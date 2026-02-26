@@ -1,13 +1,16 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { selectConferenceById, selectTeamWithRosterSummary } from '../features/league/leagueSlice';
+import { selectConferenceById, selectTeamById } from '../features/league/leagueSlice';
 import { selectTeamSchedule } from '../features/season/seasonSlice';
+import { selectRoster } from '../features/league/rosterSlice';
 import { useAppSelector } from '../store/hooks';
 
 function TeamPage() {
   const { id } = useParams();
   const teamId = id ?? '';
-  const teamSummary = useAppSelector((state) => (teamId ? selectTeamWithRosterSummary(state, teamId) : null));
+
+  const team = useAppSelector(state => selectTeamById(state, teamId));
+  const roster = useAppSelector(state => selectRoster(state, teamId));
   const season = useAppSelector(state => state.season);
 
   // Create selector instance
@@ -16,22 +19,30 @@ function TeamPage() {
   const schedule = useAppSelector(state => scheduleSelector(state, teamId));
 
   const conference = useAppSelector((state) => {
-    if (!teamSummary) return null;
-    return selectConferenceById(state, teamSummary.team.conferenceId);
+    if (!team) return null;
+    return selectConferenceById(state, team.conferenceId);
   });
 
   const allTeams = useAppSelector(state => state.league.teams);
   const teamById = useMemo(() => new Map(allTeams.map(t => [t.id, t])), [allTeams]);
 
-  const byPosition = useMemo(() => {
-    if (!teamSummary) return {} as Record<string, number>;
-    return teamSummary.topPlayers.reduce<Record<string, number>>((acc, player) => {
+  // Derived roster stats
+  const rosterStats = useMemo(() => {
+     if (!roster || roster.length === 0) return { overall: 0, size: 0, topPlayers: [], byPosition: {} };
+
+     const overall = Math.round(roster.reduce((sum, p) => sum + p.overall, 0) / roster.length);
+     const topPlayers = [...roster].sort((a, b) => b.overall - a.overall).slice(0, 5);
+
+     const byPosition = roster.reduce<Record<string, number>>((acc, player) => {
       acc[player.position] = (acc[player.position] || 0) + 1;
       return acc;
     }, {});
-  }, [teamSummary]);
 
-  if (!teamSummary) {
+    return { overall, size: roster.length, topPlayers, byPosition };
+  }, [roster]);
+
+
+  if (!team) {
     return (
       <div className="card text-center py-8">
         <h2>Team Not Found</h2>
@@ -47,62 +58,74 @@ function TeamPage() {
       <div className="card">
          <div className="flex justify-between items-start">
              <div>
-                 <h2 className="m-0 text-2xl font-bold">{teamSummary.team.schoolName} {teamSummary.team.nickname}</h2>
+                 <h2 className="m-0 text-2xl font-bold">{team.schoolName} {team.nickname}</h2>
                  <div className="text-gray-500 mt-1">
-                     {conference?.name} &bull; {teamSummary.team.region} Region
+                     {conference?.name} &bull; {team.region} Region
                  </div>
              </div>
              <div className="text-right">
                  <div className="text-xs uppercase text-gray-500">Program Prestige</div>
-                 <div className="text-xl font-bold">{teamSummary.team.prestige}</div>
+                 <div className="text-xl font-bold">{team.prestige}</div>
              </div>
          </div>
 
          <div className="flex gap-8 mt-4 pt-4 border-t">
-             <div>
-                 <div className="text-xs uppercase text-gray-500">Roster Overall</div>
-                 <div className="text-lg font-bold">{teamSummary.rosterOverall}</div>
-             </div>
-             <div>
-                 <div className="text-xs uppercase text-gray-500">Roster Size</div>
-                 <div className="text-lg font-bold">{teamSummary.rosterSize}</div>
-             </div>
-             <div>
-                 <div className="text-xs uppercase text-gray-500">Position Mix</div>
-                 <div className="text-sm font-mono mt-1">
-                     {Object.entries(byPosition).map(([pos, count]) => (
-                         <span key={pos} className="mr-2">
-                             {pos}:{count}
-                         </span>
-                     ))}
+             {rosterStats.size === 0 ? (
+                 <div className="text-gray-500 italic">
+                     Roster will be generated when the season begins.
                  </div>
-             </div>
+             ) : (
+                 <>
+                    <div>
+                        <div className="text-xs uppercase text-gray-500">Roster Overall</div>
+                        <div className="text-lg font-bold">{rosterStats.overall}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs uppercase text-gray-500">Roster Size</div>
+                        <div className="text-lg font-bold">{rosterStats.size}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs uppercase text-gray-500">Position Mix</div>
+                        <div className="text-sm font-mono mt-1">
+                            {Object.entries(rosterStats.byPosition).map(([pos, count]) => (
+                                <span key={pos} className="mr-2">
+                                    {pos}:{count}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                 </>
+             )}
          </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="card p-0 overflow-hidden">
             <div className="bg-gray-50 p-2 border-b font-bold">Top Players</div>
-            <table className="w-full text-sm">
-              <thead className="bg-white border-b text-gray-500 text-xs">
-                <tr>
-                  <th className="p-2 text-left">Name</th>
-                  <th className="p-2 text-center w-12">Pos</th>
-                  <th className="p-2 text-center w-12">Year</th>
-                  <th className="p-2 text-center w-12">OVR</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teamSummary.topPlayers.map((player) => (
-                  <tr key={player.id} className="border-b last:border-0 hover:bg-gray-50">
-                    <td className="p-2 font-semibold">{player.name}</td>
-                    <td className="p-2 text-center">{player.position}</td>
-                    <td className="p-2 text-center">{player.year}</td>
-                    <td className="p-2 text-center font-bold">{player.overall}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {rosterStats.size === 0 ? (
+                <div className="p-4 text-center text-gray-500 text-sm">No players found.</div>
+            ) : (
+                <table className="w-full text-sm">
+                <thead className="bg-white border-b text-gray-500 text-xs">
+                    <tr>
+                    <th className="p-2 text-left">Name</th>
+                    <th className="p-2 text-center w-12">Pos</th>
+                    <th className="p-2 text-center w-12">Year</th>
+                    <th className="p-2 text-center w-12">OVR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rosterStats.topPlayers.map((player) => (
+                    <tr key={player.id} className="border-b last:border-0 hover:bg-gray-50">
+                        <td className="p-2 font-semibold">{player.name}</td>
+                        <td className="p-2 text-center">{player.position}</td>
+                        <td className="p-2 text-center">{player.year}</td>
+                        <td className="p-2 text-center font-bold">{player.overall}</td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            )}
           </div>
 
           <div className="card p-0 overflow-hidden">

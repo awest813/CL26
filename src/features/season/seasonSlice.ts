@@ -5,6 +5,7 @@ import { generateSeasonSchedule } from '../../sim/schedule';
 import { simulateGame } from '../../sim/matchEngine';
 import { generateRoster } from '../../sim/generateRoster';
 import { selectTeams } from '../league/leagueSlice';
+import { initializeRosters, advanceRosters } from '../league/rosterSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
 import { computeRankings } from '../../sim/rankings';
 
@@ -23,10 +24,13 @@ const initialState: SeasonState = {
 // Async thunk to start a new season
 export const startNewSeason = createAsyncThunk(
   'season/startNewSeason',
-  async ({ seed, year }: { seed: number; year: number }, { getState }) => {
+  async ({ seed, year }: { seed: number; year: number }, { getState, dispatch }) => {
     const state = getState() as RootState;
     const teams = state.league.teams;
     const conferences = state.league.conferences;
+
+    // Initialize rosters if not present (idempotent)
+    await dispatch(initializeRosters({ seed }));
 
     // Generate schedule
     const schedule = generateSeasonSchedule(teams, conferences, seed);
@@ -47,10 +51,22 @@ export const advanceToNextSeason = createAsyncThunk(
         const currentYear = state.season.year;
         const currentSeed = state.season.seasonSeed;
 
+        // Collect user's committed recruits BEFORE reset
+        const userTeamId = state.coach.selectedTeamId;
+        const userRecruits = state.coach.recruitPool.filter(r => r.committedTeamId === userTeamId);
+
         // Simple increment for seed and year
         const newSeed = currentSeed + 1;
         const newYear = currentYear + 1;
 
+        // Advance Rosters (Graduation + Recruitment + Dev)
+        await dispatch(advanceRosters({
+            userTeamId,
+            userRecruits,
+            seed: newSeed
+        }));
+
+        // Start New Season (Resets recruiting pool, generates schedule)
         await dispatch(startNewSeason({ seed: newSeed, year: newYear }));
     }
 );
@@ -62,6 +78,8 @@ export const simCurrentWeek = createAsyncThunk(
     const state = getState() as RootState;
     const { currentWeekIndex, scheduleByWeek, seasonSeed } = state.season;
     const teams = selectTeams(state);
+    // Use state.roster directly inside thunk
+    const rosters = state.roster.rosters;
 
     if (currentWeekIndex >= scheduleByWeek.length) {
       throw new Error('Season schedule complete');
@@ -72,6 +90,10 @@ export const simCurrentWeek = createAsyncThunk(
 
     // Helper to get roster
     const getRoster = (teamId: string) => {
+        // Use stateful roster if available, else fallback (should not happen if initialized)
+        const roster = rosters[teamId];
+        if (roster && roster.length > 0) return roster;
+
         const team = teams.find(t => t.id === teamId);
         if (!team) throw new Error(`Team ${teamId} not found`);
         return generateRoster(team, 'league-roster-v1');

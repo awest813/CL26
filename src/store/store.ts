@@ -2,6 +2,7 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import storage from 'redux-persist/lib/storage';
 import { persistReducer } from 'redux-persist';
 import { leagueReducer } from '../features/league/leagueSlice';
+import { rosterReducer } from '../features/league/rosterSlice';
 import { seasonReducer } from '../features/season/seasonSlice';
 import { coachReducer } from '../features/coach/coachSlice';
 import { uiReducer } from '../features/ui/uiSlice';
@@ -9,6 +10,7 @@ import { exhibitionReducer } from '../features/exhibition/exhibitionSlice';
 
 const rootReducer = combineReducers({
   league: leagueReducer,
+  roster: rosterReducer,
   season: seasonReducer,
   coach: coachReducer,
   ui: uiReducer,
@@ -18,7 +20,7 @@ const rootReducer = combineReducers({
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['season', 'coach', 'ui'],
+  whitelist: ['season', 'coach', 'ui', 'roster'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
