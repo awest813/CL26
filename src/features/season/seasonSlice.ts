@@ -106,12 +106,30 @@ export const simCurrentWeek = createAsyncThunk(
         return team;
     }
 
-    // Determine tactics (default for now)
-    const defaultTactics = {
-      tempo: 'normal',
-      rideClear: 'balanced',
-      slideAggression: 'normal',
-    } as const;
+    // User Tactics
+    const userTeamId = state.coach.selectedTeamId;
+    const userTactics = state.coach.tactics;
+
+    // Helper to get tactics
+    const getTactics = (teamId: string, seed: number) => {
+        if (teamId === userTeamId) return userTactics;
+
+        // Simple CPU Tactics Generation based on seed
+        const tempos = ['slow', 'normal', 'fast'] as const;
+        const rides = ['conservative', 'balanced', 'aggressive'] as const;
+        const slides = ['early', 'normal', 'late'] as const;
+
+        // Pseudo-random index based on seed
+        const tIdx = seed % 3;
+        const rIdx = (seed * 2) % 3;
+        const sIdx = (seed * 3) % 3;
+
+        return {
+            tempo: tempos[tIdx],
+            rideClear: rides[rIdx],
+            slideAggression: slides[sIdx],
+        };
+    };
 
     gamesToPlay.forEach(game => {
       const homeTeam = getTeam(game.homeTeamId);
@@ -120,14 +138,13 @@ export const simCurrentWeek = createAsyncThunk(
       const awayRoster = getRoster(game.awayTeamId);
 
       // Deterministic seed for this game based on season seed and game ID
-      // simple hash for now
       const gameSeed = seasonSeed + currentWeekIndex * 1000 + game.id.length + game.homeTeamId.charCodeAt(0) + game.awayTeamId.charCodeAt(0);
 
       const result = simulateGame(
         { team: homeTeam, roster: homeRoster },
         { team: awayTeam, roster: awayRoster },
-        defaultTactics,
-        defaultTactics,
+        getTactics(game.homeTeamId, gameSeed),
+        getTactics(game.awayTeamId, gameSeed + 1),
         gameSeed
       );
 

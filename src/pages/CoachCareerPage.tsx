@@ -7,6 +7,7 @@ import {
   removeRecruitFromBoard,
   setRecruitHours,
   setRecruitPitch,
+  setTactics,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
@@ -47,7 +48,7 @@ function CoachCareerPage() {
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
-  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY' | 'STRATEGY'>('ACTIVE');
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
   const teamNameById = useMemo(() => new Map(teams.map((team) => [team.id, `${team.schoolName}`])), [teams]);
@@ -149,6 +150,12 @@ function CoachCareerPage() {
                         Active Board
                     </button>
                     <button
+                        className={`pb-1 border-b-2 font-semibold text-sm ${activeTab === 'STRATEGY' ? 'border-blue-600 text-blue-800' : 'border-transparent text-gray-500'}`}
+                        onClick={() => setActiveTab('STRATEGY')}
+                    >
+                        Strategy
+                    </button>
+                    <button
                         className={`pb-1 border-b-2 font-semibold text-sm ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-800' : 'border-transparent text-gray-500'}`}
                         onClick={() => setActiveTab('HISTORY')}
                     >
@@ -195,6 +202,67 @@ function CoachCareerPage() {
              )}
         </div>
       </div>
+
+      {activeTab === 'STRATEGY' && (
+          <div className="card">
+              <h3 className="text-lg font-bold mb-4">Team Strategy</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-4 bg-gray-50 rounded border">
+                      <label className="block font-bold mb-2">Offensive Tempo</label>
+                      <select
+                        value={coach.tactics.tempo}
+                        onChange={(e) => dispatch(setTactics({ ...coach.tactics, tempo: e.target.value as any }))}
+                        className="w-full p-2 border rounded mb-2"
+                      >
+                          <option value="slow">Slow (Possession)</option>
+                          <option value="normal">Balanced</option>
+                          <option value="fast">Fast (Run & Gun)</option>
+                      </select>
+                      <p className="text-xs text-gray-500">
+                          {coach.tactics.tempo === 'slow' && "Reduces total possessions. Good for underdogs."}
+                          {coach.tactics.tempo === 'normal' && "Standard pace of play."}
+                          {coach.tactics.tempo === 'fast' && "Increases total possessions. High scoring, high variance."}
+                      </p>
+                  </div>
+
+                  <div className="p-4 bg-gray-50 rounded border">
+                      <label className="block font-bold mb-2">Ride / Clear</label>
+                      <select
+                        value={coach.tactics.rideClear}
+                        onChange={(e) => dispatch(setTactics({ ...coach.tactics, rideClear: e.target.value as any }))}
+                        className="w-full p-2 border rounded mb-2"
+                      >
+                          <option value="conservative">Conservative</option>
+                          <option value="balanced">Balanced</option>
+                          <option value="aggressive">Aggressive (10-Man)</option>
+                      </select>
+                      <p className="text-xs text-gray-500">
+                          {coach.tactics.rideClear === 'conservative' && "Safe clears, light ride. Fewer turnovers for both sides."}
+                          {coach.tactics.rideClear === 'balanced' && "Standard pressure."}
+                          {coach.tactics.rideClear === 'aggressive' && "High pressure ride. Causes turnovers but risks easy transition goals."}
+                      </p>
+                  </div>
+
+                  <div className="p-4 bg-gray-50 rounded border">
+                      <label className="block font-bold mb-2">Slide Package</label>
+                      <select
+                        value={coach.tactics.slideAggression}
+                        onChange={(e) => dispatch(setTactics({ ...coach.tactics, slideAggression: e.target.value as any }))}
+                        className="w-full p-2 border rounded mb-2"
+                      >
+                          <option value="early">Early (Aggressive)</option>
+                          <option value="normal">Normal</option>
+                          <option value="late">Late (Hold)</option>
+                      </select>
+                      <p className="text-xs text-gray-500">
+                          {coach.tactics.slideAggression === 'early' && "Slides early to ball. Stops dodgers but leaves shooters open."}
+                          {coach.tactics.slideAggression === 'normal' && "Standard help defense."}
+                          {coach.tactics.slideAggression === 'late' && "Defenders stay home. Forces 1v1 wins but protects crease."}
+                      </p>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {activeTab === 'HISTORY' && (
           <div className="card">
