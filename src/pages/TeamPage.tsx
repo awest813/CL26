@@ -22,53 +22,83 @@ function TeamPage() {
 
   if (!teamSummary) {
     return (
-      <section className="card">
-        <h2>Team not found</h2>
-        <Link to="/conferences">Back to conferences</Link>
-      </section>
+      <div className="card text-center py-8">
+        <h2>Team Not Found</h2>
+        <Link to="/conferences" className="text-blue-600 hover:underline">
+            &larr; Return to Conferences
+        </Link>
+      </div>
     );
   }
 
   return (
-    <section className="card">
-      <h2>
-        {teamSummary.team.schoolName} {teamSummary.team.nickname}
-      </h2>
-      <p>
-        Conference: <strong>{conference?.name ?? teamSummary.team.conferenceId}</strong>
-      </p>
-      <p>
-        Region: <strong>{teamSummary.team.region}</strong> · Prestige: <strong>{teamSummary.team.prestige}</strong>
-      </p>
-      <p>
-        Generated Roster Overall: <strong>{teamSummary.rosterOverall}</strong> (size {teamSummary.rosterSize})
-      </p>
+    <div className="flex-col gap-4">
+      <div className="card">
+         <div className="flex justify-between items-start">
+             <div>
+                 <h2 className="m-0 text-2xl font-bold">{teamSummary.team.schoolName} {teamSummary.team.nickname}</h2>
+                 <div className="text-gray-500 mt-1">
+                     {conference?.name} &bull; {teamSummary.team.region} Region
+                 </div>
+             </div>
+             <div className="text-right">
+                 <div className="text-xs uppercase text-gray-500">Program Prestige</div>
+                 <div className="text-xl font-bold">{teamSummary.team.prestige}</div>
+             </div>
+         </div>
 
-      <h3>Top Players</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Pos</th>
-            <th>Year</th>
-            <th>Overall</th>
-          </tr>
-        </thead>
-        <tbody>
-          {teamSummary.topPlayers.map((player) => (
-            <tr key={player.id}>
-              <td>{player.name}</td>
-              <td>{player.position}</td>
-              <td>{player.year}</td>
-              <td>{player.overall}</td>
+         <div className="flex gap-8 mt-4 pt-4 border-t">
+             <div>
+                 <div className="text-xs uppercase text-gray-500">Roster Overall</div>
+                 <div className="text-lg font-bold">{teamSummary.rosterOverall}</div>
+             </div>
+             <div>
+                 <div className="text-xs uppercase text-gray-500">Roster Size</div>
+                 <div className="text-lg font-bold">{teamSummary.rosterSize}</div>
+             </div>
+             <div>
+                 <div className="text-xs uppercase text-gray-500">Position Mix</div>
+                 <div className="text-sm font-mono mt-1">
+                     {Object.entries(byPosition).map(([pos, count]) => (
+                         <span key={pos} className="mr-2">
+                             {pos}:{count}
+                         </span>
+                     ))}
+                 </div>
+             </div>
+         </div>
+      </div>
+
+      <div className="card p-0 overflow-hidden">
+        <div className="bg-gray-50 p-2 border-b font-bold">Top Players</div>
+        <table className="w-full text-sm">
+          <thead className="bg-white border-b text-gray-500 text-xs">
+            <tr>
+              <th className="p-2 text-left">Name</th>
+              <th className="p-2 text-center w-12">Pos</th>
+              <th className="p-2 text-center w-12">Year</th>
+              <th className="p-2 text-center w-12">OVR</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {teamSummary.topPlayers.map((player) => (
+              <tr key={player.id} className="border-b last:border-0 hover:bg-gray-50">
+                <td className="p-2 font-semibold">{player.name}</td>
+                <td className="p-2 text-center">{player.position}</td>
+                <td className="p-2 text-center">{player.year}</td>
+                <td className="p-2 text-center font-bold">{player.overall}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      <p>Top-player position mix: {Object.entries(byPosition).map(([pos, count]) => `${pos}(${count})`).join(', ')}</p>
-      <Link to="/conferences">← Back to conferences</Link>
-    </section>
+      <div className="text-center">
+         <Link to="/conferences" className="text-blue-600 hover:underline">
+             &larr; Back to Conferences
+         </Link>
+      </div>
+    </div>
   );
 }
 

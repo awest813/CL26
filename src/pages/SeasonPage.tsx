@@ -15,6 +15,8 @@ function SeasonPage() {
   const dispatch = useAppDispatch();
   const [seedInput, setSeedInput] = useState(2026);
   const [conferenceFilter, setConferenceFilter] = useState('ALL');
+  const [isSimulating, setIsSimulating] = useState(false);
+
   const summary = useAppSelector(selectSeasonSummary);
   const hasSeason = useAppSelector(selectSeasonHasStarted);
   const teams = useAppSelector((state) => state.league.teams);
@@ -35,17 +37,26 @@ function SeasonPage() {
     });
   }, [thisWeekGames, conferenceFilter, teamById]);
 
-  const handleStartSeason = () => {
-      dispatch(startNewSeason({ seed: seedInput }));
+  const handleStartSeason = async () => {
+      setIsSimulating(true);
+      await dispatch(startNewSeason({ seed: seedInput }));
+      setIsSimulating(false);
   };
 
-  const handleSimWeek = () => {
-      dispatch(simCurrentWeek());
+  const handleSimWeek = async () => {
+      setIsSimulating(true);
+      await dispatch(simCurrentWeek());
+      setIsSimulating(false);
   };
 
-  const handleSimSeason = () => {
-      if(confirm("Simulate the rest of the regular season?")) {
-        dispatch(simSeason());
+  const handleSimSeason = async () => {
+      if(confirm("Simulate the rest of the regular season? This may take a moment.")) {
+        setIsSimulating(true);
+        // Add a small delay so the UI updates to show disabled state before the heavy sync process locks it up (if it was sync, but it is async thunk)
+        setTimeout(async () => {
+            await dispatch(simSeason());
+            setIsSimulating(false);
+        }, 50);
       }
   };
 
@@ -83,8 +94,9 @@ function SeasonPage() {
                   <button
                       className="btn btn-primary"
                       onClick={handleStartSeason}
+                      disabled={isSimulating}
                   >
-                      Begin Season
+                      {isSimulating ? 'Starting...' : 'Begin Season'}
                   </button>
               </div>
           </div>
@@ -107,12 +119,14 @@ function SeasonPage() {
                      <button
                         className="btn btn-primary"
                         onClick={handleSimWeek}
+                        disabled={isSimulating}
                      >
-                        Sim Week {displayWeek + 1}
+                        {isSimulating ? 'Simulating...' : `Sim Week ${displayWeek + 1}`}
                      </button>
                      <button
                         className="btn"
                         onClick={handleSimSeason}
+                        disabled={isSimulating}
                      >
                         Sim To End
                      </button>

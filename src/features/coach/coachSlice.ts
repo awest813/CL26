@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { Recruit, RecruitingPitch, Tactics } from '../../types/sim';
+import { resetSeason } from '../season/seasonSlice';
 
 import { generateRecruitPool, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
@@ -154,6 +155,19 @@ const coachSlice = createSlice({
             }
         });
     }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(resetSeason, (state) => {
+          // Reset recruiting state but keep coach profile
+          state.recruitPool = [];
+          state.boardRecruitIds = [];
+          state.weeklyHoursByRecruitId = {};
+          state.activePitchesByRecruitId = {};
+          state.interestByRecruitId = {};
+          state.interestChangeByRecruitId = {};
+          state.recruitingWeekIndex = 0;
+      });
   },
 });
 
