@@ -238,6 +238,23 @@ export const selectWeekGames = (weekIndex: number) => createSelector(
   }
 );
 
+export const selectTeamSchedule = createSelector(
+  [(state: RootState) => state.season.scheduleByWeek, (state: RootState) => state.season.gameResults, (_state: RootState, teamId: string) => teamId],
+  (scheduleByWeek, results, teamId) => {
+    const teamGames: { weekIndex: number; game: any; result: GameResult | undefined }[] = [];
+
+    scheduleByWeek.forEach((weekGames, weekIndex) => {
+        const game = weekGames.find(g => g.homeTeamId === teamId || g.awayTeamId === teamId);
+        if (game) {
+            const result = results.find(r => r.id === game.id);
+            teamGames.push({ weekIndex, game, result });
+        }
+    });
+
+    return teamGames;
+  }
+);
+
 export const selectTeamRecords = createSelector(
     [(state: RootState) => state.season.gameResults, (state: RootState) => state.league.teams],
     (results, teams) => {

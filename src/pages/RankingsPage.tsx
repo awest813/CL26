@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAppSelector } from '../store/hooks';
 import { selectTop25 } from '../features/season/rankingsSelector';
 
@@ -5,10 +6,10 @@ function TeamNameDisplay({ teamId }: { teamId: string }) {
     const team = useAppSelector(state => state.league.teams.find(t => t.id === teamId));
     if (!team) return <span>Unknown Team</span>;
     return (
-        <div>
+        <Link to={`/team/${teamId}`} className="hover:underline text-black block">
             <span className="font-semibold">{team.schoolName}</span>
             <span className="text-xs text-gray-500 ml-1">{team.nickname}</span>
-        </div>
+        </Link>
     );
 }
 

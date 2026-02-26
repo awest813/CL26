@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 
@@ -115,13 +115,17 @@ function SeasonWeekPage() {
                   return (
                     <tr key={game.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className={`p-2 text-right ${awayScore > homeScore ? 'font-bold' : ''}`}>
-                          {away?.schoolName} <span className="text-xs text-gray-500 font-normal">({away?.nickname})</span>
+                          <Link to={`/team/${away?.id}`} className="hover:underline text-black">
+                             {away?.schoolName} <span className="text-xs text-gray-500 font-normal">({away?.nickname})</span>
+                          </Link>
                       </td>
                       <td className="p-2 text-center font-mono font-bold bg-gray-50">
                           {isFinal ? `${awayScore} - ${homeScore}` : 'vs'}
                       </td>
                       <td className={`p-2 text-left ${homeScore > awayScore ? 'font-bold' : ''}`}>
-                          {home?.schoolName} <span className="text-xs text-gray-500 font-normal">({home?.nickname})</span>
+                          <Link to={`/team/${home?.id}`} className="hover:underline text-black">
+                             {home?.schoolName} <span className="text-xs text-gray-500 font-normal">({home?.nickname})</span>
+                          </Link>
                       </td>
                       <td className="p-2 text-center text-xs text-gray-600">
                           {isFinal ? `${result.statsB.shots} - ${result.statsA.shots}` : '-'}

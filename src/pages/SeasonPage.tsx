@@ -231,8 +231,10 @@ function SeasonPage() {
             return (
               <div key={game.id} className="p-3 border-b border-gray-100 flex justify-between items-center hover:bg-gray-50 transition-colors">
                 <div className="flex-1 text-right">
-                    <span className="font-semibold block md:inline">{away?.schoolName}</span>
-                    <span className="text-xs text-gray-500 ml-1">({away?.nickname})</span>
+                    <Link to={`/team/${away?.id}`} className="hover:underline text-black">
+                        <span className="font-semibold block md:inline">{away?.schoolName}</span>
+                        <span className="text-xs text-gray-500 ml-1">({away?.nickname})</span>
+                    </Link>
                 </div>
                 <div className="mx-4 font-mono font-bold text-lg min-w-[80px] text-center bg-gray-100 rounded px-2 py-1">
                     {result ? (
@@ -242,8 +244,10 @@ function SeasonPage() {
                     )}
                 </div>
                 <div className="flex-1 text-left">
-                    <span className="font-semibold block md:inline">{home?.schoolName}</span>
-                    <span className="text-xs text-gray-500 ml-1">({home?.nickname})</span>
+                    <Link to={`/team/${home?.id}`} className="hover:underline text-black">
+                        <span className="font-semibold block md:inline">{home?.schoolName}</span>
+                        <span className="text-xs text-gray-500 ml-1">({home?.nickname})</span>
+                    </Link>
                 </div>
               </div>
             );
