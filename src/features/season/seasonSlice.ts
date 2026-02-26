@@ -23,7 +23,7 @@ const initialState: SeasonState = {
 // Async thunk to start a new season
 export const startNewSeason = createAsyncThunk(
   'season/startNewSeason',
-  async ({ seed }: { seed: number }, { getState }) => {
+  async ({ seed, year }: { seed: number; year: number }, { getState }) => {
     const state = getState() as RootState;
     const teams = state.league.teams;
     const conferences = state.league.conferences;
@@ -34,8 +34,25 @@ export const startNewSeason = createAsyncThunk(
     return {
       schedule,
       seed,
+      year,
     };
   }
+);
+
+// Async thunk to advance to the next season (increment year)
+export const advanceToNextSeason = createAsyncThunk(
+    'season/advanceToNextSeason',
+    async (_, { dispatch, getState }) => {
+        const state = getState() as RootState;
+        const currentYear = state.season.year;
+        const currentSeed = state.season.seasonSeed;
+
+        // Simple increment for seed and year
+        const newSeed = currentSeed + 1;
+        const newYear = currentYear + 1;
+
+        await dispatch(startNewSeason({ seed: newSeed, year: newYear }));
+    }
 );
 
 // Async thunk to simulate the current week
@@ -165,6 +182,7 @@ const seasonSlice = createSlice({
       .addCase(startNewSeason.fulfilled, (state, action) => {
         state.scheduleByWeek = action.payload.schedule;
         state.seasonSeed = action.payload.seed;
+        state.year = action.payload.year;
         state.currentWeekIndex = 0;
         state.completedWeeks = 0;
         state.gameResults = [];
@@ -204,6 +222,7 @@ export const selectSeasonSummary = (state: RootState) => ({
     currentWeekIndex: state.season.currentWeekIndex,
     completedWeeks: state.season.completedWeeks,
     seasonSeed: state.season.seasonSeed,
+    year: state.season.year,
 });
 
 export const selectSeasonHasStarted = (state: RootState) => state.season.phase !== 'PRE';

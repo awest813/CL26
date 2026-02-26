@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { Recruit, RecruitingPitch, Tactics } from '../../types/sim';
-import { resetSeason } from '../season/seasonSlice';
+import { resetSeason, startNewSeason } from '../season/seasonSlice';
 
 import { generateRecruitPool, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
@@ -36,6 +36,7 @@ export interface CoachState {
   activePitchesByRecruitId: Record<string, RecruitingPitch>;
   interestByRecruitId: Record<string, number>;
   interestChangeByRecruitId: Record<string, number>;
+  pastRecruitingClasses: { year: number; recruits: Recruit[] }[];
 }
 
 const initialState: CoachState = {
@@ -57,6 +58,7 @@ const initialState: CoachState = {
   activePitchesByRecruitId: {},
   interestByRecruitId: {},
   interestChangeByRecruitId: {},
+  pastRecruitingClasses: [],
 };
 
 const coachSlice = createSlice({
@@ -161,6 +163,40 @@ const coachSlice = createSlice({
       .addCase(resetSeason, (state) => {
           // Reset recruiting state but keep coach profile
           state.recruitPool = [];
+          state.boardRecruitIds = [];
+          state.weeklyHoursByRecruitId = {};
+          state.activePitchesByRecruitId = {};
+          state.interestByRecruitId = {};
+          state.interestChangeByRecruitId = {};
+          state.recruitingWeekIndex = 0;
+          state.pastRecruitingClasses = [];
+      })
+      .addCase(startNewSeason.fulfilled, (state, action) => {
+          // 1. Archive current class (recruits committed to user's team)
+          if (state.selectedTeamId) {
+              const myRecruits = state.recruitPool.filter(r => r.committedTeamId === state.selectedTeamId);
+              // Use previous year? Or current year?
+              // The season just started for `action.payload.year`. The recruits are for THIS year (freshmen).
+              // Actually, in NCAA games, you recruit for the *following* year.
+              // So the class you just signed enters in `action.payload.year`.
+              // We'll store them as "Class of [Year]".
+              if (myRecruits.length > 0) {
+                state.pastRecruitingClasses.push({
+                    year: action.payload.year,
+                    recruits: myRecruits
+                });
+              }
+          }
+
+          // 2. Setup new recruiting year
+          // New seed based on season seed
+          const newRecruitingSeed = action.payload.seed + 2000;
+          state.recruitingSeed = newRecruitingSeed;
+
+          // Generate new pool for the UPCOMING class
+          state.recruitPool = generateRecruitPool(newRecruitingSeed);
+
+          // Reset board state
           state.boardRecruitIds = [];
           state.weeklyHoursByRecruitId = {};
           state.activePitchesByRecruitId = {};
