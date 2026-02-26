@@ -122,6 +122,7 @@ export function processTeamOffseason(
     // 3. Fill Roster Gaps (Walk-ons / CPU Recruits)
     // Target roster size ~26
     const targetSize = 26;
+    const maxSize = 35;
     let needs = targetSize - nextRoster.length;
 
     if (needs > 0) {
@@ -155,6 +156,40 @@ export function processTeamOffseason(
             nextRoster.push(generateWalkOn(team, pos, seed + needs * 75));
             needs--;
         }
+    }
+
+    // 4. Enforce Roster Limit (Cut Players)
+    if (nextRoster.length > maxSize) {
+        // Sort by Overall (ascending) to identify cut candidates
+        // But protect minimum positional requirements
+        nextRoster.sort((a, b) => a.overall - b.overall);
+
+        const minReqs: Record<string, number> = {
+            'A': 3, 'M': 5, 'D': 4, 'LSM': 1, 'FO': 1, 'G': 2
+        };
+
+        const currentCounts = nextRoster.reduce((acc, p) => {
+            acc[p.position] = (acc[p.position] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const finalRoster: Player[] = [];
+        let cutsNeeded = nextRoster.length - maxSize;
+
+        for (const player of nextRoster) {
+            if (cutsNeeded > 0) {
+                // Can we cut this player?
+                if ((currentCounts[player.position] || 0) > (minReqs[player.position] || 0)) {
+                    // Cut
+                    currentCounts[player.position]--;
+                    cutsNeeded--;
+                    continue; // Skip adding to final roster
+                }
+            }
+            finalRoster.push(player);
+        }
+
+        return finalRoster;
     }
 
     return nextRoster;

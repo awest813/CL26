@@ -43,6 +43,7 @@ function CoachCareerPage() {
   const dispatch = useAppDispatch();
   const teams = useAppSelector((state) => state.league.teams);
   const coach = useAppSelector((state) => state.coach);
+  const season = useAppSelector((state) => state.season);
   const recordsByTeamId = useAppSelector(selectTeamRecords);
 
   const [search, setSearch] = useState('');
@@ -131,7 +132,7 @@ function CoachCareerPage() {
                     </Link>
                 </h2>
                 <div className="text-gray-500 text-sm mt-1">
-                    Coach {coach.profile.name} &bull; Tier {coach.careerTier}
+                    Coach {coach.profile.name} &bull; {season.year} Season
                 </div>
             </div>
             <div className="text-right">
