@@ -6,6 +6,7 @@ import {
   removeRecruitFromBoard,
   setRecruitHours,
   setRecruitPitch,
+  setTactics,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
@@ -47,6 +48,8 @@ function CoachCareerPage() {
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
+  const [boardFilter, setBoardFilter] = useState<'ALL' | 'HOT' | 'RISK'>('ALL');
+  const [prospectSort, setProspectSort] = useState<'STARS' | 'FIT'>('STARS');
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
   const teamNameById = useMemo(() => new Map(teams.map((team) => [team.id, `${team.schoolName}`])), [teams]);
@@ -54,11 +57,21 @@ function CoachCareerPage() {
   const boardSet = useMemo(() => new Set(coach.boardRecruitIds), [coach.boardRecruitIds]);
 
   const visibleRecruits = useMemo(() => {
-      return coach.recruitPool
-        .filter((recruit) => (positionFilter === 'ALL' ? true : recruit.position === positionFilter))
-        .filter((recruit) => recruit.name.toLowerCase().includes(search.toLowerCase()))
-        .slice(0, 50); // limit for performance
-  }, [coach.recruitPool, positionFilter, search]);
+    const pool = coach.recruitPool
+      .filter((recruit) => (positionFilter === 'ALL' ? true : recruit.position === positionFilter))
+      .filter((recruit) => recruit.name.toLowerCase().includes(search.toLowerCase()));
+
+    const sortedPool = [...pool].sort((a, b) => {
+      if (prospectSort === 'STARS') {
+        return b.stars - a.stars;
+      }
+      const fitA = selectedTeam ? estimateRecruitFit(a, selectedTeam) : 0;
+      const fitB = selectedTeam ? estimateRecruitFit(b, selectedTeam) : 0;
+      return fitB - fitA;
+    });
+
+    return sortedPool.slice(0, 50);
+  }, [coach.recruitPool, positionFilter, search, prospectSort, selectedTeam]);
 
   const boardRecruits = useMemo(() => {
       return coach.boardRecruitIds
@@ -101,6 +114,26 @@ function CoachCareerPage() {
         .sort((a, b) => b.interest - a.interest);
   }, [boardRecruits, coach.weeklyHoursByRecruitId, coach.recruitPool, coach.activePitchesByRecruitId, selectedTeam, teams]);
 
+  const filteredBoardRows = useMemo(() => {
+    if (boardFilter === 'HOT') {
+      return boardRows.filter((row) => row.interest >= 60);
+    }
+
+    if (boardFilter === 'RISK') {
+      return boardRows.filter((row) => row.dealbreakerWarning);
+    }
+
+    return boardRows;
+  }, [boardFilter, boardRows]);
+
+  const targetListTitle =
+    boardFilter === 'HOT' ? 'Target List • Hot Leads' : boardFilter === 'RISK' ? 'Target List • Dealbreaker Risks' : 'Target List';
+
+  const averageBoardInterest =
+    boardRows.length === 0 ? 0 : Math.round(boardRows.reduce((sum, row) => sum + row.interest, 0) / boardRows.length);
+  const riskCount = boardRows.filter((row) => row.dealbreakerWarning).length;
+  const hotLeadCount = boardRows.filter((row) => row.interest >= 60).length;
+
   const committedToUserCount = coach.recruitPool.filter((recruit) => recruit.committedTeamId && recruit.committedTeamId === coach.selectedTeamId).length;
 
   const userRecord = coach.selectedTeamId
@@ -139,6 +172,16 @@ function CoachCareerPage() {
 
   return (
     <div className="flex-col gap-4">
+      <div className="card dashboardHero">
+        <div>
+          <p className="eyebrow">Career Mode Overhaul • Session 3</p>
+          <h2 className="m-0 text-xl">Recruiting Command Center</h2>
+          <p className="text-sm text-gray-500 mb-1">
+            Session three introduces a lightweight career-systems layer with tactical identity controls and program expectation context.
+          </p>
+        </div>
+      </div>
+
       <div className="card">
         <div className="flex justify-between items-start">
             <div>
@@ -196,13 +239,84 @@ function CoachCareerPage() {
                  )}
             </div>
         </div>
+
+        <div className="careerHintRow">
+          <span>Progress map:</span>
+          <span>1) Shell + nav</span>
+          <span>2) Recruiting triage</span>
+          <span>3) Career systems layer</span>
+          <span>4) Polish + balancing pass</span>
+        </div>
       </div>
 
       <div className="grid2">
         <div className="card">
-          <h3 className="text-lg font-bold mb-2">Target List ({boardRows.length}/25)</h3>
+          <h3 className="text-lg font-bold m-0">Program Strategy</h3>
+          <p className="text-sm text-gray-500 mt-1">Tune team identity and monitor recruiting momentum week to week.</p>
+          <div className="strategyGrid">
+            <label>
+              Tempo
+              <select
+                value={coach.tactics.tempo}
+                onChange={(event) => dispatch(setTactics({ ...coach.tactics, tempo: event.target.value as typeof coach.tactics.tempo }))}
+              >
+                <option value="slow">Slow</option>
+                <option value="normal">Normal</option>
+                <option value="fast">Fast</option>
+              </select>
+            </label>
+            <label>
+              Ride/Clear
+              <select
+                value={coach.tactics.rideClear}
+                onChange={(event) => dispatch(setTactics({ ...coach.tactics, rideClear: event.target.value as typeof coach.tactics.rideClear }))}
+              >
+                <option value="conservative">Conservative</option>
+                <option value="balanced">Balanced</option>
+                <option value="aggressive">Aggressive</option>
+              </select>
+            </label>
+            <label>
+              Slide Aggression
+              <select
+                value={coach.tactics.slideAggression}
+                onChange={(event) => dispatch(setTactics({ ...coach.tactics, slideAggression: event.target.value as typeof coach.tactics.slideAggression }))}
+              >
+                <option value="early">Early</option>
+                <option value="normal">Normal</option>
+                <option value="late">Late</option>
+              </select>
+            </label>
+          </div>
+          <div className="insightRow">
+            <div><span>Avg Board Interest</span><strong>{averageBoardInterest}%</strong></div>
+            <div><span>Hot Leads</span><strong>{hotLeadCount}</strong></div>
+            <div><span>Dealbreaker Risk</span><strong>{riskCount}</strong></div>
+          </div>
+          {coach.programExpectations && (
+            <div className="insightSubtle text-sm">
+              Expectations: {coach.programExpectations.winTarget}+ wins, Top {coach.programExpectations.rankTarget}, security {coach.programExpectations.securityBaseline}%
+            </div>
+          )}
+        </div>
+      </div>
 
-          {boardRows.length === 0 ? (
+      <div className="grid2">
+        <div className="card">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-bold m-0">{targetListTitle} ({filteredBoardRows.length}/25)</h3>
+            <select
+              value={boardFilter}
+              onChange={(event) => setBoardFilter(event.target.value as 'ALL' | 'HOT' | 'RISK')}
+              className="w-20 p-1 text-sm border rounded"
+            >
+              <option value="ALL">All</option>
+              <option value="HOT">Hot</option>
+              <option value="RISK">Risk</option>
+            </select>
+          </div>
+
+          {filteredBoardRows.length === 0 ? (
              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded">
                  <p>Your board is empty.</p>
                  <p className="text-sm">Add prospects from the pool on the right.</p>
@@ -220,7 +334,7 @@ function CoachCareerPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {boardRows.map(({ recruit, interest, activePitch, pitchGrade, dealbreakerWarning, topSuitors }) => (
+                  {filteredBoardRows.map(({ recruit, interest, activePitch, pitchGrade, dealbreakerWarning, topSuitors }) => (
                     <tr key={recruit.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="py-2">
                         <div className="font-semibold flex items-center gap-1">
@@ -317,6 +431,14 @@ function CoachCareerPage() {
                 <option value="LSM">LSM</option>
                 <option value="FO">FO</option>
                 <option value="G">G</option>
+            </select>
+            <select
+                value={prospectSort}
+                onChange={(e) => setProspectSort(e.target.value as 'STARS' | 'FIT')}
+                className="w-24 p-1 text-sm border rounded"
+            >
+                <option value="STARS">Sort: Stars</option>
+                <option value="FIT">Sort: Fit</option>
             </select>
           </div>
 

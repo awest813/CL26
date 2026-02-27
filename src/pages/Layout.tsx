@@ -4,10 +4,12 @@ import LeftNavBar from './Layout/LeftNavBar';
 import RightNavBar from './Layout/RightNavBar';
 import { Outlet } from 'react-router-dom';
 import { useSeasonSanityCheck } from '../hooks/useSeasonSanityCheck';
+import { useAppSelector } from '../store/hooks';
 import './style.css';
 
 function Layout() {
   const { isValid, error } = useSeasonSanityCheck();
+  const sidebarOpen = useAppSelector((state) => state.ui.sidebarOpen);
 
   return (
     <main className="layout">
@@ -20,13 +22,13 @@ function Layout() {
           textAlign: 'center',
           borderBottom: '1px solid #fca5a5',
           fontWeight: 'bold',
-          zIndex: 9999
+          zIndex: 9999,
         }}>
           ⚠️ Application State Warning: {error}
         </div>
       )}
-      <div className="layoutBody">
-        <LeftNavBar />
+      <div className={`layoutBody ${sidebarOpen ? '' : 'menuCollapsed'}`}>
+        {sidebarOpen && <LeftNavBar />}
         <div className="childBody">
           <Outlet />
           <Footer />
