@@ -30,7 +30,7 @@ function Header() {
         <p className="muted text-sm m-0">Current area: {sectionName}</p>
       </div>
       <div className="headerMeta">
-        <button type="button" className="btn text-sm" onClick={() => dispatch(setSidebarOpen(!sidebarOpen))}>
+        <button type="button" className="btn text-sm" aria-pressed={sidebarOpen} onClick={() => dispatch(setSidebarOpen(!sidebarOpen))}>
           {sidebarOpen ? 'Hide Menu' : 'Show Menu'}
         </button>
         <span className="badge">{season.year} • {seasonLabel}</span>
