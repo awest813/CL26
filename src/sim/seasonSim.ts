@@ -1,6 +1,6 @@
-import { generateRoster } from './generateRoster';
-import { simulateGame } from './matchEngine';
-import { Conference, GameSummary, ScheduledGame, Tactics, Team, TeamRecord } from '../types/sim';
+import { generateRoster } from './generateRoster.ts';
+import { simulateGame } from './matchEngine.ts';
+import type { Conference, GameSummary, ScheduledGame, Tactics, Team, TeamRecord } from '../types/sim.ts';
 
 interface SeasonSimInputs {
   teams: Team[];

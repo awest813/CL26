@@ -1,5 +1,5 @@
-import { Player, Position, Team } from '../types/sim';
-import { makeRng, pickOne, randInt } from './rng';
+import type { Player, Position, Team } from '../types/sim.ts';
+import { makeRng, pickOne, randInt } from './rng.ts';
 import namesData from '../data/names.json' with { type: 'json' };
 
 const POSITION_DISTRIBUTION: Position[] = [

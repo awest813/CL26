@@ -1,5 +1,5 @@
-import { GameResult, Player, PlayerGameStats, Tactics, TeamGameStats, TeamSimInput } from '../types/sim';
-import { makeRng, normalish, pickOne, randInt } from './rng';
+import type { GameResult, Player, PlayerGameStats, Tactics, TeamGameStats, TeamSimInput } from '../types/sim.ts';
+import { makeRng, normalish, pickOne, randInt } from './rng.ts';
 
 export type { Tactics, TeamSimInput, TeamGameStats, PlayerGameStats, GameResult };
 
