@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAppSelector } from '../store/hooks';
-import { selectTeamRecords, selectTop12Projection, selectTop25Rankings } from '../features/season/seasonSlice';
+import { selectTeamRecords, selectTop12Projection, selectTop25Rankings, selectSeasonSummary } from '../features/season/seasonSlice';
 import { selectTeams } from '../features/league/leagueSlice';
 import { computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
 
@@ -9,6 +9,14 @@ function RankingsPage() {
   const top12 = useAppSelector(selectTop12Projection);
   const teams = useAppSelector(selectTeams);
   const records = useAppSelector(selectTeamRecords);
+  const summary = useAppSelector(selectSeasonSummary);
+
+  const isPostseason = summary.phase === 'PLAYOFF' || summary.phase === 'OFFSEASON';
+  const weekLabel = isPostseason
+    ? 'Final'
+    : summary.completedWeeks > 0
+      ? `Week ${summary.completedWeeks}`
+      : 'Pre-Season';
 
   const teamById = useMemo(() => {
     return new Map(teams.map((team) => [team.id, team]));
@@ -35,8 +43,12 @@ function RankingsPage() {
   return (
     <div className="grid2">
       <section className="card">
-        <h2>Top 25</h2>
-        <p className="text-sm text-gray-500">Weekly deterministic power ranking based on record and point margin.</p>
+        <h2>Top 25 <span className="text-sm font-normal text-gray-400 ml-1">{weekLabel}</span></h2>
+        <p className="text-sm text-gray-500">
+          {isPostseason
+            ? 'Final regular-season power rankings.'
+            : 'Deterministic power ranking based on record and point margin.'}
+        </p>
 
         <table>
           <thead>
@@ -66,8 +78,12 @@ function RankingsPage() {
       </section>
 
       <section className="card">
-        <h2>Top 12 Playoff Projection</h2>
-        <p className="text-sm text-gray-500">If the season ended today, this would be the projected 12-team field.</p>
+        <h2>Top 12 {isPostseason ? 'Tournament Field' : 'Playoff Projection'}</h2>
+        <p className="text-sm text-gray-500">
+          {isPostseason
+            ? 'Final seeding used for the NCAA Tournament.'
+            : 'If the season ended today, this would be the projected 12-team field.'}
+        </p>
 
         <table>
           <thead>

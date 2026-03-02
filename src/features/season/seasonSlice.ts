@@ -215,6 +215,7 @@ export const seasonReducer = seasonSlice.reducer;
 // Selectors
 export const selectSeasonSummary = (state: RootState) => ({
     phase: state.season.phase,
+    year: state.season.year,
     currentWeekIndex: state.season.currentWeekIndex,
     completedWeeks: state.season.completedWeeks,
     seasonSeed: state.season.seasonSeed,
