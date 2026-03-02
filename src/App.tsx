@@ -13,6 +13,7 @@ import SeasonStandingsPage from './pages/SeasonStandingsPage';
 import SeasonWeekPage from './pages/SeasonWeekPage';
 import PlayoffsPage from './pages/PlayoffsPage';
 import AlphaStagePage from './pages/AlphaStagePage';
+import RosterPage from './pages/RosterPage';
 import './App.css';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
         { path: 'login', element: <Login /> },
         { path: 'career', element: <CoachCareerPage /> },
         { path: 'career/setup', element: <CoachCareerSetupPage /> },
+        { path: 'career/roster', element: <RosterPage /> },
         { path: 'season', element: <SeasonPage /> },
         { path: 'schedule', element: <Navigate to="/season" replace /> },
         { path: 'season/standings', element: <SeasonStandingsPage /> },

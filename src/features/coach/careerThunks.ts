@@ -7,7 +7,11 @@ import {
   updateJobSecurity,
   recordSeasonEnd,
   resetRecruitingForNewSeason,
+  setManagedRoster,
+  setStarterIds,
 } from './coachSlice';
+import { generateRoster } from '../../sim/generateRoster';
+import { applyRosterTurnover, buildDefaultStarters } from '../../sim/rosterManagement';
 
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
   'coach/runCareerWeeklyCycle',
@@ -93,5 +97,56 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
 
     dispatch(updateJobSecurity(newJobSecurity));
     dispatch(resetRecruitingForNewSeason());
+  },
+);
+
+/**
+ * Initialize the managed roster from the procedurally generated one.
+ * Called at career start or when no managed roster exists yet.
+ */
+export const initializeManagedRoster = createAsyncThunk<void, void, { state: RootState }>(
+  'coach/initializeManagedRoster',
+  async (_arg, { dispatch, getState }) => {
+    const state = getState();
+    const coach = state.coach;
+    const teams = state.league.teams;
+
+    if (!coach.selectedTeamId) return;
+    const team = teams.find((t) => t.id === coach.selectedTeamId);
+    if (!team) return;
+
+    const roster = generateRoster(team, 'league-roster-v1');
+    const starters = buildDefaultStarters(roster);
+    dispatch(setManagedRoster(roster));
+    dispatch(setStarterIds(starters));
+  },
+);
+
+/**
+ * Apply offseason roster turnover: graduates leave, recruits join, players develop.
+ * Called when beginning a new season.
+ */
+export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: number }, { state: RootState }>(
+  'coach/applyOffseasonRosterTurnover',
+  async ({ newSeed }, { dispatch, getState }) => {
+    const state = getState();
+    const coach = state.coach;
+    const teams = state.league.teams;
+
+    if (!coach.selectedTeamId) return;
+    const team = teams.find((t) => t.id === coach.selectedTeamId);
+    if (!team) return;
+
+    // Get current roster (fall back to procedural if no managed roster yet)
+    const currentRoster = coach.managedRoster ?? generateRoster(team, 'league-roster-v1');
+
+    // Get signed recruits from the most recent completed year
+    const latestYear = Math.max(...Object.keys(coach.signedRecruitsByYear).map(Number), 0);
+    const signedRecruits = latestYear > 0 ? (coach.signedRecruitsByYear[latestYear] ?? []) : [];
+
+    const newRoster = applyRosterTurnover(currentRoster, signedRecruits, team, newSeed);
+    const newStarters = buildDefaultStarters(newRoster);
+    dispatch(setManagedRoster(newRoster));
+    dispatch(setStarterIds(newStarters));
   },
 );

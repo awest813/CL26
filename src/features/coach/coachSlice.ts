@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { CareerRecord, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
+import { CareerRecord, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
 import { generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
@@ -45,6 +45,9 @@ export interface CoachState {
   jobSecurity: number;
   seasonHistory: SeasonHistoryEntry[];
   careerRecord: CareerRecord;
+  // Roster management
+  managedRoster: Player[] | null;
+  starterIds: string[];
 }
 
 const initialState: CoachState = {
@@ -78,6 +81,9 @@ const initialState: CoachState = {
     championships: 0,
     seasonsCompleted: 0,
   },
+  // Roster management
+  managedRoster: null,
+  starterIds: [],
 };
 
 const coachSlice = createSlice({
@@ -217,7 +223,22 @@ const coachSlice = createSlice({
         const { seasonYear, signedRecruits } = action.payload;
         state.signedRecruitsByYear[seasonYear] = signedRecruits;
         state.scholarshipsAvailable = Math.max(0, state.scholarshipsAvailable - signedRecruits.length);
-    }
+    },
+    setManagedRoster: (state, action: PayloadAction<Player[]>) => {
+        state.managedRoster = action.payload;
+    },
+    setStarterIds: (state, action: PayloadAction<string[]>) => {
+        state.starterIds = action.payload;
+    },
+    toggleStarter: (state, action: PayloadAction<string>) => {
+        const playerId = action.payload;
+        const idx = state.starterIds.indexOf(playerId);
+        if (idx >= 0) {
+            state.starterIds.splice(idx, 1);
+        } else {
+            state.starterIds.push(playerId);
+        }
+    },
   },
 });
 
@@ -238,6 +259,9 @@ export const {
     updateJobSecurity,
     recordSeasonEnd,
     resetRecruitingForNewSeason,
+    setManagedRoster,
+    setStarterIds,
+    toggleStarter,
 } = coachSlice.actions;
 
 

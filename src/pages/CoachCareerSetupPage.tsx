@@ -1,6 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { completeCareerSetup, setCoachProfile } from '../features/coach/coachSlice';
+import { initializeManagedRoster } from '../features/coach/careerThunks';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 type Archetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
@@ -98,6 +99,7 @@ function CoachCareerSetupPage() {
         programExpectations: setup.programExpectations,
       }),
     );
+    dispatch(initializeManagedRoster());
 
     navigate('/career');
   }

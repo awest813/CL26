@@ -55,10 +55,13 @@ export const simCurrentWeek = createAsyncThunk(
     const gamesToPlay = scheduleByWeek[currentWeekIndex];
     const results: GameResult[] = [];
 
-    // Helper to get roster
+    // Helper to get roster — uses managed roster for the coached team if available
     const getRoster = (teamId: string) => {
         const team = teams.find(t => t.id === teamId);
         if (!team) throw new Error(`Team ${teamId} not found`);
+        if (teamId === coachState.selectedTeamId && coachState.managedRoster && coachState.managedRoster.length > 0) {
+            return coachState.managedRoster;
+        }
         return generateRoster(team, 'league-roster-v1');
     }
 
