@@ -19,6 +19,7 @@ const navSections: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { to: '/', label: 'Overview', hint: 'Program home', end: true },
       { to: '/career', label: 'Coach Office', hint: 'Career dashboard' },
+      { to: '/career/roster', label: 'Roster', hint: 'Depth chart & players' },
       { to: '/career/setup', label: 'Staff Setup', hint: 'Profile and team' },
     ],
   },

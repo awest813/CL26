@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import {
   addRecruitToBoard,
   initializeRecruitingBoard,
@@ -11,7 +11,7 @@ import {
   MAX_HOURS_PER_RECRUIT,
   processSigningDay,
 } from '../features/coach/coachSlice';
-import { runCareerWeeklyCycle, processSeasonEnd } from '../features/coach/careerThunks';
+import { runCareerWeeklyCycle, processSeasonEnd, applyOffseasonRosterTurnover } from '../features/coach/careerThunks';
 import { selectTeamRecords, startNewSeason } from '../features/season/seasonSlice';
 import { summarizeSigningClass } from '../sim/offseason';
 import { estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
@@ -218,6 +218,7 @@ function CoachCareerPage() {
 
   async function onNewSeason() {
     const nextSeed = (coach.recruitingSeed ?? 2026) + 1;
+    await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed }));
     await dispatch(startNewSeason({ seed: nextSeed }));
   }
 
@@ -329,6 +330,15 @@ function CoachCareerPage() {
             )}
           </div>
         )}
+      </div>
+
+      {/* ── Quick Links ── */}
+      <div className="flex gap-3 mt-2">
+        <Link to="/career/roster" className="text-sm text-blue-600 hover:underline font-medium">
+          Roster &amp; Depth Chart →
+        </Link>
+        <span className="text-gray-300">|</span>
+        <Link to="/season" className="text-sm text-blue-600 hover:underline">Season Dashboard</Link>
       </div>
 
       {/* ── Offseason Panel ── */}
