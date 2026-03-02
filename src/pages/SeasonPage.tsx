@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   selectSeasonHasStarted,
   selectSeasonSummary,
@@ -11,8 +11,16 @@ import {
 } from '../features/season/seasonSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
+const PHASE_LABELS: Record<string, string> = {
+  PRE: 'Pre-Season',
+  REGULAR: 'Regular Season',
+  PLAYOFF: 'Playoffs',
+  OFFSEASON: 'Offseason',
+};
+
 function SeasonPage() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const [seedInput, setSeedInput] = useState(2026);
   const [conferenceFilter, setConferenceFilter] = useState('ALL');
   const summary = useAppSelector(selectSeasonSummary);
@@ -55,6 +63,13 @@ function SeasonPage() {
   const handleReset = () => {
       if(confirm("Are you sure you want to reset the season? This cannot be undone.")) {
           dispatch(resetSeason());
+      }
+  };
+
+  const handleNewSeason = () => {
+      if(confirm("Start a new season? Current season results are preserved in your career history.")) {
+          dispatch(resetSeason());
+          navigate('/season');
       }
   };
 
@@ -113,7 +128,7 @@ function SeasonPage() {
             <div>
                 <h2 className="m-0 text-xl font-bold">Season Dashboard</h2>
                 <div className="text-sm text-gray-500 mt-1">
-                    Week {displayWeek + 1} of 12 &bull; {summary.phase} Phase
+                    Week {displayWeek + 1} of 12 &bull; {PHASE_LABELS[summary.phase] ?? summary.phase}
                 </div>
             </div>
 
@@ -133,9 +148,17 @@ function SeasonPage() {
                      </button>
                 </div>
             )}
-             {summary.phase !== 'REGULAR' && (
+             {summary.phase === 'PLAYOFF' && (
                  <div className="flex gap-2">
                      <Link to="/playoffs" className="btn btn-primary">Go to Playoffs</Link>
+                 </div>
+             )}
+             {summary.phase === 'OFFSEASON' && (
+                 <div className="flex gap-2">
+                     <Link to="/playoffs" className="btn">View Playoff Results</Link>
+                     <button className="btn btn-primary" onClick={handleNewSeason}>
+                         Begin New Season
+                     </button>
                  </div>
              )}
         </div>
