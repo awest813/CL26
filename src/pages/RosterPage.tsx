@@ -106,14 +106,9 @@ function RosterPage() {
   const season = useAppSelector((state) => state.season);
 
   const selectedTeam = teams.find((t) => t.id === coach.selectedTeamId) ?? null;
-
-  if (!coach.selectedTeamId || !coach.profile) {
-    return <Navigate to="/career/setup" replace />;
-  }
-
-  const roster = coach.managedRoster ?? [];
+  const roster = useMemo(() => coach.managedRoster ?? [], [coach.managedRoster]);
   const starterSet = useMemo(() => new Set(coach.starterIds), [coach.starterIds]);
-
+  const signedClass = coach.signedRecruitsByYear[season.year] ?? [];
   const depthSummary = useMemo(
     () => getRosterDepthSummary(roster, coach.starterIds),
     [roster, coach.starterIds],
@@ -141,7 +136,11 @@ function RosterPage() {
     : 0;
 
   const graduatingCount = roster.filter((p) => p.year === 4).length;
-  const signedClass = coach.signedRecruitsByYear[season.year] ?? [];
+
+
+  if (!coach.selectedTeamId || !coach.profile) {
+    return <Navigate to="/career/setup" replace />;
+  }
 
   function onToggle(playerId: string) {
     dispatch(toggleStarter(playerId));

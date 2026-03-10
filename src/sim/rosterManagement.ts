@@ -14,7 +14,6 @@ function starsToBaseline(stars: number): number {
 export function convertRecruitToPlayer(
   signedRecruit: SignedRecruit,
   team: Team,
-  slotIndex: number,
   rng: () => number,
 ): Player {
   const baseline = starsToBaseline(signedRecruit.stars);
@@ -116,8 +115,8 @@ export function applyRosterTurnover(
   }));
 
   // Step 4: Convert signed recruits to freshmen
-  const incomingFreshmen: Player[] = signedRecruits.map((sr, i) =>
-    convertRecruitToPlayer(sr, team, i, rng),
+  const incomingFreshmen: Player[] = signedRecruits.map((sr) =>
+    convertRecruitToPlayer(sr, team, rng),
   );
 
   // Step 5: Fill remaining spots with generated walk-ons up to 24 players

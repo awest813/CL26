@@ -49,7 +49,17 @@ function PlayoffsPage() {
         : 0,
       jobSecurityEnd: coach.jobSecurity,
     }));
-  }, [playoffState?.championTeamId]);
+  }, [
+    coach.jobSecurity,
+    coach.seasonHistory,
+    coach.selectedTeamId,
+    coach.signedRecruitsByYear,
+    dispatch,
+    playoffState?.championTeamId,
+    playoffState?.seeds,
+    records,
+    summary.year,
+  ]);
 
   const handleNewSeason = () => {
     if (confirm('Start a new season? Current season results will be preserved in your career history.')) {
