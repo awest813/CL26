@@ -301,6 +301,40 @@ td {
   color: #666;
 }
 
+.pageStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-elevated {
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+}
+
+.sectionTitle {
+  margin: 0;
+}
+
+.sectionSubtitle {
+  margin: 0.4rem 0 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.statusBanner {
+  padding: 1rem;
+  text-align: center;
+  border-bottom: 1px solid;
+  font-weight: 700;
+}
+
+.statusBanner-warning {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-bottom-color: #fca5a5;
+}
+
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -339,6 +373,7 @@ input {
   background-color: #f3f4f6;
   color: #1f2937;
   font-size: 0.9rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
 .btn-primary {
@@ -348,7 +383,15 @@ input {
 }
 
 .btn:hover {
-  opacity: 0.9;
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.btn:focus-visible,
+.leftNav .navLink:focus-visible,
+.link-card:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
 }
 
 .stat-row {
@@ -371,10 +414,27 @@ input {
   margin-bottom: 0.25rem;
 }
 
+.stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.04em;
+}
+
 .stat-item .value {
   font-size: 1.5rem;
   font-weight: bold;
   color: #111827;
+  margin: 0;
+}
+
+.value-compact {
+  font-size: 1rem;
+}
+
+.actionRow {
+  margin-top: 1rem;
 }
 
 .link-grid {
@@ -394,6 +454,12 @@ input {
 
 .link-card:hover {
   background-color: #f9fafb;
+}
+
+.link-card-meta {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.35rem;
 }
 
 .badge {

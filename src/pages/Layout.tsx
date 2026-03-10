@@ -20,17 +20,7 @@ function Layout() {
     <main className={`layout ${isMenuOpen ? 'layout-menuOpen' : ''}`}>
       <Header />
       {!isValid && (
-        <div
-          style={{
-            backgroundColor: '#fee2e2',
-            color: '#991b1b',
-            padding: '1rem',
-            textAlign: 'center',
-            borderBottom: '1px solid #fca5a5',
-            fontWeight: 'bold',
-            zIndex: 9999,
-          }}
-        >
+        <div className="statusBanner statusBanner-warning" role="status" aria-live="polite">
           ⚠️ Application State Warning: {error}
         </div>
       )}
