@@ -1,75 +1,82 @@
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '../store/hooks';
 
+type DashboardAction = {
+  label: string;
+  link: string;
+  primary: boolean;
+};
+
+const PHASE_STATUS_LABEL: Record<string, string> = {
+  PRE: 'Pre-Season',
+  PLAYOFF: 'Playoffs',
+  OFFSEASON: 'Offseason',
+};
+
 function Home() {
   const season = useAppSelector(state => state.season);
   const { year, phase, currentWeekIndex, seasonSeed } = season;
 
-  const getStatusText = () => {
-    if (phase === 'PRE') return 'Pre-Season';
-    if (phase === 'REGULAR') return `Week ${currentWeekIndex + 1}`;
-    if (phase === 'PLAYOFF') return 'Playoffs';
-    if (phase === 'OFFSEASON') return 'Offseason';
-    return phase;
-  };
+  const statusLabel =
+    phase === 'REGULAR' ? `Week ${currentWeekIndex + 1}` : (PHASE_STATUS_LABEL[phase] ?? phase);
 
-  const getNextAction = () => {
-      if (phase === 'PRE') return { label: 'Start New Season', link: '/season', primary: true };
-      if (phase === 'REGULAR') return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
-      if (phase === 'PLAYOFF') return { label: 'Go to Playoffs', link: '/playoffs', primary: true };
-      if (phase === 'OFFSEASON') return { label: 'Review Season', link: '/season', primary: false };
-      return { label: 'View Season', link: '/season', primary: false };
-  }
-
-  const action = getNextAction();
+  const action: DashboardAction = (() => {
+    if (phase === 'PRE') return { label: 'Start New Season', link: '/season', primary: true };
+    if (phase === 'REGULAR') return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
+    if (phase === 'PLAYOFF') return { label: 'Go to Playoffs', link: '/playoffs', primary: true };
+    if (phase === 'OFFSEASON') return { label: 'Review Season', link: '/season', primary: false };
+    return { label: 'View Season', link: '/season', primary: false };
+  })();
 
   return (
-    <div>
-        <section className="card">
-            <h2>Dashboard</h2>
-            <div className="stat-row">
-                <div className="stat-item">
-                    <label>Year</label>
-                    <span className="value">{year}</span>
-                </div>
-                <div className="stat-item">
-                    <label>Status</label>
-                    <span className="value">{getStatusText()}</span>
-                </div>
-                <div className="stat-item">
-                    <label>Seed</label>
-                    <span className="value" style={{fontSize: '1rem'}}>{seasonSeed || '-'}</span>
-                </div>
-            </div>
+    <div className="pageStack">
+      <section className="card card-elevated">
+        <h2 className="sectionTitle">Dashboard</h2>
+        <p className="sectionSubtitle">Your current dynasty snapshot and next recommended action.</p>
 
-            <div style={{ marginTop: '1rem' }}>
-                <Link to={action.link} className={`btn ${action.primary ? 'btn-primary' : ''}`}>
-                    {action.label}
-                </Link>
-            </div>
-        </section>
+        <dl className="stat-row" aria-label="Current season status">
+          <div className="stat-item">
+            <dt className="stat-label">Year</dt>
+            <dd className="value">{year}</dd>
+          </div>
+          <div className="stat-item">
+            <dt className="stat-label">Status</dt>
+            <dd className="value">{statusLabel}</dd>
+          </div>
+          <div className="stat-item">
+            <dt className="stat-label">Seed</dt>
+            <dd className="value value-compact">{seasonSeed || '-'}</dd>
+          </div>
+        </dl>
 
-        <section className="card">
-            <h3>Quick Actions</h3>
-            <div className="link-grid">
-                <Link to="/career" className="link-card">
-                    <strong>Coach Career</strong>
-                    <div style={{ fontSize: '0.8rem', color: '#666' }}>Manage recruiting & status</div>
-                </Link>
-                <Link to="/conferences" className="link-card">
-                    <strong>Conferences</strong>
-                    <div style={{ fontSize: '0.8rem', color: '#666' }}>Browse all teams by conference</div>
-                </Link>
-                <Link to="/season/standings" className="link-card">
-                    <strong>League Standings</strong>
-                    <div style={{ fontSize: '0.8rem', color: '#666' }}>Conference and overall records</div>
-                </Link>
-                <Link to="/alpha" className="link-card">
-                    <strong>Alpha Progress</strong>
-                    <div style={{ fontSize: '0.8rem', color: '#666' }}>Feature checklist + next priorities</div>
-                </Link>
-            </div>
-        </section>
+        <div className="actionRow">
+          <Link to={action.link} className={`btn ${action.primary ? 'btn-primary' : ''}`}>
+            {action.label}
+          </Link>
+        </div>
+      </section>
+
+      <section className="card card-elevated">
+        <h3 className="sectionTitle">Quick Actions</h3>
+        <div className="link-grid">
+          <Link to="/career" className="link-card">
+            <strong>Coach Career</strong>
+            <div className="link-card-meta">Manage recruiting &amp; status</div>
+          </Link>
+          <Link to="/conferences" className="link-card">
+            <strong>Conferences</strong>
+            <div className="link-card-meta">Browse all teams by conference</div>
+          </Link>
+          <Link to="/season/standings" className="link-card">
+            <strong>League Standings</strong>
+            <div className="link-card-meta">Conference and overall records</div>
+          </Link>
+          <Link to="/alpha" className="link-card">
+            <strong>Alpha Progress</strong>
+            <div className="link-card-meta">Feature checklist + next priorities</div>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
