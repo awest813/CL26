@@ -73,4 +73,33 @@ describe('coach effects', () => {
 
     assert.ok(summary.some((line) => line.includes('avoidable flags')));
   });
+
+  test('operations skill reduces weekly fatigue accumulation', () => {
+    const baseline = advanceFatigue(25, 'DEFENSE', 'RECRUITER', 0);
+    const skilledOps = advanceFatigue(25, 'DEFENSE', 'RECRUITER', 5);
+    assert.ok(skilledOps < baseline);
+  });
+
+  test('skill tree boosts lacrosse control points in the game plan', () => {
+    const basePlan = buildCoachGamePlan({
+      baseTactics: base,
+      practiceFocus: 'CONDITIONING',
+      fatigue: 25,
+      archetype: 'RECRUITER',
+      coachSkill: 70,
+      skillTree: { recruiting: 0, development: 0, operations: 0 },
+    });
+    const skilledPlan = buildCoachGamePlan({
+      baseTactics: base,
+      practiceFocus: 'CONDITIONING',
+      fatigue: 25,
+      archetype: 'RECRUITER',
+      coachSkill: 82,
+      skillTree: { recruiting: 4, development: 3, operations: 5 },
+    });
+
+    assert.ok(skilledPlan.modifiers.faceoff > basePlan.modifiers.faceoff);
+    assert.ok(skilledPlan.modifiers.groundBallBonus > basePlan.modifiers.groundBallBonus);
+    assert.ok(skilledPlan.modifiers.penaltyAvoidance > basePlan.modifiers.penaltyAvoidance);
+  });
 });

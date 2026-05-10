@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { CareerRecord, CoachArchetype, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
-import { generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
+import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
 import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue } from '../../sim/coachEffects';
@@ -231,7 +231,12 @@ const coachSlice = createSlice({
         state.practiceFocus = action.payload;
     },
     advanceCoachWeek: (state) => {
-        state.teamFatigue = advanceFatigue(state.teamFatigue, state.practiceFocus, state.profile?.archetype ?? 'RECRUITER');
+        state.teamFatigue = advanceFatigue(
+            state.teamFatigue,
+            state.practiceFocus,
+            state.profile?.archetype ?? 'RECRUITER',
+            state.skillTree?.operations ?? 0,
+        );
         const boostersLevel = state.programResources?.boosters ?? 50;
         state.adPressure = Math.max(
             15,
@@ -375,24 +380,29 @@ export const advanceRecruitingWeek = createAsyncThunk(
         // Generate grades
         const pitchGradesByRecruitId: Record<string, string> = {};
         const dealbreakerViolationsByRecruitId: Record<string, boolean> = {};
+        const positionNeedBonusByRecruitId: Record<string, number> = {};
+        const positionNeedByPosition = buildPositionNeedByPosition(coach.managedRoster);
 
         coach.boardRecruitIds.forEach(recruitId => {
              const recruit = coach.recruitPool.find(r => r.id === recruitId);
              if (!recruit) return;
 
-             const activePitch = coach.activePitchesByRecruitId[recruitId];
-             if (activePitch) {
-                 pitchGradesByRecruitId[recruitId] = getTeamPitchGrade(selectedTeam, activePitch, recruit);
-             }
+             const positionNeed = positionNeedByPosition[recruit.position] ?? 0;
+             positionNeedBonusByRecruitId[recruitId] = Math.max(0, Math.min(3, positionNeed));
+
+              const activePitch = coach.activePitchesByRecruitId[recruitId];
+              if (activePitch) {
+                 pitchGradesByRecruitId[recruitId] = getTeamPitchGrade(selectedTeam, activePitch, recruit, positionNeedByPosition);
+              }
 
              // Check dealbreaker
-             if (recruit.dealbreaker) {
-                 const grade = getTeamPitchGrade(selectedTeam, recruit.dealbreaker, recruit);
-                 // If grade is D or F, it's a violation
-                 if (grade === 'D' || grade === 'F') {
-                     dealbreakerViolationsByRecruitId[recruitId] = true;
-                 }
-             }
+              if (recruit.dealbreaker) {
+                 const grade = getTeamPitchGrade(selectedTeam, recruit.dealbreaker, recruit, positionNeedByPosition);
+                  // If grade is D or F, it's a violation
+                  if (grade === 'D' || grade === 'F') {
+                      dealbreakerViolationsByRecruitId[recruitId] = true;
+                  }
+              }
         });
 
         const archetypeBonus =
@@ -415,6 +425,7 @@ export const advanceRecruitingWeek = createAsyncThunk(
             coach.activePitchesByRecruitId,
             pitchGradesByRecruitId,
             dealbreakerViolationsByRecruitId,
+            positionNeedBonusByRecruitId,
             coach.selectedTeamId,
             coach.recruitingSeed,
             coach.recruitingWeekIndex,
@@ -456,7 +467,7 @@ export const processSigningDay = createAsyncThunk(
             (recruit) => recruit.committedTeamId === coach.selectedTeamId,
         );
 
-        const signingOutcome = resolveSigningDay(committedToUser, coach.scholarshipsAvailable);
+        const signingOutcome = resolveSigningDay(committedToUser, coach.scholarshipsAvailable, coach.managedRoster);
         const signedRecruits = signingOutcome.signedRecruitIds
             .map((recruitId) => coach.recruitPool.find((recruit) => recruit.id === recruitId))
             .filter((recruit): recruit is Recruit => Boolean(recruit))
