@@ -29,6 +29,23 @@ const tactics: Tactics = {
 };
 
 describe('match engine gameplay modifiers', () => {
+  test('games always resolve with a winner', () => {
+    const rosterA = generateRoster(teamA, 'overtime-test');
+    const rosterB = generateRoster(teamB, 'overtime-test');
+
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const result = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        tactics,
+        seed,
+      );
+
+      assert.notStrictEqual(result.scoreA, result.scoreB, `seed ${seed} produced a tie`);
+    }
+  });
+
   test('offense-focused gameplan creates a stronger attacking output', () => {
     const rosterA = generateRoster(teamA, 'gameplan-test');
     const rosterB = generateRoster(teamB, 'gameplan-test');

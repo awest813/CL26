@@ -50,6 +50,8 @@ const DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR = 1600;
 const FACEOFF_EDGE_DIVISOR = 40;
 const SHOT_QUALITY_POWER_DIVISOR = 110;
 const SHOT_QUALITY_VARIANCE = 0.06;
+const OVERTIME_POSSESSIONS_PER_TEAM = 5;
+const MAX_OVERTIME_PERIODS = 3;
 
 function resolveStarterSet(roster: Player[], starterIds?: string[]): Set<string> | null {
   if (!starterIds || starterIds.length === 0) return null;
@@ -324,6 +326,44 @@ export function simulateGame(
 
   for (let i = 0; i < possessionsB; i += 1) {
     runPossession(teamB, teamA, ratingB, ratingA, modifiersB, modifiersA, tacticsB, tacticsA, statsB, statsA, pStatsB, pStatsA, possessionsA + i);
+  }
+
+  let overtimePeriods = 0;
+  while (statsA.goals === statsB.goals && overtimePeriods < MAX_OVERTIME_PERIODS) {
+    overtimePeriods += 1;
+    const beforeA = statsA.goals;
+    const beforeB = statsB.goals;
+    const overtimeTotalPossessions = OVERTIME_POSSESSIONS_PER_TEAM * 2;
+    let offenseIsA = rng() < shareA;
+
+    for (let i = 0; i < overtimeTotalPossessions; i += 1) {
+      const possessionIndex = totalPossessions + (overtimePeriods - 1) * overtimeTotalPossessions + i;
+      if (offenseIsA) {
+        runPossession(teamA, teamB, ratingA, ratingB, modifiersA, modifiersB, tacticsA, tacticsB, statsA, statsB, pStatsA, pStatsB, possessionIndex);
+      } else {
+        runPossession(teamB, teamA, ratingB, ratingA, modifiersB, modifiersA, tacticsB, tacticsA, statsB, statsA, pStatsB, pStatsA, possessionIndex);
+      }
+
+      if (statsA.goals > beforeA || statsB.goals > beforeB) {
+        break;
+      }
+      offenseIsA = !offenseIsA;
+    }
+  }
+
+  if (statsA.goals === statsB.goals) {
+    const overtimeEdge = (ratingA.offense + modifiersA.offense + ratingA.faceoff * 0.12) - (ratingB.offense + modifiersB.offense + ratingB.faceoff * 0.12);
+    const chanceA = Math.min(0.65, Math.max(0.35, 0.5 + overtimeEdge / 260));
+    if (rng() < chanceA) {
+      statsA.goals += 1;
+    } else {
+      statsB.goals += 1;
+    }
+  }
+
+  if (overtimePeriods > 0) {
+    const winnerName = statsA.goals > statsB.goals ? teamA.team.schoolName : teamB.team.schoolName;
+    highlights.push(`Final — ${winnerName} wins in overtime (${overtimePeriods} OT).`);
   }
 
   if (highlights.length < 10) {

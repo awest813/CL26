@@ -9,6 +9,7 @@ import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
 import { computePlayoffProjection, computeRankings } from '../../sim/rankings';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
+import { seedToNumber } from '../../sim/rng';
 
 const DEFAULT_TACTICS = {
   tempo: 'normal',
@@ -99,9 +100,9 @@ export const simCurrentWeek = createAsyncThunk(
       const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
       const awayTactics = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
 
-      // Deterministic seed for this game based on season seed and game ID
-      // simple hash for now
-      const gameSeed = seasonSeed + currentWeekIndex * 1000 + game.id.length + game.homeTeamId.charCodeAt(0) + game.awayTeamId.charCodeAt(0);
+      const gameSeed = seedToNumber(
+        `${seasonSeed}:${currentWeekIndex}:${game.id}:${game.homeTeamId}:${game.awayTeamId}`,
+      );
 
       const homeInput =
         game.homeTeamId === coachState.selectedTeamId && coachState.starterIds.length > 0
