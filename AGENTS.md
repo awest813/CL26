@@ -23,3 +23,24 @@ Build a deterministic, web-based college lacrosse head coach simulation with:
 ## Current phase focus
 For this phase, scaffold architecture and implement league browsing + generated roster summaries.
 Do **not** implement full sim engine yet.
+
+## Cursor Cloud specific instructions
+
+This is a client-side-only React SPA — no backend, database, or Docker services are needed.
+
+### Quick reference
+
+| Task | Command |
+|------|---------|
+| Install deps | `npm install` |
+| Dev server | `npm run dev` (Vite, default `http://localhost:5173`) |
+| Lint | `npm run lint` |
+| Build (type-check + prod) | `npm run build` |
+| Unit/regression tests | `npm run test:regression` (requires `bun` on PATH) |
+
+### Non-obvious notes
+
+- **Bun is required for tests.** The `test:regression` script uses `bun test`. Bun is pre-installed at `~/.bun/bin/bun`; ensure `~/.bun/bin` is on `PATH`.
+- **No `.env` or secrets needed.** All game data comes from bundled JSON files (`src/data/teams128.json`, `src/data/names.json`) and browser `localStorage` via `redux-persist`.
+- **ESLint config is CJS.** The config lives in `.eslintrc.cjs` (CommonJS) despite the project being `"type": "module"`.
+- **Test files are excluded from `tsc`.** `tsconfig.json` excludes `src/**/*.test.ts`, so `npm run build` won't type-check test files.
