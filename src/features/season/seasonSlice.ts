@@ -17,6 +17,17 @@ const DEFAULT_TACTICS = {
   slideAggression: 'normal',
 } as const;
 
+function composeSeasonGameSeed(
+  seasonSeed: number,
+  weekIndex: number,
+  gameId: string,
+  homeTeamId: string,
+  awayTeamId: string,
+): number {
+  // Include season/week/game identity + matchup IDs so each game seed stays stable and unique.
+  return seedToNumber(`${seasonSeed}:${weekIndex}:${gameId}:${homeTeamId}:${awayTeamId}`);
+}
+
 const initialState: SeasonState = {
   year: 2026,
   currentWeekIndex: 0,
@@ -100,8 +111,12 @@ export const simCurrentWeek = createAsyncThunk(
       const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
       const awayTactics = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
 
-      const gameSeed = seedToNumber(
-        `${seasonSeed}:${currentWeekIndex}:${game.id}:${game.homeTeamId}:${game.awayTeamId}`,
+      const gameSeed = composeSeasonGameSeed(
+        seasonSeed,
+        currentWeekIndex,
+        game.id,
+        game.homeTeamId,
+        game.awayTeamId,
       );
 
       const homeInput =

@@ -165,6 +165,17 @@ function defenseBoostFromTactics(tactics: Tactics): number {
   return boost;
 }
 
+function computeFaceoffShare(
+  rng: () => number,
+  ratingA: TeamRatings,
+  ratingB: TeamRatings,
+  modifiersA: EffectiveGameplayModifiers,
+  modifiersB: EffectiveGameplayModifiers,
+): number {
+  const faceoffEdge = (ratingA.faceoff + modifiersA.faceoff - ratingB.faceoff - modifiersB.faceoff) / FACEOFF_EDGE_DIVISOR;
+  return Math.min(0.62, Math.max(0.38, 0.5 + faceoffEdge * 0.08 + normalish(rng) * 0.03));
+}
+
 function weightedPlayerForGoal(rng: () => number, ratings: TeamRatings): Player {
   const pool = [...ratings.attackers, ...ratings.middies];
   if (pool.length === 0) return ratings.goaliePlayer;
@@ -214,8 +225,7 @@ export function simulateGame(
   const modifiersB = resolveGameplayModifiers(teamB);
 
   const totalPossessions = Math.max(60, 78 + tempoModifier(tacticsA.tempo) + tempoModifier(tacticsB.tempo));
-  const faceoffEdge = (ratingA.faceoff + modifiersA.faceoff - ratingB.faceoff - modifiersB.faceoff) / FACEOFF_EDGE_DIVISOR;
-  const shareA = Math.min(0.62, Math.max(0.38, 0.5 + faceoffEdge * 0.08 + normalish(rng) * 0.03));
+  const shareA = computeFaceoffShare(rng, ratingA, ratingB, modifiersA, modifiersB);
   const possessionsA = Math.round(totalPossessions * shareA);
   const possessionsB = totalPossessions - possessionsA;
 
@@ -339,7 +349,8 @@ export function simulateGame(
     const beforeA = statsA.goals;
     const beforeB = statsB.goals;
     const overtimeTotalPossessions = OVERTIME_POSSESSIONS_PER_TEAM * 2;
-    let offenseIsA = rng() < shareA;
+    const overtimeShareA = computeFaceoffShare(rng, ratingA, ratingB, modifiersA, modifiersB);
+    let offenseIsA = rng() < overtimeShareA;
 
     for (let i = 0; i < overtimeTotalPossessions; i += 1) {
       const possessionIndex = totalPossessions + (overtimePeriods - 1) * overtimeTotalPossessions + i;
@@ -357,8 +368,9 @@ export function simulateGame(
   }
 
   if (statsA.goals === statsB.goals) {
-    const overtimeEdge = (ratingA.offense + modifiersA.offense + ratingA.faceoff * OVERTIME_FACEOFF_WEIGHT) -
-      (ratingB.offense + modifiersB.offense + ratingB.faceoff * OVERTIME_FACEOFF_WEIGHT);
+    const teamAStrength = ratingA.offense + modifiersA.offense + ratingA.faceoff * OVERTIME_FACEOFF_WEIGHT;
+    const teamBStrength = ratingB.offense + modifiersB.offense + ratingB.faceoff * OVERTIME_FACEOFF_WEIGHT;
+    const overtimeEdge = teamAStrength - teamBStrength;
     const chanceA = Math.min(
       OVERTIME_MAX_WIN_CHANCE,
       Math.max(OVERTIME_MIN_WIN_CHANCE, OVERTIME_BASE_WIN_CHANCE + overtimeEdge / OVERTIME_EDGE_DIVISOR),
