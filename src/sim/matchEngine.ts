@@ -57,6 +57,8 @@ const OVERTIME_BASE_WIN_CHANCE = 0.5;
 const OVERTIME_EDGE_DIVISOR = 260;
 const OVERTIME_MIN_WIN_CHANCE = 0.35;
 const OVERTIME_MAX_WIN_CHANCE = 0.65;
+const MIN_SCORING_RUN_FOR_HIGHLIGHT = 3;
+const SCORING_RUN_HIGHLIGHT_CHANCE = 0.6;
 
 function resolveStarterSet(roster: Player[], starterIds?: string[]): Set<string> | null {
   if (!starterIds || starterIds.length === 0) return null;
@@ -300,8 +302,8 @@ export function simulateGame(
   const pStatsA = new Map<string, PlayerGameStats>();
   const pStatsB = new Map<string, PlayerGameStats>();
   const highlights: string[] = [];
-  let unansweredGoalTeamId: string | null = null;
-  let unansweredGoals = 0;
+  let scoringRunTeamId: string | null = null;
+  let scoringRunLength = 0;
 
   function ensurePlayerStats(target: Map<string, PlayerGameStats>, player: Player, teamId: string): PlayerGameStats {
     const existing = target.get(player.id);
@@ -389,11 +391,11 @@ export function simulateGame(
     offenseStats.goals += 1;
     const scorerStats = ensurePlayerStats(playerStats, shooter, offenseInput.team.id);
     scorerStats.goals += 1;
-    if (unansweredGoalTeamId === offenseInput.team.id) {
-      unansweredGoals += 1;
+    if (scoringRunTeamId === offenseInput.team.id) {
+      scoringRunLength += 1;
     } else {
-      unansweredGoalTeamId = offenseInput.team.id;
-      unansweredGoals = 1;
+      scoringRunTeamId = offenseInput.team.id;
+      scoringRunLength = 1;
     }
 
     if (rng() < 0.64) {
@@ -410,9 +412,9 @@ export function simulateGame(
       highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} ${pickOne(rng, phrases)}.`);
     }
 
-    if (unansweredGoals >= 3 && highlights.length < 20 && rng() < 0.6) {
+    if (scoringRunLength >= MIN_SCORING_RUN_FOR_HIGHLIGHT && highlights.length < 20 && rng() < SCORING_RUN_HIGHLIGHT_CHANCE) {
       const c = clockForPossession(possessionIndex, totalPossessions);
-      highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} is on a ${unansweredGoals}-goal run.`);
+      highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} is on a ${scoringRunLength}-goal run.`);
     }
   }
 
