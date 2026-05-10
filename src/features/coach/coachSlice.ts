@@ -269,6 +269,9 @@ const coachSlice = createSlice({
         state.adPressure = Math.max(0, Math.min(100, action.payload));
     },
     recordSeasonEnd: (state, action: PayloadAction<SeasonHistoryEntry>) => {
+        if (state.seasonHistory.some((entry) => entry.year === action.payload.year)) {
+            return;
+        }
         state.seasonHistory.push(action.payload);
         state.careerRecord.seasonsCompleted += 1;
         state.careerRecord.totalWins += action.payload.wins;
