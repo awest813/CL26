@@ -77,7 +77,11 @@ function SeasonPage() {
       return (
           <div className="card max-w-lg mx-auto">
               <h2>Start New Season</h2>
-              <p className="mb-4 text-gray-500">Configure your season settings below.</p>
+              <p className="mb-2 text-gray-500">Configure your season settings below.</p>
+              <p className="mb-4 text-sm text-gray-600">
+                The season seed controls schedule generation and the entire CPU league roster draw. Those rosters stay
+                fixed for this year and refresh when you start a later season with a new seed.
+              </p>
 
               <div className="flex gap-4 items-end mb-4">
                   <label className="flex-1">
