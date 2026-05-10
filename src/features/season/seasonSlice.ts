@@ -101,13 +101,16 @@ export const simCurrentWeek = createAsyncThunk(
       // simple hash for now
       const gameSeed = seasonSeed + currentWeekIndex * 1000 + game.id.length + game.homeTeamId.charCodeAt(0) + game.awayTeamId.charCodeAt(0);
 
-      const result = simulateGame(
-        { team: homeTeam, roster: homeRoster },
-        { team: awayTeam, roster: awayRoster },
-        homeTactics,
-        awayTactics,
-        gameSeed
-      );
+      const homeInput =
+        game.homeTeamId === coachState.selectedTeamId && coachState.starterIds.length > 0
+          ? { team: homeTeam, roster: homeRoster, starterIds: coachState.starterIds }
+          : { team: homeTeam, roster: homeRoster };
+      const awayInput =
+        game.awayTeamId === coachState.selectedTeamId && coachState.starterIds.length > 0
+          ? { team: awayTeam, roster: awayRoster, starterIds: coachState.starterIds }
+          : { team: awayTeam, roster: awayRoster };
+
+      const result = simulateGame(homeInput, awayInput, homeTactics, awayTactics, gameSeed);
 
       // Add metadata to result
       result.id = game.id;
@@ -158,17 +161,33 @@ export const simNextPlayoffRound = createAsyncThunk(
         const state = getState() as RootState;
         const playoffState = state.season.playoffs;
         const teams = selectTeams(state);
+        const coach = state.coach;
 
         if (!playoffState) throw new Error("No active playoffs");
 
         // Use a base seed for simulation
         const baseSeed = state.season.seasonSeed + 9999;
 
+        const coachPlay =
+          coach.selectedTeamId && coach.managedRoster && coach.managedRoster.length > 0
+            ? {
+                teamId: coach.selectedTeamId,
+                roster: coach.managedRoster,
+                starterIds: coach.starterIds,
+                tactics: applyCoachWeekSettings({
+                  baseTactics: coach.tactics,
+                  practiceFocus: coach.practiceFocus,
+                  fatigue: coach.teamFatigue,
+                }),
+              }
+            : null;
+
         return simulatePlayoffRound(
           playoffState,
           teams,
           baseSeed,
           leagueSeasonRosterSeed(state.season.seasonSeed),
+          coachPlay,
         );
     }
 );
@@ -186,6 +205,9 @@ const seasonSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(startNewSeason.fulfilled, (state, action) => {
+        if (state.phase === 'OFFSEASON') {
+          state.year += 1;
+        }
         state.scheduleByWeek = action.payload.schedule;
         state.seasonSeed = action.payload.seed;
         state.currentWeekIndex = 0;

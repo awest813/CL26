@@ -170,6 +170,9 @@ function RosterPage() {
             <div className="text-sm text-gray-500 mt-0.5">
               {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {season.year} Season &bull; {roster.length} players
             </div>
+            <p className="text-xs text-gray-600 mt-2 mb-0 max-w-2xl">
+              Starters drive in-game ratings and who gets scoring chances. Bench players still contribute, but at a lower weight—set your depth chart before big weeks and the postseason.
+            </p>
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-400 uppercase mb-1">Roster OVR</div>

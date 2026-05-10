@@ -20,6 +20,8 @@ export interface Team {
 export interface TeamSimInput {
   team: Team;
   roster: Player[];
+  /** When set (non-empty), starters drive team ratings and scoring touches more than bench. */
+  starterIds?: string[];
 }
 
 export interface PlayerRatings {
@@ -60,6 +62,8 @@ export interface SignedRecruit {
   signedAtYear: number;
   stars: number;
   position: Position;
+  /** 40–99 scouting ceiling; copied from recruit at signing. Drives freshman attribute variance. */
+  potential?: number;
 }
 
 export type RecruitingPitch = 'PLAYING_TIME' | 'PROXIMITY' | 'ACADEMIC' | 'PRESTIGE' | 'CHAMPIONSHIP' | 'CAMPUS_LIFE';

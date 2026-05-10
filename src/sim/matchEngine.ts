@@ -13,53 +13,92 @@ interface TeamRatings {
   attackers: Player[];
   middies: Player[];
   goaliePlayer: Player;
+  /** Per-player sampling weights for goals/assists (starters get more touches when set). */
+  fieldPlayerWeights: Map<string, number>;
 }
 
-function calcRatings(roster: Player[]): TeamRatings {
+function resolveStarterSet(roster: Player[], starterIds?: string[]): Set<string> | null {
+  if (!starterIds || starterIds.length === 0) return null;
+  const rosterIds = new Set(roster.map((p) => p.id));
+  const resolved = starterIds.filter((id) => rosterIds.has(id));
+  if (resolved.length === 0) return null;
+  return new Set(resolved);
+}
+
+function playerDepthWeight(playerId: string, starterSet: Set<string> | null): number {
+  if (!starterSet) return 1;
+  return starterSet.has(playerId) ? 1.78 : 0.38;
+}
+
+function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
+  const starterSet = resolveStarterSet(roster, starterIds);
+  const fieldPlayerWeights = new Map<string, number>();
+
   const attackers: Player[] = [];
   const middies: Player[] = [];
 
-  let offSum = 0;
-  let defSum = 0;
-  let foSum = 0;
-  let disSum = 0;
-
-  let defendersCount = 0;
-  let faceoffCount = 0;
-  let goaliePlayer: Player | undefined;
+  let offWeighted = 0;
+  let offDenom = 0;
+  let defWeighted = 0;
+  let defDenom = 0;
+  let foWeighted = 0;
+  let foDenom = 0;
+  let disWeighted = 0;
+  let disDenom = 0;
 
   for (let i = 0; i < roster.length; i++) {
     const p = roster[i];
-    disSum += p.discipline;
+    const w = playerDepthWeight(p.id, starterSet);
+    disWeighted += p.discipline * w;
+    disDenom += w;
+    fieldPlayerWeights.set(p.id, w);
 
     const pos = p.position;
     if (pos === 'A') {
       attackers.push(p);
-      offSum += p.shooting * 0.55 + p.passing * 0.25 + p.IQ * 0.2;
+      const c = p.shooting * 0.55 + p.passing * 0.25 + p.IQ * 0.2;
+      offWeighted += c * w;
+      offDenom += w;
     } else if (pos === 'M') {
       middies.push(p);
-      offSum += p.shooting * 0.55 + p.passing * 0.25 + p.IQ * 0.2;
-      defSum += p.defense * 0.6 + p.speed * 0.2 + p.IQ * 0.2;
+      const oc = p.shooting * 0.55 + p.passing * 0.25 + p.IQ * 0.2;
+      const dc = p.defense * 0.6 + p.speed * 0.2 + p.IQ * 0.2;
+      offWeighted += oc * w;
+      offDenom += w;
+      defWeighted += dc * w;
+      defDenom += w;
     } else if (pos === 'D' || pos === 'LSM') {
-      defendersCount++;
-      defSum += p.defense * 0.6 + p.speed * 0.2 + p.IQ * 0.2;
+      const dc = p.defense * 0.6 + p.speed * 0.2 + p.IQ * 0.2;
+      defWeighted += dc * w;
+      defDenom += w;
     } else if (pos === 'FO') {
-      faceoffCount++;
-      foSum += p.passing * 0.15 + p.speed * 0.2 + p.discipline * 0.2 + p.overall * 0.45;
-    } else if (pos === 'G') {
-      if (!goaliePlayer) goaliePlayer = p;
+      const fc = p.passing * 0.15 + p.speed * 0.2 + p.discipline * 0.2 + p.overall * 0.45;
+      foWeighted += fc * w;
+      foDenom += w;
     }
   }
 
-  if (!goaliePlayer) goaliePlayer = roster[0];
+  const goalies = roster.filter((p) => p.position === 'G');
+  const starterGoalie = starterSet ? goalies.find((g) => starterSet.has(g.id)) : undefined;
+  const goaliePlayer = starterGoalie ?? goalies[0] ?? roster[0];
 
-  const offense = offSum / Math.max(attackers.length + middies.length, 1);
-  const defense = defSum / Math.max(defendersCount + middies.length, 1);
+  const offense = offWeighted / Math.max(offDenom, 1e-6);
+  const defense = defWeighted / Math.max(defDenom, 1e-6);
   const goalie = goaliePlayer.defense * 0.7 + goaliePlayer.IQ * 0.3;
-  const faceoff = foSum / Math.max(faceoffCount, 1);
-  const discipline = disSum / Math.max(roster.length, 1);
+  const faceoff = foDenom > 0 ? foWeighted / foDenom : 62;
+  const discipline = disWeighted / Math.max(disDenom, 1e-6);
 
-  return { offense, defense, goalie, faceoff, discipline, attackers, middies, goaliePlayer };
+  return {
+    offense,
+    defense,
+    goalie,
+    faceoff,
+    discipline,
+    attackers,
+    middies,
+    goaliePlayer,
+    fieldPlayerWeights,
+  };
 }
 
 function tempoModifier(tempo: Tactics['tempo']): number {
@@ -86,13 +125,20 @@ function defenseBoostFromTactics(tactics: Tactics): number {
 }
 
 function weightedPlayerForGoal(rng: () => number, ratings: TeamRatings): Player {
-  const total = ratings.attackers.length + ratings.middies.length;
-  if (total === 0) return ratings.goaliePlayer;
-  const index = randInt(rng, 0, total - 1);
-  if (index < ratings.attackers.length) {
-    return ratings.attackers[index];
+  const pool = [...ratings.attackers, ...ratings.middies];
+  if (pool.length === 0) return ratings.goaliePlayer;
+  let total = 0;
+  const cumulative: number[] = [];
+  for (const p of pool) {
+    const w = ratings.fieldPlayerWeights.get(p.id) ?? 1;
+    total += w;
+    cumulative.push(total);
   }
-  return ratings.middies[index - ratings.attackers.length];
+  const r = rng() * total;
+  for (let i = 0; i < cumulative.length; i++) {
+    if (r <= cumulative[i]) return pool[i];
+  }
+  return pool[pool.length - 1];
 }
 
 export function simulateGame(
@@ -103,8 +149,8 @@ export function simulateGame(
   seed: number,
 ): GameResult {
   const rng = makeRng(seed);
-  const ratingA = calcRatings(teamA.roster);
-  const ratingB = calcRatings(teamB.roster);
+  const ratingA = calcRatings(teamA.roster, teamA.starterIds);
+  const ratingB = calcRatings(teamB.roster, teamB.starterIds);
 
   const totalPossessions = Math.max(60, 78 + tempoModifier(tacticsA.tempo) + tempoModifier(tacticsB.tempo));
   const faceoffEdge = (ratingA.faceoff - ratingB.faceoff) / 40;
