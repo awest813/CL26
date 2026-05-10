@@ -1,4 +1,5 @@
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './pages/Layout';
 import Home from './pages/Home';
 import ConferencesPage from './pages/ConferencesPage';
@@ -42,7 +43,11 @@ function App() {
     },
   ]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <ErrorBoundary>
+      <RouterProvider router={router} />
+    </ErrorBoundary>
+  );
 }
 
 export default App;
