@@ -53,6 +53,13 @@ const FOCUS_MODIFIERS: Record<PracticeFocus, TeamGameplayModifiers> = {
   },
 };
 
+const FOCUS_LABELS: Record<PracticeFocus, string> = {
+  OFFENSE: 'Offense install',
+  DEFENSE: 'Defense install',
+  DISCIPLINE: 'Discipline emphasis',
+  CONDITIONING: 'Conditioning block',
+};
+
 const ARCHETYPE_BONUSES: Record<CoachArchetype, Partial<TeamGameplayModifiers>> = {
   RECRUITER: {},
   TACTICIAN: {
@@ -71,6 +78,9 @@ const FATIGUE_PENALTY_RANGE = 76;
 const CONDITIONING_FATIGUE_REDUCTION = 0.52;
 const TACTICIAN_FATIGUE_MITIGATION = 0.88;
 const DEVELOPER_FATIGUE_MITIGATION = 0.94;
+const FATIGUE_LABEL_DRAINED = 78;
+const FATIGUE_LABEL_WORN = 58;
+const FATIGUE_LABEL_MANAGED = 34;
 const SHOT_QUALITY_MIN = -0.08;
 const SHOT_QUALITY_MAX = 0.08;
 const TURNOVER_AVOIDANCE_MAX = 0.12;
@@ -149,17 +159,14 @@ export function applyCoachWeekSettings(settings: CoachWeekSettings): Tactics {
 }
 
 function fatigueLabelFor(value: number): CoachGamePlan['fatigueLabel'] {
-  if (value >= 78) return 'Drained';
-  if (value >= 58) return 'Worn';
-  if (value >= 34) return 'Managed';
+  if (value >= FATIGUE_LABEL_DRAINED) return 'Drained';
+  if (value >= FATIGUE_LABEL_WORN) return 'Worn';
+  if (value >= FATIGUE_LABEL_MANAGED) return 'Managed';
   return 'Fresh';
 }
 
 function focusLabelFor(focus: PracticeFocus): string {
-  if (focus === 'OFFENSE') return 'Offense install';
-  if (focus === 'DEFENSE') return 'Defense install';
-  if (focus === 'DISCIPLINE') return 'Discipline emphasis';
-  return 'Conditioning block';
+  return FOCUS_LABELS[focus];
 }
 
 export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
