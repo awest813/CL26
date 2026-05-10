@@ -3,6 +3,10 @@ import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
+const FACILITIES_BONUS_DIVISOR = 22;
+const OPERATIONS_BONUS_DIVISOR = 2;
+const BOOSTERS_GROWTH_THRESHOLD = 75;
+const TRAIT_BUMP_PROBABILITY = 0.62;
 
 type CoachArchetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
 type PracticeFocus = 'OFFENSE' | 'DEFENSE' | 'CONDITIONING' | 'DISCIPLINE';
@@ -78,9 +82,9 @@ export function developPlayers(
 ): Player[] {
   const devBonus = options?.coachArchetype === 'DEVELOPER' ? 1 : 0;
   const developmentSkillBonus = options?.developmentSkill ?? 0;
-  const facilitiesBonus = Math.floor((options?.facilitiesLevel ?? 50) / 22);
-  const operationsBonus = Math.floor((options?.operationsSkill ?? 0) / 2);
-  const boostersModifier = options?.boostersLevel != null && options.boostersLevel >= 75 ? 1 : 0;
+  const facilitiesBonus = Math.floor((options?.facilitiesLevel ?? 50) / FACILITIES_BONUS_DIVISOR);
+  const operationsBonus = Math.floor((options?.operationsSkill ?? 0) / OPERATIONS_BONUS_DIVISOR);
+  const boostersModifier = options?.boostersLevel != null && options.boostersLevel >= BOOSTERS_GROWTH_THRESHOLD ? 1 : 0;
   const totalBonus = devBonus + developmentSkillBonus + facilitiesBonus + operationsBonus + boostersModifier;
 
   return roster.map((player) => {
@@ -117,7 +121,7 @@ function bumpPlayer(player: Player, rng: () => number, targets: Array<keyof Pick
   };
 
   for (const key of targets) {
-    if (rng() < 0.62) {
+    if (rng() < TRAIT_BUMP_PROBABILITY) {
       updates[key] = clamp(updates[key] + 1);
     }
   }
@@ -145,7 +149,7 @@ export function applyWeeklyTraitGrowth(
 ): Player[] {
   if (roster.length === 0) return roster;
 
-  const rng = makeRng(seedToNumber(`${weekSeed}:weekly-growth:${weekIndex}:${practiceFocus}`));
+  const rng = makeRng(seedToNumber(JSON.stringify([weekSeed, 'weekly-growth', weekIndex, practiceFocus])));
   const coachSkill = options?.coachSkill ?? 70;
   const growthSlots = Math.max(
     2,

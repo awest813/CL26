@@ -17,6 +17,16 @@ import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
 import { computeRankings } from '../../sim/rankings';
 
+const BASE_WEEKLY_XP = 8;
+const WINNING_WEEK_XP_BONUS = 3;
+const WIN_GAP_PRESSURE_MULTIPLIER = 2;
+const RANK_GAP_PRESSURE_DIVISOR = 6;
+const DEFAULT_AD_PRESSURE = 45;
+const FACILITY_PRESSURE_RELIEF_BASELINE = 50;
+const FACILITY_PRESSURE_RELIEF_DIVISOR = 6;
+const SECURITY_PENALTY_NEUTRAL_PRESSURE = 50;
+const SECURITY_PENALTY_DIVISOR = 6;
+
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
   'coach/runCareerWeeklyCycle',
   async (_arg, { dispatch, getState }) => {
@@ -46,8 +56,8 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
       ? selectTeamRecords(postWeekState)[postWeekCoach.selectedTeamId]
       : undefined;
     const weeklyXp =
-      8 +
-      (userRecord && userRecord.wins + userRecord.losses > 0 && userRecord.wins > userRecord.losses ? 3 : 0) +
+      BASE_WEEKLY_XP +
+      (userRecord && userRecord.wins + userRecord.losses > 0 && userRecord.wins > userRecord.losses ? WINNING_WEEK_XP_BONUS : 0) +
       (postWeekCoach.skillTree?.operations ?? 0);
     dispatch(addCoachXp(weeklyXp));
 
@@ -126,10 +136,18 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
 
     const winExpectationGap = Math.max(0, coach.programExpectations.winTarget - wins);
     const rankExpectationGap = Math.max(0, (pollRank ?? 128) - rankTarget);
-    const baseAdPressure = (coach.adPressure ?? 45) + winExpectationGap * 2 + Math.floor(rankExpectationGap / 6);
-    const resourceShield = Math.round(((coach.programResources?.facilities ?? 50) - 50) / 6);
+    const baseAdPressure =
+      (coach.adPressure ?? DEFAULT_AD_PRESSURE) +
+      winExpectationGap * WIN_GAP_PRESSURE_MULTIPLIER +
+      Math.floor(rankExpectationGap / RANK_GAP_PRESSURE_DIVISOR);
+    const resourceShield = Math.round(
+      ((coach.programResources?.facilities ?? FACILITY_PRESSURE_RELIEF_BASELINE) - FACILITY_PRESSURE_RELIEF_BASELINE) /
+        FACILITY_PRESSURE_RELIEF_DIVISOR,
+    );
     const boostedPressure = Math.max(0, Math.min(100, baseAdPressure - resourceShield));
-    const pressurePenalty = Math.round((boostedPressure - 50) / 6);
+    const pressurePenalty = Math.round(
+      (boostedPressure - SECURITY_PENALTY_NEUTRAL_PRESSURE) / SECURITY_PENALTY_DIVISOR,
+    );
 
     const newJobSecurity = Math.max(0, Math.min(100, coach.jobSecurity + securityDelta - pressurePenalty));
 

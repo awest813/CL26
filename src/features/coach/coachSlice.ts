@@ -9,6 +9,22 @@ import { RootState } from '../../store/store';
 
 export const WEEKLY_HOURS_CAP = 120;
 export const MAX_HOURS_PER_RECRUIT = 20;
+const AD_PRESSURE_SENSITIVITY = 60;
+
+const CAREER_TIER_DEFAULTS: Record<'REBUILD' | 'STABLE' | 'CONTENDER', { resources: ProgramResources; adPressure: number }> = {
+  REBUILD: {
+    resources: { nil: 44, boosters: 50, facilities: 46 },
+    adPressure: 34,
+  },
+  STABLE: {
+    resources: { nil: 52, boosters: 58, facilities: 56 },
+    adPressure: 48,
+  },
+  CONTENDER: {
+    resources: { nil: 62, boosters: 72, facilities: 64 },
+    adPressure: 64,
+  },
+};
 
 export interface CoachProfile {
   name: string;
@@ -144,16 +160,9 @@ const coachSlice = createSlice({
         state.onboardingStep = 'READY'; // Changed to READY as per component check
         // Set job security baseline from expectations
         state.jobSecurity = action.payload.programExpectations.securityBaseline;
-        if (action.payload.careerTier === 'REBUILD') {
-            state.programResources = { nil: 44, boosters: 50, facilities: 46 };
-            state.adPressure = 34;
-        } else if (action.payload.careerTier === 'STABLE') {
-            state.programResources = { nil: 52, boosters: 58, facilities: 56 };
-            state.adPressure = 48;
-        } else {
-            state.programResources = { nil: 62, boosters: 72, facilities: 64 };
-            state.adPressure = 64;
-        }
+        const defaults = CAREER_TIER_DEFAULTS[action.payload.careerTier];
+        state.programResources = defaults.resources;
+        state.adPressure = defaults.adPressure;
     },
     initializeRecruitingBoard: (state, action: PayloadAction<{ seed: number; teams: Team[] }>) => {
         state.recruitingSeed = action.payload.seed;
@@ -223,7 +232,7 @@ const coachSlice = createSlice({
             15,
             Math.min(
                 98,
-                state.adPressure + Math.round((boostersLevel - state.jobSecurity) / 60),
+                state.adPressure + Math.round((boostersLevel - state.jobSecurity) / AD_PRESSURE_SENSITIVITY),
             ),
         );
     },
