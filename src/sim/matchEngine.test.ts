@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import { simulateGame } from './matchEngine.ts';
+import { resolveDeadlockWinner, simulateGame } from './matchEngine.ts';
 import { generateRoster } from './generateRoster.ts';
 import type { Team, Tactics } from '../types/sim.ts';
 
@@ -29,6 +29,13 @@ const tactics: Tactics = {
 };
 
 describe('match engine gameplay modifiers', () => {
+  test('deadlock winner resolution uses bounded probabilities', () => {
+    assert.strictEqual(resolveDeadlockWinner(() => 0.34, 0, 10_000), 'A');
+    assert.strictEqual(resolveDeadlockWinner(() => 0.36, 0, 10_000), 'B');
+    assert.strictEqual(resolveDeadlockWinner(() => 0.64, 10_000, 0), 'A');
+    assert.strictEqual(resolveDeadlockWinner(() => 0.66, 10_000, 0), 'B');
+  });
+
   test('games always resolve with a winner', () => {
     const rosterA = generateRoster(teamA, 'overtime-test');
     const rosterB = generateRoster(teamB, 'overtime-test');

@@ -211,6 +211,19 @@ function resolveGameplayModifiers(input: TeamSimInput): EffectiveGameplayModifie
   };
 }
 
+export function resolveDeadlockWinner(
+  rng: () => number,
+  teamAStrength: number,
+  teamBStrength: number,
+): 'A' | 'B' {
+  const overtimeEdge = teamAStrength - teamBStrength;
+  const chanceA = Math.min(
+    OVERTIME_MAX_WIN_CHANCE,
+    Math.max(OVERTIME_MIN_WIN_CHANCE, OVERTIME_BASE_WIN_CHANCE + overtimeEdge / OVERTIME_EDGE_DIVISOR),
+  );
+  return rng() < chanceA ? 'A' : 'B';
+}
+
 export function simulateGame(
   teamA: TeamSimInput,
   teamB: TeamSimInput,
@@ -370,12 +383,7 @@ export function simulateGame(
   if (statsA.goals === statsB.goals) {
     const teamAStrength = ratingA.offense + modifiersA.offense + ratingA.faceoff * OVERTIME_FACEOFF_WEIGHT;
     const teamBStrength = ratingB.offense + modifiersB.offense + ratingB.faceoff * OVERTIME_FACEOFF_WEIGHT;
-    const overtimeEdge = teamAStrength - teamBStrength;
-    const chanceA = Math.min(
-      OVERTIME_MAX_WIN_CHANCE,
-      Math.max(OVERTIME_MIN_WIN_CHANCE, OVERTIME_BASE_WIN_CHANCE + overtimeEdge / OVERTIME_EDGE_DIVISOR),
-    );
-    if (rng() < chanceA) {
+    if (resolveDeadlockWinner(rng, teamAStrength, teamBStrength) === 'A') {
       statsA.goals += 1;
     } else {
       statsB.goals += 1;
@@ -384,7 +392,7 @@ export function simulateGame(
 
   if (overtimePeriods > 0) {
     const winnerName = statsA.goals > statsB.goals ? teamA.team.schoolName : teamB.team.schoolName;
-    highlights.push(`Final — ${winnerName} wins in overtime (${overtimePeriods} OT).`);
+    highlights.push(`Final - ${winnerName} wins in overtime (${overtimePeriods} OT).`);
   }
 
   if (highlights.length < 10) {
