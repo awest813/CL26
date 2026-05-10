@@ -26,6 +26,7 @@ const FACILITY_PRESSURE_RELIEF_BASELINE = 50;
 const FACILITY_PRESSURE_RELIEF_DIVISOR = 6;
 const SECURITY_PENALTY_NEUTRAL_PRESSURE = 50;
 const SECURITY_PENALTY_DIVISOR = 6;
+const TOTAL_TEAMS = 128;
 
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
   'coach/runCareerWeeklyCycle',
@@ -101,7 +102,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
 
     const rankingsTable = computeRankings(teams, records, 128);
     const userPollRow = rankingsTable.find((r) => r.teamId === coach.selectedTeamId);
-    const pollRank = userPollRow?.rank ?? 128;
+    const pollRank = userPollRow?.rank ?? TOTAL_TEAMS;
     const rankTarget = coach.programExpectations.rankTarget;
 
     // Determine playoff outcomes

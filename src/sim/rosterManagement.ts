@@ -109,7 +109,7 @@ export function developPlayers(
   });
 }
 
-function bumpPlayer(player: Player, rng: () => number, targets: Array<keyof Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'>>): Player {
+function applyTargetedTraitGrowth(player: Player, rng: () => number, targets: Array<keyof Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'>>): Player {
   const updates: Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'> = {
     shooting: player.shooting,
     passing: player.passing,
@@ -174,7 +174,7 @@ export function applyWeeklyTraitGrowth(
   for (let i = 0; i < growthSlots; i += 1) {
     const playerIndex = randInt(rng, 0, mutable.length - 1);
     const player = mutable[playerIndex];
-    mutable[playerIndex] = bumpPlayer(player, rng, chosenTraits);
+    mutable[playerIndex] = applyTargetedTraitGrowth(player, rng, chosenTraits);
   }
 
   return mutable;

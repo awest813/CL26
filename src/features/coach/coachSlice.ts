@@ -12,14 +12,17 @@ export const MAX_HOURS_PER_RECRUIT = 20;
 const AD_PRESSURE_SENSITIVITY = 60;
 
 const CAREER_TIER_DEFAULTS: Record<'REBUILD' | 'STABLE' | 'CONTENDER', { resources: ProgramResources; adPressure: number }> = {
+  // Rebuilds get lower NIL/facility baselines and less pressure to win immediately.
   REBUILD: {
     resources: { nil: 44, boosters: 50, facilities: 46 },
     adPressure: 34,
   },
+  // Stable programs have balanced support with moderate pressure.
   STABLE: {
     resources: { nil: 52, boosters: 58, facilities: 56 },
     adPressure: 48,
   },
+  // Contenders carry higher support but significantly higher board pressure.
   CONTENDER: {
     resources: { nil: 62, boosters: 72, facilities: 64 },
     adPressure: 64,
