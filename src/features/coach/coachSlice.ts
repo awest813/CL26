@@ -362,6 +362,7 @@ export const processSigningDay = createAsyncThunk(
                 signedAtYear: state.season.year,
                 stars: recruit.stars,
                 position: recruit.position,
+                potential: recruit.potential,
             }));
 
         dispatch(finalizeSigningClass({

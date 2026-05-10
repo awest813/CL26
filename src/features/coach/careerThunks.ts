@@ -12,6 +12,7 @@ import {
 } from './coachSlice';
 import { generateRoster } from '../../sim/generateRoster';
 import { applyRosterTurnover, buildDefaultStarters } from '../../sim/rosterManagement';
+import { computeRankings } from '../../sim/rankings';
 
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
   'coach/runCareerWeeklyCycle',
@@ -50,9 +51,15 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     if (!coach.selectedTeamId || !coach.programExpectations) return;
 
     const records = selectTeamRecords(state);
+    const teams = state.league.teams;
     const userRecord = records[coach.selectedTeamId] ?? { wins: 0, losses: 0 };
     const wins = userRecord.wins;
     const losses = userRecord.losses;
+
+    const rankingsTable = computeRankings(teams, records, 128);
+    const userPollRow = rankingsTable.find((r) => r.teamId === coach.selectedTeamId);
+    const pollRank = userPollRow?.rank ?? 128;
+    const rankTarget = coach.programExpectations.rankTarget;
 
     // Determine playoff outcomes
     const playoffSeeds = season.playoffs?.seeds ?? [];
@@ -75,6 +82,15 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     } else {
       securityDelta = -22;
     }
+
+    const gamesPlayed = wins + losses;
+    if (gamesPlayed >= 8 && pollRank <= rankTarget) {
+      securityDelta += 5;
+    }
+    if (gamesPlayed >= 8 && pollRank > rankTarget + 10 && !madePlayoffs) {
+      securityDelta -= 8;
+    }
+
     const newJobSecurity = Math.max(0, Math.min(100, coach.jobSecurity + securityDelta));
 
     // Signing class stats
@@ -144,7 +160,9 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
     const latestYear = Math.max(...Object.keys(coach.signedRecruitsByYear).map(Number), 0);
     const signedRecruits = latestYear > 0 ? (coach.signedRecruitsByYear[latestYear] ?? []) : [];
 
-    const newRoster = applyRosterTurnover(currentRoster, signedRecruits, team, newSeed);
+    const newRoster = applyRosterTurnover(currentRoster, signedRecruits, team, newSeed, {
+      coachArchetype: coach.profile?.archetype,
+    });
     const newStarters = buildDefaultStarters(newRoster);
     dispatch(setManagedRoster(newRoster));
     dispatch(setStarterIds(newStarters));

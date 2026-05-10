@@ -1,11 +1,19 @@
 import { generateRoster } from './generateRoster';
 import { simulateGame } from './matchEngine';
-import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, RankingRow, Tactics, Team } from '../types/sim';
+import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, RankingRow, Tactics, Team, TeamSimInput } from '../types/sim';
 
 const DEFAULT_TACTICS: Tactics = {
   tempo: 'normal',
   rideClear: 'balanced',
   slideAggression: 'normal',
+};
+
+/** User program context for playoff games (managed roster, depth chart, tactics). */
+export type PlayoffCoachContext = {
+  teamId: string;
+  roster: Player[];
+  starterIds: string[];
+  tactics: Tactics;
 };
 
 function makeGameId(round: PlayoffRoundName, slot: number): string {
@@ -134,7 +142,13 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
   return [];
 }
 
-export function simulatePlayoffRound(state: PlayoffState, teams: Team[], baseSeed: number, rosterSeed = 'league-roster-v1'): PlayoffState {
+export function simulatePlayoffRound(
+  state: PlayoffState,
+  teams: Team[],
+  baseSeed: number,
+  rosterSeed = 'league-roster-v1',
+  coach: PlayoffCoachContext | null = null,
+): PlayoffState {
   if (state.championTeamId) {
     throw new Error('Playoffs already complete.');
   }
@@ -159,11 +173,29 @@ export function simulatePlayoffRound(state: PlayoffState, teams: Team[], baseSee
       throw new Error(`Missing playoff team for game ${game.id}.`);
     }
 
+    const homeIsCoach = coach && game.homeTeamId === coach.teamId;
+    const awayIsCoach = coach && game.awayTeamId === coach.teamId;
+
+    const homeRoster = homeIsCoach ? coach.roster : generateRoster(homeTeam, rosterSeed);
+    const awayRoster = awayIsCoach ? coach.roster : generateRoster(awayTeam, rosterSeed);
+
+    const homeInput: TeamSimInput =
+      homeIsCoach && coach.starterIds.length > 0
+        ? { team: homeTeam, roster: homeRoster, starterIds: coach.starterIds }
+        : { team: homeTeam, roster: homeRoster };
+    const awayInput: TeamSimInput =
+      awayIsCoach && coach.starterIds.length > 0
+        ? { team: awayTeam, roster: awayRoster, starterIds: coach.starterIds }
+        : { team: awayTeam, roster: awayRoster };
+
+    const homeTactics = homeIsCoach ? coach.tactics : DEFAULT_TACTICS;
+    const awayTactics = awayIsCoach ? coach.tactics : DEFAULT_TACTICS;
+
     const result = simulateGame(
-      { team: homeTeam, roster: generateRoster(homeTeam, rosterSeed) },
-      { team: awayTeam, roster: generateRoster(awayTeam, rosterSeed) },
-      DEFAULT_TACTICS,
-      DEFAULT_TACTICS,
+      homeInput,
+      awayInput,
+      homeTactics,
+      awayTactics,
       baseSeed + roundSeedOffset(round) + index,
     );
 

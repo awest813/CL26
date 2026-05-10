@@ -7,6 +7,7 @@ import {
   setRecruitHours,
   setRecruitPitch,
   setPracticeFocus,
+  setTactics,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
   processSigningDay,
@@ -16,7 +17,8 @@ import { selectTeamRecords, startNewSeason } from '../features/season/seasonSlic
 import { summarizeSigningClass } from '../sim/offseason';
 import { estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { PracticeFocus, RecruitingPitch, RecruitMotivation, SeasonHistoryEntry } from '../types/sim';
+import { PracticeFocus, RecruitingPitch, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
+import { computeRankings } from '../sim/rankings';
 
 const PITCH_LABELS: Record<RecruitingPitch, string> = {
   PLAYING_TIME: 'Play Time',
@@ -185,6 +187,12 @@ function CoachCareerPage() {
   const rankTarget = expectations?.rankTarget ?? 99;
   const careerYear = coach.careerRecord.seasonsCompleted + 1;
 
+  const pollRank = useMemo(() => {
+    if (!coach.selectedTeamId || season.phase === 'PRE') return null;
+    const table = computeRankings(teams, recordsByTeamId, 128);
+    return table.find((r) => r.teamId === coach.selectedTeamId)?.rank ?? null;
+  }, [coach.selectedTeamId, season.phase, teams, recordsByTeamId]);
+
   if (coach.onboardingStep !== 'READY' || !coach.profile || !coach.selectedTeamId) {
     return <Navigate to="/career/setup" replace />;
   }
@@ -270,7 +278,15 @@ function CoachCareerPage() {
                 />
               </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1.5">Rank target: Top {rankTarget}</div>
+            <div className="text-xs text-gray-500 mt-1.5">
+              Rank target: Top {rankTarget}
+              {pollRank != null && season.phase !== 'PRE' && (
+                <span className="block mt-0.5 text-gray-600">
+                  Current poll: #{pollRank}
+                  {pollRank <= rankTarget ? ' (meeting target)' : ' (below target)'}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Job Security */}
@@ -279,7 +295,7 @@ function CoachCareerPage() {
             <JobSecurityBar value={coach.jobSecurity} />
             <div className="text-xs text-gray-500 mt-2">
               {coach.jobSecurity < 30
-                ? '⚠ Meeting expectations is critical this season.'
+                ? 'Meeting expectations is critical this season.'
                 : coach.jobSecurity >= 75
                   ? 'You have strong administrative support.'
                   : 'Keep performing to stay secure.'}
@@ -339,6 +355,59 @@ function CoachCareerPage() {
         </Link>
         <span className="text-gray-300">|</span>
         <Link to="/season" className="text-sm text-blue-600 hover:underline">Season Dashboard</Link>
+      </div>
+
+      <div className="card">
+        <h3 className="text-base font-bold m-0">Gameplan</h3>
+        <p className="text-xs text-gray-500 mt-1 mb-3">
+          Your base scheme for every game. Practice focus still shifts tempo and slides during the weekly cycle.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label className="text-xs font-semibold text-gray-600">
+            Tempo
+            <select
+              value={coach.tactics.tempo}
+              onChange={(e) =>
+                dispatch(setTactics({ ...coach.tactics, tempo: e.target.value as Tactics['tempo'] }))
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="slow">Slow — limit possessions</option>
+              <option value="normal">Balanced</option>
+              <option value="fast">Fast — push transition</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            Ride / clear
+            <select
+              value={coach.tactics.rideClear}
+              onChange={(e) =>
+                dispatch(setTactics({ ...coach.tactics, rideClear: e.target.value as Tactics['rideClear'] }))
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="conservative">Conservative</option>
+              <option value="balanced">Balanced</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            Slide timing
+            <select
+              value={coach.tactics.slideAggression}
+              onChange={(e) =>
+                dispatch(
+                  setTactics({ ...coach.tactics, slideAggression: e.target.value as Tactics['slideAggression'] }),
+                )
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="early">Early help</option>
+              <option value="normal">Standard</option>
+              <option value="late">Late slides — pack in</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       {/* ── Offseason Panel ── */}

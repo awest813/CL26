@@ -10,13 +10,20 @@ function starsToBaseline(stars: number): number {
   return 43 + stars * 11;
 }
 
+function potentialBaselineBonus(potential: number | undefined, stars: number): number {
+  const p = potential ?? 52 + stars * 9;
+  const clamped = Math.max(40, Math.min(99, p));
+  return (clamped - 72) * 0.32;
+}
+
 /** Generate a player from a signed recruit record */
 export function convertRecruitToPlayer(
   signedRecruit: SignedRecruit,
   team: Team,
   rng: () => number,
 ): Player {
-  const baseline = starsToBaseline(signedRecruit.stars);
+  const potBonus = potentialBaselineBonus(signedRecruit.potential, signedRecruit.stars);
+  const baseline = starsToBaseline(signedRecruit.stars) + potBonus;
   const position = signedRecruit.position;
 
   const variance = randInt(rng, -8, 8);
@@ -53,11 +60,18 @@ export function convertRecruitToPlayer(
  * Apply player development at the end of a season.
  * Upperclassmen improve slightly; freshmen have the biggest gains.
  */
-export function developPlayers(roster: Player[], rng: () => number): Player[] {
+export function developPlayers(
+  roster: Player[],
+  rng: () => number,
+  options?: { coachArchetype?: 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER' },
+): Player[] {
+  const devBonus = options?.coachArchetype === 'DEVELOPER' ? 1 : 0;
+
   return roster.map((player) => {
     // Freshmen and sophomores develop more
-    const growthCeiling = player.year === 1 ? 5 : player.year === 2 ? 4 : player.year === 3 ? 3 : 1;
-    const growth = randInt(rng, 0, growthCeiling);
+    const growthCeiling =
+      (player.year === 1 ? 5 : player.year === 2 ? 4 : player.year === 3 ? 3 : 1) + devBonus;
+    const growth = randInt(rng, 0, Math.min(6, growthCeiling));
     if (growth === 0) return player;
 
     const bump = (base: number) => clamp(base + randInt(rng, 0, growth));
@@ -90,11 +104,12 @@ export function applyRosterTurnover(
   signedRecruits: SignedRecruit[],
   team: Team,
   newSeed: number,
+  options?: { coachArchetype?: 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER' },
 ): Player[] {
   const rng = makeRng(seedToNumber(`${newSeed}:${team.id}:turnover`));
 
   // Step 1: Develop players
-  const developed = developPlayers(currentRoster, rng);
+  const developed = developPlayers(currentRoster, rng, { coachArchetype: options?.coachArchetype });
 
   // Step 2: Separate leavers from returners
   //   - Seniors (year 4) always graduate
