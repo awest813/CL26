@@ -4,6 +4,8 @@ import { simCurrentWeek, selectTeamRecords } from '../season/seasonSlice';
 import {
   advanceCoachWeek,
   advanceRecruitingWeek,
+  addCoachXp,
+  setAdPressure,
   updateJobSecurity,
   recordSeasonEnd,
   resetRecruitingForNewSeason,
@@ -12,8 +14,19 @@ import {
 } from './coachSlice';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
-import { applyRosterTurnover, buildDefaultStarters } from '../../sim/rosterManagement';
+import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
 import { computeRankings } from '../../sim/rankings';
+
+const BASE_WEEKLY_XP = 8;
+const WINNING_WEEK_XP_BONUS = 3;
+const WIN_GAP_PRESSURE_MULTIPLIER = 2;
+const RANK_GAP_PRESSURE_DIVISOR = 6;
+const DEFAULT_AD_PRESSURE = 45;
+const FACILITY_PRESSURE_RELIEF_BASELINE = 50;
+const FACILITY_PRESSURE_RELIEF_DIVISOR = 6;
+const SECURITY_PENALTY_NEUTRAL_PRESSURE = 50;
+const SECURITY_PENALTY_DIVISOR = 6;
+const TOTAL_TEAMS = 128;
 
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
   'coach/runCareerWeeklyCycle',
@@ -35,6 +48,36 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
     // the user has no active targets on their board.
     if (canAdvanceRecruiting) {
       await dispatch(advanceRecruitingWeek());
+    }
+
+    const postWeekState = getState();
+    const postWeekCoach = postWeekState.coach;
+    const postWeekSeason = postWeekState.season;
+    const userRecord = postWeekCoach.selectedTeamId
+      ? selectTeamRecords(postWeekState)[postWeekCoach.selectedTeamId]
+      : undefined;
+    const weeklyXp =
+      BASE_WEEKLY_XP +
+      (userRecord && userRecord.wins + userRecord.losses > 0 && userRecord.wins > userRecord.losses ? WINNING_WEEK_XP_BONUS : 0) +
+      (postWeekCoach.skillTree?.operations ?? 0);
+    dispatch(addCoachXp(weeklyXp));
+
+    if (postWeekCoach.selectedTeamId && postWeekCoach.managedRoster) {
+      const grownRoster = applyWeeklyTraitGrowth(
+        postWeekCoach.managedRoster,
+        postWeekSeason.seasonSeed,
+        postWeekSeason.completedWeeks,
+        postWeekCoach.practiceFocus,
+        {
+          coachArchetype: postWeekCoach.profile?.archetype,
+          coachSkill: postWeekCoach.profile?.skill ?? 70,
+          developmentSkill: postWeekCoach.skillTree?.development ?? 0,
+          operationsSkill: postWeekCoach.skillTree?.operations ?? 0,
+          facilitiesLevel: postWeekCoach.programResources?.facilities ?? 50,
+          boostersLevel: postWeekCoach.programResources?.boosters ?? 50,
+        },
+      );
+      dispatch(setManagedRoster(grownRoster));
     }
 
     dispatch(advanceCoachWeek());
@@ -59,7 +102,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
 
     const rankingsTable = computeRankings(teams, records, 128);
     const userPollRow = rankingsTable.find((r) => r.teamId === coach.selectedTeamId);
-    const pollRank = userPollRow?.rank ?? 128;
+    const pollRank = userPollRow?.rank ?? TOTAL_TEAMS;
     const rankTarget = coach.programExpectations.rankTarget;
 
     // Determine playoff outcomes
@@ -92,7 +135,22 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       securityDelta -= 8;
     }
 
-    const newJobSecurity = Math.max(0, Math.min(100, coach.jobSecurity + securityDelta));
+    const winExpectationGap = Math.max(0, coach.programExpectations.winTarget - wins);
+    const rankExpectationGap = Math.max(0, pollRank - rankTarget);
+    const baseAdPressure =
+      (coach.adPressure ?? DEFAULT_AD_PRESSURE) +
+      winExpectationGap * WIN_GAP_PRESSURE_MULTIPLIER +
+      Math.floor(rankExpectationGap / RANK_GAP_PRESSURE_DIVISOR);
+    const resourceShield = Math.round(
+      ((coach.programResources?.facilities ?? FACILITY_PRESSURE_RELIEF_BASELINE) - FACILITY_PRESSURE_RELIEF_BASELINE) /
+        FACILITY_PRESSURE_RELIEF_DIVISOR,
+    );
+    const boostedPressure = Math.max(0, Math.min(100, baseAdPressure - resourceShield));
+    const pressurePenalty = Math.round(
+      (boostedPressure - SECURITY_PENALTY_NEUTRAL_PRESSURE) / SECURITY_PENALTY_DIVISOR,
+    );
+
+    const newJobSecurity = Math.max(0, Math.min(100, coach.jobSecurity + securityDelta - pressurePenalty));
 
     // Signing class stats
     const signedClass = coach.signedRecruitsByYear[season.year] ?? [];
@@ -112,6 +170,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       jobSecurityEnd: newJobSecurity,
     }));
 
+    dispatch(setAdPressure(boostedPressure));
     dispatch(updateJobSecurity(newJobSecurity));
     dispatch(resetRecruitingForNewSeason());
   },
@@ -165,6 +224,10 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
 
     const newRoster = applyRosterTurnover(currentRoster, signedRecruits, team, newSeed, {
       coachArchetype: coach.profile?.archetype,
+      developmentSkill: coach.skillTree?.development ?? 0,
+      operationsSkill: coach.skillTree?.operations ?? 0,
+      facilitiesLevel: coach.programResources?.facilities ?? 50,
+      boostersLevel: coach.programResources?.boosters ?? 50,
     });
     const newStarters = buildDefaultStarters(newRoster);
     dispatch(setManagedRoster(newRoster));

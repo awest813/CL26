@@ -9,12 +9,24 @@ import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
 import { computePlayoffProjection, computeRankings } from '../../sim/rankings';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
+import { seedToNumber } from '../../sim/rng';
 
 const DEFAULT_TACTICS = {
   tempo: 'normal',
   rideClear: 'balanced',
   slideAggression: 'normal',
 } as const;
+
+function composeSeasonGameSeed(
+  seasonSeed: number,
+  weekIndex: number,
+  gameId: string,
+  homeTeamId: string,
+  awayTeamId: string,
+): number {
+  // JSON array encoding prevents delimiter-collision ambiguity while keeping deterministic ordering.
+  return seedToNumber(JSON.stringify([seasonSeed, weekIndex, gameId, homeTeamId, awayTeamId]));
+}
 
 const initialState: SeasonState = {
   year: 2026,
@@ -99,9 +111,13 @@ export const simCurrentWeek = createAsyncThunk(
       const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
       const awayTactics = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
 
-      // Deterministic seed for this game based on season seed and game ID
-      // simple hash for now
-      const gameSeed = seasonSeed + currentWeekIndex * 1000 + game.id.length + game.homeTeamId.charCodeAt(0) + game.awayTeamId.charCodeAt(0);
+      const gameSeed = composeSeasonGameSeed(
+        seasonSeed,
+        currentWeekIndex,
+        game.id,
+        game.homeTeamId,
+        game.awayTeamId,
+      );
 
       const homeInput =
         game.homeTeamId === coachState.selectedTeamId && coachState.starterIds.length > 0

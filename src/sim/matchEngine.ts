@@ -50,6 +50,13 @@ const DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR = 1600;
 const FACEOFF_EDGE_DIVISOR = 40;
 const SHOT_QUALITY_POWER_DIVISOR = 110;
 const SHOT_QUALITY_VARIANCE = 0.06;
+const OVERTIME_POSSESSIONS_PER_TEAM = 5;
+const MAX_OVERTIME_PERIODS = 3;
+const OVERTIME_FACEOFF_WEIGHT = 0.12;
+const OVERTIME_BASE_WIN_CHANCE = 0.5;
+const OVERTIME_EDGE_DIVISOR = 260;
+const OVERTIME_MIN_WIN_CHANCE = 0.35;
+const OVERTIME_MAX_WIN_CHANCE = 0.65;
 
 function resolveStarterSet(roster: Player[], starterIds?: string[]): Set<string> | null {
   if (!starterIds || starterIds.length === 0) return null;
@@ -158,6 +165,17 @@ function defenseBoostFromTactics(tactics: Tactics): number {
   return boost;
 }
 
+function computeFaceoffShare(
+  rng: () => number,
+  ratingA: TeamRatings,
+  ratingB: TeamRatings,
+  modifiersA: EffectiveGameplayModifiers,
+  modifiersB: EffectiveGameplayModifiers,
+): number {
+  const faceoffEdge = (ratingA.faceoff + modifiersA.faceoff - ratingB.faceoff - modifiersB.faceoff) / FACEOFF_EDGE_DIVISOR;
+  return Math.min(0.62, Math.max(0.38, 0.5 + faceoffEdge * 0.08 + normalish(rng) * 0.03));
+}
+
 function weightedPlayerForGoal(rng: () => number, ratings: TeamRatings): Player {
   const pool = [...ratings.attackers, ...ratings.middies];
   if (pool.length === 0) return ratings.goaliePlayer;
@@ -193,6 +211,19 @@ function resolveGameplayModifiers(input: TeamSimInput): EffectiveGameplayModifie
   };
 }
 
+export function resolveDeadlockWinner(
+  rng: () => number,
+  teamAStrength: number,
+  teamBStrength: number,
+): 'A' | 'B' {
+  const overtimeEdge = teamAStrength - teamBStrength;
+  const chanceA = Math.min(
+    OVERTIME_MAX_WIN_CHANCE,
+    Math.max(OVERTIME_MIN_WIN_CHANCE, OVERTIME_BASE_WIN_CHANCE + overtimeEdge / OVERTIME_EDGE_DIVISOR),
+  );
+  return rng() < chanceA ? 'A' : 'B';
+}
+
 export function simulateGame(
   teamA: TeamSimInput,
   teamB: TeamSimInput,
@@ -207,8 +238,7 @@ export function simulateGame(
   const modifiersB = resolveGameplayModifiers(teamB);
 
   const totalPossessions = Math.max(60, 78 + tempoModifier(tacticsA.tempo) + tempoModifier(tacticsB.tempo));
-  const faceoffEdge = (ratingA.faceoff + modifiersA.faceoff - ratingB.faceoff - modifiersB.faceoff) / FACEOFF_EDGE_DIVISOR;
-  const shareA = Math.min(0.62, Math.max(0.38, 0.5 + faceoffEdge * 0.08 + normalish(rng) * 0.03));
+  const shareA = computeFaceoffShare(rng, ratingA, ratingB, modifiersA, modifiersB);
   const possessionsA = Math.round(totalPossessions * shareA);
   const possessionsB = totalPossessions - possessionsA;
 
@@ -324,6 +354,46 @@ export function simulateGame(
 
   for (let i = 0; i < possessionsB; i += 1) {
     runPossession(teamB, teamA, ratingB, ratingA, modifiersB, modifiersA, tacticsB, tacticsA, statsB, statsA, pStatsB, pStatsA, possessionsA + i);
+  }
+
+  let overtimePeriods = 0;
+  while (statsA.goals === statsB.goals && overtimePeriods < MAX_OVERTIME_PERIODS) {
+    overtimePeriods += 1;
+    const overtimeTotalPossessions = OVERTIME_POSSESSIONS_PER_TEAM * 2;
+    // Overtime uses the same faceoff model as regulation for the opening draw, then alternates possessions as a compact sudden-death abstraction.
+    const overtimeShareA = computeFaceoffShare(rng, ratingA, ratingB, modifiersA, modifiersB);
+    let offenseIsA = rng() < overtimeShareA;
+
+    for (let i = 0; i < overtimeTotalPossessions; i += 1) {
+      const possessionIndex = totalPossessions + (overtimePeriods - 1) * overtimeTotalPossessions + i;
+      if (offenseIsA) {
+        runPossession(teamA, teamB, ratingA, ratingB, modifiersA, modifiersB, tacticsA, tacticsB, statsA, statsB, pStatsA, pStatsB, possessionIndex);
+      } else {
+        runPossession(teamB, teamA, ratingB, ratingA, modifiersB, modifiersA, tacticsB, tacticsA, statsB, statsA, pStatsB, pStatsA, possessionIndex);
+      }
+
+      if (statsA.goals !== statsB.goals) {
+        // Sudden-death: first overtime goal ends the period immediately.
+        break;
+      }
+      offenseIsA = !offenseIsA;
+    }
+  }
+
+  if (statsA.goals === statsB.goals) {
+    const teamAStrength = ratingA.offense + modifiersA.offense + ratingA.faceoff * OVERTIME_FACEOFF_WEIGHT;
+    const teamBStrength = ratingB.offense + modifiersB.offense + ratingB.faceoff * OVERTIME_FACEOFF_WEIGHT;
+    if (resolveDeadlockWinner(rng, teamAStrength, teamBStrength) === 'A') {
+      statsA.goals += 1;
+    } else {
+      statsB.goals += 1;
+    }
+  }
+
+  if (overtimePeriods > 0) {
+    const winnerName = statsA.goals > statsB.goals ? teamA.team.schoolName : teamB.team.schoolName;
+    const overtimeText = overtimePeriods === 1 ? 'OT' : `${overtimePeriods} OTs`;
+    highlights.push(`Final - ${winnerName} wins in overtime (${overtimeText}).`);
   }
 
   if (highlights.length < 10) {
