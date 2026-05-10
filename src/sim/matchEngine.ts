@@ -206,7 +206,7 @@ function groundBallBonusFromTactics(tactics: Tactics): number {
 }
 
 function scoringPhrasesForTactics(tactics: Tactics): string[] {
-  const base = ['scores on a fast break', 'buries a step-down rip', 'finishes after a slick feed', 'beats the goalie stick-side high'];
+  const base = ['scores on a fast break', 'buries a step-down rip', 'finishes after a slick feed', 'beats the goalie stick side high'];
   if (tactics.offenseSet === 'motion') {
     return [...base, 'spins one extra pass before snapping home', 'finishes after crisp off-ball movement'];
   }

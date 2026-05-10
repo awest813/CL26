@@ -187,4 +187,41 @@ describe('match engine gameplay modifiers', () => {
 
     assert.ok(pressureGroundBalls > zoneGroundBalls);
   });
+
+  test('high-end offense can trigger scoring-run gameplay highlights', () => {
+    const rosterA = generateRoster(teamA, 'strategy-run-highlight');
+    const rosterB = generateRoster(teamB, 'strategy-run-highlight');
+    let foundScoringRunHighlight = false;
+
+    for (let seed = 500; seed < 680; seed += 1) {
+      const result = simulateGame(
+        {
+          team: teamA,
+          roster: rosterA,
+          gameplan: {
+            offense: 8,
+            defense: 0,
+            goalie: 0,
+            faceoff: 0,
+            discipline: 0,
+            shotQuality: 0.06,
+            turnoverAvoidance: 0,
+            penaltyAvoidance: 0,
+            groundBallBonus: 0,
+          },
+        },
+        { team: teamB, roster: rosterB },
+        { ...tactics, tempo: 'fast', offenseSet: 'crease' },
+        { ...tactics, tempo: 'slow', defensePackage: 'zone' },
+        seed,
+      );
+
+      if (result.highlights.some((line) => line.includes('-goal run.'))) {
+        foundScoringRunHighlight = true;
+        break;
+      }
+    }
+
+    assert.ok(foundScoringRunHighlight);
+  });
 });
