@@ -177,6 +177,8 @@ export interface Tactics {
   tempo: 'slow' | 'normal' | 'fast';
   rideClear: 'conservative' | 'balanced' | 'aggressive';
   slideAggression: 'early' | 'normal' | 'late';
+  offenseSet?: 'balanced' | 'motion' | 'invert' | 'crease';
+  defensePackage?: 'man' | 'zone' | 'pressure';
 }
 
 export type PracticeFocus = 'OFFENSE' | 'DEFENSE' | 'CONDITIONING' | 'DISCIPLINE';

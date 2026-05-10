@@ -6,6 +6,8 @@ import { Tactics } from '../types/sim';
 const tempoOptions: Tactics['tempo'][] = ['slow', 'normal', 'fast'];
 const rideOptions: Tactics['rideClear'][] = ['conservative', 'balanced', 'aggressive'];
 const slideOptions: Tactics['slideAggression'][] = ['early', 'normal', 'late'];
+const offenseSetOptions: NonNullable<Tactics['offenseSet']>[] = ['balanced', 'motion', 'invert', 'crease'];
+const defensePackageOptions: NonNullable<Tactics['defensePackage']>[] = ['man', 'zone', 'pressure'];
 
 function TacticsControls({
   label,
@@ -49,6 +51,34 @@ function TacticsControls({
           onChange={(event) => onChange({ ...value, slideAggression: event.target.value as Tactics['slideAggression'] })}
         >
           {slideOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Offense Set
+        <select
+          value={value.offenseSet ?? 'balanced'}
+          onChange={(event) => onChange({ ...value, offenseSet: event.target.value as NonNullable<Tactics['offenseSet']> })}
+        >
+          {offenseSetOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Defense Package
+        <select
+          value={value.defensePackage ?? 'man'}
+          onChange={(event) =>
+            onChange({ ...value, defensePackage: event.target.value as NonNullable<Tactics['defensePackage']> })
+          }
+        >
+          {defensePackageOptions.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>

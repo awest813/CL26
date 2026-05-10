@@ -93,6 +93,8 @@ const initialState: CoachState = {
     tempo: 'normal',
     rideClear: 'balanced',
     slideAggression: 'normal',
+    offenseSet: 'balanced',
+    defensePackage: 'man',
   },
   profile: null,
   onboardingStep: 'PROFILE',

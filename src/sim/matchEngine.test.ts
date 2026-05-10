@@ -26,6 +26,8 @@ const tactics: Tactics = {
   tempo: 'normal',
   rideClear: 'balanced',
   slideAggression: 'normal',
+  offenseSet: 'balanced',
+  defensePackage: 'man',
 };
 
 describe('match engine gameplay modifiers', () => {
@@ -128,5 +130,61 @@ describe('match engine gameplay modifiers', () => {
       clean.statsA.turnovers + clean.statsA.penalties <
         sloppy.statsA.turnovers + sloppy.statsA.penalties,
     );
+  });
+
+  test('motion offense set creates more attacking volume over a seed sample', () => {
+    const rosterA = generateRoster(teamA, 'strategy-offense-test');
+    const rosterB = generateRoster(teamB, 'strategy-offense-test');
+    let balancedShots = 0;
+    let motionShots = 0;
+
+    for (let seed = 110; seed < 170; seed += 1) {
+      const balanced = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        { ...tactics, offenseSet: 'balanced' },
+        tactics,
+        seed,
+      );
+      const motion = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        { ...tactics, offenseSet: 'motion' },
+        tactics,
+        seed,
+      );
+      balancedShots += balanced.statsA.shots;
+      motionShots += motion.statsA.shots;
+    }
+
+    assert.ok(motionShots > balancedShots);
+  });
+
+  test('pressure defense package forces more opponent turnovers over a seed sample', () => {
+    const rosterA = generateRoster(teamA, 'strategy-defense-test');
+    const rosterB = generateRoster(teamB, 'strategy-defense-test');
+    let pressureForcedTurnovers = 0;
+    let zoneForcedTurnovers = 0;
+
+    for (let seed = 210; seed < 270; seed += 1) {
+      const pressure = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        { ...tactics, defensePackage: 'pressure' },
+        seed,
+      );
+      const zone = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        { ...tactics, defensePackage: 'zone' },
+        seed,
+      );
+      pressureForcedTurnovers += pressure.statsA.turnovers;
+      zoneForcedTurnovers += zone.statsA.turnovers;
+    }
+
+    assert.ok(pressureForcedTurnovers > zoneForcedTurnovers);
   });
 });

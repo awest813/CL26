@@ -154,6 +154,9 @@ function offenseBoostFromTactics(tactics: Tactics): number {
   if (tactics.rideClear === 'conservative') boost -= 1.2;
   if (tactics.slideAggression === 'late') boost += 1;
   if (tactics.slideAggression === 'early') boost -= 0.7;
+  if (tactics.offenseSet === 'motion') boost += 1.2;
+  if (tactics.offenseSet === 'invert') boost += 1.5;
+  if (tactics.offenseSet === 'crease') boost += 1;
   return boost;
 }
 
@@ -162,7 +165,56 @@ function defenseBoostFromTactics(tactics: Tactics): number {
   if (tactics.slideAggression === 'early') boost += 1.7;
   if (tactics.slideAggression === 'late') boost -= 1.3;
   if (tactics.rideClear === 'aggressive') boost += 0.8;
+  if (tactics.defensePackage === 'zone') boost += 1.5;
+  if (tactics.defensePackage === 'pressure') boost += 2.1;
   return boost;
+}
+
+function shotQualityModifierFromTactics(tactics: Tactics): number {
+  if (tactics.offenseSet === 'motion') return 0.016;
+  if (tactics.offenseSet === 'invert') return 0.01;
+  if (tactics.offenseSet === 'crease') return 0.022;
+  return 0;
+}
+
+function turnoverModifierFromTactics(tactics: Tactics): number {
+  if (tactics.offenseSet === 'invert') return 0.016;
+  if (tactics.offenseSet === 'motion') return -0.012;
+  if (tactics.offenseSet === 'crease') return -0.004;
+  return 0;
+}
+
+function pressureTurnoverBonusFromDefense(tactics: Tactics): number {
+  if (tactics.defensePackage === 'pressure') return 0.02;
+  if (tactics.defensePackage === 'zone') return -0.006;
+  return 0;
+}
+
+function penaltyModifierFromTactics(tactics: Tactics): number {
+  if (tactics.offenseSet === 'invert') return 0.004;
+  if (tactics.offenseSet === 'crease') return 0.008;
+  if (tactics.defensePackage === 'pressure') return 0.007;
+  return 0;
+}
+
+function groundBallBonusFromTactics(tactics: Tactics): number {
+  if (tactics.defensePackage === 'pressure') return 2;
+  if (tactics.defensePackage === 'zone') return -1;
+  return 0;
+}
+
+function scoringPhrasesForTactics(tactics: Tactics): string[] {
+  const base = ['scores on a fast break', 'buries a step-down rip', 'finishes after a slick feed', 'beats the goalie high stick'];
+  if (tactics.offenseSet === 'motion') {
+    return [...base, 'spins one extra pass before snapping home', 'finishes after crisp off-ball movement'];
+  }
+  if (tactics.offenseSet === 'invert') {
+    return [...base, 'gets downhill from up top and tucks it inside', 'wins the midfield mismatch for a clean finish'];
+  }
+  if (tactics.offenseSet === 'crease') {
+    return [...base, 'dumps it inside for a doorstep finish', 'finds the crease cutter for an easy one'];
+  }
+  return base;
 }
 
 function computeFaceoffShare(
@@ -242,12 +294,14 @@ export function simulateGame(
   const possessionsA = Math.round(totalPossessions * shareA);
   const possessionsB = totalPossessions - possessionsA;
 
-  const statsA: TeamGameStats = { teamId: teamA.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersA.groundBallBonus)), penalties: 0, faceoffPct: Math.round(shareA * 1000) / 10 };
-  const statsB: TeamGameStats = { teamId: teamB.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersB.groundBallBonus)), penalties: 0, faceoffPct: Math.round((1 - shareA) * 1000) / 10 };
+  const statsA: TeamGameStats = { teamId: teamA.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersA.groundBallBonus + groundBallBonusFromTactics(tacticsA))), penalties: 0, faceoffPct: Math.round(shareA * 1000) / 10 };
+  const statsB: TeamGameStats = { teamId: teamB.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersB.groundBallBonus + groundBallBonusFromTactics(tacticsB))), penalties: 0, faceoffPct: Math.round((1 - shareA) * 1000) / 10 };
 
   const pStatsA = new Map<string, PlayerGameStats>();
   const pStatsB = new Map<string, PlayerGameStats>();
   const highlights: string[] = [];
+  let unansweredGoalTeamId: string | null = null;
+  let unansweredGoals = 0;
 
   function ensurePlayerStats(target: Map<string, PlayerGameStats>, player: Player, teamId: string): PlayerGameStats {
     const existing = target.get(player.id);
@@ -264,7 +318,8 @@ export function simulateGame(
     const aggressiveRideTurnoverCost = offenseTactics.rideClear === 'aggressive' ? AGGRESSIVE_CLEAR_TURNOVER_COST : 0;
     const defensiveTurnoverReduction = defenseMods.discipline / DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR;
     const baseTurnoverRate = TURNOVER_BASE_CHANCE + disciplineGap;
-    const turnoverAdjustments = aggressiveRideTurnoverCost - offenseMods.turnoverAvoidance - defensiveTurnoverReduction;
+    const turnoverAdjustments = aggressiveRideTurnoverCost - offenseMods.turnoverAvoidance - defensiveTurnoverReduction
+      + turnoverModifierFromTactics(offenseTactics) + pressureTurnoverBonusFromDefense(defenseTactics);
     const turnoverChance = Math.min(
       TURNOVER_MAX_CHANCE,
       Math.max(
@@ -278,7 +333,8 @@ export function simulateGame(
       PENALTY_MAX_CHANCE,
       Math.max(
         PENALTY_MIN_CHANCE,
-        PENALTY_BASE_CHANCE + (100 - adjustedOffenseDiscipline) / 220 + earlySlidePenaltyCost - offenseMods.penaltyAvoidance - defensivePenaltyDisruption,
+        PENALTY_BASE_CHANCE + (100 - adjustedOffenseDiscipline) / 220 + earlySlidePenaltyCost - offenseMods.penaltyAvoidance - defensivePenaltyDisruption
+          + penaltyModifierFromTactics(offenseTactics) + penaltyModifierFromTactics(defenseTactics),
       ),
     );
 
@@ -305,7 +361,8 @@ export function simulateGame(
 
     const offensePower = offenseRatings.offense + offenseMods.offense + offenseBoostFromTactics(offenseTactics);
     const defensePower = defenseRatings.defense + defenseMods.defense + defenseBoostFromTactics(defenseTactics);
-    const quality = (offensePower - defensePower) / SHOT_QUALITY_POWER_DIVISOR + offenseMods.shotQuality + normalish(rng) * SHOT_QUALITY_VARIANCE;
+    const quality = (offensePower - defensePower) / SHOT_QUALITY_POWER_DIVISOR + offenseMods.shotQuality
+      + shotQualityModifierFromTactics(offenseTactics) + normalish(rng) * SHOT_QUALITY_VARIANCE;
 
     const shotChance = Math.min(0.88, Math.max(0.48, 0.66 + quality));
     if (rng() > shotChance) {
@@ -332,6 +389,12 @@ export function simulateGame(
     offenseStats.goals += 1;
     const scorerStats = ensurePlayerStats(playerStats, shooter, offenseInput.team.id);
     scorerStats.goals += 1;
+    if (unansweredGoalTeamId === offenseInput.team.id) {
+      unansweredGoals += 1;
+    } else {
+      unansweredGoalTeamId = offenseInput.team.id;
+      unansweredGoals = 1;
+    }
 
     if (rng() < 0.64) {
       const assister = weightedPlayerForGoal(rng, offenseRatings);
@@ -343,8 +406,13 @@ export function simulateGame(
 
     if (highlights.length < 20 && (rng() < 0.5 || offenseStats.goals <= 3)) {
       const c = clockForPossession(possessionIndex, totalPossessions);
-      const phrases = ['scores on a fast break', 'buries a step-down rip', 'finishes after a slick feed', 'beats the goalie high stick'];
+      const phrases = scoringPhrasesForTactics(offenseTactics);
       highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} ${pickOne(rng, phrases)}.`);
+    }
+
+    if (unansweredGoals >= 3 && highlights.length < 20 && rng() < 0.6) {
+      const c = clockForPossession(possessionIndex, totalPossessions);
+      highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} is on a ${unansweredGoals}-goal run.`);
     }
   }
 
