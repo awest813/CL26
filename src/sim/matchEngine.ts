@@ -52,6 +52,11 @@ const SHOT_QUALITY_POWER_DIVISOR = 110;
 const SHOT_QUALITY_VARIANCE = 0.06;
 const OVERTIME_POSSESSIONS_PER_TEAM = 5;
 const MAX_OVERTIME_PERIODS = 3;
+const OVERTIME_FACEOFF_WEIGHT = 0.12;
+const OVERTIME_BASE_WIN_CHANCE = 0.5;
+const OVERTIME_EDGE_DIVISOR = 260;
+const OVERTIME_MIN_WIN_CHANCE = 0.35;
+const OVERTIME_MAX_WIN_CHANCE = 0.65;
 
 function resolveStarterSet(roster: Player[], starterIds?: string[]): Set<string> | null {
   if (!starterIds || starterIds.length === 0) return null;
@@ -352,8 +357,12 @@ export function simulateGame(
   }
 
   if (statsA.goals === statsB.goals) {
-    const overtimeEdge = (ratingA.offense + modifiersA.offense + ratingA.faceoff * 0.12) - (ratingB.offense + modifiersB.offense + ratingB.faceoff * 0.12);
-    const chanceA = Math.min(0.65, Math.max(0.35, 0.5 + overtimeEdge / 260));
+    const overtimeEdge = (ratingA.offense + modifiersA.offense + ratingA.faceoff * OVERTIME_FACEOFF_WEIGHT) -
+      (ratingB.offense + modifiersB.offense + ratingB.faceoff * OVERTIME_FACEOFF_WEIGHT);
+    const chanceA = Math.min(
+      OVERTIME_MAX_WIN_CHANCE,
+      Math.max(OVERTIME_MIN_WIN_CHANCE, OVERTIME_BASE_WIN_CHANCE + overtimeEdge / OVERTIME_EDGE_DIVISOR),
+    );
     if (rng() < chanceA) {
       statsA.goals += 1;
     } else {
