@@ -362,6 +362,7 @@ export function simulateGame(
     const beforeA = statsA.goals;
     const beforeB = statsB.goals;
     const overtimeTotalPossessions = OVERTIME_POSSESSIONS_PER_TEAM * 2;
+    // Overtime is modeled as a fresh opening draw, then alternating possessions as a compact sudden-death abstraction.
     const overtimeShareA = computeFaceoffShare(rng, ratingA, ratingB, modifiersA, modifiersB);
     let offenseIsA = rng() < overtimeShareA;
 
@@ -374,6 +375,7 @@ export function simulateGame(
       }
 
       if (statsA.goals > beforeA || statsB.goals > beforeB) {
+        // Sudden-death: first overtime goal ends the period immediately.
         break;
       }
       offenseIsA = !offenseIsA;

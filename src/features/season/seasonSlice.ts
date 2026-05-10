@@ -24,8 +24,8 @@ function composeSeasonGameSeed(
   homeTeamId: string,
   awayTeamId: string,
 ): number {
-  // Include season/week/game identity + matchup IDs so each game seed stays stable and unique.
-  return seedToNumber(`${seasonSeed}:${weekIndex}:${gameId}:${homeTeamId}:${awayTeamId}`);
+  // JSON array encoding prevents delimiter-collision ambiguity while keeping deterministic ordering.
+  return seedToNumber(JSON.stringify([seasonSeed, weekIndex, gameId, homeTeamId, awayTeamId]));
 }
 
 const initialState: SeasonState = {
