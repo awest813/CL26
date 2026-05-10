@@ -136,7 +136,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     }
 
     const winExpectationGap = Math.max(0, coach.programExpectations.winTarget - wins);
-    const rankExpectationGap = Math.max(0, (pollRank ?? TOTAL_TEAMS) - rankTarget);
+    const rankExpectationGap = Math.max(0, pollRank - rankTarget);
     const baseAdPressure =
       (coach.adPressure ?? DEFAULT_AD_PRESSURE) +
       winExpectationGap * WIN_GAP_PRESSURE_MULTIPLIER +

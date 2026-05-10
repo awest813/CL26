@@ -84,9 +84,9 @@ export function developPlayers(
   const devBonus = options?.coachArchetype === 'DEVELOPER' ? 1 : 0;
   const developmentSkillBonus = options?.developmentSkill ?? 0;
   const facilitiesBonus = Math.floor((options?.facilitiesLevel ?? 50) / FACILITIES_BONUS_DIVISOR);
-  const operationsBonus = Math.floor((options?.operationsSkill ?? 0) / OPERATIONS_BONUS_DIVISOR);
+  const operationsSkillBonus = Math.floor((options?.operationsSkill ?? 0) / OPERATIONS_BONUS_DIVISOR);
   const boostersModifier = options?.boostersLevel != null && options.boostersLevel >= BOOSTERS_GROWTH_THRESHOLD ? 1 : 0;
-  const totalBonus = devBonus + developmentSkillBonus + facilitiesBonus + operationsBonus + boostersModifier;
+  const totalBonus = devBonus + developmentSkillBonus + facilitiesBonus + operationsSkillBonus + boostersModifier;
 
   return roster.map((player) => {
     // Freshmen and sophomores develop more

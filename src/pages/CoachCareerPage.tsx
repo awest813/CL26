@@ -532,7 +532,7 @@ function CoachCareerPage() {
               <input
                 type="range"
                 min={25}
-                max={95}
+                max={key === 'nil' ? 90 : 95}
                 value={value}
                 onChange={(e) => onResourceChange(key, Number(e.target.value))}
                 className="w-full"
