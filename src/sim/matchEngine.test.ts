@@ -160,11 +160,11 @@ describe('match engine gameplay modifiers', () => {
     assert.ok(motionShots > balancedShots);
   });
 
-  test('pressure defense package forces more opponent turnovers over a seed sample', () => {
+  test('pressure defense package creates more loose-ball production than zone over a seed sample', () => {
     const rosterA = generateRoster(teamA, 'strategy-defense-test');
     const rosterB = generateRoster(teamB, 'strategy-defense-test');
-    let pressureForcedTurnovers = 0;
-    let zoneForcedTurnovers = 0;
+    let pressureGroundBalls = 0;
+    let zoneGroundBalls = 0;
 
     for (let seed = 210; seed < 270; seed += 1) {
       const pressure = simulateGame(
@@ -181,10 +181,10 @@ describe('match engine gameplay modifiers', () => {
         { ...tactics, defensePackage: 'zone' },
         seed,
       );
-      pressureForcedTurnovers += pressure.statsA.turnovers;
-      zoneForcedTurnovers += zone.statsA.turnovers;
+      pressureGroundBalls += pressure.statsB.groundBalls;
+      zoneGroundBalls += zone.statsB.groundBalls;
     }
 
-    assert.ok(pressureForcedTurnovers > zoneForcedTurnovers);
+    assert.ok(pressureGroundBalls > zoneGroundBalls);
   });
 });
