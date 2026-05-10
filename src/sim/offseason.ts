@@ -37,8 +37,8 @@ function recruitFitScoreForSigning(
   const signedAtPosition = signedCounts[position] ?? 0;
   const projectedCount = currentCounts[position] + signedAtPosition;
   const deficit = POSITION_TARGETS[position] - projectedCount;
-  const needBonus = Math.max(0, deficit) * 22;
-  const surplusPenalty = Math.max(0, projectedCount - POSITION_TARGETS[position]) * 10;
+  const needBonus = Math.max(0, deficit) * 40;
+  const surplusPenalty = Math.max(0, projectedCount - POSITION_TARGETS[position]) * 16;
   return recruit.stars * 28 + recruit.potential * 0.72 + needBonus - surplusPenalty;
 }
 

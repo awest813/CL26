@@ -49,7 +49,7 @@ const recruits: RecruitShape[] = [
 test('resolveSigningDay prioritizes stars then potential with scholarship cap', () => {
   const result = resolveSigningDay(recruits, 2);
   assert.deepEqual(result.signedRecruitIds, ['b', 'c']);
-  assert.deepEqual(result.unsignedRecruitIds, ['d', 'a']);
+  assert.deepEqual(result.unsignedRecruitIds, ['a', 'd']);
 });
 
 test('summarizeSigningClass returns compact class quality metrics', () => {
