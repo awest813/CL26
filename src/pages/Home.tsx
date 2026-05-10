@@ -30,9 +30,30 @@ function Home() {
 
   return (
     <div className="pageStack">
+      <section className="home-hero" aria-labelledby="home-hero-title">
+        <div className="home-hero-inner">
+          <p className="home-hero-eyebrow">128 teams · 12-game season · 12-team playoff</p>
+          <h2 id="home-hero-title" className="home-hero-title">
+            Own the clipboard. Build the dynasty.
+          </h2>
+          <p className="home-hero-lede">
+            Run your fictional program through polls, recruiting swings, and a full postseason bracket—deterministic sim
+            logic, one save in the browser.
+          </p>
+          <div className="home-hero-actions">
+            <Link to={action.link} className={`btn ${action.primary ? 'btn-primary' : ''}`}>
+              {action.label}
+            </Link>
+            <Link to="/career" className="btn">
+              Coach office
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="card card-elevated">
-        <h2 className="sectionTitle">Dashboard</h2>
-        <p className="sectionSubtitle">Your current dynasty snapshot and next recommended action.</p>
+        <h2 className="sectionTitle">Season snapshot</h2>
+        <p className="sectionSubtitle">Where your save stands right now.</p>
 
         <dl className="stat-row" aria-label="Current season status">
           <div className="stat-item">
@@ -48,12 +69,6 @@ function Home() {
             <dd className="value value-compact">{seasonSeed || '-'}</dd>
           </div>
         </dl>
-
-        <div className="actionRow">
-          <Link to={action.link} className={`btn ${action.primary ? 'btn-primary' : ''}`}>
-            {action.label}
-          </Link>
-        </div>
       </section>
 
       <section className="card card-elevated">

@@ -11,6 +11,7 @@ import {
   setStarterIds,
 } from './coachSlice';
 import { generateRoster } from '../../sim/generateRoster';
+import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, buildDefaultStarters } from '../../sim/rosterManagement';
 import { computeRankings } from '../../sim/rankings';
 
@@ -131,7 +132,8 @@ export const initializeManagedRoster = createAsyncThunk<void, void, { state: Roo
     const team = teams.find((t) => t.id === coach.selectedTeamId);
     if (!team) return;
 
-    const roster = generateRoster(team, 'league-roster-v1');
+    const rosterSeed = leagueSeasonRosterSeed(state.season.seasonSeed);
+    const roster = generateRoster(team, rosterSeed);
     const starters = buildDefaultStarters(roster);
     dispatch(setManagedRoster(roster));
     dispatch(setStarterIds(starters));
@@ -154,7 +156,8 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
     if (!team) return;
 
     // Get current roster (fall back to procedural if no managed roster yet)
-    const currentRoster = coach.managedRoster ?? generateRoster(team, 'league-roster-v1');
+    const rosterSeed = leagueSeasonRosterSeed(state.season.seasonSeed);
+    const currentRoster = coach.managedRoster ?? generateRoster(team, rosterSeed);
 
     // Get signed recruits from the most recent completed year
     const latestYear = Math.max(...Object.keys(coach.signedRecruitsByYear).map(Number), 0);

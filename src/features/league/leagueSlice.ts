@@ -3,6 +3,7 @@ import teamsData from '../../data/teams128.json';
 import { Conference, LeagueData, Team } from '../../types/sim';
 import { RootState } from '../../store/store';
 import { generateRoster } from '../../sim/generateRoster';
+import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 
 interface LeagueState extends LeagueData {}
 
@@ -35,11 +36,15 @@ export const selectConferenceById = (state: RootState, conferenceId: string) =>
   state.league.conferences.find((conference) => conference.id === conferenceId);
 
 export const selectTeamWithRosterSummary = createSelector(
-  [selectTeamById, (_state: RootState, teamId: string) => teamId],
-  (team, teamId) => {
+  [
+    (state: RootState, teamId: string) => selectTeamById(state, teamId),
+    (_state: RootState, teamId: string) => teamId,
+    (state: RootState) => state.season.seasonSeed,
+  ],
+  (team, teamId, seasonSeed) => {
     if (!team) return null;
 
-    const roster = generateRoster(team, 'league-roster-v1');
+    const roster = generateRoster(team, leagueSeasonRosterSeed(seasonSeed));
     const overall = Math.round(roster.reduce((sum, player) => sum + player.overall, 0) / roster.length);
     const topPlayers = [...roster].sort((a, b) => b.overall - a.overall).slice(0, 5);
 
@@ -53,12 +58,15 @@ export const selectTeamWithRosterSummary = createSelector(
   },
 );
 
-export const selectConferenceBrowserRows = createSelector([selectConferences, selectTeams], (conferences, teams) =>
-  conferences.map((conference) => {
+export const selectConferenceBrowserRows = createSelector(
+  [selectConferences, selectTeams, (state: RootState) => state.season.seasonSeed],
+  (conferences, teams, seasonSeed) => {
+    const rosterKey = leagueSeasonRosterSeed(seasonSeed);
+    return conferences.map((conference) => {
     const conferenceTeams = teams.filter((team) => team.conferenceId === conference.id);
     const conferenceRosterStrength = Math.round(
       conferenceTeams.reduce((sum, team) => {
-        const roster = generateRoster(team, 'league-roster-v1');
+        const roster = generateRoster(team, rosterKey);
         const rosterOverall = roster.reduce((rosterSum, player) => rosterSum + player.overall, 0) / roster.length;
         return sum + rosterOverall;
       }, 0) / conferenceTeams.length,
@@ -73,5 +81,6 @@ export const selectConferenceBrowserRows = createSelector([selectConferences, se
       ),
       rosterStrength: conferenceRosterStrength,
     };
-  }),
+    });
+  },
 );

@@ -46,8 +46,8 @@ export const runExhibition = createAsyncThunk<GameResult | null, void, { state: 
     }
 
     return simulateGame(
-      { team: teamA, roster: generateRoster(teamA, 'league-roster-v1') },
-      { team: teamB, roster: generateRoster(teamB, 'league-roster-v1') },
+      { team: teamA, roster: generateRoster(teamA, `exhibition-${seed}`) },
+      { team: teamB, roster: generateRoster(teamB, `exhibition-${seed}`) },
       tacticsA,
       tacticsB,
       seed,

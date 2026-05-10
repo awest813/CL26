@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { IconClose, IconMenu, IconWarning } from '../components/UiIcons';
 import Footer from './Layout/Footer';
 import Header from './Layout/Header';
 import LeftNavBar from './Layout/LeftNavBar';
@@ -17,11 +18,19 @@ function Layout() {
   }, [location.pathname]);
 
   return (
-    <main className={`layout ${isMenuOpen ? 'layout-menuOpen' : ''}`}>
+    <div className={`layout ${isMenuOpen ? 'layout-menuOpen' : ''}`}>
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <Header />
       {!isValid && (
         <div className="statusBanner statusBanner-warning" role="status" aria-live="polite">
-          ⚠️ Application State Warning: {error}
+          <span className="statusBanner-icon" aria-hidden>
+            <IconWarning />
+          </span>
+          <span>
+            <strong>Save data notice.</strong> {error}
+          </span>
         </div>
       )}
       <div className="menuBarMobile">
@@ -31,22 +40,29 @@ function Layout() {
           onClick={() => setIsMenuOpen((current) => !current)}
           aria-expanded={isMenuOpen}
           aria-controls="app-primary-menu"
-          aria-label={isMenuOpen ? 'Close primary navigation menu' : 'Open primary navigation menu'}
         >
-          {isMenuOpen ? '✕ Close Menu' : '☰ Open Menu'}
+          {isMenuOpen ? (
+            <>
+              <IconClose className="menuToggleIcon" /> Close menu
+            </>
+          ) : (
+            <>
+              <IconMenu className="menuToggleIcon" /> Menu
+            </>
+          )}
         </button>
       </div>
       <div className="layoutBody">
         <div id="app-primary-menu">
           <LeftNavBar isMenuOpen={isMenuOpen} onNavigate={() => setIsMenuOpen(false)} />
         </div>
-        <div className="childBody">
+        <main id="main-content" className="childBody" tabIndex={-1}>
           <Outlet />
           <Footer />
-        </div>
+        </main>
         <RightNavBar />
       </div>
-    </main>
+    </div>
   );
 }
 

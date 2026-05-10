@@ -4,6 +4,7 @@ import { RootState } from '../../store/store';
 import { generateSeasonSchedule } from '../../sim/schedule';
 import { simulateGame } from '../../sim/matchEngine';
 import { generateRoster } from '../../sim/generateRoster';
+import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
 import { computePlayoffProjection, computeRankings } from '../../sim/rankings';
@@ -62,7 +63,7 @@ export const simCurrentWeek = createAsyncThunk(
         if (teamId === coachState.selectedTeamId && coachState.managedRoster && coachState.managedRoster.length > 0) {
             return coachState.managedRoster;
         }
-        return generateRoster(team, 'league-roster-v1');
+        return generateRoster(team, leagueSeasonRosterSeed(seasonSeed));
     }
 
     // Helper to get team
@@ -181,7 +182,13 @@ export const simNextPlayoffRound = createAsyncThunk(
               }
             : null;
 
-        return simulatePlayoffRound(playoffState, teams, baseSeed, 'league-roster-v1', coachPlay);
+        return simulatePlayoffRound(
+          playoffState,
+          teams,
+          baseSeed,
+          leagueSeasonRosterSeed(state.season.seasonSeed),
+          coachPlay,
+        );
     }
 );
 
