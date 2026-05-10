@@ -1,6 +1,6 @@
 import { generateRoster } from './generateRoster';
 import { simulateGame } from './matchEngine';
-import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, RankingRow, Tactics, Team, TeamSimInput } from '../types/sim';
+import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, RankingRow, TeamGameplayModifiers, Tactics, Team, TeamSimInput } from '../types/sim';
 
 const DEFAULT_TACTICS: Tactics = {
   tempo: 'normal',
@@ -14,6 +14,7 @@ export type PlayoffCoachContext = {
   roster: Player[];
   starterIds: string[];
   tactics: Tactics;
+  modifiers?: TeamGameplayModifiers;
 };
 
 function makeGameId(round: PlayoffRoundName, slot: number): string {
@@ -181,12 +182,16 @@ export function simulatePlayoffRound(
 
     const homeInput: TeamSimInput =
       homeIsCoach && coach.starterIds.length > 0
-        ? { team: homeTeam, roster: homeRoster, starterIds: coach.starterIds }
-        : { team: homeTeam, roster: homeRoster };
+        ? { team: homeTeam, roster: homeRoster, starterIds: coach.starterIds, gameplan: coach.modifiers }
+        : homeIsCoach
+          ? { team: homeTeam, roster: homeRoster, gameplan: coach.modifiers }
+          : { team: homeTeam, roster: homeRoster };
     const awayInput: TeamSimInput =
       awayIsCoach && coach.starterIds.length > 0
-        ? { team: awayTeam, roster: awayRoster, starterIds: coach.starterIds }
-        : { team: awayTeam, roster: awayRoster };
+        ? { team: awayTeam, roster: awayRoster, starterIds: coach.starterIds, gameplan: coach.modifiers }
+        : awayIsCoach
+          ? { team: awayTeam, roster: awayRoster, gameplan: coach.modifiers }
+          : { team: awayTeam, roster: awayRoster };
 
     const homeTactics = homeIsCoach ? coach.tactics : DEFAULT_TACTICS;
     const awayTactics = awayIsCoach ? coach.tactics : DEFAULT_TACTICS;

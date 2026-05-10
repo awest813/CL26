@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { CareerRecord, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
+import { CareerRecord, CoachArchetype, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
 import { generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
@@ -13,7 +13,7 @@ export const MAX_HOURS_PER_RECRUIT = 20;
 export interface CoachProfile {
   name: string;
   almaMater: string;
-  archetype: 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
+  archetype: CoachArchetype;
   age: number;
   skill: number;
 }

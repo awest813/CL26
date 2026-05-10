@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { completeCareerSetup, setCoachProfile } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-
-type Archetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
+import { CoachArchetype } from '../types/sim';
 
 const archetypeOptions: Array<{
-  value: Archetype;
+  value: CoachArchetype;
   label: string;
   summary: string;
   bonuses: string[];
@@ -45,7 +44,7 @@ function CoachCareerSetupPage() {
 
   const [coachName, setCoachName] = useState(coach.profile?.name ?? '');
   const [almaMater, setAlmaMater] = useState(coach.profile?.almaMater ?? '');
-  const [archetype, setArchetype] = useState<Archetype>(coach.profile?.archetype ?? 'RECRUITER');
+  const [archetype, setArchetype] = useState<CoachArchetype>(coach.profile?.archetype ?? 'RECRUITER');
   const [coachAge, setCoachAge] = useState(coach.profile?.age ?? 38);
   const [coachSkill, setCoachSkill] = useState(coach.profile?.skill ?? 72);
   const [teamId, setTeamId] = useState(coach.selectedTeamId ?? '');
