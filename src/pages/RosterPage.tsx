@@ -289,7 +289,7 @@ function RosterPage() {
               >
                 <div className="font-semibold">{s.position}</div>
                 <div><StarDisplay count={s.stars} /></div>
-                <div className="text-xs text-gray-400">Arrives {season.year + 1}</div>
+                <div className="text-xs text-gray-400">Joins {season.year + 1}</div>
               </div>
             ))}
           </div>
