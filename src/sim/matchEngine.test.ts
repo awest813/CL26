@@ -99,7 +99,10 @@ describe('match engine gameplay modifiers', () => {
       77,
     );
 
-    assert.ok(clean.statsA.turnovers <= sloppy.statsA.turnovers);
-    assert.ok(clean.statsA.penalties <= sloppy.statsA.penalties);
+    assert.ok(clean.statsA.turnovers < sloppy.statsA.turnovers);
+    assert.ok(
+      clean.statsA.turnovers + clean.statsA.penalties <
+        sloppy.statsA.turnovers + sloppy.statsA.penalties,
+    );
   });
 });
