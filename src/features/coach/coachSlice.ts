@@ -24,6 +24,18 @@ export interface ProgramExpectations {
   securityBaseline: number;
 }
 
+export interface CoachSkillTree {
+  recruiting: number;
+  development: number;
+  operations: number;
+}
+
+export interface ProgramResources {
+  nil: number;
+  boosters: number;
+  facilities: number;
+}
+
 export interface CoachState {
   selectedTeamId: string | null;
   tactics: Tactics;
@@ -43,6 +55,12 @@ export interface CoachState {
   teamFatigue: number;
   // Career progression
   jobSecurity: number;
+  adPressure: number;
+  coachXp: number;
+  coachLevel: number;
+  coachSkillPoints: number;
+  skillTree: CoachSkillTree;
+  programResources: ProgramResources;
   seasonHistory: SeasonHistoryEntry[];
   careerRecord: CareerRecord;
   // Roster management
@@ -73,6 +91,20 @@ const initialState: CoachState = {
   teamFatigue: 20,
   // Career progression
   jobSecurity: 60,
+  adPressure: 45,
+  coachXp: 0,
+  coachLevel: 1,
+  coachSkillPoints: 0,
+  skillTree: {
+    recruiting: 0,
+    development: 0,
+    operations: 0,
+  },
+  programResources: {
+    nil: 50,
+    boosters: 50,
+    facilities: 50,
+  },
   seasonHistory: [],
   careerRecord: {
     totalWins: 0,
@@ -112,6 +144,16 @@ const coachSlice = createSlice({
         state.onboardingStep = 'READY'; // Changed to READY as per component check
         // Set job security baseline from expectations
         state.jobSecurity = action.payload.programExpectations.securityBaseline;
+        if (action.payload.careerTier === 'REBUILD') {
+            state.programResources = { nil: 44, boosters: 50, facilities: 46 };
+            state.adPressure = 34;
+        } else if (action.payload.careerTier === 'STABLE') {
+            state.programResources = { nil: 52, boosters: 58, facilities: 56 };
+            state.adPressure = 48;
+        } else {
+            state.programResources = { nil: 62, boosters: 72, facilities: 64 };
+            state.adPressure = 64;
+        }
     },
     initializeRecruitingBoard: (state, action: PayloadAction<{ seed: number; teams: Team[] }>) => {
         state.recruitingSeed = action.payload.seed;
@@ -176,9 +218,43 @@ const coachSlice = createSlice({
     },
     advanceCoachWeek: (state) => {
         state.teamFatigue = advanceFatigue(state.teamFatigue, state.practiceFocus, state.profile?.archetype ?? 'RECRUITER');
+        const boostersLevel = state.programResources?.boosters ?? 50;
+        state.adPressure = Math.max(
+            15,
+            Math.min(
+                98,
+                state.adPressure + Math.round((boostersLevel - state.jobSecurity) / 60),
+            ),
+        );
     },
     updateJobSecurity: (state, action: PayloadAction<number>) => {
         state.jobSecurity = Math.max(0, Math.min(100, action.payload));
+    },
+    allocateProgramResources: (state, action: PayloadAction<ProgramResources>) => {
+        state.programResources = {
+            nil: Math.max(25, Math.min(90, action.payload.nil)),
+            boosters: Math.max(25, Math.min(95, action.payload.boosters)),
+            facilities: Math.max(25, Math.min(95, action.payload.facilities)),
+        };
+    },
+    addCoachXp: (state, action: PayloadAction<number>) => {
+        const gained = Math.max(0, action.payload);
+        state.coachXp += gained;
+        while (state.coachXp >= 100) {
+            state.coachXp -= 100;
+            state.coachLevel += 1;
+            state.coachSkillPoints += 1;
+        }
+    },
+    upgradeCoachSkill: (state, action: PayloadAction<keyof CoachSkillTree>) => {
+        const key = action.payload;
+        if (state.coachSkillPoints <= 0) return;
+        if (state.skillTree[key] >= 5) return;
+        state.skillTree[key] += 1;
+        state.coachSkillPoints -= 1;
+    },
+    setAdPressure: (state, action: PayloadAction<number>) => {
+        state.adPressure = Math.max(0, Math.min(100, action.payload));
     },
     recordSeasonEnd: (state, action: PayloadAction<SeasonHistoryEntry>) => {
         state.seasonHistory.push(action.payload);
@@ -254,6 +330,10 @@ export const {
     setRecruitPitch,
     setPracticeFocus,
     advanceCoachWeek,
+    allocateProgramResources,
+    addCoachXp,
+    upgradeCoachSkill,
+    setAdPressure,
     applyRecruitingUpdates,
     finalizeSigningClass,
     updateJobSecurity,
@@ -298,11 +378,17 @@ export const advanceRecruitingWeek = createAsyncThunk(
              }
         });
 
-        // Derive archetype bonus: RECRUITER +15%, DEVELOPER -5%, TACTICIAN neutral
         const archetypeBonus =
             coach.profile?.archetype === 'RECRUITER' ? 1.15
             : coach.profile?.archetype === 'DEVELOPER' ? 0.95
             : 1.0;
+        const recruitingSkill = coach.skillTree?.recruiting ?? 0;
+        const nilLevel = coach.programResources?.nil ?? 50;
+        const boostersLevel = coach.programResources?.boosters ?? 50;
+        const recruitingSkillBonus = 1 + recruitingSkill * 0.03;
+        const nilBonus = 1 + (nilLevel - 50) / 300;
+        const boostersBonus = 1 + (boostersLevel - 50) / 400;
+        const recruitingBonus = archetypeBonus * recruitingSkillBonus * nilBonus * boostersBonus;
         const coachSkill = coach.profile?.skill ?? 72;
 
         const result = simulateRecruitingWeek(
@@ -315,7 +401,7 @@ export const advanceRecruitingWeek = createAsyncThunk(
             coach.selectedTeamId,
             coach.recruitingSeed,
             coach.recruitingWeekIndex,
-            archetypeBonus,
+            recruitingBonus,
             coachSkill
         );
 

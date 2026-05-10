@@ -4,6 +4,17 @@ import namesData from '../data/names.json' with { type: 'json' };
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
 
+type CoachArchetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
+type PracticeFocus = 'OFFENSE' | 'DEFENSE' | 'CONDITIONING' | 'DISCIPLINE';
+
+export interface CoachDevelopmentInputs {
+  coachArchetype?: CoachArchetype;
+  developmentSkill?: number;
+  operationsSkill?: number;
+  facilitiesLevel?: number;
+  boostersLevel?: number;
+}
+
 /** Convert star rating to an approximate overall baseline */
 function starsToBaseline(stars: number): number {
   // 2★ ~55, 3★ ~65, 4★ ~75, 5★ ~87
@@ -63,15 +74,20 @@ export function convertRecruitToPlayer(
 export function developPlayers(
   roster: Player[],
   rng: () => number,
-  options?: { coachArchetype?: 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER' },
+  options?: CoachDevelopmentInputs,
 ): Player[] {
   const devBonus = options?.coachArchetype === 'DEVELOPER' ? 1 : 0;
+  const developmentSkillBonus = options?.developmentSkill ?? 0;
+  const facilitiesBonus = Math.floor((options?.facilitiesLevel ?? 50) / 22);
+  const operationsBonus = Math.floor((options?.operationsSkill ?? 0) / 2);
+  const boostersModifier = options?.boostersLevel != null && options.boostersLevel >= 75 ? 1 : 0;
+  const totalBonus = devBonus + developmentSkillBonus + facilitiesBonus + operationsBonus + boostersModifier;
 
   return roster.map((player) => {
     // Freshmen and sophomores develop more
     const growthCeiling =
-      (player.year === 1 ? 5 : player.year === 2 ? 4 : player.year === 3 ? 3 : 1) + devBonus;
-    const growth = randInt(rng, 0, Math.min(6, growthCeiling));
+      (player.year === 1 ? 5 : player.year === 2 ? 4 : player.year === 3 ? 3 : 1) + totalBonus;
+    const growth = randInt(rng, 0, Math.min(9, growthCeiling));
     if (growth === 0) return player;
 
     const bump = (base: number) => clamp(base + randInt(rng, 0, growth));
@@ -89,6 +105,77 @@ export function developPlayers(
   });
 }
 
+function bumpPlayer(player: Player, rng: () => number, targets: Array<keyof Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'>>): Player {
+  const updates: Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'> = {
+    shooting: player.shooting,
+    passing: player.passing,
+    speed: player.speed,
+    defense: player.defense,
+    IQ: player.IQ,
+    stamina: player.stamina,
+    discipline: player.discipline,
+  };
+
+  for (const key of targets) {
+    if (rng() < 0.62) {
+      updates[key] = clamp(updates[key] + 1);
+    }
+  }
+
+  const overall = Math.round(
+    (updates.shooting +
+      updates.passing +
+      updates.speed +
+      updates.defense +
+      updates.IQ +
+      updates.stamina +
+      updates.discipline) /
+      7,
+  );
+  const skill = clamp(Math.round(overall + randInt(rng, -2, 2)));
+  return { ...player, ...updates, overall, skill };
+}
+
+export function applyWeeklyTraitGrowth(
+  roster: Player[],
+  weekSeed: number,
+  weekIndex: number,
+  practiceFocus: PracticeFocus,
+  options?: CoachDevelopmentInputs & { coachSkill?: number },
+): Player[] {
+  if (roster.length === 0) return roster;
+
+  const rng = makeRng(seedToNumber(`${weekSeed}:weekly-growth:${weekIndex}:${practiceFocus}`));
+  const coachSkill = options?.coachSkill ?? 70;
+  const growthSlots = Math.max(
+    2,
+    Math.min(
+      8,
+      2 +
+        Math.floor((options?.developmentSkill ?? 0) / 2) +
+        Math.floor((coachSkill - 60) / 15) +
+        Math.floor((options?.facilitiesLevel ?? 50) / 28),
+    ),
+  );
+
+  const focusTraits: Record<PracticeFocus, Array<keyof Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'>>> = {
+    OFFENSE: ['shooting', 'passing', 'IQ'],
+    DEFENSE: ['defense', 'discipline', 'IQ'],
+    CONDITIONING: ['speed', 'stamina'],
+    DISCIPLINE: ['discipline', 'IQ', 'stamina'],
+  };
+  const chosenTraits = focusTraits[practiceFocus];
+
+  const mutable = [...roster];
+  for (let i = 0; i < growthSlots; i += 1) {
+    const playerIndex = randInt(rng, 0, mutable.length - 1);
+    const player = mutable[playerIndex];
+    mutable[playerIndex] = bumpPlayer(player, rng, chosenTraits);
+  }
+
+  return mutable;
+}
+
 const POSITION_FILL_ORDER: Position[] = ['A', 'A', 'A', 'M', 'M', 'M', 'M', 'D', 'D', 'D', 'LSM', 'FO', 'G', 'A', 'M', 'D', 'M', 'D', 'A', 'M', 'D', 'LSM', 'M', 'D', 'A'];
 
 /**
@@ -104,12 +191,18 @@ export function applyRosterTurnover(
   signedRecruits: SignedRecruit[],
   team: Team,
   newSeed: number,
-  options?: { coachArchetype?: 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER' },
+  options?: CoachDevelopmentInputs,
 ): Player[] {
   const rng = makeRng(seedToNumber(`${newSeed}:${team.id}:turnover`));
 
   // Step 1: Develop players
-  const developed = developPlayers(currentRoster, rng, { coachArchetype: options?.coachArchetype });
+  const developed = developPlayers(currentRoster, rng, {
+    coachArchetype: options?.coachArchetype,
+    developmentSkill: options?.developmentSkill,
+    operationsSkill: options?.operationsSkill,
+    facilitiesLevel: options?.facilitiesLevel,
+    boostersLevel: options?.boostersLevel,
+  });
 
   // Step 2: Separate leavers from returners
   //   - Seniors (year 4) always graduate

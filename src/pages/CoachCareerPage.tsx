@@ -2,12 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   addRecruitToBoard,
+  allocateProgramResources,
   initializeRecruitingBoard,
   removeRecruitFromBoard,
   setRecruitHours,
   setRecruitPitch,
   setPracticeFocus,
   setTactics,
+  upgradeCoachSkill,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
   processSigningDay,
@@ -68,6 +70,13 @@ function JobSecurityBar({ value }: { value: number }) {
       </div>
     </div>
   );
+}
+
+function adPressureLabel(pressure: number): { label: string; color: string } {
+  if (pressure >= 80) return { label: 'Board Heat: Extreme', color: '#b91c1c' };
+  if (pressure >= 65) return { label: 'Board Heat: High', color: '#dc2626' };
+  if (pressure >= 45) return { label: 'Board Heat: Moderate', color: '#f59e0b' };
+  return { label: 'Board Heat: Manageable', color: '#16a34a' };
 }
 
 function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: number }) {
@@ -212,6 +221,13 @@ function CoachCareerPage() {
 
   const archetype = coach.profile.archetype;
   const archetypeBonuses = ARCHETYPE_BONUSES[archetype] ?? [];
+  const adPressure = coach.adPressure ?? 45;
+  const coachLevel = coach.coachLevel ?? 1;
+  const coachXp = coach.coachXp ?? 0;
+  const coachSkillPoints = coach.coachSkillPoints ?? 0;
+  const skillTree = coach.skillTree ?? { recruiting: 0, development: 0, operations: 0 };
+  const programResources = coach.programResources ?? { nil: 50, boosters: 50, facilities: 50 };
+  const pressureState = adPressureLabel(adPressure);
 
   function onAdd(recruit: typeof visibleRecruits[0]) {
     if (selectedTeam) {
@@ -231,6 +247,15 @@ function CoachCareerPage() {
     const withoutCurrent = totalHours - current;
     const allowed = Math.min(MAX_HOURS_PER_RECRUIT, Math.max(0, WEEKLY_HOURS_CAP - withoutCurrent));
     dispatch(setRecruitHours({ recruitId, hours: Math.min(requested, allowed) }));
+  }
+
+  function onResourceChange(resource: 'nil' | 'boosters' | 'facilities', value: number): void {
+    dispatch(
+      allocateProgramResources({
+        ...programResources,
+        [resource]: value,
+      }),
+    );
   }
 
   async function onEndSeason() {
@@ -306,7 +331,10 @@ function CoachCareerPage() {
           <div>
             <div className="text-xs text-gray-500 uppercase mb-2">Job Security</div>
             <JobSecurityBar value={coach.jobSecurity} />
-            <div className="text-xs text-gray-500 mt-2">
+            <div className="text-xs mt-2" style={{ color: pressureState.color }}>
+              {pressureState.label} ({adPressure}%)
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
               {coach.jobSecurity < 30
                 ? 'Meeting expectations is critical this season.'
                 : coach.jobSecurity >= 75
@@ -451,6 +479,67 @@ function CoachCareerPage() {
               <option value="late">Late slides — pack in</option>
             </select>
           </label>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h3 className="text-base font-bold m-0">Staff &amp; Program Levers</h3>
+            <p className="text-xs text-gray-500 mt-1 mb-0">
+              Practice focus drives weekly trait growth; staff upgrades and resources shape recruiting, development, and AD pressure.
+            </p>
+          </div>
+          <div className="text-right text-xs text-gray-500">
+            <div>Coach Level {coachLevel}</div>
+            <div>XP {coachXp}/100</div>
+            <div className="font-semibold text-blue-700">Skill Points: {coachSkillPoints}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+          {([
+            ['recruiting', 'Recruiting Tree', 'Boosts weekly recruiting gains.'],
+            ['development', 'Development Tree', 'Improves weekly and offseason trait growth.'],
+            ['operations', 'Operations Tree', 'Improves fatigue/admin stability and XP pace.'],
+          ] as const).map(([key, label, hint]) => (
+            <div key={key} className="border rounded p-2">
+              <div className="text-xs uppercase text-gray-500">{label}</div>
+              <div className="text-lg font-bold">
+                {skillTree[key]}/5
+              </div>
+              <div className="text-xs text-gray-500 mb-2">{hint}</div>
+              <button
+                className="btn btn-primary text-xs"
+                disabled={coachSkillPoints <= 0 || skillTree[key] >= 5}
+                onClick={() => dispatch(upgradeCoachSkill(key))}
+              >
+                Upgrade (+1)
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {([
+            ['nil', 'NIL Budget', programResources.nil, 'Recruiting close rate and leverage'],
+            ['boosters', 'Booster Alignment', programResources.boosters, 'Raises support but can increase AD pressure'],
+            ['facilities', 'Facilities', programResources.facilities, 'Player growth and pressure shielding'],
+          ] as const).map(([key, label, value, hint]) => (
+            <label key={key} className="text-xs font-semibold text-gray-600 border rounded p-2">
+              {label}
+              <div className="text-xs text-gray-500 mt-0.5 mb-1 font-normal">{hint}</div>
+              <input
+                type="range"
+                min={25}
+                max={95}
+                value={value}
+                onChange={(e) => onResourceChange(key, Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="text-xs text-gray-700 font-bold">{value}</div>
+            </label>
+          ))}
         </div>
       </div>
 

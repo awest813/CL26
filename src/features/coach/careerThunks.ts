@@ -4,6 +4,8 @@ import { simCurrentWeek, selectTeamRecords } from '../season/seasonSlice';
 import {
   advanceCoachWeek,
   advanceRecruitingWeek,
+  addCoachXp,
+  setAdPressure,
   updateJobSecurity,
   recordSeasonEnd,
   resetRecruitingForNewSeason,
@@ -12,7 +14,7 @@ import {
 } from './coachSlice';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
-import { applyRosterTurnover, buildDefaultStarters } from '../../sim/rosterManagement';
+import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
 import { computeRankings } from '../../sim/rankings';
 
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
@@ -35,6 +37,36 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
     // the user has no active targets on their board.
     if (canAdvanceRecruiting) {
       await dispatch(advanceRecruitingWeek());
+    }
+
+    const postWeekState = getState();
+    const postWeekCoach = postWeekState.coach;
+    const postWeekSeason = postWeekState.season;
+    const userRecord = postWeekCoach.selectedTeamId
+      ? selectTeamRecords(postWeekState)[postWeekCoach.selectedTeamId]
+      : undefined;
+    const weeklyXp =
+      8 +
+      (userRecord && userRecord.wins + userRecord.losses > 0 && userRecord.wins > userRecord.losses ? 3 : 0) +
+      (postWeekCoach.skillTree?.operations ?? 0);
+    dispatch(addCoachXp(weeklyXp));
+
+    if (postWeekCoach.selectedTeamId && postWeekCoach.managedRoster) {
+      const grownRoster = applyWeeklyTraitGrowth(
+        postWeekCoach.managedRoster,
+        postWeekSeason.seasonSeed,
+        postWeekSeason.completedWeeks,
+        postWeekCoach.practiceFocus,
+        {
+          coachArchetype: postWeekCoach.profile?.archetype,
+          coachSkill: postWeekCoach.profile?.skill ?? 70,
+          developmentSkill: postWeekCoach.skillTree?.development ?? 0,
+          operationsSkill: postWeekCoach.skillTree?.operations ?? 0,
+          facilitiesLevel: postWeekCoach.programResources?.facilities ?? 50,
+          boostersLevel: postWeekCoach.programResources?.boosters ?? 50,
+        },
+      );
+      dispatch(setManagedRoster(grownRoster));
     }
 
     dispatch(advanceCoachWeek());
@@ -92,7 +124,14 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       securityDelta -= 8;
     }
 
-    const newJobSecurity = Math.max(0, Math.min(100, coach.jobSecurity + securityDelta));
+    const winExpectationGap = Math.max(0, coach.programExpectations.winTarget - wins);
+    const rankExpectationGap = Math.max(0, (pollRank ?? 128) - rankTarget);
+    const baseAdPressure = (coach.adPressure ?? 45) + winExpectationGap * 2 + Math.floor(rankExpectationGap / 6);
+    const resourceShield = Math.round(((coach.programResources?.facilities ?? 50) - 50) / 6);
+    const boostedPressure = Math.max(0, Math.min(100, baseAdPressure - resourceShield));
+    const pressurePenalty = Math.round((boostedPressure - 50) / 6);
+
+    const newJobSecurity = Math.max(0, Math.min(100, coach.jobSecurity + securityDelta - pressurePenalty));
 
     // Signing class stats
     const signedClass = coach.signedRecruitsByYear[season.year] ?? [];
@@ -112,6 +151,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       jobSecurityEnd: newJobSecurity,
     }));
 
+    dispatch(setAdPressure(boostedPressure));
     dispatch(updateJobSecurity(newJobSecurity));
     dispatch(resetRecruitingForNewSeason());
   },
@@ -165,6 +205,10 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
 
     const newRoster = applyRosterTurnover(currentRoster, signedRecruits, team, newSeed, {
       coachArchetype: coach.profile?.archetype,
+      developmentSkill: coach.skillTree?.development ?? 0,
+      operationsSkill: coach.skillTree?.operations ?? 0,
+      facilitiesLevel: coach.programResources?.facilities ?? 50,
+      boostersLevel: coach.programResources?.boosters ?? 50,
     });
     const newStarters = buildDefaultStarters(newRoster);
     dispatch(setManagedRoster(newRoster));
