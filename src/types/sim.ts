@@ -22,6 +22,19 @@ export interface TeamSimInput {
   roster: Player[];
   /** When set (non-empty), starters drive team ratings and scoring touches more than bench. */
   starterIds?: string[];
+  gameplan?: TeamGameplayModifiers;
+}
+
+export interface TeamGameplayModifiers {
+  offense: number;
+  defense: number;
+  goalie: number;
+  faceoff: number;
+  discipline: number;
+  shotQuality: number;
+  turnoverAvoidance: number;
+  penaltyAvoidance: number;
+  groundBallBonus: number;
 }
 
 export interface PlayerRatings {

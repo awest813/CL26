@@ -14,6 +14,7 @@ import {
 } from '../features/coach/coachSlice';
 import { runCareerWeeklyCycle, processSeasonEnd, applyOffseasonRosterTurnover } from '../features/coach/careerThunks';
 import { selectTeamRecords, startNewSeason } from '../features/season/seasonSlice';
+import { buildCoachGamePlan, summarizeCoachGamePlan } from '../sim/coachEffects';
 import { summarizeSigningClass } from '../sim/offseason';
 import { estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -193,6 +194,18 @@ function CoachCareerPage() {
     return table.find((r) => r.teamId === coach.selectedTeamId)?.rank ?? null;
   }, [coach.selectedTeamId, season.phase, teams, recordsByTeamId]);
 
+  const coachGamePlan = useMemo(
+    () =>
+      buildCoachGamePlan({
+        baseTactics: coach.tactics,
+        practiceFocus: coach.practiceFocus,
+        fatigue: coach.teamFatigue,
+        archetype: coach.profile?.archetype,
+      }),
+    [coach.practiceFocus, coach.profile?.archetype, coach.tactics, coach.teamFatigue],
+  );
+  const prepNotes = useMemo(() => summarizeCoachGamePlan(coachGamePlan), [coachGamePlan]);
+
   if (coach.onboardingStep !== 'READY' || !coach.profile || !coach.selectedTeamId) {
     return <Navigate to="/career/setup" replace />;
   }
@@ -311,6 +324,37 @@ function CoachCareerPage() {
                   <span className="text-blue-400">+</span> {bonus}
                 </li>
               ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 pt-3 mt-3 border-t text-xs">
+          <div>
+            <div className="text-gray-400 uppercase mb-1">Weekly prep</div>
+            <div className="font-semibold text-gray-700">{coachGamePlan.focusLabel}</div>
+            <div className="text-gray-500 mt-1">
+              Fatigue status: <span className="font-semibold">{coachGamePlan.fatigueLabel}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-400 uppercase mb-1">Gameplan edge</div>
+            <div className="text-gray-600">
+              Off {coachGamePlan.modifiers.offense >= 0 ? '+' : ''}{coachGamePlan.modifiers.offense.toFixed(1)}
+              {' · '}
+              Def {coachGamePlan.modifiers.defense >= 0 ? '+' : ''}{coachGamePlan.modifiers.defense.toFixed(1)}
+              {' · '}
+              Disc {coachGamePlan.modifiers.discipline >= 0 ? '+' : ''}{coachGamePlan.modifiers.discipline.toFixed(1)}
+            </div>
+            <div className="text-gray-500 mt-1">
+              FO {coachGamePlan.modifiers.faceoff >= 0 ? '+' : ''}{coachGamePlan.modifiers.faceoff.toFixed(1)}
+              {' · '}
+              GB {coachGamePlan.modifiers.groundBallBonus >= 0 ? '+' : ''}{coachGamePlan.modifiers.groundBallBonus.toFixed(1)}
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-400 uppercase mb-1">Expected impact</div>
+            <ul className="m-0 pl-4 text-gray-600 space-y-1">
+              {prepNotes.length > 0 ? prepNotes.map((note) => <li key={note}>{note}</li>) : <li>Balanced week with no major swing factors.</li>}
             </ul>
           </div>
         </div>

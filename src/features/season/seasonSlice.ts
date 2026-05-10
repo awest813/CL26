@@ -8,7 +8,13 @@ import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
 import { computePlayoffProjection, computeRankings } from '../../sim/rankings';
-import { applyCoachWeekSettings } from '../../sim/coachEffects';
+import { buildCoachGamePlan } from '../../sim/coachEffects';
+
+const DEFAULT_TACTICS = {
+  tempo: 'normal',
+  rideClear: 'balanced',
+  slideAggression: 'normal',
+} as const;
 
 const initialState: SeasonState = {
   year: 2026,
@@ -74,19 +80,15 @@ export const simCurrentWeek = createAsyncThunk(
     }
 
     // Determine tactics (default for now)
-    const defaultTactics = {
-      tempo: 'normal',
-      rideClear: 'balanced',
-      slideAggression: 'normal',
-    } as const;
-
-    const coachTeamTactics = coachState.selectedTeamId
-      ? applyCoachWeekSettings({
+    const coachGamePlan = coachState.selectedTeamId
+      ? buildCoachGamePlan({
           baseTactics: coachState.tactics,
           practiceFocus: coachState.practiceFocus,
           fatigue: coachState.teamFatigue,
+          archetype: coachState.profile?.archetype,
         })
-      : defaultTactics;
+      : null;
+    const coachTeamTactics = coachGamePlan?.tactics ?? DEFAULT_TACTICS;
 
     gamesToPlay.forEach(game => {
       const homeTeam = getTeam(game.homeTeamId);
@@ -94,8 +96,8 @@ export const simCurrentWeek = createAsyncThunk(
       const homeRoster = getRoster(game.homeTeamId);
       const awayRoster = getRoster(game.awayTeamId);
 
-      const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : defaultTactics;
-      const awayTactics = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : defaultTactics;
+      const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
+      const awayTactics = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
 
       // Deterministic seed for this game based on season seed and game ID
       // simple hash for now
@@ -103,12 +105,16 @@ export const simCurrentWeek = createAsyncThunk(
 
       const homeInput =
         game.homeTeamId === coachState.selectedTeamId && coachState.starterIds.length > 0
-          ? { team: homeTeam, roster: homeRoster, starterIds: coachState.starterIds }
-          : { team: homeTeam, roster: homeRoster };
+          ? { team: homeTeam, roster: homeRoster, starterIds: coachState.starterIds, gameplan: coachGamePlan?.modifiers }
+          : game.homeTeamId === coachState.selectedTeamId
+            ? { team: homeTeam, roster: homeRoster, gameplan: coachGamePlan?.modifiers }
+            : { team: homeTeam, roster: homeRoster };
       const awayInput =
         game.awayTeamId === coachState.selectedTeamId && coachState.starterIds.length > 0
-          ? { team: awayTeam, roster: awayRoster, starterIds: coachState.starterIds }
-          : { team: awayTeam, roster: awayRoster };
+          ? { team: awayTeam, roster: awayRoster, starterIds: coachState.starterIds, gameplan: coachGamePlan?.modifiers }
+          : game.awayTeamId === coachState.selectedTeamId
+            ? { team: awayTeam, roster: awayRoster, gameplan: coachGamePlan?.modifiers }
+            : { team: awayTeam, roster: awayRoster };
 
       const result = simulateGame(homeInput, awayInput, homeTactics, awayTactics, gameSeed);
 
@@ -168,17 +174,23 @@ export const simNextPlayoffRound = createAsyncThunk(
         // Use a base seed for simulation
         const baseSeed = state.season.seasonSeed + 9999;
 
+        const coachGamePlan = coach.selectedTeamId
+          ? buildCoachGamePlan({
+              baseTactics: coach.tactics,
+              practiceFocus: coach.practiceFocus,
+              fatigue: coach.teamFatigue,
+              archetype: coach.profile?.archetype,
+            })
+          : null;
+
         const coachPlay =
           coach.selectedTeamId && coach.managedRoster && coach.managedRoster.length > 0
             ? {
                 teamId: coach.selectedTeamId,
                 roster: coach.managedRoster,
                 starterIds: coach.starterIds,
-                tactics: applyCoachWeekSettings({
-                  baseTactics: coach.tactics,
-                  practiceFocus: coach.practiceFocus,
-                  fatigue: coach.teamFatigue,
-                }),
+                tactics: coachGamePlan?.tactics ?? DEFAULT_TACTICS,
+                modifiers: coachGamePlan?.modifiers,
               }
             : null;
 

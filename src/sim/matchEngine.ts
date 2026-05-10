@@ -1,4 +1,4 @@
-import { GameResult, Player, PlayerGameStats, Tactics, TeamGameStats, TeamSimInput } from '../types/sim';
+import { GameResult, Player, PlayerGameStats, TeamGameplayModifiers, Tactics, TeamGameStats, TeamSimInput } from '../types/sim';
 import { makeRng, normalish, pickOne, randInt } from './rng.ts';
 import { clockForPossession } from './timeUtils.ts';
 
@@ -16,6 +16,25 @@ interface TeamRatings {
   /** Per-player sampling weights for goals/assists (starters get more touches when set). */
   fieldPlayerWeights: Map<string, number>;
 }
+
+interface EffectiveGameplayModifiers extends TeamGameplayModifiers {
+  shotQuality: number;
+  turnoverAvoidance: number;
+  penaltyAvoidance: number;
+  groundBallBonus: number;
+}
+
+const ZERO_GAMEPLAN: EffectiveGameplayModifiers = {
+  offense: 0,
+  defense: 0,
+  goalie: 0,
+  faceoff: 0,
+  discipline: 0,
+  shotQuality: 0,
+  turnoverAvoidance: 0,
+  penaltyAvoidance: 0,
+  groundBallBonus: 0,
+};
 
 function resolveStarterSet(roster: Player[], starterIds?: string[]): Set<string> | null {
   if (!starterIds || starterIds.length === 0) return null;
@@ -141,6 +160,24 @@ function weightedPlayerForGoal(rng: () => number, ratings: TeamRatings): Player 
   return pool[pool.length - 1];
 }
 
+function resolveGameplayModifiers(input: TeamSimInput): EffectiveGameplayModifiers {
+  if (!input.gameplan) {
+    return ZERO_GAMEPLAN;
+  }
+
+  return {
+    offense: input.gameplan.offense ?? 0,
+    defense: input.gameplan.defense ?? 0,
+    goalie: input.gameplan.goalie ?? 0,
+    faceoff: input.gameplan.faceoff ?? 0,
+    discipline: input.gameplan.discipline ?? 0,
+    shotQuality: input.gameplan.shotQuality ?? 0,
+    turnoverAvoidance: input.gameplan.turnoverAvoidance ?? 0,
+    penaltyAvoidance: input.gameplan.penaltyAvoidance ?? 0,
+    groundBallBonus: input.gameplan.groundBallBonus ?? 0,
+  };
+}
+
 export function simulateGame(
   teamA: TeamSimInput,
   teamB: TeamSimInput,
@@ -151,15 +188,17 @@ export function simulateGame(
   const rng = makeRng(seed);
   const ratingA = calcRatings(teamA.roster, teamA.starterIds);
   const ratingB = calcRatings(teamB.roster, teamB.starterIds);
+  const modifiersA = resolveGameplayModifiers(teamA);
+  const modifiersB = resolveGameplayModifiers(teamB);
 
   const totalPossessions = Math.max(60, 78 + tempoModifier(tacticsA.tempo) + tempoModifier(tacticsB.tempo));
-  const faceoffEdge = (ratingA.faceoff - ratingB.faceoff) / 40;
+  const faceoffEdge = (ratingA.faceoff + modifiersA.faceoff - ratingB.faceoff - modifiersB.faceoff) / 40;
   const shareA = Math.min(0.62, Math.max(0.38, 0.5 + faceoffEdge * 0.08 + normalish(rng) * 0.03));
   const possessionsA = Math.round(totalPossessions * shareA);
   const possessionsB = totalPossessions - possessionsA;
 
-  const statsA: TeamGameStats = { teamId: teamA.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: randInt(rng, 22, 35), penalties: 0, faceoffPct: Math.round(shareA * 1000) / 10 };
-  const statsB: TeamGameStats = { teamId: teamB.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: randInt(rng, 22, 35), penalties: 0, faceoffPct: Math.round((1 - shareA) * 1000) / 10 };
+  const statsA: TeamGameStats = { teamId: teamA.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersA.groundBallBonus)), penalties: 0, faceoffPct: Math.round(shareA * 1000) / 10 };
+  const statsB: TeamGameStats = { teamId: teamB.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersB.groundBallBonus)), penalties: 0, faceoffPct: Math.round((1 - shareA) * 1000) / 10 };
 
   const pStatsA = new Map<string, PlayerGameStats>();
   const pStatsB = new Map<string, PlayerGameStats>();
@@ -173,10 +212,12 @@ export function simulateGame(
     return created;
   }
 
-  function runPossession(offenseInput: TeamSimInput, defenseInput: TeamSimInput, offenseRatings: TeamRatings, defenseRatings: TeamRatings, offenseTactics: Tactics, defenseTactics: Tactics, offenseStats: TeamGameStats, defenseStats: TeamGameStats, playerStats: Map<string, PlayerGameStats>, defensePlayerStats: Map<string, PlayerGameStats>, possessionIndex: number): void {
-    const disciplineGap = (100 - offenseRatings.discipline) / 140;
-    const turnoverChance = 0.15 + disciplineGap + (offenseTactics.rideClear === 'aggressive' ? 0.02 : 0);
-    const penaltyChance = 0.045 + (100 - offenseRatings.discipline) / 220 + (defenseTactics.slideAggression === 'early' ? 0.015 : 0);
+  function runPossession(offenseInput: TeamSimInput, defenseInput: TeamSimInput, offenseRatings: TeamRatings, defenseRatings: TeamRatings, offenseMods: EffectiveGameplayModifiers, defenseMods: EffectiveGameplayModifiers, offenseTactics: Tactics, defenseTactics: Tactics, offenseStats: TeamGameStats, defenseStats: TeamGameStats, playerStats: Map<string, PlayerGameStats>, defensePlayerStats: Map<string, PlayerGameStats>, possessionIndex: number): void {
+    const offenseDiscipline = offenseRatings.discipline + offenseMods.discipline;
+    const defenseDiscipline = defenseRatings.discipline + defenseMods.discipline;
+    const disciplineGap = (100 - offenseDiscipline) / 140;
+    const turnoverChance = Math.min(0.34, Math.max(0.06, 0.15 + disciplineGap + (offenseTactics.rideClear === 'aggressive' ? 0.02 : 0) - offenseMods.turnoverAvoidance - defenseMods.discipline / 900));
+    const penaltyChance = Math.min(0.18, Math.max(0.015, 0.045 + (100 - offenseDiscipline) / 220 + (defenseTactics.slideAggression === 'early' ? 0.015 : 0) - offenseMods.penaltyAvoidance - defenseDiscipline / 1600));
 
     if (rng() < penaltyChance) {
       offenseStats.penalties += 1;
@@ -199,9 +240,9 @@ export function simulateGame(
       return;
     }
 
-    const offensePower = offenseRatings.offense + offenseBoostFromTactics(offenseTactics);
-    const defensePower = defenseRatings.defense + defenseBoostFromTactics(defenseTactics);
-    const quality = (offensePower - defensePower) / 110 + normalish(rng) * 0.06;
+    const offensePower = offenseRatings.offense + offenseMods.offense + offenseBoostFromTactics(offenseTactics);
+    const defensePower = defenseRatings.defense + defenseMods.defense + defenseBoostFromTactics(defenseTactics);
+    const quality = (offensePower - defensePower) / 110 + offenseMods.shotQuality + normalish(rng) * 0.06;
 
     const shotChance = Math.min(0.88, Math.max(0.48, 0.66 + quality));
     if (rng() > shotChance) {
@@ -211,7 +252,7 @@ export function simulateGame(
     offenseStats.shots += 1;
     const shooter = weightedPlayerForGoal(rng, offenseRatings);
 
-    const saveChance = Math.min(0.58, Math.max(0.2, 0.34 + (defenseRatings.goalie - offensePower) / 180));
+    const saveChance = Math.min(0.58, Math.max(0.2, 0.34 + (defenseRatings.goalie + defenseMods.goalie - offensePower) / 180));
     const missChance = Math.min(0.22, Math.max(0.06, 0.12 - quality / 4));
 
     if (rng() < missChance) {
@@ -245,11 +286,11 @@ export function simulateGame(
   }
 
   for (let i = 0; i < possessionsA; i += 1) {
-    runPossession(teamA, teamB, ratingA, ratingB, tacticsA, tacticsB, statsA, statsB, pStatsA, pStatsB, i);
+    runPossession(teamA, teamB, ratingA, ratingB, modifiersA, modifiersB, tacticsA, tacticsB, statsA, statsB, pStatsA, pStatsB, i);
   }
 
   for (let i = 0; i < possessionsB; i += 1) {
-    runPossession(teamB, teamA, ratingB, ratingA, tacticsB, tacticsA, statsB, statsA, pStatsB, pStatsA, possessionsA + i);
+    runPossession(teamB, teamA, ratingB, ratingA, modifiersB, modifiersA, tacticsB, tacticsA, statsB, statsA, pStatsB, pStatsA, possessionsA + i);
   }
 
   if (highlights.length < 10) {
