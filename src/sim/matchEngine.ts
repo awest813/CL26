@@ -206,7 +206,7 @@ function groundBallBonusFromTactics(tactics: Tactics): number {
 }
 
 function scoringPhrasesForTactics(tactics: Tactics): string[] {
-  const base = ['scores on a fast break', 'buries a step-down rip', 'finishes after a slick feed', 'beats the goalie high stick'];
+  const base = ['scores on a fast break', 'buries a step-down rip', 'finishes after a slick feed', 'beats the goalie stick-side high'];
   if (tactics.offenseSet === 'motion') {
     return [...base, 'spins one extra pass before snapping home', 'finishes after crisp off-ball movement'];
   }
@@ -414,7 +414,7 @@ export function simulateGame(
 
     if (scoringRunLength >= MIN_SCORING_RUN_FOR_HIGHLIGHT && highlights.length < 20 && rng() < SCORING_RUN_HIGHLIGHT_CHANCE) {
       const c = clockForPossession(possessionIndex, totalPossessions);
-      highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} is on a ${scoringRunLength}-goal run.`);
+      highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} are on a ${scoringRunLength}-goal run.`);
     }
   }
 
