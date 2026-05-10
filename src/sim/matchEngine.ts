@@ -36,6 +36,18 @@ const ZERO_GAMEPLAN: EffectiveGameplayModifiers = {
   groundBallBonus: 0,
 };
 
+const TURNOVER_BASE_CHANCE = 0.15;
+const TURNOVER_MIN_CHANCE = 0.06;
+const TURNOVER_MAX_CHANCE = 0.34;
+const AGGRESSIVE_CLEAR_TURNOVER_COST = 0.02;
+const DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR = 900;
+
+const PENALTY_BASE_CHANCE = 0.045;
+const PENALTY_MIN_CHANCE = 0.015;
+const PENALTY_MAX_CHANCE = 0.18;
+const EARLY_SLIDE_PENALTY_COST = 0.015;
+const DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR = 1600;
+
 function resolveStarterSet(roster: Player[], starterIds?: string[]): Set<string> | null {
   if (!starterIds || starterIds.length === 0) return null;
   const rosterIds = new Set(roster.map((p) => p.id));
@@ -216,8 +228,24 @@ export function simulateGame(
     const offenseDiscipline = offenseRatings.discipline + offenseMods.discipline;
     const defenseDiscipline = defenseRatings.discipline + defenseMods.discipline;
     const disciplineGap = (100 - offenseDiscipline) / 140;
-    const turnoverChance = Math.min(0.34, Math.max(0.06, 0.15 + disciplineGap + (offenseTactics.rideClear === 'aggressive' ? 0.02 : 0) - offenseMods.turnoverAvoidance - defenseMods.discipline / 900));
-    const penaltyChance = Math.min(0.18, Math.max(0.015, 0.045 + (100 - offenseDiscipline) / 220 + (defenseTactics.slideAggression === 'early' ? 0.015 : 0) - offenseMods.penaltyAvoidance - defenseDiscipline / 1600));
+    const aggressiveRideTurnoverCost = offenseTactics.rideClear === 'aggressive' ? AGGRESSIVE_CLEAR_TURNOVER_COST : 0;
+    const defensiveTurnoverDisruption = defenseMods.discipline / DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR;
+    const turnoverChance = Math.min(
+      TURNOVER_MAX_CHANCE,
+      Math.max(
+        TURNOVER_MIN_CHANCE,
+        TURNOVER_BASE_CHANCE + disciplineGap + aggressiveRideTurnoverCost - offenseMods.turnoverAvoidance - defensiveTurnoverDisruption,
+      ),
+    );
+    const earlySlidePenaltyCost = defenseTactics.slideAggression === 'early' ? EARLY_SLIDE_PENALTY_COST : 0;
+    const defensivePenaltyDisruption = defenseDiscipline / DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR;
+    const penaltyChance = Math.min(
+      PENALTY_MAX_CHANCE,
+      Math.max(
+        PENALTY_MIN_CHANCE,
+        PENALTY_BASE_CHANCE + (100 - offenseDiscipline) / 220 + earlySlidePenaltyCost - offenseMods.penaltyAvoidance - defensivePenaltyDisruption,
+      ),
+    );
 
     if (rng() < penaltyChance) {
       offenseStats.penalties += 1;

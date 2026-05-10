@@ -2,6 +2,84 @@ import { PracticeFocus, Tactics, TeamGameplayModifiers } from '../types/sim';
 
 type CoachArchetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
 
+const FOCUS_TRANSLATION_BY_ARCHETYPE: Record<CoachArchetype, number> = {
+  RECRUITER: 1,
+  TACTICIAN: 1.25,
+  DEVELOPER: 1.08,
+};
+
+const FOCUS_MODIFIERS: Record<PracticeFocus, TeamGameplayModifiers> = {
+  OFFENSE: {
+    offense: 4.2,
+    defense: -1.2,
+    goalie: 0,
+    faceoff: 0,
+    discipline: 0,
+    shotQuality: 0.034,
+    turnoverAvoidance: 0,
+    penaltyAvoidance: 0,
+    groundBallBonus: 0,
+  },
+  DEFENSE: {
+    offense: -0.8,
+    defense: 4,
+    goalie: 2.2,
+    faceoff: 0,
+    discipline: 0,
+    shotQuality: 0,
+    turnoverAvoidance: 0,
+    penaltyAvoidance: 0,
+    groundBallBonus: 0,
+  },
+  DISCIPLINE: {
+    offense: 0,
+    defense: 0,
+    goalie: 0,
+    faceoff: 0,
+    discipline: 7,
+    shotQuality: 0,
+    turnoverAvoidance: 0.05,
+    penaltyAvoidance: 0.04,
+    groundBallBonus: 0,
+  },
+  CONDITIONING: {
+    offense: 0,
+    defense: 1.4,
+    goalie: 0,
+    faceoff: 1.8,
+    discipline: 0,
+    shotQuality: 0,
+    turnoverAvoidance: 0,
+    penaltyAvoidance: 0,
+    groundBallBonus: 3.5,
+  },
+};
+
+const ARCHETYPE_BONUSES: Record<CoachArchetype, Partial<TeamGameplayModifiers>> = {
+  RECRUITER: {},
+  TACTICIAN: {
+    offense: 0.8,
+    defense: 0.8,
+    shotQuality: 0.008,
+  },
+  DEVELOPER: {
+    discipline: 1.6,
+    groundBallBonus: 0.8,
+  },
+};
+
+const FATIGUE_PENALTY_START = 24;
+const FATIGUE_PENALTY_RANGE = 76;
+const FATIGUE_PENALTIES: Pick<TeamGameplayModifiers, 'offense' | 'defense' | 'goalie' | 'faceoff' | 'discipline' | 'shotQuality' | 'groundBallBonus'> = {
+  offense: 5.2,
+  defense: 4.4,
+  goalie: 2.6,
+  faceoff: 3.8,
+  discipline: 4.8,
+  shotQuality: 0.028,
+  groundBallBonus: 2.4,
+};
+
 export interface CoachWeekSettings {
   baseTactics: Tactics;
   practiceFocus: PracticeFocus;
@@ -84,62 +162,39 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   const archetype = settings.archetype ?? 'RECRUITER';
   const tactics = applyCoachWeekSettings(settings);
   const modifiers = blankGameplayModifiers();
+  const focusTranslation = FOCUS_TRANSLATION_BY_ARCHETYPE[archetype];
+  const focusModifiers = FOCUS_MODIFIERS[settings.practiceFocus];
 
-  const focusTranslation =
-    archetype === 'TACTICIAN'
-      ? 1.25
-      : archetype === 'DEVELOPER'
-        ? 1.08
-        : 1;
+  modifiers.offense += focusModifiers.offense * focusTranslation;
+  modifiers.defense += focusModifiers.defense * focusTranslation;
+  modifiers.goalie += focusModifiers.goalie * focusTranslation;
+  modifiers.faceoff += focusModifiers.faceoff * focusTranslation;
+  modifiers.discipline += focusModifiers.discipline * focusTranslation;
+  modifiers.shotQuality += focusModifiers.shotQuality * focusTranslation;
+  modifiers.turnoverAvoidance += focusModifiers.turnoverAvoidance * focusTranslation;
+  modifiers.penaltyAvoidance += focusModifiers.penaltyAvoidance * focusTranslation;
+  modifiers.groundBallBonus += focusModifiers.groundBallBonus * focusTranslation;
 
-  if (settings.practiceFocus === 'OFFENSE') {
-    modifiers.offense += 4.2 * focusTranslation;
-    modifiers.shotQuality += 0.034 * focusTranslation;
-    modifiers.defense -= 1.2;
-  }
+  const archetypeBonus = ARCHETYPE_BONUSES[archetype];
+  modifiers.offense += archetypeBonus.offense ?? 0;
+  modifiers.defense += archetypeBonus.defense ?? 0;
+  modifiers.discipline += archetypeBonus.discipline ?? 0;
+  modifiers.shotQuality += archetypeBonus.shotQuality ?? 0;
+  modifiers.groundBallBonus += archetypeBonus.groundBallBonus ?? 0;
 
-  if (settings.practiceFocus === 'DEFENSE') {
-    modifiers.defense += 4 * focusTranslation;
-    modifiers.goalie += 2.2 * focusTranslation;
-    modifiers.offense -= 0.8;
-  }
-
-  if (settings.practiceFocus === 'DISCIPLINE') {
-    modifiers.discipline += 7 * focusTranslation;
-    modifiers.turnoverAvoidance += 0.05 * focusTranslation;
-    modifiers.penaltyAvoidance += 0.04 * focusTranslation;
-  }
-
-  if (settings.practiceFocus === 'CONDITIONING') {
-    modifiers.faceoff += 1.8 * focusTranslation;
-    modifiers.groundBallBonus += 3.5 * focusTranslation;
-    modifiers.defense += 1.4;
-  }
-
-  if (archetype === 'TACTICIAN') {
-    modifiers.offense += 0.8;
-    modifiers.defense += 0.8;
-    modifiers.shotQuality += 0.008;
-  }
-
-  if (archetype === 'DEVELOPER') {
-    modifiers.discipline += 1.6;
-    modifiers.groundBallBonus += 0.8;
-  }
-
-  const fatiguePenaltyBase = clamp((fatigue - 24) / 76, 0, 1);
+  const fatiguePenaltyBase = clamp((fatigue - FATIGUE_PENALTY_START) / FATIGUE_PENALTY_RANGE, 0, 1);
   let fatiguePenaltyScale = settings.practiceFocus === 'CONDITIONING' ? 0.52 : 1;
   if (archetype === 'TACTICIAN') fatiguePenaltyScale *= 0.88;
   if (archetype === 'DEVELOPER') fatiguePenaltyScale *= 0.94;
   const fatiguePenalty = fatiguePenaltyBase * fatiguePenaltyScale;
 
-  modifiers.offense -= fatiguePenalty * 5.2;
-  modifiers.defense -= fatiguePenalty * 4.4;
-  modifiers.goalie -= fatiguePenalty * 2.6;
-  modifiers.faceoff -= fatiguePenalty * 3.8;
-  modifiers.discipline -= fatiguePenalty * 4.8;
-  modifiers.shotQuality -= fatiguePenalty * 0.028;
-  modifiers.groundBallBonus -= fatiguePenalty * 2.4;
+  modifiers.offense -= fatiguePenalty * FATIGUE_PENALTIES.offense;
+  modifiers.defense -= fatiguePenalty * FATIGUE_PENALTIES.defense;
+  modifiers.goalie -= fatiguePenalty * FATIGUE_PENALTIES.goalie;
+  modifiers.faceoff -= fatiguePenalty * FATIGUE_PENALTIES.faceoff;
+  modifiers.discipline -= fatiguePenalty * FATIGUE_PENALTIES.discipline;
+  modifiers.shotQuality -= fatiguePenalty * FATIGUE_PENALTIES.shotQuality;
+  modifiers.groundBallBonus -= fatiguePenalty * FATIGUE_PENALTIES.groundBallBonus;
 
   return {
     tactics,
