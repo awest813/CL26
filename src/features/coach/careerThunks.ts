@@ -218,9 +218,8 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
     const rosterSeed = leagueSeasonRosterSeed(state.season.seasonSeed);
     const currentRoster = coach.managedRoster ?? generateRoster(team, rosterSeed);
 
-    // Get signed recruits from the most recent completed year
-    const latestYear = Math.max(...Object.keys(coach.signedRecruitsByYear).map(Number), 0);
-    const signedRecruits = latestYear > 0 ? (coach.signedRecruitsByYear[latestYear] ?? []) : [];
+    // Only apply this offseason's signing class to avoid carrying over older classes.
+    const signedRecruits = coach.signedRecruitsByYear[state.season.year] ?? [];
 
     const newRoster = applyRosterTurnover(currentRoster, signedRecruits, team, newSeed, {
       coachArchetype: coach.profile?.archetype,
