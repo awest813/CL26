@@ -6,6 +6,8 @@ const DEFAULT_TACTICS: Tactics = {
   tempo: 'normal',
   rideClear: 'balanced',
   slideAggression: 'normal',
+  offenseSet: 'balanced',
+  defensePackage: 'man',
 };
 
 /** User program context for playoff games (managed roster, depth chart, tactics). */

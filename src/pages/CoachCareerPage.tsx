@@ -434,7 +434,7 @@ function CoachCareerPage() {
         <p className="text-xs text-gray-500 mt-1 mb-3">
           Your base scheme for every game. Practice focus still shifts tempo and slides during the weekly cycle.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
           <label className="text-xs font-semibold text-gray-600">
             Tempo
             <select
@@ -477,6 +477,37 @@ function CoachCareerPage() {
               <option value="early">Early help</option>
               <option value="normal">Standard</option>
               <option value="late">Late slides — pack in</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            Offense set
+            <select
+              value={coach.tactics.offenseSet ?? 'balanced'}
+              onChange={(e) =>
+                dispatch(setTactics({ ...coach.tactics, offenseSet: e.target.value as NonNullable<Tactics['offenseSet']> }))
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="balanced">Balanced</option>
+              <option value="motion">Motion — off-ball movement</option>
+              <option value="invert">Invert — midfield dodges</option>
+              <option value="crease">Crease — inside finishing</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            Defense package
+            <select
+              value={coach.tactics.defensePackage ?? 'man'}
+              onChange={(e) =>
+                dispatch(
+                  setTactics({ ...coach.tactics, defensePackage: e.target.value as NonNullable<Tactics['defensePackage']> }),
+                )
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="man">Man-to-man</option>
+              <option value="zone">Zone — protect the slot</option>
+              <option value="pressure">Pressure — force pace</option>
             </select>
           </label>
         </div>

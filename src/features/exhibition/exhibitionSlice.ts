@@ -17,6 +17,8 @@ const defaultTactics: Tactics = {
   tempo: 'normal',
   rideClear: 'balanced',
   slideAggression: 'normal',
+  offenseSet: 'balanced',
+  defensePackage: 'man',
 };
 
 const initialState: ExhibitionState = {

@@ -15,6 +15,8 @@ const DEFAULT_TACTICS = {
   tempo: 'normal',
   rideClear: 'balanced',
   slideAggression: 'normal',
+  offenseSet: 'balanced',
+  defensePackage: 'man',
 } as const;
 
 function composeSeasonGameSeed(

@@ -26,6 +26,8 @@ const tactics: Tactics = {
   tempo: 'normal',
   rideClear: 'balanced',
   slideAggression: 'normal',
+  offenseSet: 'balanced',
+  defensePackage: 'man',
 };
 
 describe('match engine gameplay modifiers', () => {
@@ -128,5 +130,98 @@ describe('match engine gameplay modifiers', () => {
       clean.statsA.turnovers + clean.statsA.penalties <
         sloppy.statsA.turnovers + sloppy.statsA.penalties,
     );
+  });
+
+  test('motion offense set creates more attacking volume over a seed sample', () => {
+    const rosterA = generateRoster(teamA, 'strategy-offense-test');
+    const rosterB = generateRoster(teamB, 'strategy-offense-test');
+    let balancedShots = 0;
+    let motionShots = 0;
+
+    for (let seed = 110; seed < 170; seed += 1) {
+      const balanced = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        { ...tactics, offenseSet: 'balanced' },
+        tactics,
+        seed,
+      );
+      const motion = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        { ...tactics, offenseSet: 'motion' },
+        tactics,
+        seed,
+      );
+      balancedShots += balanced.statsA.shots;
+      motionShots += motion.statsA.shots;
+    }
+
+    assert.ok(motionShots > balancedShots);
+  });
+
+  test('pressure defense package creates more loose-ball production than zone over a seed sample', () => {
+    const rosterA = generateRoster(teamA, 'strategy-defense-test');
+    const rosterB = generateRoster(teamB, 'strategy-defense-test');
+    let pressureGroundBalls = 0;
+    let zoneGroundBalls = 0;
+
+    for (let seed = 210; seed < 270; seed += 1) {
+      const pressure = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        { ...tactics, defensePackage: 'pressure' },
+        seed,
+      );
+      const zone = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        { ...tactics, defensePackage: 'zone' },
+        seed,
+      );
+      pressureGroundBalls += pressure.statsB.groundBalls;
+      zoneGroundBalls += zone.statsB.groundBalls;
+    }
+
+    assert.ok(pressureGroundBalls > zoneGroundBalls);
+  });
+
+  test('high-end offense can trigger scoring-run gameplay highlights', () => {
+    const rosterA = generateRoster(teamA, 'strategy-run-highlight');
+    const rosterB = generateRoster(teamB, 'strategy-run-highlight');
+    let foundScoringRunHighlight = false;
+
+    for (let seed = 500; seed < 680; seed += 1) {
+      const result = simulateGame(
+        {
+          team: teamA,
+          roster: rosterA,
+          gameplan: {
+            offense: 8,
+            defense: 0,
+            goalie: 0,
+            faceoff: 0,
+            discipline: 0,
+            shotQuality: 0.06,
+            turnoverAvoidance: 0,
+            penaltyAvoidance: 0,
+            groundBallBonus: 0,
+          },
+        },
+        { team: teamB, roster: rosterB },
+        { ...tactics, tempo: 'fast', offenseSet: 'crease' },
+        { ...tactics, tempo: 'slow', defensePackage: 'zone' },
+        seed,
+      );
+
+      if (result.highlights.some((line) => line.includes('-goal run.'))) {
+        foundScoringRunHighlight = true;
+        break;
+      }
+    }
+
+    assert.ok(foundScoringRunHighlight);
   });
 });
