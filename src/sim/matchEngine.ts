@@ -359,10 +359,8 @@ export function simulateGame(
   let overtimePeriods = 0;
   while (statsA.goals === statsB.goals && overtimePeriods < MAX_OVERTIME_PERIODS) {
     overtimePeriods += 1;
-    const beforeA = statsA.goals;
-    const beforeB = statsB.goals;
     const overtimeTotalPossessions = OVERTIME_POSSESSIONS_PER_TEAM * 2;
-    // Overtime is modeled as a fresh opening draw, then alternating possessions as a compact sudden-death abstraction.
+    // Overtime uses the same faceoff model as regulation for the opening draw, then alternates possessions as a compact sudden-death abstraction.
     const overtimeShareA = computeFaceoffShare(rng, ratingA, ratingB, modifiersA, modifiersB);
     let offenseIsA = rng() < overtimeShareA;
 
@@ -374,7 +372,7 @@ export function simulateGame(
         runPossession(teamB, teamA, ratingB, ratingA, modifiersB, modifiersA, tacticsB, tacticsA, statsB, statsA, pStatsB, pStatsA, possessionIndex);
       }
 
-      if (statsA.goals > beforeA || statsB.goals > beforeB) {
+      if (statsA.goals !== statsB.goals) {
         // Sudden-death: first overtime goal ends the period immediately.
         break;
       }
@@ -394,7 +392,8 @@ export function simulateGame(
 
   if (overtimePeriods > 0) {
     const winnerName = statsA.goals > statsB.goals ? teamA.team.schoolName : teamB.team.schoolName;
-    highlights.push(`Final - ${winnerName} wins in overtime (${overtimePeriods} OT).`);
+    const overtimeText = overtimePeriods === 1 ? 'OT' : `${overtimePeriods} OTs`;
+    highlights.push(`Final - ${winnerName} wins in overtime (${overtimeText}).`);
   }
 
   if (highlights.length < 10) {
