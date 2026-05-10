@@ -225,9 +225,9 @@ export function simulateGame(
   }
 
   function runPossession(offenseInput: TeamSimInput, defenseInput: TeamSimInput, offenseRatings: TeamRatings, defenseRatings: TeamRatings, offenseMods: EffectiveGameplayModifiers, defenseMods: EffectiveGameplayModifiers, offenseTactics: Tactics, defenseTactics: Tactics, offenseStats: TeamGameStats, defenseStats: TeamGameStats, playerStats: Map<string, PlayerGameStats>, defensePlayerStats: Map<string, PlayerGameStats>, possessionIndex: number): void {
-    const offenseDiscipline = offenseRatings.discipline + offenseMods.discipline;
-    const defenseDiscipline = defenseRatings.discipline + defenseMods.discipline;
-    const disciplineGap = (100 - offenseDiscipline) / 140;
+    const adjustedOffenseDiscipline = offenseRatings.discipline + offenseMods.discipline;
+    const adjustedDefenseDiscipline = defenseRatings.discipline + defenseMods.discipline;
+    const disciplineGap = (100 - adjustedOffenseDiscipline) / 140;
     const aggressiveRideTurnoverCost = offenseTactics.rideClear === 'aggressive' ? AGGRESSIVE_CLEAR_TURNOVER_COST : 0;
     const defensiveTurnoverDisruption = defenseMods.discipline / DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR;
     const turnoverChance = Math.min(
@@ -238,12 +238,12 @@ export function simulateGame(
       ),
     );
     const earlySlidePenaltyCost = defenseTactics.slideAggression === 'early' ? EARLY_SLIDE_PENALTY_COST : 0;
-    const defensivePenaltyDisruption = defenseDiscipline / DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR;
+    const defensivePenaltyDisruption = adjustedDefenseDiscipline / DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR;
     const penaltyChance = Math.min(
       PENALTY_MAX_CHANCE,
       Math.max(
         PENALTY_MIN_CHANCE,
-        PENALTY_BASE_CHANCE + (100 - offenseDiscipline) / 220 + earlySlidePenaltyCost - offenseMods.penaltyAvoidance - defensivePenaltyDisruption,
+        PENALTY_BASE_CHANCE + (100 - adjustedOffenseDiscipline) / 220 + earlySlidePenaltyCost - offenseMods.penaltyAvoidance - defensivePenaltyDisruption,
       ),
     );
 

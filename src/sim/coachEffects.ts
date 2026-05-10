@@ -70,6 +70,10 @@ const ARCHETYPE_BONUSES: Record<CoachArchetype, Partial<TeamGameplayModifiers>> 
 
 const FATIGUE_PENALTY_START = 24;
 const FATIGUE_PENALTY_RANGE = 76;
+const SHOT_QUALITY_MIN = -0.08;
+const SHOT_QUALITY_MAX = 0.08;
+const TURNOVER_AVOIDANCE_MAX = 0.12;
+const PENALTY_AVOIDANCE_MAX = 0.1;
 const FATIGUE_PENALTIES: Pick<TeamGameplayModifiers, 'offense' | 'defense' | 'goalie' | 'faceoff' | 'discipline' | 'shotQuality' | 'groundBallBonus'> = {
   offense: 5.2,
   defense: 4.4,
@@ -204,9 +208,9 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
       goalie: clampModifier(modifiers.goalie),
       faceoff: clampModifier(modifiers.faceoff),
       discipline: clampModifier(modifiers.discipline),
-      shotQuality: clampModifier(clamp(modifiers.shotQuality, -0.08, 0.08)),
-      turnoverAvoidance: clampModifier(clamp(modifiers.turnoverAvoidance, 0, 0.12)),
-      penaltyAvoidance: clampModifier(clamp(modifiers.penaltyAvoidance, 0, 0.1)),
+      shotQuality: clampModifier(clamp(modifiers.shotQuality, SHOT_QUALITY_MIN, SHOT_QUALITY_MAX)),
+      turnoverAvoidance: clampModifier(clamp(modifiers.turnoverAvoidance, 0, TURNOVER_AVOIDANCE_MAX)),
+      penaltyAvoidance: clampModifier(clamp(modifiers.penaltyAvoidance, 0, PENALTY_AVOIDANCE_MAX)),
       groundBallBonus: clampModifier(modifiers.groundBallBonus),
     },
     fatigueLabel: fatigueLabelFor(fatigue),
