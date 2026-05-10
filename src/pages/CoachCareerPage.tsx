@@ -354,7 +354,7 @@ function CoachCareerPage() {
           <div>
             <div className="text-gray-400 uppercase mb-1">Expected impact</div>
             <ul className="m-0 pl-4 text-gray-600 space-y-1">
-              {prepNotes.length > 0 ? prepNotes.map((note, index) => <li key={`prep-note-${index}`}>{note}</li>) : <li>Balanced week with no major swing factors.</li>}
+              {prepNotes.length > 0 ? prepNotes.map((note, index) => <li key={`prep-note-${index}-${note.slice(0, 12)}`}>{note}</li>) : <li>Balanced week with no major swing factors.</li>}
             </ul>
           </div>
         </div>

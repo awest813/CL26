@@ -47,6 +47,9 @@ const PENALTY_MIN_CHANCE = 0.015;
 const PENALTY_MAX_CHANCE = 0.18;
 const EARLY_SLIDE_PENALTY_COST = 0.015;
 const DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR = 1600;
+const FACEOFF_EDGE_DIVISOR = 40;
+const SHOT_QUALITY_POWER_DIVISOR = 110;
+const SHOT_QUALITY_VARIANCE = 0.06;
 
 function resolveStarterSet(roster: Player[], starterIds?: string[]): Set<string> | null {
   if (!starterIds || starterIds.length === 0) return null;
@@ -204,7 +207,7 @@ export function simulateGame(
   const modifiersB = resolveGameplayModifiers(teamB);
 
   const totalPossessions = Math.max(60, 78 + tempoModifier(tacticsA.tempo) + tempoModifier(tacticsB.tempo));
-  const faceoffEdge = (ratingA.faceoff + modifiersA.faceoff - ratingB.faceoff - modifiersB.faceoff) / 40;
+  const faceoffEdge = (ratingA.faceoff + modifiersA.faceoff - ratingB.faceoff - modifiersB.faceoff) / FACEOFF_EDGE_DIVISOR;
   const shareA = Math.min(0.62, Math.max(0.38, 0.5 + faceoffEdge * 0.08 + normalish(rng) * 0.03));
   const possessionsA = Math.round(totalPossessions * shareA);
   const possessionsB = totalPossessions - possessionsA;
@@ -272,7 +275,7 @@ export function simulateGame(
 
     const offensePower = offenseRatings.offense + offenseMods.offense + offenseBoostFromTactics(offenseTactics);
     const defensePower = defenseRatings.defense + defenseMods.defense + defenseBoostFromTactics(defenseTactics);
-    const quality = (offensePower - defensePower) / 110 + offenseMods.shotQuality + normalish(rng) * 0.06;
+    const quality = (offensePower - defensePower) / SHOT_QUALITY_POWER_DIVISOR + offenseMods.shotQuality + normalish(rng) * SHOT_QUALITY_VARIANCE;
 
     const shotChance = Math.min(0.88, Math.max(0.48, 0.66 + quality));
     if (rng() > shotChance) {

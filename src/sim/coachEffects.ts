@@ -100,7 +100,7 @@ export interface CoachGamePlan {
 }
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
-const roundToThreeDecimals = (value: number): number => Number(value.toFixed(3));
+const roundToThreeDecimals = (value: number): number => Math.round(value * 1000) / 1000;
 
 function blankGameplayModifiers(): TeamGameplayModifiers {
   return {
