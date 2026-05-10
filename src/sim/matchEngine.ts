@@ -229,12 +229,14 @@ export function simulateGame(
     const adjustedDefenseDiscipline = defenseRatings.discipline + defenseMods.discipline;
     const disciplineGap = (100 - adjustedOffenseDiscipline) / 140;
     const aggressiveRideTurnoverCost = offenseTactics.rideClear === 'aggressive' ? AGGRESSIVE_CLEAR_TURNOVER_COST : 0;
-    const defensiveTurnoverDisruption = defenseMods.discipline / DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR;
+    const defensiveTurnoverReduction = defenseMods.discipline / DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR;
+    const baseTurnoverRate = TURNOVER_BASE_CHANCE + disciplineGap;
+    const turnoverAdjustments = aggressiveRideTurnoverCost - offenseMods.turnoverAvoidance - defensiveTurnoverReduction;
     const turnoverChance = Math.min(
       TURNOVER_MAX_CHANCE,
       Math.max(
         TURNOVER_MIN_CHANCE,
-        TURNOVER_BASE_CHANCE + disciplineGap + aggressiveRideTurnoverCost - offenseMods.turnoverAvoidance - defensiveTurnoverDisruption,
+        baseTurnoverRate + turnoverAdjustments,
       ),
     );
     const earlySlidePenaltyCost = defenseTactics.slideAggression === 'early' ? EARLY_SLIDE_PENALTY_COST : 0;

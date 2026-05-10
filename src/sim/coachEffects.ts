@@ -1,6 +1,4 @@
-import { PracticeFocus, Tactics, TeamGameplayModifiers } from '../types/sim';
-
-type CoachArchetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
+import { CoachArchetype, PracticeFocus, Tactics, TeamGameplayModifiers } from '../types/sim';
 
 const FOCUS_TRANSLATION_BY_ARCHETYPE: Record<CoachArchetype, number> = {
   RECRUITER: 1,
@@ -70,6 +68,9 @@ const ARCHETYPE_BONUSES: Record<CoachArchetype, Partial<TeamGameplayModifiers>> 
 
 const FATIGUE_PENALTY_START = 24;
 const FATIGUE_PENALTY_RANGE = 76;
+const CONDITIONING_FATIGUE_REDUCTION = 0.52;
+const TACTICIAN_FATIGUE_MITIGATION = 0.88;
+const DEVELOPER_FATIGUE_MITIGATION = 0.94;
 const SHOT_QUALITY_MIN = -0.08;
 const SHOT_QUALITY_MAX = 0.08;
 const TURNOVER_AVOIDANCE_MAX = 0.12;
@@ -99,7 +100,7 @@ export interface CoachGamePlan {
 }
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
-const clampModifier = (value: number): number => Number(value.toFixed(3));
+const roundToThreeDecimals = (value: number): number => Number(value.toFixed(3));
 
 function blankGameplayModifiers(): TeamGameplayModifiers {
   return {
@@ -187,9 +188,9 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   modifiers.groundBallBonus += archetypeBonus.groundBallBonus ?? 0;
 
   const fatiguePenaltyBase = clamp((fatigue - FATIGUE_PENALTY_START) / FATIGUE_PENALTY_RANGE, 0, 1);
-  let fatiguePenaltyScale = settings.practiceFocus === 'CONDITIONING' ? 0.52 : 1;
-  if (archetype === 'TACTICIAN') fatiguePenaltyScale *= 0.88;
-  if (archetype === 'DEVELOPER') fatiguePenaltyScale *= 0.94;
+  let fatiguePenaltyScale = settings.practiceFocus === 'CONDITIONING' ? CONDITIONING_FATIGUE_REDUCTION : 1;
+  if (archetype === 'TACTICIAN') fatiguePenaltyScale *= TACTICIAN_FATIGUE_MITIGATION;
+  if (archetype === 'DEVELOPER') fatiguePenaltyScale *= DEVELOPER_FATIGUE_MITIGATION;
   const fatiguePenalty = fatiguePenaltyBase * fatiguePenaltyScale;
 
   modifiers.offense -= fatiguePenalty * FATIGUE_PENALTIES.offense;
@@ -203,15 +204,15 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   return {
     tactics,
     modifiers: {
-      offense: clampModifier(modifiers.offense),
-      defense: clampModifier(modifiers.defense),
-      goalie: clampModifier(modifiers.goalie),
-      faceoff: clampModifier(modifiers.faceoff),
-      discipline: clampModifier(modifiers.discipline),
-      shotQuality: clampModifier(clamp(modifiers.shotQuality, SHOT_QUALITY_MIN, SHOT_QUALITY_MAX)),
-      turnoverAvoidance: clampModifier(clamp(modifiers.turnoverAvoidance, 0, TURNOVER_AVOIDANCE_MAX)),
-      penaltyAvoidance: clampModifier(clamp(modifiers.penaltyAvoidance, 0, PENALTY_AVOIDANCE_MAX)),
-      groundBallBonus: clampModifier(modifiers.groundBallBonus),
+      offense: roundToThreeDecimals(modifiers.offense),
+      defense: roundToThreeDecimals(modifiers.defense),
+      goalie: roundToThreeDecimals(modifiers.goalie),
+      faceoff: roundToThreeDecimals(modifiers.faceoff),
+      discipline: roundToThreeDecimals(modifiers.discipline),
+      shotQuality: roundToThreeDecimals(clamp(modifiers.shotQuality, SHOT_QUALITY_MIN, SHOT_QUALITY_MAX)),
+      turnoverAvoidance: roundToThreeDecimals(clamp(modifiers.turnoverAvoidance, 0, TURNOVER_AVOIDANCE_MAX)),
+      penaltyAvoidance: roundToThreeDecimals(clamp(modifiers.penaltyAvoidance, 0, PENALTY_AVOIDANCE_MAX)),
+      groundBallBonus: roundToThreeDecimals(modifiers.groundBallBonus),
     },
     fatigueLabel: fatigueLabelFor(fatigue),
     focusLabel: focusLabelFor(settings.practiceFocus),

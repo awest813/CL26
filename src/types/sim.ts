@@ -37,6 +37,8 @@ export interface TeamGameplayModifiers {
   groundBallBonus: number;
 }
 
+export type CoachArchetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
+
 export interface PlayerRatings {
   shooting: number;
   passing: number;
