@@ -1,10 +1,18 @@
-import type { Position, Recruit, RecruitingPitch, RecruitMotivation, Team } from '../types/sim.ts';
+import type { Player, Position, Recruit, RecruitingPitch, RecruitMotivation, Team } from '../types/sim.ts';
 import { makeRng, pickOne, randInt } from './rng.ts';
 import namesData from '../data/names.json' with { type: 'json' };
 
 const REGIONS = ['Northeast', 'Mid-Atlantic', 'South', 'Midwest', 'West'];
 const POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 const PITCHES: RecruitingPitch[] = ['PLAYING_TIME', 'PROXIMITY', 'ACADEMIC', 'PRESTIGE', 'CHAMPIONSHIP', 'CAMPUS_LIFE'];
+const POSITION_TARGETS: Record<Position, number> = {
+  A: 5,
+  M: 7,
+  D: 7,
+  LSM: 2,
+  FO: 1,
+  G: 2,
+};
 
 export function generateRecruitPool(seed: number, count = 180): Recruit[] {
   const rng = makeRng(seed);
@@ -73,6 +81,34 @@ export function estimateRecruitFit(recruit: Recruit, team: Team): number {
   return Math.round(prestigeWeight + starWeight + regionBonus);
 }
 
+export function buildPositionNeedByPosition(roster?: Player[] | null): Record<Position, number> {
+  const counts: Record<Position, number> = { A: 0, M: 0, D: 0, LSM: 0, FO: 0, G: 0 };
+  if (roster) {
+    roster.forEach((player) => {
+      counts[player.position] = (counts[player.position] ?? 0) + 1;
+    });
+  }
+
+  return {
+    A: POSITION_TARGETS.A - counts.A,
+    M: POSITION_TARGETS.M - counts.M,
+    D: POSITION_TARGETS.D - counts.D,
+    LSM: POSITION_TARGETS.LSM - counts.LSM,
+    FO: POSITION_TARGETS.FO - counts.FO,
+    G: POSITION_TARGETS.G - counts.G,
+  };
+}
+
+function playingTimeGradeFromNeed(recruit: Recruit, positionNeedByPosition?: Record<Position, number>): string {
+  if (!positionNeedByPosition) return '';
+  const need = positionNeedByPosition[recruit.position] ?? 0;
+  if (need >= 3) return 'A+';
+  if (need >= 1) return 'A';
+  if (need === 0) return 'B';
+  if (need <= -3) return 'D';
+  return 'C';
+}
+
 export function calculateTeamGrade(team: Team, pitch: RecruitingPitch): string {
   // Simplified logic for grades
   switch (pitch) {
@@ -95,7 +131,16 @@ export function calculateTeamGrade(team: Team, pitch: RecruitingPitch): string {
   }
 }
 
-export function getTeamPitchGrade(team: Team, pitch: RecruitingPitch, recruit: Recruit): string {
+export function getTeamPitchGrade(
+  team: Team,
+  pitch: RecruitingPitch,
+  recruit: Recruit,
+  positionNeedByPosition?: Record<Position, number>,
+): string {
+   if (pitch === 'PLAYING_TIME') {
+       const needDrivenGrade = playingTimeGradeFromNeed(recruit, positionNeedByPosition);
+       if (needDrivenGrade) return needDrivenGrade;
+   }
    if (pitch === 'PROXIMITY') {
        return team.region === recruit.region ? 'A+' : 'D';
    }

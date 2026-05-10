@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert';
-import { generateRecruitPool, calculateTeamGrade, getTeamPitchGrade, estimateRecruitFit } from './recruiting.ts';
+import { buildPositionNeedByPosition, generateRecruitPool, calculateTeamGrade, getTeamPitchGrade, estimateRecruitFit } from './recruiting.ts';
 import type { Team, Recruit } from '../types/sim.ts';
 
 describe('Recruiting Logic', () => {
@@ -57,8 +57,41 @@ describe('Recruiting Logic', () => {
         // PROXIMITY -> A+ (same region)
         assert.strictEqual(getTeamPitchGrade(team, 'PROXIMITY', recruit), 'A+');
 
-        // PRESTIGE -> A+ (90 > 85)
-        assert.strictEqual(getTeamPitchGrade(team, 'PRESTIGE', recruit), 'A+');
+         // PRESTIGE -> A+ (90 > 85)
+         assert.strictEqual(getTeamPitchGrade(team, 'PRESTIGE', recruit), 'A+');
+     });
+
+    test('playing time grade reflects positional roster need when available', () => {
+        const team = {
+            prestige: 85,
+            region: 'Northeast',
+        } as unknown as Team;
+
+        const recruit = {
+            position: 'FO',
+            region: 'Northeast',
+        } as Recruit;
+
+        const needMap = buildPositionNeedByPosition([
+            {
+                id: 'p1',
+                name: 'Goalie',
+                position: 'G',
+                year: 2,
+                age: 19,
+                skill: 70,
+                shooting: 55,
+                passing: 60,
+                speed: 62,
+                defense: 74,
+                IQ: 70,
+                stamina: 69,
+                discipline: 71,
+                overall: 66,
+            },
+        ]);
+
+        assert.strictEqual(getTeamPitchGrade(team, 'PLAYING_TIME', recruit, needMap), 'A');
     });
 
     test('estimateRecruitFit includes motivations', () => {

@@ -100,6 +100,12 @@ export interface CoachWeekSettings {
   practiceFocus: PracticeFocus;
   fatigue: number;
   archetype?: CoachArchetype;
+  coachSkill?: number;
+  skillTree?: {
+    recruiting?: number;
+    development?: number;
+    operations?: number;
+  };
 }
 
 export interface CoachGamePlan {
@@ -172,6 +178,10 @@ function focusLabelFor(focus: PracticeFocus): string {
 export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   const fatigue = clamp(settings.fatigue, 0, 100);
   const archetype = settings.archetype ?? 'RECRUITER';
+  const coachSkill = clamp(settings.coachSkill ?? 70, 40, 99);
+  const recruitingSkill = clamp(settings.skillTree?.recruiting ?? 0, 0, 5);
+  const developmentSkill = clamp(settings.skillTree?.development ?? 0, 0, 5);
+  const operationsSkill = clamp(settings.skillTree?.operations ?? 0, 0, 5);
   const tactics = applyCoachWeekSettings(settings);
   const modifiers = blankGameplayModifiers();
   const focusTranslation = FOCUS_TRANSLATION_BY_ARCHETYPE[archetype];
@@ -194,10 +204,21 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   modifiers.shotQuality += archetypeBonus.shotQuality ?? 0;
   modifiers.groundBallBonus += archetypeBonus.groundBallBonus ?? 0;
 
+  const coachSkillEdge = (coachSkill - 70) / 50;
+  modifiers.offense += coachSkillEdge;
+  modifiers.defense += coachSkillEdge * 0.85;
+  modifiers.faceoff += recruitingSkill * 0.55;
+  modifiers.groundBallBonus += recruitingSkill * 0.7;
+  modifiers.discipline += developmentSkill * 0.9;
+  modifiers.turnoverAvoidance += developmentSkill * 0.008;
+  modifiers.goalie += operationsSkill * 0.6;
+  modifiers.penaltyAvoidance += operationsSkill * 0.008;
+
   const fatiguePenaltyBase = clamp((fatigue - FATIGUE_PENALTY_START) / FATIGUE_PENALTY_RANGE, 0, 1);
   let fatiguePenaltyScale = settings.practiceFocus === 'CONDITIONING' ? CONDITIONING_FATIGUE_REDUCTION : 1;
   if (archetype === 'TACTICIAN') fatiguePenaltyScale *= TACTICIAN_FATIGUE_MITIGATION;
   if (archetype === 'DEVELOPER') fatiguePenaltyScale *= DEVELOPER_FATIGUE_MITIGATION;
+  fatiguePenaltyScale *= 1 - operationsSkill * 0.03;
   const fatiguePenalty = fatiguePenaltyBase * fatiguePenaltyScale;
 
   modifiers.offense -= fatiguePenalty * FATIGUE_PENALTIES.offense;
@@ -256,6 +277,7 @@ export function advanceFatigue(
   previousFatigue: number,
   focus: PracticeFocus,
   archetype: CoachArchetype = 'RECRUITER',
+  operationsSkill = 0,
 ): number {
   const bounded = clamp(previousFatigue, 0, 100);
 
@@ -271,5 +293,6 @@ export function advanceFatigue(
 
   // TACTICIAN manages player loads better: 20% less net fatigue accumulation
   const archetypeReduction = archetype === 'TACTICIAN' ? 0.8 : 1.0;
-  return clamp(bounded + rawDelta * archetypeReduction, 0, 100);
+  const operationsReduction = clamp(1 - operationsSkill * 0.03, 0.82, 1);
+  return clamp(bounded + rawDelta * archetypeReduction * operationsReduction, 0, 100);
 }

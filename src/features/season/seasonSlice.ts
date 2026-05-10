@@ -100,6 +100,8 @@ export const simCurrentWeek = createAsyncThunk(
           practiceFocus: coachState.practiceFocus,
           fatigue: coachState.teamFatigue,
           archetype: coachState.profile?.archetype,
+          coachSkill: coachState.profile?.skill,
+          skillTree: coachState.skillTree,
         })
       : null;
     const coachTeamTactics = coachGamePlan?.tactics ?? DEFAULT_TACTICS;
@@ -198,6 +200,8 @@ export const simNextPlayoffRound = createAsyncThunk(
               practiceFocus: coach.practiceFocus,
               fatigue: coach.teamFatigue,
               archetype: coach.profile?.archetype,
+              coachSkill: coach.profile?.skill,
+              skillTree: coach.skillTree,
             })
           : null;
 

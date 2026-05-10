@@ -30,6 +30,7 @@ describe('Recruiting Week Simulation', () => {
             {},
             {},
             {},
+            {},
             'team-1',
             12345,
             0
@@ -44,6 +45,7 @@ describe('Recruiting Week Simulation', () => {
         const result = simulateRecruitingWeek(
             [recruit],
             [], // NOT on board
+            {},
             {},
             {},
             {},
@@ -66,6 +68,7 @@ describe('Recruiting Week Simulation', () => {
             {},
             {},
             { 'r1': true }, // VIOLATION
+            {},
             'team-1',
             12345,
             0
@@ -80,7 +83,7 @@ describe('Recruiting Week Simulation', () => {
         const result = simulateRecruitingWeek(
             [recruit],
             [], // user ignores
-            {}, {}, {}, {},
+            {}, {}, {}, {}, {},
             'team-1',
             12345,
             0
@@ -97,6 +100,7 @@ describe('Recruiting Week Simulation', () => {
             [recruit],
             ['r1'],
             { 'r1': 20 }, // plenty of hours
+            {},
             {},
             {},
             {},
@@ -119,7 +123,7 @@ describe('Recruiting Week Simulation', () => {
         const result = simulateRecruitingWeek(
             [recruit],
             [],
-            {}, {}, {}, {},
+            {}, {}, {}, {}, {},
             'team-1',
             12345,
             0

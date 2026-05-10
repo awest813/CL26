@@ -18,7 +18,7 @@ import { runCareerWeeklyCycle, processSeasonEnd, applyOffseasonRosterTurnover } 
 import { selectTeamRecords, startNewSeason } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan } from '../sim/coachEffects';
 import { summarizeSigningClass } from '../sim/offseason';
-import { estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
+import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, RecruitingPitch, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
 import { computeRankings } from '../sim/rankings';
@@ -40,9 +40,9 @@ const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
 };
 
 const ARCHETYPE_BONUSES: Record<string, string[]> = {
-  RECRUITER: ['+15% weekly interest gain', 'Expanded recruit reach', 'Faster commitments'],
-  TACTICIAN: ['20% less fatigue build-up', 'Better practice-to-game translation', 'Scheme advantage in close games'],
-  DEVELOPER: ['Prospects trust your system', 'Signed players develop faster', 'Better 3★ target outcomes'],
+  RECRUITER: ['+15% weekly interest gain', 'Expanded recruit reach', 'Faster commitments on key needs'],
+  TACTICIAN: ['20% less fatigue build-up', 'Better practice-to-game translation', 'Scheme advantage in late possessions'],
+  DEVELOPER: ['Prospects trust your system', 'Signed players develop faster', 'Cleaner sticks and defensive growth'],
 };
 
 function jobSecurityLabel(security: number): { label: string; color: string } {
@@ -131,6 +131,7 @@ function CoachCareerPage() {
   const teamNameById = useMemo(() => new Map(teams.map((team) => [team.id, `${team.schoolName}`])), [teams]);
 
   const boardSet = useMemo(() => new Set(coach.boardRecruitIds), [coach.boardRecruitIds]);
+  const positionNeedByPosition = useMemo(() => buildPositionNeedByPosition(coach.managedRoster), [coach.managedRoster]);
 
   const visibleRecruits = useMemo(() => {
     return coach.recruitPool
@@ -156,7 +157,9 @@ function CoachCareerPage() {
         const interestMap = recruit.interestByTeamId || {};
         const interest = selectedTeam ? (interestMap[selectedTeam.id] || 0) : 0;
         const activePitch = coach.activePitchesByRecruitId[recruit.id];
-        const pitchGrade = selectedTeam && activePitch ? getTeamPitchGrade(selectedTeam, activePitch, recruit) : '-';
+        const pitchGrade = selectedTeam && activePitch
+          ? getTeamPitchGrade(selectedTeam, activePitch, recruit, positionNeedByPosition)
+          : '-';
 
         const topSuitors = Object.entries(interestMap)
           .sort((a, b) => b[1] - a[1])
@@ -168,7 +171,7 @@ function CoachCareerPage() {
 
         let dealbreakerWarning = false;
         if (selectedTeam && recruit.dealbreaker) {
-          const dbGrade = getTeamPitchGrade(selectedTeam, recruit.dealbreaker, recruit);
+          const dbGrade = getTeamPitchGrade(selectedTeam, recruit.dealbreaker, recruit, positionNeedByPosition);
           if (dbGrade === 'D' || dbGrade === 'F') {
             dealbreakerWarning = true;
           }
@@ -177,7 +180,7 @@ function CoachCareerPage() {
         return { recruit, fit, hours, interest, activePitch, pitchGrade, dealbreakerWarning, topSuitors };
       })
       .sort((a, b) => b.interest - a.interest);
-  }, [boardRecruits, coach.weeklyHoursByRecruitId, coach.activePitchesByRecruitId, selectedTeam, teams]);
+  }, [boardRecruits, coach.weeklyHoursByRecruitId, coach.activePitchesByRecruitId, selectedTeam, teams, positionNeedByPosition]);
 
   const committedToUserCount = coach.recruitPool.filter(
     (recruit) => recruit.committedTeamId && recruit.committedTeamId === coach.selectedTeamId
@@ -210,8 +213,10 @@ function CoachCareerPage() {
         practiceFocus: coach.practiceFocus,
         fatigue: coach.teamFatigue,
         archetype: coach.profile?.archetype,
+        coachSkill: coach.profile?.skill,
+        skillTree: coach.skillTree,
       }),
-    [coach.practiceFocus, coach.profile?.archetype, coach.tactics, coach.teamFatigue],
+    [coach.practiceFocus, coach.profile?.archetype, coach.profile?.skill, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
   const prepNotes = useMemo(() => summarizeCoachGamePlan(coachGamePlan), [coachGamePlan]);
 
@@ -530,9 +535,9 @@ function CoachCareerPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
           {([
-            ['recruiting', 'Recruiting Tree', 'Boosts weekly recruiting gains.'],
-            ['development', 'Development Tree', 'Improves weekly and offseason trait growth.'],
-            ['operations', 'Operations Tree', 'Improves fatigue/admin stability and XP pace.'],
+            ['recruiting', 'Recruiting Tree', 'Boosts weekly recruiting gains plus faceoff/ground-ball edge.'],
+            ['development', 'Development Tree', 'Improves weekly/offseason trait growth and turnover discipline.'],
+            ['operations', 'Operations Tree', 'Improves fatigue control, goalie prep, and penalty avoidance.'],
           ] as const).map(([key, label, hint]) => (
             <div key={key} className="border rounded p-2">
               <div className="text-xs uppercase text-gray-500">{label}</div>

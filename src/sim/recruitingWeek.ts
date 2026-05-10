@@ -33,6 +33,7 @@ export function simulateRecruitingWeek(
   activePitchesByRecruitId: Record<string, RecruitingPitch | undefined>,
   pitchGradesByRecruitId: Record<string, string>,
   dealbreakerViolationsByRecruitId: Record<string, boolean>,
+  positionNeedBonusByRecruitId: Record<string, number>,
   selectedTeamId: TeamId | null,
   seed: number,
   weekIndex: number,
@@ -84,7 +85,8 @@ export function simulateRecruitingWeek(
           pitchBonus = baseGain * (importanceMult * gradeMult - 1);
         }
 
-        weeklyGain = Math.max(0, Math.round(baseGain + pitchBonus));
+        const positionNeedBonus = boardSet.has(recruit.id) ? positionNeedBonusByRecruitId[recruit.id] ?? 0 : 0;
+        weeklyGain = Math.max(0, Math.round(baseGain + pitchBonus + positionNeedBonus));
       }
 
       if (dealbreakerViolationsByRecruitId[recruit.id]) {
