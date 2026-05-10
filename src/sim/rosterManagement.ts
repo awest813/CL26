@@ -10,6 +10,7 @@ const TRAIT_BUMP_PROBABILITY = 0.62;
 
 type CoachArchetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
 type PracticeFocus = 'OFFENSE' | 'DEFENSE' | 'CONDITIONING' | 'DISCIPLINE';
+type PlayerTrait = keyof Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'>;
 
 export interface CoachDevelopmentInputs {
   coachArchetype?: CoachArchetype;
@@ -109,7 +110,7 @@ export function developPlayers(
   });
 }
 
-function applyTargetedTraitGrowth(player: Player, rng: () => number, targets: Array<keyof Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'>>): Player {
+function applyTargetedTraitGrowth(player: Player, rng: () => number, targets: PlayerTrait[]): Player {
   const updates: Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'> = {
     shooting: player.shooting,
     passing: player.passing,
@@ -162,7 +163,7 @@ export function applyWeeklyTraitGrowth(
     ),
   );
 
-  const focusTraits: Record<PracticeFocus, Array<keyof Pick<Player, 'shooting' | 'passing' | 'speed' | 'defense' | 'IQ' | 'stamina' | 'discipline'>>> = {
+  const focusTraits: Record<PracticeFocus, PlayerTrait[]> = {
     OFFENSE: ['shooting', 'passing', 'IQ'],
     DEFENSE: ['defense', 'discipline', 'IQ'],
     CONDITIONING: ['speed', 'stamina'],

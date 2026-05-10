@@ -9,7 +9,7 @@ import { RootState } from '../../store/store';
 
 export const WEEKLY_HOURS_CAP = 120;
 export const MAX_HOURS_PER_RECRUIT = 20;
-const AD_PRESSURE_SENSITIVITY = 60;
+const AD_PRESSURE_DIVISOR = 60;
 
 const CAREER_TIER_DEFAULTS: Record<'REBUILD' | 'STABLE' | 'CONTENDER', { resources: ProgramResources; adPressure: number }> = {
   // Rebuilds get lower NIL/facility baselines and less pressure to win immediately.
@@ -235,7 +235,7 @@ const coachSlice = createSlice({
             15,
             Math.min(
                 98,
-                state.adPressure + Math.round((boostersLevel - state.jobSecurity) / AD_PRESSURE_SENSITIVITY),
+                state.adPressure + Math.round((boostersLevel - state.jobSecurity) / AD_PRESSURE_DIVISOR),
             ),
         );
     },
