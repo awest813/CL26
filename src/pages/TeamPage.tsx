@@ -34,23 +34,13 @@ function TeamPage() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([pos, count]) => `${pos}(${count})`)
     .join(', ');
-  const { topPlayer, topPlayersAverageOverall } = teamSummary.topPlayers.reduce(
-    (summary, player, index, players) => {
-      summary.totalOverall += player.overall;
-      if (index === 0) {
-        summary.topPlayer = player;
-      }
-      if (index === players.length - 1) {
-        summary.topPlayersAverageOverall = Math.round(summary.totalOverall / players.length);
-      }
-      return summary;
-    },
-    {
-      topPlayer: null as (typeof teamSummary.topPlayers)[number] | null,
-      totalOverall: 0,
-      topPlayersAverageOverall: 0,
-    },
-  );
+  const topPlayer = teamSummary.topPlayers[0] ?? null;
+  const topPlayersAverageOverall =
+    teamSummary.topPlayers.length > 0
+      ? Math.round(
+          teamSummary.topPlayers.reduce((sum, player) => sum + player.overall, 0) / teamSummary.topPlayers.length,
+        )
+      : 0;
 
   return (
     <div className="pageStack">

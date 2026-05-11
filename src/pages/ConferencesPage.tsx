@@ -31,16 +31,22 @@ function ConferencesPage() {
   const hasNoResults = filteredRows.length === 0;
   const hasActiveFilters = regionFilter !== 'all' || searchText.trim().length > 0;
   const totalTeamCount = conferenceRows.reduce((sum, row) => sum + row.teamCount, 0);
-  const { visibleTeamCount, totalVisibleRosterStrength } = filteredRows.reduce(
-    (totals, row) => {
-      totals.visibleTeamCount += row.teamCount;
-      totals.totalVisibleRosterStrength += row.rosterStrength;
-      return totals;
-    },
-    { visibleTeamCount: 0, totalVisibleRosterStrength: 0 },
-  );
-  const averageVisibleRosterStrengthValue =
-    filteredRows.length > 0 ? Number((totalVisibleRosterStrength / filteredRows.length).toFixed(1)) : 0;
+  const { visibleTeamCount, averageVisibleRosterStrengthValue } = useMemo(() => {
+    const totals = filteredRows.reduce(
+      (summary, row) => {
+        summary.visibleTeamCount += row.teamCount;
+        summary.totalVisibleRosterStrength += row.rosterStrength;
+        return summary;
+      },
+      { visibleTeamCount: 0, totalVisibleRosterStrength: 0 },
+    );
+
+    return {
+      visibleTeamCount: totals.visibleTeamCount,
+      averageVisibleRosterStrengthValue:
+        filteredRows.length > 0 ? Number((totals.totalVisibleRosterStrength / filteredRows.length).toFixed(1)) : 0,
+    };
+  }, [filteredRows]);
 
   const clearFilters = () => {
     setRegionFilter('all');
@@ -111,14 +117,15 @@ function ConferencesPage() {
         </div>
       ) : null}
 
-      {filteredRows.map(({ conference, teams, rosterStrength, averagePrestige, teamCount }) => (
+      {filteredRows.map(({ conference, teams, rosterStrength, averagePrestige, teamCount }) => {
+        const conferenceRegions = Array.from(new Set(teams.map((team) => team.region))).join(' · ');
+
+        return (
         <section key={conference.id} className="conferenceCard card-elevated conferenceBrowserCard">
           <div className="conferenceBrowserHeader">
             <div>
               <h3 className="m-0">{conference.name}</h3>
-              <p className="conferenceBrowserSubhead">
-                {Array.from(new Set(teams.map((team) => team.region))).join(' · ')}
-              </p>
+              <p className="conferenceBrowserSubhead">{conferenceRegions}</p>
             </div>
             <div className="conferenceBrowserMetrics" aria-label={`${conference.name} summary`}>
               <span className="conferenceMetricChip">Teams {teamCount}</span>
@@ -142,7 +149,8 @@ function ConferencesPage() {
             ))}
           </div>
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }
