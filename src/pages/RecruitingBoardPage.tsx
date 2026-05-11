@@ -20,6 +20,12 @@ import {
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { RecruitingPitch, RecruitMotivation } from '../types/sim';
 
+type PositionFilterValue = (typeof RECRUITING_POSITION_FILTERS)[number];
+
+function cappedInterest(value: number) {
+  return Math.min(100, value);
+}
+
 function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
   const color =
     motivation.importance === 'HIGH'
@@ -46,7 +52,7 @@ function RecruitingBoardPage() {
   const season = useAppSelector(selectSeasonSummary);
 
   const [search, setSearch] = useState('');
-  const [positionFilter, setPositionFilter] = useState<(typeof RECRUITING_POSITION_FILTERS)[number]>('ALL');
+  const [positionFilter, setPositionFilter] = useState<PositionFilterValue>('ALL');
   const isCoachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
@@ -355,10 +361,10 @@ function RecruitingBoardPage() {
                         <div className="w-full bg-gray-100 rounded-full h-1.5 mb-0.5">
                           <div
                             className={`h-1.5 rounded-full ${interest >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                            style={{ width: `${Math.min(100, interest)}%` }}
+                            style={{ width: `${cappedInterest(interest)}%` }}
                           />
                         </div>
-                        <div className="text-xs text-center text-gray-500">{Math.min(100, interest)}%</div>
+                        <div className="text-xs text-center text-gray-500">{cappedInterest(interest)}%</div>
                       </td>
                       <td className="py-2 text-right">
                         <input
@@ -412,7 +418,7 @@ function RecruitingBoardPage() {
             />
               <select
                 value={positionFilter}
-                onChange={(e) => setPositionFilter(e.target.value as (typeof RECRUITING_POSITION_FILTERS)[number])}
+                onChange={(e) => setPositionFilter(e.target.value as PositionFilterValue)}
                 className="p-1.5 text-sm border rounded w-20"
               >
                 {RECRUITING_POSITION_FILTERS.map((position) => (
@@ -454,7 +460,7 @@ function RecruitingBoardPage() {
                         </div>
                         {selectedTeam && (
                           <div className="text-xs text-gray-400">
-                            Interest {Math.min(100, recruit.interestByTeamId?.[selectedTeam.id] ?? 0)}%
+                            Interest {cappedInterest(recruit.interestByTeamId?.[selectedTeam.id] ?? 0)}%
                           </div>
                         )}
                         {isCommittedElsewhere && (

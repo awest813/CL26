@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert';
 import { buildPositionNeedByPosition, generateRecruitPool, calculateTeamGrade, getTeamPitchGrade, estimateRecruitFit } from './recruiting.ts';
-import type { Team, Recruit } from '../types/sim.ts';
+import type { Team, Recruit, RecruitingPitch } from '../types/sim.ts';
 
 describe('Recruiting Logic', () => {
     test('generateRecruitPool creates recruits with motivations', () => {
@@ -46,7 +46,7 @@ describe('Recruiting Logic', () => {
             prestige: 65,
         } as Team;
 
-        assert.strictEqual(calculateTeamGrade(team, 'NOT_A_PITCH' as unknown as import('../types/sim.ts').RecruitingPitch), 'C');
+        assert.strictEqual(calculateTeamGrade(team, 'NOT_A_PITCH' as unknown as RecruitingPitch), 'C');
     });
 
     test('getTeamPitchGrade maps to motivations correctly', () => {
