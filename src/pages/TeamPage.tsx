@@ -34,10 +34,13 @@ function TeamPage() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([pos, count]) => `${pos}(${count})`)
     .join(', ');
-  const topPlayer = teamSummary.topPlayers[0];
-  const averageTopPlayerOverall = Math.round(
-    teamSummary.topPlayers.reduce((sum, player) => sum + player.overall, 0) / teamSummary.topPlayers.length,
-  );
+  const topPlayer = teamSummary.topPlayers[0] ?? null;
+  const averageTopPlayerOverall =
+    teamSummary.topPlayers.length > 0
+      ? Math.round(
+          teamSummary.topPlayers.reduce((sum, player) => sum + player.overall, 0) / teamSummary.topPlayers.length,
+        )
+      : 0;
 
   return (
     <div className="pageStack">
@@ -87,19 +90,27 @@ function TeamPage() {
 
         <section className="card">
           <h3 className="m-0">Top-End Talent</h3>
-          <div className="teamSpotlightCard">
-            <span className="teamInfoLabel">Best player</span>
-            <strong>
-              {topPlayer.name} · {topPlayer.position}
-            </strong>
-            <p className="teamSpotlightMeta">
-              Year {topPlayer.year} · Age {topPlayer.age} · Skill {topPlayer.skill}
-            </p>
-          </div>
+          {topPlayer ? (
+            <div className="teamSpotlightCard">
+              <span className="teamInfoLabel">Best player</span>
+              <strong>
+                {topPlayer.name} · {topPlayer.position}
+              </strong>
+              <p className="teamSpotlightMeta">
+                Year {topPlayer.year} · Age {topPlayer.age} · Skill {topPlayer.skill}
+              </p>
+            </div>
+          ) : (
+            <div className="teamSpotlightCard">
+              <span className="teamInfoLabel">Best player</span>
+              <strong>No roster preview available</strong>
+              <p className="teamSpotlightMeta">Generated player data will appear here once the roster seed resolves.</p>
+            </div>
+          )}
           <div className="teamInfoList">
             <div className="teamInfoRow">
               <span className="teamInfoLabel">Top player overall</span>
-              <strong>{topPlayer.overall}</strong>
+              <strong>{topPlayer?.overall ?? '—'}</strong>
             </div>
             <div className="teamInfoRow">
               <span className="teamInfoLabel">Top-5 average overall</span>
