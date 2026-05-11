@@ -43,7 +43,7 @@ function Home() {
     ? { label: 'Coach Office', link: '/career', primary: false }
     : { label: 'Career Setup', link: '/career/setup', primary: false };
 
-  function handleResetSave() {
+  function handleNewGame() {
     const confirmed = window.confirm(
       'Start a new game? This will permanently erase your current save — all season progress, coach career data, and recruits will be lost.',
     );
@@ -51,6 +51,10 @@ function Home() {
     dispatch(resetCoach());
     dispatch(resetSeason());
     persistor.purge().then(() => {
+      navigate('/career/setup');
+    }).catch(() => {
+      // Purge failed — state resets still applied in-memory; proceed to setup so
+      // the user can start fresh even if localStorage couldn't be cleared.
       navigate('/career/setup');
     });
   }
@@ -138,7 +142,7 @@ function Home() {
           Erase your current save and start fresh with a new coach and program. This cannot be undone.
         </p>
         <div style={{ marginTop: '0.75rem' }}>
-          <button type="button" className="btn btn-danger" onClick={handleResetSave}>
+          <button type="button" className="btn btn-danger" onClick={handleNewGame}>
             Reset Save &amp; Start New Game
           </button>
         </div>
