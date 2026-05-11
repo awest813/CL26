@@ -23,7 +23,8 @@ function playerStatLine(player: PlayerGameStats): string {
   if (player.goals > 0) parts.push(`${player.goals}g`);
   if (player.assists > 0) parts.push(`${player.assists}a`);
   if (player.saves > 0) parts.push(`${player.saves}sv`);
-  return `${player.name} (${player.position}${parts.length ? `: ${parts.join(' ')}` : ''})`;
+  const stats = parts.length > 0 ? `: ${parts.join(' ')}` : '';
+  return `${player.name} (${player.position}${stats})`;
 }
 
 function UserGameCard({

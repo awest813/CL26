@@ -40,6 +40,10 @@ function computePrestigeDriftDelta(champion: boolean, madePlayoffs: boolean, win
   return 0;
 }
 
+function getOfferTier(teamPrestige: number, effectivePrestige: number): 'UPGRADE' | 'LATERAL' {
+  return teamPrestige > effectivePrestige ? 'UPGRADE' : 'LATERAL';
+}
+
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
   'coach/runCareerWeeklyCycle',
   async (_arg, { dispatch, getState }) => {
@@ -196,7 +200,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
         .filter((team) => team.id !== coach.selectedTeamId && team.prestige >= currentEffectivePrestige)
         .map((team) => ({
           team,
-          sortKey: seedToNumber(JSON.stringify([season.seasonSeed, season.year, coach.selectedTeamId, team.id])),
+          sortKey: seedToNumber(`${season.seasonSeed}:${season.year}:${coach.selectedTeamId}:${team.id}`),
         }))
         .sort((a, b) => {
           const upgradeDelta = (b.team.prestige - currentEffectivePrestige) - (a.team.prestige - currentEffectivePrestige);
@@ -206,7 +210,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
         .slice(0, champion ? 2 : 1)
         .map(({ team }) => ({
           teamId: team.id,
-          tier: team.prestige > currentEffectivePrestige ? 'UPGRADE' as const : 'LATERAL' as const,
+          tier: getOfferTier(team.prestige, currentEffectivePrestige),
           presentedAtYear: season.year,
         }));
       dispatch(setPendingJobOffers(candidateOffers));

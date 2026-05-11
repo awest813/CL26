@@ -293,7 +293,7 @@ const coachSlice = createSlice({
     },
     applyJobOfferAcceptance: (state, action: PayloadAction<{
         teamId: string;
-        careerTier: CoachState['careerTier'];
+        careerTier: NonNullable<CoachState['careerTier']>;
         programExpectations: ProgramExpectations;
     }>) => {
         state.selectedTeamId = action.payload.teamId;
@@ -311,11 +311,9 @@ const coachSlice = createSlice({
         state.managedRoster = null;
         state.starterIds = [];
         state.teamFatigue = 20;
-        if (action.payload.careerTier) {
-            const defaults = CAREER_TIER_DEFAULTS[action.payload.careerTier];
-            state.programResources = defaults.resources;
-            state.adPressure = defaults.adPressure;
-        }
+        const defaults = CAREER_TIER_DEFAULTS[action.payload.careerTier];
+        state.programResources = defaults.resources;
+        state.adPressure = defaults.adPressure;
         state.jobSecurity = action.payload.programExpectations.securityBaseline;
     },
     recordSeasonEnd: (state, action: PayloadAction<SeasonHistoryEntry>) => {
