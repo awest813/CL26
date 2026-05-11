@@ -13,6 +13,10 @@ const AD_PRESSURE_DIVISOR = 60;
 const MIN_PRESTIGE_DRIFT = -20;
 const MAX_PRESTIGE_DRIFT = 30;
 
+function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+}
+
 const CAREER_TIER_DEFAULTS: Record<'REBUILD' | 'STABLE' | 'CONTENDER', { resources: ProgramResources; adPressure: number }> = {
   // Rebuilds get lower NIL/facility baselines and less pressure to win immediately.
   REBUILD: {
@@ -284,10 +288,7 @@ const coachSlice = createSlice({
         state.adPressure = Math.max(0, Math.min(100, action.payload));
     },
     applyPrestigeDrift: (state, action: PayloadAction<number>) => {
-        state.programPrestigeDrift = Math.max(
-            MIN_PRESTIGE_DRIFT,
-            Math.min(MAX_PRESTIGE_DRIFT, state.programPrestigeDrift + action.payload),
-        );
+        state.programPrestigeDrift = clamp(state.programPrestigeDrift + action.payload, MIN_PRESTIGE_DRIFT, MAX_PRESTIGE_DRIFT);
     },
     setPendingJobOffers: (state, action: PayloadAction<JobOffer[]>) => {
         state.pendingJobOffers = action.payload;
@@ -576,7 +577,7 @@ export const selectUserEffectivePrestige = createSelector(
     (teams, selectedTeamId, drift) => {
         const team = teams.find((t) => t.id === selectedTeamId);
         if (!team) return null;
-        return Math.max(1, Math.min(100, team.prestige + drift));
+        return clamp(team.prestige + drift, 1, 100);
     },
 );
 

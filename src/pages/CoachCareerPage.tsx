@@ -138,7 +138,7 @@ function CoachCareerPage() {
     [conferences],
   );
   const effectiveRecruitingTeams = useMemo(() => {
-    if (!coach.selectedTeamId || effectivePrestige == null) return teams;
+    if (!coach.selectedTeamId || effectivePrestige === null) return teams;
     return teams.map((team) =>
       team.id === coach.selectedTeamId ? { ...team, prestige: effectivePrestige } : team,
     );

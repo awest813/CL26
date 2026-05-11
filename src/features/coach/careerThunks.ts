@@ -208,8 +208,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
           sortKey: seedToNumber(`${season.seasonSeed}:${season.year}:${coach.selectedTeamId}:${team.id}`),
         }))
         .sort((a, b) => {
-          const prestigeComparison =
-            (b.team.prestige - currentEffectivePrestige) - (a.team.prestige - currentEffectivePrestige);
+          const prestigeComparison = b.team.prestige - a.team.prestige;
           if (prestigeComparison !== 0) return prestigeComparison;
           return a.sortKey - b.sortKey;
         })
