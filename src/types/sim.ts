@@ -163,6 +163,7 @@ export interface RankingScoreBreakdown {
   pointDifferentialPoints: number;
   prestigePoints: number;
   scoringVolumePoints: number;
+  strengthOfSchedulePoints: number;
   totalPoints: number;
 }
 
@@ -227,6 +228,8 @@ export interface SeasonState {
   seasonSeed: number;
   playoffs?: PlayoffState | null;
   standings?: RankingRow[];
+  /** Snapshot of each team's rank from the previous week sim; used for movement indicators. */
+  previousRankByTeamId: Record<string, number>;
 }
 
 export interface LeagueData {

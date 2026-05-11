@@ -2,6 +2,21 @@ import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
+import { PlayerGameStats } from '../types/sim';
+
+function topPerformerLine(players: PlayerGameStats[]): string {
+  return players
+    .slice(0, 2)
+    .map((p) => {
+      const parts: string[] = [];
+      if (p.goals > 0) parts.push(`${p.goals}g`);
+      if (p.assists > 0) parts.push(`${p.assists}a`);
+      if (p.saves > 0) parts.push(`${p.saves}sv`);
+      const stats = parts.join(' ');
+      return `${p.name} (${p.position}${stats ? `: ${stats}` : ''})`;
+    })
+    .join(' · ');
+}
 
 function SeasonWeekPage() {
   const { weekIndex } = useParams();
@@ -120,28 +135,41 @@ function SeasonWeekPage() {
                   const awayScore = result?.scoreB ?? 0;
                   const homeScore = result?.scoreA ?? 0;
                   const isFinal = !!result;
+                  const awayPerformers = result?.topPlayersB ?? [];
+                  const homePerformers = result?.topPlayersA ?? [];
+                  const allPerformers = [...awayPerformers, ...homePerformers];
 
                   return (
-                    <tr key={game.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className={`p-2 text-right ${awayScore > homeScore ? 'font-bold' : ''}`}>
-                          {away?.schoolName} <span className="text-xs text-gray-500 font-normal">({away?.nickname})</span>
-                      </td>
-                      <td className="p-2 text-center font-mono font-bold bg-gray-50">
-                          {isFinal ? `${awayScore} - ${homeScore}` : 'vs'}
-                      </td>
-                      <td className={`p-2 text-left ${homeScore > awayScore ? 'font-bold' : ''}`}>
-                          {home?.schoolName} <span className="text-xs text-gray-500 font-normal">({home?.nickname})</span>
-                      </td>
-                      <td className="p-2 text-center text-xs text-gray-600">
-                          {isFinal ? `${result.statsB.shots} - ${result.statsA.shots}` : '-'}
-                      </td>
-                      <td className="p-2 text-center text-xs text-gray-600">
-                          {isFinal ? `${result.statsB.turnovers} - ${result.statsA.turnovers}` : '-'}
-                      </td>
-                      <td className="p-2 text-center text-xs text-gray-600">
-                          {isFinal ? `${result.statsB.faceoffPct}% - ${result.statsA.faceoffPct}%` : '-'}
-                      </td>
-                    </tr>
+                    <>
+                      <tr key={game.id} className="border-b last:border-0 hover:bg-gray-50">
+                        <td className={`p-2 text-right ${awayScore > homeScore ? 'font-bold' : ''}`}>
+                            {away?.schoolName} <span className="text-xs text-gray-500 font-normal">({away?.nickname})</span>
+                        </td>
+                        <td className="p-2 text-center font-mono font-bold bg-gray-50">
+                            {isFinal ? `${awayScore} - ${homeScore}` : 'vs'}
+                        </td>
+                        <td className={`p-2 text-left ${homeScore > awayScore ? 'font-bold' : ''}`}>
+                            {home?.schoolName} <span className="text-xs text-gray-500 font-normal">({home?.nickname})</span>
+                        </td>
+                        <td className="p-2 text-center text-xs text-gray-600">
+                            {isFinal ? `${result.statsB.shots} - ${result.statsA.shots}` : '-'}
+                        </td>
+                        <td className="p-2 text-center text-xs text-gray-600">
+                            {isFinal ? `${result.statsB.turnovers} - ${result.statsA.turnovers}` : '-'}
+                        </td>
+                        <td className="p-2 text-center text-xs text-gray-600">
+                            {isFinal ? `${result.statsB.faceoffPct}% - ${result.statsA.faceoffPct}%` : '-'}
+                        </td>
+                      </tr>
+                      {isFinal && allPerformers.length > 0 && (
+                        <tr key={`${game.id}-performers`} className="border-b bg-gray-50">
+                          <td colSpan={6} className="px-3 py-1 text-xs text-gray-500">
+                            <span className="font-semibold text-gray-600">Top performers: </span>
+                            {topPerformerLine(allPerformers)}
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
                 {displayedGames.length === 0 && (

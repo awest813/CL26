@@ -7,7 +7,7 @@ import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
-import { computePlayoffProjection, computeRankings } from '../../sim/rankings';
+import { computeAllSOS, computePlayoffProjection, computeRankings } from '../../sim/rankings';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { seedToNumber } from '../../sim/rng';
 
@@ -40,6 +40,7 @@ const initialState: SeasonState = {
   phase: 'PRE',
   seasonSeed: 0,
   playoffs: null,
+  previousRankByTeamId: {},
 };
 
 // Async thunk to start a new season
@@ -65,13 +66,19 @@ export const simCurrentWeek = createAsyncThunk(
   'season/simCurrentWeek',
   async (_, { getState }) => {
     const state = getState() as RootState;
-    const { currentWeekIndex, scheduleByWeek, seasonSeed } = state.season;
+    const { currentWeekIndex, scheduleByWeek, seasonSeed, gameResults: existingResults } = state.season;
     const coachState = state.coach;
     const teams = selectTeams(state);
 
     if (currentWeekIndex >= scheduleByWeek.length) {
       throw new Error('Season schedule complete');
     }
+
+    // Snapshot current rankings before this week's results so we can show rank movement.
+    const prevRecords = selectTeamRecords(state);
+    const prevSos = computeAllSOS(existingResults, prevRecords);
+    const prevRankings = computeRankings(teams, prevRecords, 25, prevSos);
+    const previousRankByTeamId = Object.fromEntries(prevRankings.map((r) => [r.teamId, r.rank]));
 
     const gamesToPlay = scheduleByWeek[currentWeekIndex];
     const results: GameResult[] = [];
@@ -145,7 +152,7 @@ export const simCurrentWeek = createAsyncThunk(
       results.push(result);
     });
 
-    return results;
+    return { results, previousRankByTeamId };
   }
 );
 
@@ -172,9 +179,10 @@ export const startPlayoffs = createAsyncThunk(
         const state = getState() as RootState;
         const teams = selectTeams(state);
         const records = selectTeamRecords(state);
+        const sos = computeAllSOS(state.season.gameResults, records);
 
         // Compute rankings to get top 12
-        const rankings = computeRankings(teams, records, 25);
+        const rankings = computeRankings(teams, records, 25, sos);
         const seeds = selectPlayoffField(rankings);
 
         return buildPlayoffState(seeds);
@@ -252,7 +260,8 @@ const seasonSlice = createSlice({
         state.playoffs = null;
       })
       .addCase(simCurrentWeek.fulfilled, (state, action) => {
-        state.gameResults.push(...action.payload);
+        state.previousRankByTeamId = action.payload.previousRankByTeamId;
+        state.gameResults.push(...action.payload.results);
         state.completedWeeks += 1;
         state.currentWeekIndex += 1;
 
@@ -370,12 +379,25 @@ export const selectOverallStandings = createSelector(
     }
 );
 
-export const selectTop25Rankings = createSelector([selectTeams, selectTeamRecords], (teams, records) =>
-  computeRankings(teams, records, 25),
+export const selectTop25Rankings = createSelector(
+  [selectTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
+  (teams, records, gameResults) => computeRankings(teams, records, 25, computeAllSOS(gameResults, records)),
 );
 
-export const selectTop12Projection = createSelector([selectTeams, selectTeamRecords], (teams, records) =>
-  computePlayoffProjection(teams, records),
+export const selectTop12Projection = createSelector(
+  [selectTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
+  (teams, records, gameResults) => computePlayoffProjection(teams, records, computeAllSOS(gameResults, records)),
 );
 
 export const selectPlayoffState = (state: RootState) => state.season.playoffs;
+
+/** Top-25 rows annotated with rank movement since the previous week sim. */
+export const selectRankTrends = createSelector(
+  [selectTop25Rankings, (state: RootState) => state.season.previousRankByTeamId],
+  (top25, prevRanks) =>
+    top25.map((row) => {
+      const prev = prevRanks[row.teamId];
+      const delta = prev != null ? prev - row.rank : null;
+      return { ...row, previousRank: prev ?? null, delta };
+    }),
+);

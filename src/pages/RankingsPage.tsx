@@ -1,15 +1,23 @@
 import { useMemo } from 'react';
 import { useAppSelector } from '../store/hooks';
-import { selectTeamRecords, selectTop12Projection, selectTop25Rankings, selectSeasonSummary } from '../features/season/seasonSlice';
+import { selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary } from '../features/season/seasonSlice';
 import { selectTeams } from '../features/league/leagueSlice';
-import { computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
+import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
+
+function rankDeltaDisplay(delta: number | null): React.ReactNode {
+  if (delta === null) return <span className="text-gray-300 text-xs" aria-label="New to rankings">NEW</span>;
+  if (delta > 0) return <span className="text-green-600 text-xs font-semibold" aria-label={`Moved up ${delta} position${delta !== 1 ? 's' : ''}`}>▲{delta}</span>;
+  if (delta < 0) return <span className="text-red-500 text-xs font-semibold" aria-label={`Moved down ${Math.abs(delta)} position${Math.abs(delta) !== 1 ? 's' : ''}`}>▼{Math.abs(delta)}</span>;
+  return <span className="text-gray-400 text-xs" aria-label="No change">–</span>;
+}
 
 function RankingsPage() {
-  const top25 = useAppSelector(selectTop25Rankings);
+  const top25WithTrends = useAppSelector(selectRankTrends);
   const top12 = useAppSelector(selectTop12Projection);
   const teams = useAppSelector(selectTeams);
   const records = useAppSelector(selectTeamRecords);
   const summary = useAppSelector(selectSeasonSummary);
+  const gameResults = useAppSelector((state) => state.season.gameResults);
 
   const isPostseason = summary.phase === 'PLAYOFF' || summary.phase === 'OFFSEASON';
   const weekLabel = isPostseason
@@ -22,8 +30,10 @@ function RankingsPage() {
     return new Map(teams.map((team) => [team.id, team]));
   }, [teams]);
 
+  const sosByTeamId = useMemo(() => computeAllSOS(gameResults, records), [gameResults, records]);
+
   const topTeamBreakdown = useMemo(() => {
-    const topTeamId = top25[0]?.teamId;
+    const topTeamId = top25WithTrends[0]?.teamId;
     if (!topTeamId) return null;
 
     const team = teamById.get(topTeamId);
@@ -32,9 +42,9 @@ function RankingsPage() {
 
     return {
       team,
-      breakdown: computeRankingBreakdown(team, record),
+      breakdown: computeRankingBreakdown(team, record, sosByTeamId[topTeamId] ?? 0),
     };
-  }, [records, teamById, top25]);
+  }, [records, teamById, top25WithTrends, sosByTeamId]);
 
   const hasGamesPlayed = useMemo(() => {
     return Object.values(records).some((record) => record.wins + record.losses > 0);
@@ -47,24 +57,26 @@ function RankingsPage() {
         <p className="text-sm text-gray-500">
           {isPostseason
             ? 'Final regular-season power rankings.'
-            : 'Deterministic power ranking based on record and point margin.'}
+            : 'Deterministic power ranking based on record, point margin, and strength of schedule.'}
         </p>
 
         <table>
           <thead>
             <tr>
               <th>Rank</th>
+              <th>Trend</th>
               <th>Team</th>
               <th>Record</th>
               <th>Points</th>
             </tr>
           </thead>
           <tbody>
-            {top25.map((row) => {
+            {top25WithTrends.map((row) => {
               const team = teamById.get(row.teamId);
               return (
                 <tr key={row.teamId}>
                   <td>{row.rank}</td>
+                  <td className="text-center">{rankDeltaDisplay(row.delta)}</td>
                   <td>
                     {team?.schoolName} <span className="text-xs text-gray-500">({team?.nickname})</span>
                   </td>
@@ -129,6 +141,7 @@ function RankingsPage() {
           <li>Point differential × {RANKING_WEIGHTS.pointDifferential}</li>
           <li>Program prestige × {RANKING_WEIGHTS.prestige}</li>
           <li>Total points scored × {RANKING_WEIGHTS.scoringVolume}</li>
+          <li>Strength of schedule (opp avg win%) × {RANKING_WEIGHTS.strengthOfSchedule}</li>
         </ul>
 
         {topTeamBreakdown && (
@@ -142,6 +155,7 @@ function RankingsPage() {
               <li>Point differential contribution: {topTeamBreakdown.breakdown.pointDifferentialPoints.toFixed(1)}</li>
               <li>Prestige contribution: {topTeamBreakdown.breakdown.prestigePoints.toFixed(1)}</li>
               <li>Scoring volume contribution: {topTeamBreakdown.breakdown.scoringVolumePoints.toFixed(1)}</li>
+              <li>Strength of schedule contribution: {topTeamBreakdown.breakdown.strengthOfSchedulePoints.toFixed(1)}</li>
               <li>
                 <strong>Total: {Math.round(topTeamBreakdown.breakdown.totalPoints)}</strong>
               </li>
