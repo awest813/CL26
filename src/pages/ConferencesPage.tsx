@@ -30,16 +30,17 @@ function ConferencesPage() {
 
   const hasNoResults = filteredRows.length === 0;
   const hasActiveFilters = regionFilter !== 'all' || searchText.trim().length > 0;
-  const visibleTeamCount = filteredRows.reduce((sum, row) => sum + row.teamCount, 0);
   const totalTeamCount = conferenceRows.reduce((sum, row) => sum + row.teamCount, 0);
-  const averageVisibleRosterStrength =
-    filteredRows.length > 0
-      ? Number(
-          (
-            filteredRows.reduce((sum, row) => sum + row.rosterStrength, 0) / filteredRows.length
-          ).toFixed(1),
-        )
-      : 0;
+  const { visibleTeamCount, totalVisibleRosterStrength } = filteredRows.reduce(
+    (totals, row) => {
+      totals.visibleTeamCount += row.teamCount;
+      totals.totalVisibleRosterStrength += row.rosterStrength;
+      return totals;
+    },
+    { visibleTeamCount: 0, totalVisibleRosterStrength: 0 },
+  );
+  const averageVisibleRosterStrengthValue =
+    filteredRows.length > 0 ? Number((totalVisibleRosterStrength / filteredRows.length).toFixed(1)) : 0;
 
   const clearFilters = () => {
     setRegionFilter('all');
@@ -68,7 +69,7 @@ function ConferencesPage() {
           </div>
           <div className="leagueOverviewStat">
             <span className="leagueOverviewLabel">Avg roster strength</span>
-            <strong>{averageVisibleRosterStrength}</strong>
+            <strong>{averageVisibleRosterStrengthValue}</strong>
           </div>
         </div>
 
