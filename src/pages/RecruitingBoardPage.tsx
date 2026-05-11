@@ -26,6 +26,10 @@ function cappedInterest(value: number) {
   return Math.min(100, value);
 }
 
+function getRecruitInterest(recruit: { interestByTeamId?: Record<string, number> }, teamId: string) {
+  return recruit.interestByTeamId?.[teamId] ?? 0;
+}
+
 function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
   const color =
     motivation.importance === 'HIGH'
@@ -119,31 +123,32 @@ function RecruitingBoardPage() {
   }, [coach.recruitPool, positionFilter, search]);
 
   const visibleRecruits = useMemo(() => {
-    return [...filteredRecruits]
+    return filteredRecruits
+      .map((recruit) => ({
+        recruit,
+        fit: selectedTeam ? estimateRecruitFit(recruit, selectedTeam) : 0,
+        interest: selectedTeam ? getRecruitInterest(recruit, selectedTeam.id) : 0,
+      }))
       .sort((a, b) => {
-        const aCommittedToUser = a.committedTeamId === selectedTeamId ? 1 : 0;
-        const bCommittedToUser = b.committedTeamId === selectedTeamId ? 1 : 0;
+        const aCommittedToUser = a.recruit.committedTeamId === selectedTeamId ? 1 : 0;
+        const bCommittedToUser = b.recruit.committedTeamId === selectedTeamId ? 1 : 0;
         if (bCommittedToUser !== aCommittedToUser) return bCommittedToUser - aCommittedToUser;
 
-        const aCommittedElsewhere = a.committedTeamId && a.committedTeamId !== selectedTeamId ? 1 : 0;
-        const bCommittedElsewhere = b.committedTeamId && b.committedTeamId !== selectedTeamId ? 1 : 0;
+        const aCommittedElsewhere = a.recruit.committedTeamId && a.recruit.committedTeamId !== selectedTeamId ? 1 : 0;
+        const bCommittedElsewhere = b.recruit.committedTeamId && b.recruit.committedTeamId !== selectedTeamId ? 1 : 0;
         if (aCommittedElsewhere !== bCommittedElsewhere) return aCommittedElsewhere - bCommittedElsewhere;
 
-        const aOnBoard = boardSet.has(a.id) ? 1 : 0;
-        const bOnBoard = boardSet.has(b.id) ? 1 : 0;
+        const aOnBoard = boardSet.has(a.recruit.id) ? 1 : 0;
+        const bOnBoard = boardSet.has(b.recruit.id) ? 1 : 0;
         if (bOnBoard !== aOnBoard) return bOnBoard - aOnBoard;
 
-        const aInterest = selectedTeam ? a.interestByTeamId?.[selectedTeam.id] ?? 0 : 0;
-        const bInterest = selectedTeam ? b.interestByTeamId?.[selectedTeam.id] ?? 0 : 0;
-        if (bInterest !== aInterest) return bInterest - aInterest;
+        if (b.interest !== a.interest) return b.interest - a.interest;
+        if (b.fit !== a.fit) return b.fit - a.fit;
 
-        const aFit = selectedTeam ? estimateRecruitFit(a, selectedTeam) : 0;
-        const bFit = selectedTeam ? estimateRecruitFit(b, selectedTeam) : 0;
-        if (bFit !== aFit) return bFit - aFit;
-
-        if (b.stars !== a.stars) return b.stars - a.stars;
-        return b.potential - a.potential;
+        if (b.recruit.stars !== a.recruit.stars) return b.recruit.stars - a.recruit.stars;
+        return b.recruit.potential - a.recruit.potential;
       })
+      .map(({ recruit }) => recruit)
       .slice(0, 75);
   }, [boardSet, filteredRecruits, selectedTeam, selectedTeamId]);
 
@@ -460,7 +465,7 @@ function RecruitingBoardPage() {
                         </div>
                         {selectedTeam && (
                           <div className="text-xs text-gray-400">
-                            Interest {cappedInterest(recruit.interestByTeamId?.[selectedTeam.id] ?? 0)}%
+                            Interest {cappedInterest(getRecruitInterest(recruit, selectedTeam.id))}%
                           </div>
                         )}
                         {isCommittedElsewhere && (
