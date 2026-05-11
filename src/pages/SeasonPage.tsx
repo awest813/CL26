@@ -56,17 +56,18 @@ function SeasonPage() {
   const nextStep = useMemo<NextStepAction>(() => {
     if (!hasSeason) return { label: 'Start this season to unlock the weekly loop.', link: null, cta: null };
     if (summary.phase === 'REGULAR') {
-      return coachReady
-        ? {
-            label: 'Use Weekly Hub to advance season + recruiting together.',
-            link: '/career/week',
-            cta: 'Open Weekly Hub →',
-          }
-        : {
-            label: 'Sim from this page, or create a coach to run the full weekly loop.',
-            link: '/career/setup',
-            cta: 'Set Up Coach →',
-          };
+      if (coachReady) {
+        return {
+          label: 'Use Weekly Hub to advance season + recruiting together.',
+          link: '/career/week',
+          cta: 'Open Weekly Hub →',
+        };
+      }
+      return {
+        label: 'Sim from this page, or create a coach to run the full weekly loop.',
+        link: '/career/setup',
+        cta: 'Set Up Coach →',
+      };
     }
     if (summary.phase === 'PLAYOFF') return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open Playoffs →' };
     if (summary.phase === 'OFFSEASON') return { label: 'Finalize offseason actions, then begin the next year.', link: '/career', cta: 'Open Career Office →' };
