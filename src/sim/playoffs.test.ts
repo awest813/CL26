@@ -48,6 +48,7 @@ describe('playoff loop', () => {
   test('simulatePlayoffRound advances through full bracket and produces champion deterministically', () => {
     const teams = createTeams(12);
     const seeds = selectPlayoffField(createTop12Rankings());
+    const seedByTeamId = new Map(seeds.map((seed) => [seed.teamId, seed.seed]));
 
     const runBracket = () => {
       let state = buildPlayoffState(seeds);
@@ -59,11 +60,19 @@ describe('playoff loop', () => {
       state = simulatePlayoffRound(state, teams, 98765);
       assert.equal(state.currentRound, 'SEMIFINAL');
       assert.equal(state.rounds.SEMIFINAL.length, 2);
+      assert.equal(
+        state.rounds.SEMIFINAL.every((game) => game.homeSeed === seedByTeamId.get(game.homeTeamId) && game.awaySeed === seedByTeamId.get(game.awayTeamId)),
+        true,
+      );
 
       state = simulatePlayoffRound(state, teams, 98765);
       assert.equal(state.currentRound, 'FINAL');
       assert.equal(state.rounds.FINAL.length, 1);
       assert.equal(state.championTeamId, null);
+      assert.equal(
+        state.rounds.FINAL.every((game) => game.homeSeed === seedByTeamId.get(game.homeTeamId) && game.awaySeed === seedByTeamId.get(game.awayTeamId)),
+        true,
+      );
 
       state = simulatePlayoffRound(state, teams, 98765);
       assert.equal(state.currentRound, 'FINAL');
