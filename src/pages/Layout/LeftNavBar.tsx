@@ -18,7 +18,9 @@ const navSections: Array<{ title: string; items: NavItem[] }> = [
     title: 'Coach Central',
     items: [
       { to: '/', label: 'Overview', hint: 'Program home', end: true },
+      { to: '/career/week', label: 'Weekly Hub', hint: 'Decisions & matchup' },
       { to: '/career', label: 'Coach Office', hint: 'Career dashboard' },
+      { to: '/career/recruiting', label: 'Recruiting Board', hint: 'Prospects & targets' },
       { to: '/career/roster', label: 'Roster', hint: 'Depth chart & players' },
       { to: '/career/setup', label: 'Staff Setup', hint: 'Profile and team' },
     ],

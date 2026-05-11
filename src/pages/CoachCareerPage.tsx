@@ -125,7 +125,6 @@ function CoachCareerPage() {
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
-  const [showHistory, setShowHistory] = useState(false);
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
   const teamNameById = useMemo(() => new Map(teams.map((team) => [team.id, `${team.schoolName}`])), [teams]);
@@ -392,41 +391,44 @@ function CoachCareerPage() {
           </div>
         </div>
 
-        {/* Career History toggle */}
+        {/* Career History — always visible when available */}
         {coach.seasonHistory.length > 0 && (
           <div className="mt-3 pt-3 border-t">
-            <button
-              className="text-xs text-blue-600 hover:underline bg-transparent border-0 cursor-pointer"
-              onClick={() => setShowHistory(!showHistory)}
-            >
-              {showHistory ? 'Hide' : 'Show'} Career History ({coach.seasonHistory.length} season{coach.seasonHistory.length !== 1 ? 's' : ''})
-            </button>
-            {showHistory && (
-              <div className="mt-2 overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-gray-400 border-b">
-                      <th className="pb-1 pr-3">Season</th>
-                      <th className="pb-1 pr-3">Record</th>
-                      <th className="pb-1 pr-3">Playoff</th>
-                      <th className="pb-1 pr-3">Recruiting</th>
-                      <th className="pb-1 text-right">Security</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {coach.seasonHistory.map((entry, i) => (
-                      <SeasonHistoryRow key={entry.year} entry={entry} index={i} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div className="text-xs text-gray-400 uppercase font-semibold mb-2">
+              Career History ({coach.seasonHistory.length} season{coach.seasonHistory.length !== 1 ? 's' : ''})
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-400 border-b">
+                    <th className="pb-1 pr-3">Season</th>
+                    <th className="pb-1 pr-3">Record</th>
+                    <th className="pb-1 pr-3">Playoff</th>
+                    <th className="pb-1 pr-3">Recruiting</th>
+                    <th className="pb-1 text-right">Security</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {coach.seasonHistory.map((entry, i) => (
+                    <SeasonHistoryRow key={entry.year} entry={entry} index={i} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
 
       {/* ── Quick Links ── */}
-      <div className="flex gap-3 mt-2">
+      <div className="flex gap-3 mt-2 flex-wrap">
+        <Link to="/career/week" className="text-sm text-blue-600 hover:underline font-medium">
+          Weekly Hub →
+        </Link>
+        <span className="text-gray-300">|</span>
+        <Link to="/career/recruiting" className="text-sm text-blue-600 hover:underline font-medium">
+          Recruiting Board →
+        </Link>
+        <span className="text-gray-300">|</span>
         <Link to="/career/roster" className="text-sm text-blue-600 hover:underline font-medium">
           Roster &amp; Depth Chart →
         </Link>
