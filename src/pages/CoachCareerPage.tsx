@@ -47,7 +47,6 @@ const ARCHETYPE_BONUSES: Record<string, string[]> = {
   TACTICIAN: ['20% less fatigue build-up', 'Better practice-to-game translation', 'Scheme advantage in late possessions'],
   DEVELOPER: ['Prospects trust your system', 'Signed players develop faster', 'Cleaner sticks and defensive growth'],
 };
-const REGULAR_SEASON_WEEKS = 12;
 
 function jobSecurityLabel(security: number): { label: string; color: string } {
   if (security >= 75) return { label: 'Strong Position', color: '#16a34a' };
@@ -301,8 +300,8 @@ function CoachCareerPage() {
   const isOffseason = season.phase === 'OFFSEASON';
   const canAdvanceWeeklyCycle =
     season.phase === 'REGULAR' &&
-    season.scheduleByWeek.length === REGULAR_SEASON_WEEKS &&
-    season.currentWeekIndex < REGULAR_SEASON_WEEKS;
+    season.scheduleByWeek.length > 0 &&
+    season.currentWeekIndex < season.scheduleByWeek.length;
   const seasonEndProcessed = isOffseason && coach.seasonHistory.some(e => e.year === season.year);
 
   return (

@@ -220,8 +220,8 @@ function WeeklyHubPage() {
   const isRegularSeason = season.phase === 'REGULAR';
   const canAdvance =
     isRegularSeason &&
-    season.scheduleByWeek.length === 12 &&
-    season.currentWeekIndex < 12;
+    season.scheduleByWeek.length > 0 &&
+    season.currentWeekIndex < season.scheduleByWeek.length;
 
   const currentWeekDisplay = season.currentWeekIndex + 1;
 
