@@ -49,12 +49,8 @@ function RecruitingBoardPage() {
 
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
-
-  if (coach.onboardingStep !== 'READY' || !coach.selectedTeamId) {
-    return <Navigate to="/career/setup" replace />;
-  }
-
-  const selectedTeamId = coach.selectedTeamId;
+  const isCoachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
+  const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
   const teamNameById = useMemo(() => new Map(teams.map((t) => [t.id, t.schoolName])), [teams]);
 
@@ -122,6 +118,10 @@ function RecruitingBoardPage() {
   const committedToUserCount = coach.recruitPool.filter(
     (r) => r.committedTeamId === selectedTeamId,
   ).length;
+
+  if (!isCoachReady) {
+    return <Navigate to="/career/setup" replace />;
+  }
 
   function onAdd(recruitId: string) {
     if (!selectedTeam) return;

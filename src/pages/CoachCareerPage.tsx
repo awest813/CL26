@@ -19,7 +19,7 @@ import {
 } from '../features/coach/coachSlice';
 import { runCareerWeeklyCycle, processSeasonEnd, applyOffseasonRosterTurnover } from '../features/coach/careerThunks';
 import { selectTeamRecords, startNewSeason } from '../features/season/seasonSlice';
-import { buildCoachGamePlan, summarizeCoachGamePlan } from '../sim/coachEffects';
+import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
 import { summarizeSigningClass } from '../sim/offseason';
 import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -233,6 +233,15 @@ function CoachCareerPage() {
     [coach.practiceFocus, coach.profile?.archetype, coach.profile?.skill, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
   const prepNotes = useMemo(() => summarizeCoachGamePlan(coachGamePlan), [coachGamePlan]);
+  const skillImpactNotes = useMemo(
+    () =>
+      summarizeCoachSkillImpacts({
+        archetype: coach.profile?.archetype,
+        skillTree: coach.skillTree,
+        resources: coach.programResources,
+      }),
+    [coach.profile?.archetype, coach.programResources, coach.skillTree],
+  );
 
   if (coach.onboardingStep !== 'READY' || !coach.profile || !coach.selectedTeamId) {
     return <Navigate to="/career/setup" replace />;
@@ -582,6 +591,15 @@ function CoachCareerPage() {
               </button>
             </div>
           ))}
+        </div>
+
+        <div className="border rounded p-3 mb-3">
+          <div className="text-xs uppercase text-gray-500 mb-1">Current Skill Effects</div>
+          <ul className="m-0 pl-4 text-sm text-gray-600 space-y-1">
+            {skillImpactNotes.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

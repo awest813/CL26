@@ -12,7 +12,7 @@ import {
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
 import { runCareerWeeklyCycle } from '../features/coach/careerThunks';
-import { buildCoachGamePlan } from '../sim/coachEffects';
+import { buildCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, GameResult } from '../types/sim';
 
@@ -36,6 +36,7 @@ const FOCUS_FATIGUE_DELTA: Record<PracticeFocus, number> = {
   CONDITIONING: -3,
   DISCIPLINE: 3,
 };
+const MAX_COACH_SKILL_LEVEL = 5;
 
 function fatiguePill(label: string): { bg: string; text: string } {
   if (label === 'Drained') return { bg: '#fef2f2', text: '#b91c1c' };
@@ -122,12 +123,8 @@ function WeeklyHubPage() {
   const records = useAppSelector(selectTeamRecords);
   const userUpcomingGame = useAppSelector(selectUserUpcomingGame);
   const userLastResult = useAppSelector(selectUserLastResult);
-
-  if (coach.onboardingStep !== 'READY' || !coach.selectedTeamId) {
-    return <Navigate to="/career/setup" replace />;
-  }
-
-  const selectedTeamId = coach.selectedTeamId;
+  const isCoachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
+  const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
   const userRecord = records[selectedTeamId] ?? {
     wins: 0,
@@ -178,6 +175,15 @@ function WeeklyHubPage() {
       }),
     [coach.practiceFocus, coach.profile, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
+  const skillImpactNotes = useMemo(
+    () =>
+      summarizeCoachSkillImpacts({
+        archetype: coach.profile?.archetype,
+        skillTree: coach.skillTree,
+        resources: coach.programResources,
+      }),
+    [coach.profile?.archetype, coach.programResources, coach.skillTree],
+  );
 
   const { bg: fatigueBg, text: fatigueText } = fatiguePill(gamePlan.fatigueLabel);
 
@@ -218,6 +224,10 @@ function WeeklyHubPage() {
     season.currentWeekIndex < 12;
 
   const currentWeekDisplay = season.currentWeekIndex + 1;
+
+  if (!isCoachReady) {
+    return <Navigate to="/career/setup" replace />;
+  }
 
   return (
     <div className="pageStack">
@@ -359,6 +369,23 @@ function WeeklyHubPage() {
                 {gamePlan.modifiers.discipline.toFixed(1)}
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="m-0 mb-3 text-base font-bold">Coach Skill Snapshot</h3>
+          <div className="text-xs text-gray-500 mb-2">
+            Recruiting {coach.skillTree.recruiting}/{MAX_COACH_SKILL_LEVEL} · Development {coach.skillTree.development}/{MAX_COACH_SKILL_LEVEL} · Operations {coach.skillTree.operations}/{MAX_COACH_SKILL_LEVEL}
+          </div>
+          <ul className="m-0 pl-4 text-sm text-gray-600 space-y-1">
+            {skillImpactNotes.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          <div className="mt-3">
+            <Link to="/career" className="text-sm text-blue-600 hover:underline">
+              Upgrade coach skills in Career Office →
+            </Link>
           </div>
         </div>
       </div>
