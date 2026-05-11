@@ -12,6 +12,10 @@ const ROUND_LABELS: Record<PlayoffRoundName, string> = {
     'FINAL': 'Championship'
 };
 
+function displaySeed(gameSeed: number, teamId: string, seedByTeamId: Map<string, number>): number | undefined {
+  return gameSeed > 0 ? gameSeed : seedByTeamId.get(teamId);
+}
+
 function PlayoffsPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -179,8 +183,8 @@ function PlayoffsPage() {
                                      const home = teamById.get(game.homeTeamId);
                                      const away = teamById.get(game.awayTeamId);
                                      const winnerId = game.winnerTeamId;
-                                     const awaySeed = game.awaySeed > 0 ? game.awaySeed : seedByTeamId.get(game.awayTeamId);
-                                     const homeSeed = game.homeSeed > 0 ? game.homeSeed : seedByTeamId.get(game.homeTeamId);
+                                     const awaySeed = displaySeed(game.awaySeed, game.awayTeamId, seedByTeamId);
+                                     const homeSeed = displaySeed(game.homeSeed, game.homeTeamId, seedByTeamId);
 
                                     const awayWon = winnerId === game.awayTeamId;
                                     const homeWon = winnerId === game.homeTeamId;

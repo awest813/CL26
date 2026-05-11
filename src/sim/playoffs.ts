@@ -91,7 +91,7 @@ function roundSeedOffset(round: PlayoffRoundName): number {
 
 function seedForTeam(state: PlayoffState, teamId: string): number {
   const seed = state.seeds.find((entry) => entry.teamId === teamId)?.seed;
-  if (!seed) {
+  if (seed === undefined) {
     throw new Error(`Missing playoff seed for team ${teamId}.`);
   }
   return seed;
