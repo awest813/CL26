@@ -14,6 +14,7 @@ import {
   buildPositionNeedByPosition,
   estimateRecruitFit,
   getTeamPitchGrade,
+  isRecruitingPitch,
   PITCH_LABELS,
   RECRUITING_POSITION_FILTERS,
 } from '../sim/recruiting';
@@ -28,10 +29,6 @@ function cappedInterest(value: number) {
 
 function getRecruitInterest(recruit: { interestByTeamId?: Record<string, number> }, teamId: string) {
   return recruit.interestByTeamId?.[teamId] ?? 0;
-}
-
-function isRecruitingPitch(value: string): value is RecruitingPitch {
-  return value in PITCH_LABELS;
 }
 
 function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {

@@ -1,6 +1,13 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert';
-import { buildPositionNeedByPosition, generateRecruitPool, calculateTeamGrade, getTeamPitchGrade, estimateRecruitFit } from './recruiting.ts';
+import {
+    buildPositionNeedByPosition,
+    generateRecruitPool,
+    calculateTeamGrade,
+    getTeamPitchGrade,
+    estimateRecruitFit,
+    isRecruitingPitch,
+} from './recruiting.ts';
 import type { Team, Recruit, RecruitingPitch } from '../types/sim.ts';
 
 describe('Recruiting Logic', () => {
@@ -68,6 +75,20 @@ describe('Recruiting Logic', () => {
          // PRESTIGE -> A+ (90 > 85)
          assert.strictEqual(getTeamPitchGrade(team, 'PRESTIGE', recruit), 'A+');
      });
+
+    test('getTeamPitchGrade delegates non-special pitches to calculateTeamGrade', () => {
+        const team = {
+            prestige: 65,
+            region: 'South',
+        } as Team;
+
+        const recruit = {
+            region: 'West',
+            position: 'M',
+        } as Recruit;
+
+        assert.strictEqual(getTeamPitchGrade(team, 'ACADEMIC', recruit), calculateTeamGrade(team, 'ACADEMIC'));
+    });
 
     test('playing time grade reflects positional roster need when available', () => {
         const team = {
@@ -145,5 +166,11 @@ describe('Recruiting Logic', () => {
         // Note: With only 3 teams and random selection of 3-5, all might be selected.
         // Let's check that we have some suitors.
         assert.ok(Object.keys(result).length > 0, 'Should generate suitors');
+    });
+
+    test('isRecruitingPitch validates pitch keys', () => {
+        assert.strictEqual(isRecruitingPitch('PRESTIGE'), true);
+        assert.strictEqual(isRecruitingPitch(''), false);
+        assert.strictEqual(isRecruitingPitch('NOT_A_PITCH'), false);
     });
 });

@@ -14,6 +14,10 @@ export const PITCH_LABELS: Record<RecruitingPitch, string> = {
   CHAMPIONSHIP: 'Winning',
   CAMPUS_LIFE: 'Campus',
 };
+
+export function isRecruitingPitch(value: string): value is RecruitingPitch {
+  return value in PITCH_LABELS;
+}
 const POSITION_TARGETS: Record<Position, number> = {
   A: 5,
   M: 7,
