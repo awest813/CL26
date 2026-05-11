@@ -41,6 +41,14 @@ describe('Recruiting Logic', () => {
         assert.strictEqual(calculateTeamGrade(team, 'CAMPUS_LIFE'), 'B+');
     });
 
+    test('calculateTeamGrade falls back to C for unexpected pitch values', () => {
+        const team = {
+            prestige: 65,
+        } as Team;
+
+        assert.strictEqual(calculateTeamGrade(team, 'NOT_A_PITCH' as unknown as import('../types/sim.ts').RecruitingPitch), 'C');
+    });
+
     test('getTeamPitchGrade maps to motivations correctly', () => {
          const team = {
             prestige: 90,

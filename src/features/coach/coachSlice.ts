@@ -238,7 +238,13 @@ const coachSlice = createSlice({
         state.weeklyHoursByRecruitId[recruitId] = validatedHours;
     },
     setRecruitPitch: (state, action: PayloadAction<{ recruitId: string; pitch: RecruitingPitch }>) => {
+        if (!state.boardRecruitIds.includes(action.payload.recruitId)) {
+            return;
+        }
         state.activePitchesByRecruitId[action.payload.recruitId] = action.payload.pitch;
+    },
+    clearRecruitPitch: (state, action: PayloadAction<string>) => {
+        delete state.activePitchesByRecruitId[action.payload];
     },
     setPracticeFocus: (state, action: PayloadAction<PracticeFocus>) => {
         state.practiceFocus = action.payload;
@@ -398,6 +404,7 @@ export const {
     removeRecruitFromBoard,
     setRecruitHours,
     setRecruitPitch,
+    clearRecruitPitch,
     setPracticeFocus,
     advanceCoachWeek,
     allocateProgramResources,
