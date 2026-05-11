@@ -183,7 +183,7 @@ function RankingsPage() {
                   <span className="font-mono font-semibold">{Number(pts).toFixed(1)}</span>
                 </div>
               ))}
-              <div className="flex justify-between text-sm py-1 col-span-2 border-t font-bold" style={{ gridColumn: '1/-1' }}>
+              <div className="flex justify-between text-sm py-1 border-t font-bold" style={{ gridColumn: '1/-1' }}>
                 <span>Total</span>
                 <span className="font-mono">{Math.round(topTeamBreakdown.breakdown.totalPoints)}</span>
               </div>

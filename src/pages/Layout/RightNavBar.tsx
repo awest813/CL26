@@ -42,14 +42,14 @@ function RightNavBar() {
 
       {careerReady && selectedTeam && (
         <div className="rightNavSection dynastyPanel">
-          <h3 className="m-0" style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b' }}>
+          <h3 className="m-0 dynastyPanelSubheading">
             My Program
           </h3>
-          <p className="m-0" style={{ fontWeight: 700, marginTop: '0.25rem' }}>
+          <p className="m-0 dynastyPanelTeamName">
             {selectedTeam.schoolName} {selectedTeam.nickname}
           </p>
           {userRecord && (
-            <p className="m-0 dynastyPanelMuted" style={{ fontSize: '0.82rem', marginTop: '0.2rem' }}>
+            <p className="m-0 dynastyPanelMuted dynastyPanelRecord">
               {userRecord.wins}–{userRecord.losses}
               {userRecord.confWins + userRecord.confLosses > 0
                 ? ` · ${userRecord.confWins}–${userRecord.confLosses} conf`
