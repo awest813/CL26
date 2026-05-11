@@ -34,51 +34,120 @@ function TeamPage() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([pos, count]) => `${pos}(${count})`)
     .join(', ');
+  const topPlayer = teamSummary.topPlayers[0];
+  const averageTopPlayerOverall = Math.round(
+    teamSummary.topPlayers.reduce((sum, player) => sum + player.overall, 0) / teamSummary.topPlayers.length,
+  );
 
   return (
-    <section className="card">
-      <h2>
-        {teamSummary.team.schoolName} {teamSummary.team.nickname}
-      </h2>
-      <p>
-        Conference: <strong>{conference?.name ?? teamSummary.team.conferenceId}</strong>
-      </p>
-      <p>
-        Region: <strong>{teamSummary.team.region}</strong> · Prestige: <strong>{teamSummary.team.prestige}</strong>
-      </p>
-      <p>
-        Generated Roster Overall: <strong>{teamSummary.rosterOverall}</strong> (size {teamSummary.rosterSize})
-      </p>
+    <div className="pageStack">
+      <section className="card card-elevated teamHeroCard">
+        <Link to="/conferences" className="teamHeroBackLink">
+          ← Back to conferences
+        </Link>
+        <div className="teamHeroHeader">
+          <div>
+            <h2 className="m-0">
+              {teamSummary.team.schoolName} {teamSummary.team.nickname}
+            </h2>
+            <p className="teamHeroSubhead">
+              {conference?.name ?? teamSummary.team.conferenceId} · {teamSummary.team.region}
+            </p>
+          </div>
+          <div className="teamHeroBadges" aria-label="Program profile">
+            <span className="conferenceMetricChip">Prestige {teamSummary.team.prestige}</span>
+            <span className="conferenceMetricChip">Roster overall {teamSummary.rosterOverall}</span>
+            <span className="conferenceMetricChip">Players {teamSummary.rosterSize}</span>
+          </div>
+        </div>
+      </section>
 
-      <h3>Top Players</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Pos</th>
-            <th>Year</th>
-            <th>Age</th>
-            <th>Skill</th>
-            <th>Overall</th>
-          </tr>
-        </thead>
-        <tbody>
-          {teamSummary.topPlayers.map((player) => (
-            <tr key={player.id}>
-              <td>{player.name}</td>
-              <td>{player.position}</td>
-              <td>{player.year}</td>
-              <td>{player.age}</td>
-              <td>{player.skill}</td>
-              <td>{player.overall}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="grid2 teamSummaryGrid">
+        <section className="card">
+          <h3 className="m-0">Program Snapshot</h3>
+          <div className="teamInfoList">
+            <div className="teamInfoRow">
+              <span className="teamInfoLabel">Conference</span>
+              <strong>{conference?.name ?? teamSummary.team.conferenceId}</strong>
+            </div>
+            <div className="teamInfoRow">
+              <span className="teamInfoLabel">Region</span>
+              <strong>{teamSummary.team.region}</strong>
+            </div>
+            <div className="teamInfoRow">
+              <span className="teamInfoLabel">Generated roster</span>
+              <strong>{teamSummary.rosterOverall} overall</strong>
+            </div>
+            <div className="teamInfoRow">
+              <span className="teamInfoLabel">Top-player mix</span>
+              <strong>{topPlayerPositionMix || 'N/A'}</strong>
+            </div>
+          </div>
+        </section>
 
-      <p>Top-player position mix: {topPlayerPositionMix || 'N/A'}</p>
-      <Link to="/conferences">← Back to conferences</Link>
-    </section>
+        <section className="card">
+          <h3 className="m-0">Top-End Talent</h3>
+          <div className="teamSpotlightCard">
+            <span className="teamInfoLabel">Best player</span>
+            <strong>
+              {topPlayer.name} · {topPlayer.position}
+            </strong>
+            <p className="teamSpotlightMeta">
+              Year {topPlayer.year} · Age {topPlayer.age} · Skill {topPlayer.skill}
+            </p>
+          </div>
+          <div className="teamInfoList">
+            <div className="teamInfoRow">
+              <span className="teamInfoLabel">Top player overall</span>
+              <strong>{topPlayer.overall}</strong>
+            </div>
+            <div className="teamInfoRow">
+              <span className="teamInfoLabel">Top-5 average overall</span>
+              <strong>{averageTopPlayerOverall}</strong>
+            </div>
+            <div className="teamInfoRow">
+              <span className="teamInfoLabel">Roster size</span>
+              <strong>{teamSummary.rosterSize}</strong>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section className="card">
+        <div className="seasonHeaderRow">
+          <div>
+            <h3 className="m-0">Top Players</h3>
+            <p className="pageHeader-sub">Deterministic roster preview generated from the current season seed.</p>
+          </div>
+        </div>
+        <div className="dataTableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Pos</th>
+                <th>Year</th>
+                <th>Age</th>
+                <th>Skill</th>
+                <th>Overall</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamSummary.topPlayers.map((player) => (
+                <tr key={player.id}>
+                  <td>{player.name}</td>
+                  <td>{player.position}</td>
+                  <td>{player.year}</td>
+                  <td>{player.age}</td>
+                  <td>{player.skill}</td>
+                  <td>{player.overall}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   );
 }
 

@@ -29,6 +29,17 @@ function ConferencesPage() {
   }, [conferenceRows, regionFilter, searchText]);
 
   const hasNoResults = filteredRows.length === 0;
+  const hasActiveFilters = regionFilter !== 'all' || searchText.trim().length > 0;
+  const visibleTeamCount = filteredRows.reduce((sum, row) => sum + row.teamCount, 0);
+  const totalTeamCount = conferenceRows.reduce((sum, row) => sum + row.teamCount, 0);
+  const averageVisibleRosterStrength =
+    filteredRows.length > 0
+      ? Number(
+          (
+            filteredRows.reduce((sum, row) => sum + row.rosterStrength, 0) / filteredRows.length
+          ).toFixed(1),
+        )
+      : 0;
 
   const clearFilters = () => {
     setRegionFilter('all');
@@ -39,10 +50,29 @@ function ConferencesPage() {
     <div className="pageStack">
       <div className="pageHeader">
         <h2>Conferences</h2>
-        <p className="pageHeader-sub">Browse all 16 conferences and 128 teams.</p>
+        <p className="pageHeader-sub">Browse the full 128-team league by conference, region, and generated roster profile.</p>
       </div>
-      <div className="card">
-        <div className="grid2">
+
+      <div className="card card-elevated leagueOverviewCard">
+        <div className="leagueOverviewStats" aria-label="League browser summary">
+          <div className="leagueOverviewStat">
+            <span className="leagueOverviewLabel">Visible conferences</span>
+            <strong>{filteredRows.length}</strong>
+          </div>
+          <div className="leagueOverviewStat">
+            <span className="leagueOverviewLabel">Visible teams</span>
+            <strong>
+              {visibleTeamCount}
+              <span className="leagueOverviewMuted"> / {totalTeamCount}</span>
+            </strong>
+          </div>
+          <div className="leagueOverviewStat">
+            <span className="leagueOverviewLabel">Avg roster strength</span>
+            <strong>{averageVisibleRosterStrength}</strong>
+          </div>
+        </div>
+
+        <div className="leagueFilterBar">
           <label>
             Search conference/team
             <input
@@ -62,8 +92,12 @@ function ConferencesPage() {
               ))}
             </select>
           </label>
+          {hasActiveFilters ? (
+            <button type="button" className="btn" onClick={clearFilters}>
+              Clear filters
+            </button>
+          ) : null}
         </div>
-        <p className="text-sm text-gray-500 m-0">Showing {filteredRows.length} conferences.</p>
       </div>
 
       {hasNoResults ? (
@@ -77,35 +111,36 @@ function ConferencesPage() {
       ) : null}
 
       {filteredRows.map(({ conference, teams, rosterStrength, averagePrestige, teamCount }) => (
-        <div key={conference.id} className="conferenceCard">
-          <h3 className="m-0">{conference.name}</h3>
-          <p className="text-sm text-gray-500 mt-2">
-            Teams: <strong>{teamCount}</strong> · Avg prestige: <strong>{averagePrestige}</strong> · Generated roster
-            strength: <strong>{rosterStrength}</strong>
-          </p>
-          <table>
-            <thead>
-              <tr>
-                <th>School</th>
-                <th>Nickname</th>
-                <th>Region</th>
-                <th>Prestige</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teams.map((team) => (
-                <tr key={team.id}>
-                  <td>
-                    <Link to={`/team/${team.id}`}>{team.schoolName}</Link>
-                  </td>
-                  <td>{team.nickname}</td>
-                  <td>{team.region}</td>
-                  <td>{team.prestige}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <section key={conference.id} className="conferenceCard card-elevated conferenceBrowserCard">
+          <div className="conferenceBrowserHeader">
+            <div>
+              <h3 className="m-0">{conference.name}</h3>
+              <p className="conferenceBrowserSubhead">
+                {Array.from(new Set(teams.map((team) => team.region))).join(' · ')}
+              </p>
+            </div>
+            <div className="conferenceBrowserMetrics" aria-label={`${conference.name} summary`}>
+              <span className="conferenceMetricChip">Teams {teamCount}</span>
+              <span className="conferenceMetricChip">Avg prestige {averagePrestige}</span>
+              <span className="conferenceMetricChip">Roster {rosterStrength}</span>
+            </div>
+          </div>
+
+          <div className="conferenceTeamGrid">
+            {teams.map((team) => (
+              <Link key={team.id} to={`/team/${team.id}`} className="conferenceTeamCard">
+                <div>
+                  <strong>{team.schoolName}</strong>
+                  <div className="conferenceTeamNickname">{team.nickname}</div>
+                </div>
+                <div className="conferenceTeamMeta">
+                  <span>{team.region}</span>
+                  <span>Prestige {team.prestige}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );
