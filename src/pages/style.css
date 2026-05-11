@@ -302,11 +302,21 @@
 
 .conferenceCard,
 .card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: var(--radius-md, 12px);
   padding: 1rem;
   margin-bottom: 1rem;
   text-align: left;
+  background: var(--bg-elevated, #fff);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
+  transition: box-shadow var(--transition-ui, 0.2s ease), transform var(--transition-fast, 0.15s ease),
+    border-color var(--transition-ui, 0.2s ease);
+}
+
+.card:hover {
+  border-color: #bfdbfe;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
 }
 
 table {
@@ -498,8 +508,17 @@ label {
 select,
 input {
   padding: 0.4rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border, #cbd5e1);
   border-radius: 6px;
+  background: var(--bg-elevated, #fff);
+  transition: border-color var(--transition-ui, 0.2s ease), box-shadow var(--transition-fast, 0.15s ease);
+}
+
+select:focus-visible,
+input:focus-visible {
+  outline: none;
+  border-color: var(--accent, #2563eb);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 .seedRow {
@@ -601,11 +620,15 @@ input {
   border-radius: 6px;
   text-decoration: none;
   color: inherit;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-ui, 0.2s ease), box-shadow var(--transition-fast, 0.15s ease),
+    transform var(--transition-fast, 0.15s ease), border-color var(--transition-ui, 0.2s ease);
 }
 
 .link-card:hover {
   background-color: #f9fafb;
+  border-color: #bfdbfe;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
+  transform: translateY(-1px);
 }
 
 .link-card-meta {
@@ -717,6 +740,12 @@ input {
   border-color: transparent;
 }
 
+.seasonInlineLink:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .seasonInlineLink-danger {
   color: #dc2626;
 }
@@ -728,16 +757,24 @@ input {
 }
 
 .seasonMatchupRow {
-  padding: 0.5rem;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: background-color var(--transition-ui, 0.2s ease);
+  transition: background-color var(--transition-ui, 0.2s ease), border-color var(--transition-ui, 0.2s ease),
+    transform var(--transition-fast, 0.15s ease);
+}
+
+.seasonMatchupRow + .seasonMatchupRow {
+  margin-top: 0.3rem;
 }
 
 .seasonMatchupRow:hover {
   background: #f9fafb;
+  border-color: #dbeafe;
+  transform: translateY(-1px);
 }
 
 .seasonMatchupFooter {
@@ -808,5 +845,12 @@ input {
   .seasonWeekFilterGroup select {
     flex: 1;
     min-width: 145px;
+  }
+
+  .seasonMatchupRow {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    justify-content: center;
+    text-align: center;
   }
 }
