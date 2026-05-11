@@ -754,6 +754,17 @@ input:focus-visible {
   border-color: #2563eb;
 }
 
+.btn-danger {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.btn-danger:hover {
+  background-color: #fee2e2;
+  border-color: #f87171;
+}
+
 .btn:hover {
   opacity: 0.95;
   transform: translateY(-1px);

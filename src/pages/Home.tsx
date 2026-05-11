@@ -1,5 +1,8 @@
-import { Link } from 'react-router-dom';
-import { useAppSelector } from '../store/hooks';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { resetCoach } from '../features/coach/coachSlice';
+import { resetSeason } from '../features/season/seasonSlice';
+import { persistor } from '../store/persistor';
 
 type DashboardAction = {
   label: string;
@@ -14,23 +17,43 @@ const PHASE_STATUS_LABEL: Record<string, string> = {
 };
 
 function Home() {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const season = useAppSelector(state => state.season);
-  const hasCareerTeam = useAppSelector((state) => Boolean(state.coach.selectedTeamId));
+  const coach = useAppSelector(state => state.coach);
+  const careerReady = coach.onboardingStep === 'READY';
   const { year, phase, currentWeekIndex, seasonSeed } = season;
+  const seasonStarted = phase !== 'PRE';
 
   const statusLabel =
     phase === 'REGULAR' ? `Week ${currentWeekIndex + 1}` : (PHASE_STATUS_LABEL[phase] ?? phase);
 
-  const action: DashboardAction = (() => {
+  const primaryAction: DashboardAction = (() => {
     if (phase === 'PRE') return { label: 'Start New Season', link: '/season', primary: true };
     if (phase === 'REGULAR') return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
     if (phase === 'PLAYOFF') return { label: 'Go to Playoffs', link: '/playoffs', primary: true };
     if (phase === 'OFFSEASON') {
-      if (hasCareerTeam) return { label: 'Finalize Offseason', link: '/career', primary: true };
+      if (careerReady) return { label: 'Finalize Offseason', link: '/career', primary: true };
       return { label: 'Review Season', link: '/season', primary: false };
     }
     return { label: 'View Season', link: '/season', primary: false };
   })();
+
+  const secondaryAction: DashboardAction = careerReady
+    ? { label: 'Coach Office', link: '/career', primary: false }
+    : { label: 'Career Setup', link: '/career/setup', primary: false };
+
+  function handleResetSave() {
+    const confirmed = window.confirm(
+      'Start a new game? This will permanently erase your current save — all season progress, coach career data, and recruits will be lost.',
+    );
+    if (!confirmed) return;
+    dispatch(resetCoach());
+    dispatch(resetSeason());
+    persistor.purge().then(() => {
+      navigate('/career/setup');
+    });
+  }
 
   return (
     <div className="pageStack">
@@ -45,11 +68,11 @@ function Home() {
             logic, one save in the browser.
           </p>
           <div className="home-hero-actions">
-            <Link to={action.link} className={`btn ${action.primary ? 'btn-primary' : ''}`}>
-              {action.label}
+            <Link to={primaryAction.link} className={`btn ${primaryAction.primary ? 'btn-primary' : ''}`}>
+              {primaryAction.label}
             </Link>
-            <Link to="/career" className="btn">
-              Coach office
+            <Link to={secondaryAction.link} className="btn">
+              {secondaryAction.label}
             </Link>
           </div>
         </div>
@@ -78,9 +101,15 @@ function Home() {
       <section className="card card-elevated">
         <h3 className="sectionTitle">Quick Actions</h3>
         <div className="link-grid">
-          <Link to="/career" className="link-card">
-            <strong>Coach Career</strong>
-            <div className="link-card-meta">Manage recruiting &amp; status</div>
+          {careerReady && (
+            <Link to="/career/week" className="link-card">
+              <strong>Weekly Hub</strong>
+              <div className="link-card-meta">Decisions &amp; matchup prep</div>
+            </Link>
+          )}
+          <Link to={careerReady ? '/career' : '/career/setup'} className="link-card">
+            <strong>{careerReady ? 'Coach Office' : 'Career Setup'}</strong>
+            <div className="link-card-meta">{careerReady ? 'Manage recruiting &amp; status' : 'Create your coach profile'}</div>
           </Link>
           <Link to="/conferences" className="link-card">
             <strong>Conferences</strong>
@@ -94,6 +123,24 @@ function Home() {
             <strong>Rankings &amp; Polls</strong>
             <div className="link-card-meta">Top 25 and playoff projection</div>
           </Link>
+          {seasonStarted && (
+            <Link to="/playoffs" className="link-card">
+              <strong>Playoff Bracket</strong>
+              <div className="link-card-meta">Championship path</div>
+            </Link>
+          )}
+        </div>
+      </section>
+
+      <section className="card">
+        <h3 className="sectionTitle">New Game</h3>
+        <p className="sectionSubtitle">
+          Erase your current save and start fresh with a new coach and program. This cannot be undone.
+        </p>
+        <div style={{ marginTop: '0.75rem' }}>
+          <button type="button" className="btn btn-danger" onClick={handleResetSave}>
+            Reset Save &amp; Start New Game
+          </button>
         </div>
       </section>
     </div>
@@ -101,3 +148,4 @@ function Home() {
 }
 
 export default Home;
+

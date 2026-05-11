@@ -391,6 +391,7 @@ const coachSlice = createSlice({
             state.starterIds.push(playerId);
         }
     },
+    resetCoach: () => initialState,
   },
 });
 
@@ -423,6 +424,7 @@ export const {
     setManagedRoster,
     setStarterIds,
     toggleStarter,
+    resetCoach,
 } = coachSlice.actions;
 
 export function careerTierFromPrestige(prestige: number): NonNullable<CoachState['careerTier']> {
