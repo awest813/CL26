@@ -102,7 +102,7 @@ function AlphaStagePage() {
   };
 
   return (
-    <div className="flex-col gap-4">
+    <div className="pageStack">
       <section className="card">
         <h2>Alpha Stage Progress</h2>
         <p className="text-sm text-gray-500">

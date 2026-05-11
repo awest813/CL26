@@ -187,84 +187,88 @@ function RankingsPage() {
       </section>
 
       <section className="card" style={{ gridColumn: '1 / -1' }}>
-        <h3 className="m-0 mb-2">Ranking Formula</h3>
-        <p className="text-sm text-gray-500">
-          Scores are deterministic — built from season performance plus a baseline program prestige signal.
-        </p>
-        <div className="grid2" style={{ marginTop: '0.75rem', gap: '0.5rem' }}>
-          {[
-            ['Overall win %', RANKING_WEIGHTS.overallWinPct],
-            ['Conference win %', RANKING_WEIGHTS.conferenceWinPct],
-            ['Point differential', RANKING_WEIGHTS.pointDifferential],
-            ['Program prestige', RANKING_WEIGHTS.prestige],
-            ['Scoring volume', RANKING_WEIGHTS.scoringVolume],
-            ['Strength of schedule', RANKING_WEIGHTS.strengthOfSchedule],
-          ].map(([label, weight]) => (
-            <div key={String(label)} className="flex justify-between text-sm border-b py-1">
-              <span className="text-gray-600">{label}</span>
-              <span className="font-mono font-semibold">×{weight}</span>
-            </div>
-          ))}
-        </div>
+        <details>
+          <summary className="text-sm font-semibold cursor-pointer text-gray-600" style={{ listStyle: 'none' }}>
+            Ranking Formula &amp; Score Breakdown
+          </summary>
+          <p className="text-sm text-gray-500 mt-2">
+            Scores are deterministic — built from season performance plus a baseline program prestige signal.
+          </p>
+          <div className="grid2" style={{ marginTop: '0.75rem', gap: '0.5rem' }}>
+            {[
+              ['Overall win %', RANKING_WEIGHTS.overallWinPct],
+              ['Conference win %', RANKING_WEIGHTS.conferenceWinPct],
+              ['Point differential', RANKING_WEIGHTS.pointDifferential],
+              ['Program prestige', RANKING_WEIGHTS.prestige],
+              ['Scoring volume', RANKING_WEIGHTS.scoringVolume],
+              ['Strength of schedule', RANKING_WEIGHTS.strengthOfSchedule],
+            ].map(([label, weight]) => (
+              <div key={String(label)} className="flex justify-between text-sm border-b py-1">
+                <span className="text-gray-600">{label}</span>
+                <span className="font-mono font-semibold">×{weight}</span>
+              </div>
+            ))}
+          </div>
 
-        {topTeamBreakdown && (
-          <div style={{ marginTop: '1rem' }}>
-            <p className="text-sm font-semibold m-0 mb-1">
-              Current #1 score breakdown — {topTeamBreakdown.team.schoolName} ({topTeamBreakdown.team.nickname})
-            </p>
-            <div className="grid2" style={{ gap: '0.5rem' }}>
-              {[
-                ['Overall win %', topTeamBreakdown.breakdown.overallWinPctPoints],
-                ['Conference win %', topTeamBreakdown.breakdown.conferenceWinPctPoints],
-                ['Point differential', topTeamBreakdown.breakdown.pointDifferentialPoints],
-                ['Prestige', topTeamBreakdown.breakdown.prestigePoints],
-                ['Scoring volume', topTeamBreakdown.breakdown.scoringVolumePoints],
-                ['Strength of schedule', topTeamBreakdown.breakdown.strengthOfSchedulePoints],
-              ].map(([label, pts]) => (
-                <div key={String(label)} className="flex justify-between text-sm border-b py-1">
-                  <span className="text-gray-600">{label}</span>
-                  <span className="font-mono font-semibold">{Number(pts).toFixed(1)}</span>
+          {topTeamBreakdown && (
+            <div style={{ marginTop: '1rem' }}>
+              <p className="text-sm font-semibold m-0 mb-1">
+                Current #1 score breakdown — {topTeamBreakdown.team.schoolName} ({topTeamBreakdown.team.nickname})
+              </p>
+              <div className="grid2" style={{ gap: '0.5rem' }}>
+                {[
+                  ['Overall win %', topTeamBreakdown.breakdown.overallWinPctPoints],
+                  ['Conference win %', topTeamBreakdown.breakdown.conferenceWinPctPoints],
+                  ['Point differential', topTeamBreakdown.breakdown.pointDifferentialPoints],
+                  ['Prestige', topTeamBreakdown.breakdown.prestigePoints],
+                  ['Scoring volume', topTeamBreakdown.breakdown.scoringVolumePoints],
+                  ['Strength of schedule', topTeamBreakdown.breakdown.strengthOfSchedulePoints],
+                ].map(([label, pts]) => (
+                  <div key={String(label)} className="flex justify-between text-sm border-b py-1">
+                    <span className="text-gray-600">{label}</span>
+                    <span className="font-mono font-semibold">{Number(pts).toFixed(1)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-sm py-1 border-t font-bold" style={{ gridColumn: '1/-1' }}>
+                  <span>Total</span>
+                  <span className="font-mono">{Math.round(topTeamBreakdown.breakdown.totalPoints)}</span>
                 </div>
-              ))}
-              <div className="flex justify-between text-sm py-1 border-t font-bold" style={{ gridColumn: '1/-1' }}>
-                <span>Total</span>
-                <span className="font-mono">{Math.round(topTeamBreakdown.breakdown.totalPoints)}</span>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* User team score breakdown */}
-        {userTeamBreakdown && (
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
-            <p className="text-sm font-semibold m-0 mb-1">
-              Your Program —{' '}
-              {userTeamBreakdown.team.schoolName} ({userTeamBreakdown.team.nickname})
-              {userTeamBreakdown.rankRow
-                ? ` · Ranked #${userTeamBreakdown.rankRow.rank}`
-                : ' · Unranked'}
-            </p>
-            <div className="grid2" style={{ gap: '0.5rem' }}>
-              {[
-                ['Overall win %', userTeamBreakdown.breakdown.overallWinPctPoints],
-                ['Conference win %', userTeamBreakdown.breakdown.conferenceWinPctPoints],
-                ['Point differential', userTeamBreakdown.breakdown.pointDifferentialPoints],
-                ['Prestige', userTeamBreakdown.breakdown.prestigePoints],
-                ['Scoring volume', userTeamBreakdown.breakdown.scoringVolumePoints],
-                ['Strength of schedule', userTeamBreakdown.breakdown.strengthOfSchedulePoints],
-              ].map(([label, pts]) => (
-                <div key={String(label)} className="flex justify-between text-sm border-b py-1">
-                  <span className="text-gray-600">{label}</span>
-                  <span className="font-mono font-semibold">{Number(pts).toFixed(1)}</span>
+          {/* User team score breakdown */}
+          {userTeamBreakdown && (
+            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+              <p className="text-sm font-semibold m-0 mb-1">
+                Your Program —{' '}
+                {userTeamBreakdown.team.schoolName} ({userTeamBreakdown.team.nickname})
+                {userTeamBreakdown.rankRow
+                  ? ` · Ranked #${userTeamBreakdown.rankRow.rank}`
+                  : ' · Unranked'}
+              </p>
+              <div className="grid2" style={{ gap: '0.5rem' }}>
+                {[
+                  ['Overall win %', userTeamBreakdown.breakdown.overallWinPctPoints],
+                  ['Conference win %', userTeamBreakdown.breakdown.conferenceWinPctPoints],
+                  ['Point differential', userTeamBreakdown.breakdown.pointDifferentialPoints],
+                  ['Prestige', userTeamBreakdown.breakdown.prestigePoints],
+                  ['Scoring volume', userTeamBreakdown.breakdown.scoringVolumePoints],
+                  ['Strength of schedule', userTeamBreakdown.breakdown.strengthOfSchedulePoints],
+                ].map(([label, pts]) => (
+                  <div key={String(label)} className="flex justify-between text-sm border-b py-1">
+                    <span className="text-gray-600">{label}</span>
+                    <span className="font-mono font-semibold">{Number(pts).toFixed(1)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-sm py-1 border-t font-bold" style={{ gridColumn: '1/-1' }}>
+                  <span>Total</span>
+                  <span className="font-mono">{Math.round(userTeamBreakdown.breakdown.totalPoints)}</span>
                 </div>
-              ))}
-              <div className="flex justify-between text-sm py-1 border-t font-bold" style={{ gridColumn: '1/-1' }}>
-                <span>Total</span>
-                <span className="font-mono">{Math.round(userTeamBreakdown.breakdown.totalPoints)}</span>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </details>
       </section>
       </div>
     </div>

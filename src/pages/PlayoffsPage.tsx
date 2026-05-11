@@ -79,7 +79,7 @@ function PlayoffsPage() {
   }
 
   return (
-    <div className="flex-col gap-4">
+    <div className="pageStack">
       {/* Header controls */}
       <div className="card flex justify-between items-center">
         <div>
@@ -165,7 +165,7 @@ function PlayoffsPage() {
             </div>
 
             {/* Bracket rounds */}
-            <div className="flex-col gap-4">
+            <div className="pageStack">
                 {(['ROUND1', 'QUARTERFINAL', 'SEMIFINAL', 'FINAL'] as const).map((round) => {
                     const games = playoffState.rounds[round];
                     if (games.length === 0) return null;

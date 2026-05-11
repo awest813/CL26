@@ -245,7 +245,7 @@ function CoachCareerSetupPage() {
           </div>
         )}
 
-        <button type="submit" disabled={!canContinue} style={{ marginTop: 16 }}>
+        <button type="submit" className="btn btn-primary" disabled={!canContinue} style={{ marginTop: 16 }}>
           {coach.onboardingStep === 'READY' ? 'Update Career Setup' : 'Start Career'}
         </button>
       </form>
