@@ -76,6 +76,7 @@ function createRegularSeasonState(teamCount = 8): SeasonState {
     phase: 'REGULAR',
     seasonSeed: 42,
     playoffs: null,
+    previousRankByTeamId: {},
   };
 }
 
@@ -134,11 +135,60 @@ describe('validateSeasonState', () => {
       phase: 'PLAYOFF',
       seasonSeed: 101,
       playoffs: playoffState,
+      previousRankByTeamId: {},
     };
 
     const result = validateSeasonState(state, teams);
 
     assert.strictEqual(result.isValid, false);
     assert.match(result.error ?? '', /duplicate seed numbers/i);
+  });
+
+  test('fails playoff phase if seeds do not include 1 through 12', () => {
+    const teams = createTeams(12);
+    const playoffState = createPlayoffState();
+    playoffState.seeds[11].seed = 13;
+
+    const state: SeasonState = {
+      year: 2026,
+      currentWeekIndex: 12,
+      completedWeeks: 12,
+      gameResults: [],
+      scheduleByWeek: [],
+      isComplete: false,
+      phase: 'PLAYOFF',
+      seasonSeed: 101,
+      playoffs: playoffState,
+      previousRankByTeamId: {},
+    };
+
+    const result = validateSeasonState(state, teams);
+
+    assert.strictEqual(result.isValid, false);
+    assert.match(result.error ?? '', /1 through 12/i);
+  });
+
+  test('fails playoff phase when round data shape is malformed', () => {
+    const teams = createTeams(12);
+    const playoffState = createPlayoffState();
+    (playoffState.rounds as unknown as { QUARTERFINAL: unknown }).QUARTERFINAL = null;
+
+    const state: SeasonState = {
+      year: 2026,
+      currentWeekIndex: 12,
+      completedWeeks: 12,
+      gameResults: [],
+      scheduleByWeek: [],
+      isComplete: false,
+      phase: 'PLAYOFF',
+      seasonSeed: 101,
+      playoffs: playoffState,
+      previousRankByTeamId: {},
+    };
+
+    const result = validateSeasonState(state, teams);
+
+    assert.strictEqual(result.isValid, false);
+    assert.match(result.error ?? '', /round data is missing or invalid/i);
   });
 });

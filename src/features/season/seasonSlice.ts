@@ -258,6 +258,7 @@ const seasonSlice = createSlice({
         state.phase = 'REGULAR';
         state.isComplete = false;
         state.playoffs = null;
+        state.previousRankByTeamId = {};
       })
       .addCase(simCurrentWeek.fulfilled, (state, action) => {
         state.previousRankByTeamId = action.payload.previousRankByTeamId;
@@ -312,39 +313,40 @@ export const selectTeamRecords = createSelector(
     [(state: RootState) => state.season.gameResults, (state: RootState) => state.league.teams],
     (results, teams) => {
         const records: Record<string, TeamRecord> = {};
+        const conferenceByTeamId: Record<string, string> = {};
         teams.forEach(team => {
             records[team.id] = { wins: 0, losses: 0, confWins: 0, confLosses: 0, pointsFor: 0, pointsAgainst: 0 };
+            conferenceByTeamId[team.id] = team.conferenceId;
         });
 
         results.forEach(game => {
-             // In simCurrentWeek, we passed {team: homeTeam} as first arg (teamA), {team: awayTeam} as second (teamB).
-             // So teamA is Home, teamB is Away.
-             const teamA = teams.find(t => t.id === game.teamAId); // Home
-             const teamB = teams.find(t => t.id === game.teamBId); // Away
+             const isConferenceGame =
+               conferenceByTeamId[game.teamAId] != null &&
+               conferenceByTeamId[game.teamAId] === conferenceByTeamId[game.teamBId];
 
              if (records[game.teamAId]) {
-                 records[game.teamAId].pointsFor += game.scoreA;
-                 records[game.teamAId].pointsAgainst += game.scoreB;
-                 if (game.scoreA > game.scoreB) {
-                     records[game.teamAId].wins += 1;
-                     if (teamA?.conferenceId === teamB?.conferenceId) records[game.teamAId].confWins += 1;
-                 } else {
-                     records[game.teamAId].losses += 1;
-                     if (teamA?.conferenceId === teamB?.conferenceId) records[game.teamAId].confLosses += 1;
-                 }
-             }
+                  records[game.teamAId].pointsFor += game.scoreA;
+                  records[game.teamAId].pointsAgainst += game.scoreB;
+                  if (game.scoreA > game.scoreB) {
+                      records[game.teamAId].wins += 1;
+                      if (isConferenceGame) records[game.teamAId].confWins += 1;
+                  } else {
+                      records[game.teamAId].losses += 1;
+                      if (isConferenceGame) records[game.teamAId].confLosses += 1;
+                  }
+              }
 
-             if (records[game.teamBId]) {
-                 records[game.teamBId].pointsFor += game.scoreB;
-                 records[game.teamBId].pointsAgainst += game.scoreA;
-                 if (game.scoreB > game.scoreA) {
-                     records[game.teamBId].wins += 1;
-                     if (teamA?.conferenceId === teamB?.conferenceId) records[game.teamBId].confWins += 1;
-                 } else {
-                     records[game.teamBId].losses += 1;
-                     if (teamA?.conferenceId === teamB?.conferenceId) records[game.teamBId].confLosses += 1;
-                 }
-             }
+              if (records[game.teamBId]) {
+                  records[game.teamBId].pointsFor += game.scoreB;
+                  records[game.teamBId].pointsAgainst += game.scoreA;
+                  if (game.scoreB > game.scoreA) {
+                      records[game.teamBId].wins += 1;
+                      if (isConferenceGame) records[game.teamBId].confWins += 1;
+                  } else {
+                      records[game.teamBId].losses += 1;
+                      if (isConferenceGame) records[game.teamBId].confLosses += 1;
+                  }
+              }
         });
         return records;
     }
