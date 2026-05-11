@@ -12,6 +12,10 @@ const ROUND_LABELS: Record<PlayoffRoundName, string> = {
     'FINAL': 'Championship'
 };
 
+function displaySeed(gameSeed: number, teamId: string, seedByTeamId: Map<string, number>): number | undefined {
+  return gameSeed > 0 ? gameSeed : seedByTeamId.get(teamId);
+}
+
 function PlayoffsPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -21,6 +25,7 @@ function PlayoffsPage() {
   const records = useAppSelector(selectTeamRecords);
   const coach = useAppSelector((state) => state.coach);
   const teamById = new Map(teams.map((team) => [team.id, team]));
+  const seedByTeamId = new Map((playoffState?.seeds ?? []).map((seed) => [seed.teamId, seed.seed]));
 
   const canStart = summary.phase === 'PLAYOFF' && !playoffState;
   const canSim = summary.phase === 'PLAYOFF' && !!playoffState && !playoffState.championTeamId;
@@ -175,9 +180,11 @@ function PlayoffsPage() {
                             <h3 className="text-base font-bold border-b pb-2 mb-3">{ROUND_LABELS[round]}</h3>
                             <div className="grid2 gap-3">
                                 {games.map((game) => {
-                                    const home = teamById.get(game.homeTeamId);
-                                    const away = teamById.get(game.awayTeamId);
-                                    const winnerId = game.winnerTeamId;
+                                     const home = teamById.get(game.homeTeamId);
+                                     const away = teamById.get(game.awayTeamId);
+                                     const winnerId = game.winnerTeamId;
+                                     const awaySeed = displaySeed(game.awaySeed, game.awayTeamId, seedByTeamId);
+                                     const homeSeed = displaySeed(game.homeSeed, game.homeTeamId, seedByTeamId);
 
                                     const awayWon = winnerId === game.awayTeamId;
                                     const homeWon = winnerId === game.homeTeamId;
@@ -187,7 +194,7 @@ function PlayoffsPage() {
                                             {/* Away team row */}
                                             <div className={`flex justify-between items-center mb-1 ${awayWon ? 'font-bold text-black' : winnerId ? 'text-gray-400 line-through-gentle' : 'text-gray-700'}`}>
                                                 <span>
-                                                    {game.awaySeed > 0 && <span className="text-xs text-gray-400 mr-1 font-normal">#{game.awaySeed}</span>}
+                                                    {awaySeed && <span className="text-xs text-gray-400 mr-1 font-normal">#{awaySeed}</span>}
                                                     {away?.schoolName}
                                                 </span>
                                                 <span className="font-mono ml-2">
@@ -197,7 +204,7 @@ function PlayoffsPage() {
                                             {/* Home team row */}
                                             <div className={`flex justify-between items-center ${homeWon ? 'font-bold text-black' : winnerId ? 'text-gray-400' : 'text-gray-700'}`}>
                                                 <span>
-                                                    {game.homeSeed > 0 && <span className="text-xs text-gray-400 mr-1 font-normal">#{game.homeSeed}</span>}
+                                                    {homeSeed && <span className="text-xs text-gray-400 mr-1 font-normal">#{homeSeed}</span>}
                                                     {home?.schoolName}
                                                 </span>
                                                 <span className="font-mono ml-2">
