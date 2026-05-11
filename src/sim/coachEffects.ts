@@ -81,6 +81,7 @@ const DEVELOPER_FATIGUE_MITIGATION = 0.94;
 const FATIGUE_LABEL_DRAINED = 78;
 const FATIGUE_LABEL_WORN = 58;
 const FATIGUE_LABEL_MANAGED = 34;
+const DEFAULT_COACH_ARCHETYPE: CoachArchetype = 'RECRUITER';
 const SHOT_QUALITY_MIN = -0.08;
 const SHOT_QUALITY_MAX = 0.08;
 const TURNOVER_AVOIDANCE_MAX = 0.12;
@@ -191,7 +192,7 @@ function focusLabelFor(focus: PracticeFocus): string {
 
 export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   const fatigue = clamp(settings.fatigue, 0, 100);
-  const archetype = settings.archetype ?? 'RECRUITER';
+  const archetype = settings.archetype ?? DEFAULT_COACH_ARCHETYPE;
   const coachSkill = clamp(settings.coachSkill ?? 70, 40, 99);
   const recruitingSkill = clamp(settings.skillTree?.recruiting ?? 0, 0, 5);
   const developmentSkill = clamp(settings.skillTree?.development ?? 0, 0, 5);
@@ -288,7 +289,7 @@ export function summarizeCoachGamePlan(plan: CoachGamePlan): string[] {
 }
 
 export function summarizeCoachSkillImpacts(input: CoachSkillImpactInput): string[] {
-  const archetype = input.archetype ?? 'RECRUITER';
+  const archetype = input.archetype ?? DEFAULT_COACH_ARCHETYPE;
   const recruiting = clamp(input.skillTree?.recruiting ?? 0, 0, 5);
   const development = clamp(input.skillTree?.development ?? 0, 0, 5);
   const operations = clamp(input.skillTree?.operations ?? 0, 0, 5);
@@ -321,7 +322,7 @@ export function summarizeCoachSkillImpacts(input: CoachSkillImpactInput): string
 export function advanceFatigue(
   previousFatigue: number,
   focus: PracticeFocus,
-  archetype: CoachArchetype = 'RECRUITER',
+  archetype: CoachArchetype = DEFAULT_COACH_ARCHETYPE,
   operationsSkill = 0,
 ): number {
   const bounded = clamp(previousFatigue, 0, 100);

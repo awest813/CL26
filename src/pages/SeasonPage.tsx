@@ -48,7 +48,7 @@ function SeasonPage() {
   const coachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
 
   const nextStep = useMemo(() => {
-    if (!hasSeason) return { label: 'Start this season to unlock the weekly loop.', link: null as string | null, cta: null as string | null };
+    if (!hasSeason) return { label: 'Start this season to unlock the weekly loop.', link: null, cta: null };
     if (summary.phase === 'REGULAR') {
       return coachReady
         ? {
@@ -64,7 +64,7 @@ function SeasonPage() {
     }
     if (summary.phase === 'PLAYOFF') return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open Playoffs →' };
     if (summary.phase === 'OFFSEASON') return { label: 'Finalize offseason actions, then begin the next year.', link: '/career', cta: 'Open Career Office →' };
-    return { label: 'Season is in pre-season setup.', link: null as string | null, cta: null as string | null };
+    return { label: 'Season is in pre-season setup.', link: null, cta: null };
   }, [coachReady, hasSeason, summary.phase]);
 
   const handleStartSeason = () => {
