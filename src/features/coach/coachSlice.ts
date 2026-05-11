@@ -12,6 +12,7 @@ export const MAX_HOURS_PER_RECRUIT = 20;
 const AD_PRESSURE_DIVISOR = 60;
 const MIN_PRESTIGE_DRIFT = -20;
 const MAX_PRESTIGE_DRIFT = 30;
+const JOB_SECURITY_DECLINE_BONUS = 3;
 
 function clamp(value: number, min: number, max: number): number {
     return Math.max(min, Math.min(max, value));
@@ -295,7 +296,7 @@ const coachSlice = createSlice({
     },
     declineAllJobOffers: (state) => {
         state.pendingJobOffers = [];
-        state.jobSecurity = Math.max(0, Math.min(100, state.jobSecurity + 3));
+        state.jobSecurity = Math.max(0, Math.min(100, state.jobSecurity + JOB_SECURITY_DECLINE_BONUS));
     },
     applyJobOfferAcceptance: (state, action: PayloadAction<{
         teamId: string;

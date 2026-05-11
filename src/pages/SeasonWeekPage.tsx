@@ -254,6 +254,7 @@ function SeasonWeekPage() {
                       {isFinal && expandedGameId === game.id && (
                         <tr className="seasonWeekDetailRow">
                           <td colSpan={6} className="px-3 py-2 text-xs text-gray-600 bg-gray-50">
+                            <div className="font-semibold text-gray-500 mb-2">Expanded stats shown away – home.</div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
                               <div><span className="text-gray-400 block">Saves</span>{result.statsB.saves} - {result.statsA.saves}</div>
                               <div><span className="text-gray-400 block">Ground Balls</span>{result.statsB.groundBalls} - {result.statsA.groundBalls}</div>
