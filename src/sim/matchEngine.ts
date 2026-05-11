@@ -296,8 +296,8 @@ export function simulateGame(
   const possessionsA = Math.round(totalPossessions * shareA);
   const possessionsB = totalPossessions - possessionsA;
 
-  const statsA: TeamGameStats = { teamId: teamA.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersA.groundBallBonus + groundBallBonusFromTactics(tacticsA))), penalties: 0, faceoffPct: Math.round(shareA * 1000) / 10 };
-  const statsB: TeamGameStats = { teamId: teamB.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersB.groundBallBonus + groundBallBonusFromTactics(tacticsB))), penalties: 0, faceoffPct: Math.round((1 - shareA) * 1000) / 10 };
+  const statsA: TeamGameStats = { teamId: teamA.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, causedTurnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersA.groundBallBonus + groundBallBonusFromTactics(tacticsA))), penalties: 0, faceoffPct: Math.round(shareA * 1000) / 10 };
+  const statsB: TeamGameStats = { teamId: teamB.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, causedTurnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersB.groundBallBonus + groundBallBonusFromTactics(tacticsB))), penalties: 0, faceoffPct: Math.round((1 - shareA) * 1000) / 10 };
 
   const pStatsA = new Map<string, PlayerGameStats>();
   const pStatsB = new Map<string, PlayerGameStats>();
@@ -342,6 +342,7 @@ export function simulateGame(
 
     if (rng() < penaltyChance) {
       offenseStats.penalties += 1;
+      defenseStats.causedTurnovers = (defenseStats.causedTurnovers ?? 0) + 1;
       if (highlights.length < 20 && rng() < 0.25) {
         const c = clockForPossession(possessionIndex, totalPossessions);
         highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} flagged for a push, possession flips.`);
@@ -351,6 +352,7 @@ export function simulateGame(
 
     if (rng() < turnoverChance) {
       offenseStats.turnovers += 1;
+      defenseStats.causedTurnovers = (defenseStats.causedTurnovers ?? 0) + 1;
       if (rng() < 0.45) {
         defenseStats.groundBalls += 1;
       }

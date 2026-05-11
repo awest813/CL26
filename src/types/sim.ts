@@ -102,6 +102,8 @@ export interface TeamGameStats {
   shots: number;
   saves: number;
   turnovers: number;
+  /** Turnovers forced on the opposing offense (caused turnovers). */
+  causedTurnovers?: number;
   groundBalls: number;
   penalties: number;
   faceoffPct: number;

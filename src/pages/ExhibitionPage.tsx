@@ -182,6 +182,7 @@ function ExhibitionPage() {
                 <th>Shots</th>
                 <th>Saves</th>
                 <th>Turnovers</th>
+                <th>Caused TO</th>
                 <th>Ground Balls</th>
                 <th>Penalties</th>
                 <th>Faceoff%</th>
@@ -194,6 +195,7 @@ function ExhibitionPage() {
                 <td>{exhibition.lastResult.statsA.shots}</td>
                 <td>{exhibition.lastResult.statsA.saves}</td>
                 <td>{exhibition.lastResult.statsA.turnovers}</td>
+                <td>{exhibition.lastResult.statsA.causedTurnovers ?? 0}</td>
                 <td>{exhibition.lastResult.statsA.groundBalls}</td>
                 <td>{exhibition.lastResult.statsA.penalties}</td>
                 <td>{exhibition.lastResult.statsA.faceoffPct}</td>
@@ -204,6 +206,7 @@ function ExhibitionPage() {
                 <td>{exhibition.lastResult.statsB.shots}</td>
                 <td>{exhibition.lastResult.statsB.saves}</td>
                 <td>{exhibition.lastResult.statsB.turnovers}</td>
+                <td>{exhibition.lastResult.statsB.causedTurnovers ?? 0}</td>
                 <td>{exhibition.lastResult.statsB.groundBalls}</td>
                 <td>{exhibition.lastResult.statsB.penalties}</td>
                 <td>{exhibition.lastResult.statsB.faceoffPct}</td>
