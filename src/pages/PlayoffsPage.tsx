@@ -112,15 +112,15 @@ function PlayoffsPage() {
 
       {/* Champion banner — shown prominently when season is complete */}
       {isComplete && playoffState?.championTeamId && (
-          <div className="card text-center" style={{ background: '#fefce8', border: '2px solid #ca8a04' }}>
-              <div className="text-sm font-semibold text-yellow-700 mb-1">
+          <div className="champion-banner">
+              <p className="champion-banner-label">
                   {summary.year} National Champion
-              </div>
-              <div className="text-2xl font-bold">
+              </p>
+              <p className="champion-banner-name">
                   {teamById.get(playoffState.championTeamId)?.schoolName} {teamById.get(playoffState.championTeamId)?.nickname}
-              </div>
+              </p>
               {coach.selectedTeamId === playoffState.championTeamId && (
-                  <div className="text-green-700 font-semibold mt-2">Your team won the championship!</div>
+                  <p className="champion-banner-you">🏆 Your team won the championship!</p>
               )}
           </div>
       )}

@@ -51,10 +51,20 @@ function RankingsPage() {
   }, [records]);
 
   return (
-    <div className="grid2">
+    <div className="pageStack">
+      <div className="pageHeader">
+        <h2>Rankings &amp; Polls</h2>
+        <p className="pageHeader-sub">
+          {isPostseason
+            ? `Final ${summary.year} regular-season power rankings.`
+            : 'Deterministic power ranking — updated after each simulated week.'}
+        </p>
+      </div>
+
+      <div className="grid2">
       <section className="card">
-        <h2>Top 25 <span className="text-sm font-normal text-gray-400 ml-1">{weekLabel}</span></h2>
-        <p className="text-sm text-gray-500">
+        <h3 className="m-0">Top 25 <span className="text-sm font-normal text-gray-400 ml-1">{weekLabel}</span></h3>
+        <p className="text-sm text-gray-500 mt-1 mb-2">
           {isPostseason
             ? 'Final regular-season power rankings.'
             : 'Deterministic power ranking based on record, point margin, and strength of schedule.'}
@@ -75,13 +85,13 @@ function RankingsPage() {
               const team = teamById.get(row.teamId);
               return (
                 <tr key={row.teamId}>
-                  <td>{row.rank}</td>
+                  <td className="font-mono font-bold">{row.rank}</td>
                   <td className="text-center">{rankDeltaDisplay(row.delta)}</td>
                   <td>
                     {team?.schoolName} <span className="text-xs text-gray-500">({team?.nickname})</span>
                   </td>
                   <td>{row.record}</td>
-                  <td>{row.points}</td>
+                  <td className="font-mono">{row.points}</td>
                 </tr>
               );
             })}
@@ -90,8 +100,8 @@ function RankingsPage() {
       </section>
 
       <section className="card">
-        <h2>Top 12 {isPostseason ? 'Tournament Field' : 'Playoff Projection'}</h2>
-        <p className="text-sm text-gray-500">
+        <h3 className="m-0">{isPostseason ? 'Tournament Field' : 'Playoff Projection'} <span className="text-sm font-normal text-gray-400 ml-1">Top 12</span></h3>
+        <p className="text-sm text-gray-500 mt-1 mb-2">
           {isPostseason
             ? 'Final seeding used for the NCAA Tournament.'
             : 'If the season ended today, this would be the projected 12-team field.'}
@@ -103,20 +113,23 @@ function RankingsPage() {
               <th>Seed</th>
               <th>Team</th>
               <th>Record</th>
+              <th>Note</th>
             </tr>
           </thead>
           <tbody>
             {top12.map((row) => {
               const team = teamById.get(row.teamId);
-              const byeLabel = row.rank <= 4 ? ' (Bye)' : '';
+              const hasBye = row.rank <= 4;
               return (
                 <tr key={row.teamId}>
-                  <td>#{row.rank}</td>
+                  <td className="font-mono font-bold">#{row.rank}</td>
                   <td>
                     {team?.schoolName} <span className="text-xs text-gray-500">({team?.nickname})</span>
-                    {byeLabel}
                   </td>
                   <td>{row.record}</td>
+                  <td className="text-xs">
+                    {hasBye && <span className="text-blue-600 font-semibold">Bye</span>}
+                  </td>
                 </tr>
               );
             })}
@@ -125,44 +138,60 @@ function RankingsPage() {
 
         {!hasGamesPlayed && (
           <p className="text-sm text-gray-500" style={{ marginTop: '0.75rem' }}>
-            No games played yet. Rankings currently reflect baseline team profile scoring.
+            No games played yet. Rankings reflect baseline program profile scoring.
           </p>
         )}
       </section>
 
       <section className="card" style={{ gridColumn: '1 / -1' }}>
-        <h3>Ranking Formula Transparency</h3>
+        <h3 className="m-0 mb-2">Ranking Formula</h3>
         <p className="text-sm text-gray-500">
-          Points are deterministic and built from season performance plus a small baseline program profile signal.
+          Scores are deterministic — built from season performance plus a baseline program prestige signal.
         </p>
-        <ul style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
-          <li>Overall win% × {RANKING_WEIGHTS.overallWinPct}</li>
-          <li>Conference win% × {RANKING_WEIGHTS.conferenceWinPct}</li>
-          <li>Point differential × {RANKING_WEIGHTS.pointDifferential}</li>
-          <li>Program prestige × {RANKING_WEIGHTS.prestige}</li>
-          <li>Total points scored × {RANKING_WEIGHTS.scoringVolume}</li>
-          <li>Strength of schedule (opp avg win%) × {RANKING_WEIGHTS.strengthOfSchedule}</li>
-        </ul>
+        <div className="grid2" style={{ marginTop: '0.75rem', gap: '0.5rem' }}>
+          {[
+            ['Overall win %', RANKING_WEIGHTS.overallWinPct],
+            ['Conference win %', RANKING_WEIGHTS.conferenceWinPct],
+            ['Point differential', RANKING_WEIGHTS.pointDifferential],
+            ['Program prestige', RANKING_WEIGHTS.prestige],
+            ['Scoring volume', RANKING_WEIGHTS.scoringVolume],
+            ['Strength of schedule', RANKING_WEIGHTS.strengthOfSchedule],
+          ].map(([label, weight]) => (
+            <div key={String(label)} className="flex justify-between text-sm border-b py-1">
+              <span className="text-gray-600">{label}</span>
+              <span className="font-mono font-semibold">×{weight}</span>
+            </div>
+          ))}
+        </div>
 
         {topTeamBreakdown && (
           <div style={{ marginTop: '1rem' }}>
-            <strong>
-              Current #1 score breakdown: {topTeamBreakdown.team.schoolName} ({topTeamBreakdown.team.nickname})
-            </strong>
-            <ul style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
-              <li>Overall win% contribution: {topTeamBreakdown.breakdown.overallWinPctPoints.toFixed(1)}</li>
-              <li>Conference win% contribution: {topTeamBreakdown.breakdown.conferenceWinPctPoints.toFixed(1)}</li>
-              <li>Point differential contribution: {topTeamBreakdown.breakdown.pointDifferentialPoints.toFixed(1)}</li>
-              <li>Prestige contribution: {topTeamBreakdown.breakdown.prestigePoints.toFixed(1)}</li>
-              <li>Scoring volume contribution: {topTeamBreakdown.breakdown.scoringVolumePoints.toFixed(1)}</li>
-              <li>Strength of schedule contribution: {topTeamBreakdown.breakdown.strengthOfSchedulePoints.toFixed(1)}</li>
-              <li>
-                <strong>Total: {Math.round(topTeamBreakdown.breakdown.totalPoints)}</strong>
-              </li>
-            </ul>
+            <p className="text-sm font-semibold m-0 mb-1">
+              Current #1 score breakdown — {topTeamBreakdown.team.schoolName} ({topTeamBreakdown.team.nickname})
+            </p>
+            <div className="grid2" style={{ gap: '0.5rem' }}>
+              {[
+                ['Overall win %', topTeamBreakdown.breakdown.overallWinPctPoints],
+                ['Conference win %', topTeamBreakdown.breakdown.conferenceWinPctPoints],
+                ['Point differential', topTeamBreakdown.breakdown.pointDifferentialPoints],
+                ['Prestige', topTeamBreakdown.breakdown.prestigePoints],
+                ['Scoring volume', topTeamBreakdown.breakdown.scoringVolumePoints],
+                ['Strength of schedule', topTeamBreakdown.breakdown.strengthOfSchedulePoints],
+              ].map(([label, pts]) => (
+                <div key={String(label)} className="flex justify-between text-sm border-b py-1">
+                  <span className="text-gray-600">{label}</span>
+                  <span className="font-mono font-semibold">{Number(pts).toFixed(1)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between text-sm py-1 border-t font-bold" style={{ gridColumn: '1/-1' }}>
+                <span>Total</span>
+                <span className="font-mono">{Math.round(topTeamBreakdown.breakdown.totalPoints)}</span>
+              </div>
+            </div>
           </div>
         )}
       </section>
+      </div>
     </div>
   );
 }

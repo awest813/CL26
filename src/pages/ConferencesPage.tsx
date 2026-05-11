@@ -36,8 +36,11 @@ function ConferencesPage() {
   };
 
   return (
-    <section>
-      <h2>Conferences</h2>
+    <div className="pageStack">
+      <div className="pageHeader">
+        <h2>Conferences</h2>
+        <p className="pageHeader-sub">Browse all 16 conferences and 128 teams.</p>
+      </div>
       <div className="card">
         <div className="grid2">
           <label>
@@ -104,7 +107,7 @@ function ConferencesPage() {
           </table>
         </div>
       ))}
-    </section>
+    </div>
   );
 }
 
