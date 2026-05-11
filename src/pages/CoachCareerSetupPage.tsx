@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { completeCareerSetup, setCoachProfile } from '../features/coach/coachSlice';
+import { careerSetupFromPrestige, completeCareerSetup, setCoachProfile } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { CoachArchetype } from '../types/sim';
@@ -54,25 +54,6 @@ function CoachCareerSetupPage() {
     [conferences],
   );
 
-  function buildProgramExpectations(prestige: number) {
-    if (prestige <= 2) {
-      return {
-        careerTier: 'REBUILD' as const,
-        programExpectations: { winTarget: 5, rankTarget: 40, securityBaseline: 72 },
-      };
-    }
-    if (prestige === 3) {
-      return {
-        careerTier: 'STABLE' as const,
-        programExpectations: { winTarget: 7, rankTarget: 25, securityBaseline: 62 },
-      };
-    }
-    return {
-      careerTier: 'CONTENDER' as const,
-      programExpectations: { winTarget: 9, rankTarget: 12, securityBaseline: 52 },
-    };
-  }
-
   function onStartCareer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -89,7 +70,7 @@ function CoachCareerSetupPage() {
       }),
     );
 
-    const setup = buildProgramExpectations(selectedTeam.prestige);
+    const setup = careerSetupFromPrestige(selectedTeam.prestige);
     dispatch(
       completeCareerSetup({
         teamId: selectedTeam.id,
@@ -104,7 +85,16 @@ function CoachCareerSetupPage() {
   }
 
   const team = teams.find((t) => t.id === teamId) ?? null;
-  const teamExpectations = team ? buildProgramExpectations(team.prestige) : null;
+  const teamExpectations = team ? careerSetupFromPrestige(team.prestige) : null;
+  const teamOptions = useMemo(
+    () =>
+      [...teams].sort((a, b) => {
+        const prestigeDelta = b.prestige - a.prestige;
+        if (prestigeDelta !== 0) return prestigeDelta;
+        return a.schoolName.localeCompare(b.schoolName);
+      }),
+    [teams],
+  );
   const canContinue =
     coachName.trim().length > 1 &&
     almaMater.trim().length > 1 &&
@@ -222,9 +212,9 @@ function CoachCareerSetupPage() {
           Program
           <select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
             <option value="">Select a team</option>
-            {teams.map((t) => (
+            {teamOptions.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.schoolName} {t.nickname} ({conferenceById.get(t.conferenceId) ?? t.conferenceId})
+                {t.schoolName} {t.nickname} ({conferenceById.get(t.conferenceId) ?? t.conferenceId}) · Prestige {t.prestige}
               </option>
             ))}
           </select>
