@@ -17,7 +17,12 @@ import {
   MAX_HOURS_PER_RECRUIT,
   processSigningDay,
 } from '../features/coach/coachSlice';
-import { runCareerWeeklyCycle, processSeasonEnd, applyOffseasonRosterTurnover } from '../features/coach/careerThunks';
+import {
+  runCareerWeeklyCycle,
+  processSeasonEnd,
+  applyOffseasonRosterTurnover,
+  initializeManagedRoster,
+} from '../features/coach/careerThunks';
 import { selectTeamRecords, startNewSeason } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
 import { summarizeSigningClass } from '../sim/offseason';
@@ -296,13 +301,24 @@ function CoachCareerPage() {
     await dispatch(startNewSeason({ seed: nextSeed }));
   }
 
-  const winProgress = Math.min(100, Math.round((userRecord.wins / Math.max(1, winTarget)) * 100));
   const isOffseason = season.phase === 'OFFSEASON';
   const canAdvanceWeeklyCycle =
     season.phase === 'REGULAR' &&
     season.scheduleByWeek.length > 0 &&
     season.currentWeekIndex < season.scheduleByWeek.length;
   const seasonEndProcessed = isOffseason && coach.seasonHistory.some(e => e.year === season.year);
+  const latestSeasonHistory = coach.seasonHistory.length > 0
+    ? coach.seasonHistory[coach.seasonHistory.length - 1]
+    : null;
+  const recordedSeason = seasonEndProcessed && latestSeasonHistory?.year === season.year ? latestSeasonHistory : null;
+  const displayedWins = recordedSeason?.wins ?? userRecord.wins;
+  const displayedLosses = recordedSeason?.losses ?? userRecord.losses;
+  const seasonStatusLabel = recordedSeason ? 'Final Season Record' : 'Season Performance';
+
+  async function onAcceptOffer(teamId: string) {
+    await dispatch(acceptJobOffer(teamId));
+    await dispatch(initializeManagedRoster());
+  }
 
   return (
     <div className="flex-col gap-4">
@@ -342,20 +358,22 @@ function CoachCareerPage() {
         <div className="grid grid-cols-3 gap-4 pt-3 border-t">
           {/* Season Performance */}
           <div>
-            <div className="text-xs text-gray-500 uppercase mb-2">Season Performance</div>
+            <div className="text-xs text-gray-500 uppercase mb-2">{seasonStatusLabel}</div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold">{userRecord.wins}–{userRecord.losses}</span>
-              <span className="text-gray-400 text-sm">({userRecord.confWins}–{userRecord.confLosses} conf)</span>
+              <span className="text-2xl font-bold">{displayedWins}–{displayedLosses}</span>
+              {!recordedSeason && (
+                <span className="text-gray-400 text-sm">({userRecord.confWins}–{userRecord.confLosses} conf)</span>
+              )}
             </div>
             <div className="mt-2">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-gray-500">Win target: {winTarget}</span>
-                <span className={userRecord.wins >= winTarget ? 'text-green-600 font-bold' : 'text-amber-600'}>{userRecord.wins}/{winTarget}</span>
+                <span className={displayedWins >= winTarget ? 'text-green-600 font-bold' : 'text-amber-600'}>{displayedWins}/{winTarget}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-1.5">
                 <div
-                  className={`h-1.5 rounded-full ${userRecord.wins >= winTarget ? 'bg-green-500' : 'bg-blue-500'}`}
-                  style={{ width: `${winProgress}%` }}
+                  className={`h-1.5 rounded-full ${displayedWins >= winTarget ? 'bg-green-500' : 'bg-blue-500'}`}
+                  style={{ width: `${Math.min(100, Math.round((displayedWins / Math.max(1, winTarget)) * 100))}%` }}
                 />
               </div>
             </div>
@@ -636,7 +654,7 @@ function CoachCareerPage() {
           <div className="flex gap-6 mb-4">
             <div>
               <div className="text-xs text-gray-500">Final Record</div>
-              <div className="font-semibold">{userRecord.wins}–{userRecord.losses}</div>
+              <div className="font-semibold">{displayedWins}–{displayedLosses}</div>
             </div>
             <div>
               <div className="text-xs text-gray-500">Signing Class</div>
@@ -648,8 +666,8 @@ function CoachCareerPage() {
             </div>
             <div>
               <div className="text-xs text-gray-500">vs Expectation</div>
-              <div className={`font-semibold ${userRecord.wins >= winTarget ? 'text-green-600' : 'text-red-500'}`}>
-                {userRecord.wins >= winTarget ? `+${userRecord.wins - winTarget} wins` : `${userRecord.wins - winTarget} wins`}
+              <div className={`font-semibold ${displayedWins >= winTarget ? 'text-green-600' : 'text-red-500'}`}>
+                {displayedWins >= winTarget ? `+${displayedWins - winTarget} wins` : `${displayedWins - winTarget} wins`}
               </div>
             </div>
           </div>
@@ -688,7 +706,7 @@ function CoachCareerPage() {
                       </div>
                       <button
                         className="btn btn-primary text-xs mt-3"
-                        onClick={() => dispatch(acceptJobOffer(offer.teamId))}
+                        onClick={() => void onAcceptOffer(offer.teamId)}
                       >
                         Accept Offer
                       </button>

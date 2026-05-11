@@ -425,13 +425,24 @@ export function careerTierFromPrestige(prestige: number): NonNullable<CoachState
 }
 
 export function expectationsFromPrestige(prestige: number): ProgramExpectations {
-    if (prestige >= 78) {
-        return { winTarget: 9, rankTarget: 12, securityBaseline: 64 };
+    switch (careerTierFromPrestige(prestige)) {
+        case 'CONTENDER':
+            return { winTarget: 9, rankTarget: 12, securityBaseline: 64 };
+        case 'STABLE':
+            return { winTarget: 7, rankTarget: 35, securityBaseline: 58 };
+        default:
+            return { winTarget: 5, rankTarget: 70, securityBaseline: 52 };
     }
-    if (prestige >= 58) {
-        return { winTarget: 7, rankTarget: 35, securityBaseline: 58 };
-    }
-    return { winTarget: 5, rankTarget: 70, securityBaseline: 52 };
+}
+
+export function careerSetupFromPrestige(prestige: number): {
+    careerTier: NonNullable<CoachState['careerTier']>;
+    programExpectations: ProgramExpectations;
+} {
+    return {
+        careerTier: careerTierFromPrestige(prestige),
+        programExpectations: expectationsFromPrestige(prestige),
+    };
 }
 
 export const acceptJobOffer = createAsyncThunk(
@@ -443,8 +454,7 @@ export const acceptJobOffer = createAsyncThunk(
 
         dispatch(applyJobOfferAcceptance({
             teamId,
-            careerTier: careerTierFromPrestige(team.prestige),
-            programExpectations: expectationsFromPrestige(team.prestige),
+            ...careerSetupFromPrestige(team.prestige),
         }));
     },
 );
