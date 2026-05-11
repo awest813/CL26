@@ -188,7 +188,7 @@ function RankingsPage() {
 
       <section className="card" style={{ gridColumn: '1 / -1' }}>
         <details>
-          <summary className="text-sm font-semibold cursor-pointer text-gray-600" style={{ listStyle: 'none' }}>
+          <summary className="text-sm font-semibold cursor-pointer text-gray-600">
             Ranking Formula &amp; Score Breakdown
           </summary>
           <p className="text-sm text-gray-500 mt-2">
