@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
@@ -64,51 +64,48 @@ function SeasonWeekPage() {
   }, [rows, conferenceFilter, sortBy, teamById]);
 
   return (
-    <div className="flex-col gap-4">
-      <div className="card flex justify-between items-center">
-         <div className="flex items-center gap-4">
-             <button
-                className="btn"
-                disabled={displayWeek <= 0}
-                onClick={() => navigate(`/season/week/${displayWeek - 1}`)}
-                aria-label="View previous week"
-             >
-                 &larr;
-             </button>
-             <h2 className="m-0">Week {displayWeek + 1}</h2>
-             <button
-                className="btn"
-                disabled={displayWeek >= maxWeekIndex}
-                onClick={() => navigate(`/season/week/${displayWeek + 1}`)}
-                aria-label="View next week"
-             >
-                 &rarr;
-             </button>
-         </div>
+    <div className="pageStack">
+      <div className="pageHeader">
+        <h2>Week {displayWeek + 1} Schedule</h2>
+        <p className="pageHeader-sub">Browse results, team stats, and top performers from each matchup.</p>
+      </div>
 
-         <div className="flex gap-2">
-            <select
-                value={conferenceFilter}
-                onChange={(e) => setConferenceFilter(e.target.value)}
-                className="p-1 text-sm border rounded"
-            >
-              <option value="ALL">All Conferences</option>
-              {conferences.map((conf) => (
-                <option key={conf.id} value={conf.id}>
-                  {conf.name}
-                </option>
-              ))}
-            </select>
+      <div className="card seasonWeekControlCard">
+        <div className="seasonWeekNavGroup">
+          <button
+            className="btn"
+            disabled={displayWeek <= 0}
+            onClick={() => navigate(`/season/week/${displayWeek - 1}`)}
+            aria-label="View previous week"
+          >
+            &larr;
+          </button>
+          <p className="seasonWeekNavLabel">Week {displayWeek + 1}</p>
+          <button
+            className="btn"
+            disabled={displayWeek >= maxWeekIndex}
+            onClick={() => navigate(`/season/week/${displayWeek + 1}`)}
+            aria-label="View next week"
+          >
+            &rarr;
+          </button>
+        </div>
 
-            <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'alpha' | 'score')}
-                className="p-1 text-sm border rounded"
-            >
-              <option value="alpha">Sort: Home A-Z</option>
-              <option value="score">Sort: High Score</option>
-            </select>
-         </div>
+        <div className="seasonWeekFilterGroup">
+          <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded">
+            <option value="ALL">All Conferences</option>
+            {conferences.map((conf) => (
+              <option key={conf.id} value={conf.id}>
+                {conf.name}
+              </option>
+            ))}
+          </select>
+
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as 'alpha' | 'score')} className="p-1 text-sm border rounded">
+            <option value="alpha">Sort: Home A-Z</option>
+            <option value="score">Sort: High Score</option>
+          </select>
+        </div>
       </div>
 
       <p className="m-0 text-sm text-gray-600">
@@ -140,8 +137,8 @@ function SeasonWeekPage() {
                   const allPerformers = [...awayPerformers, ...homePerformers];
 
                   return (
-                    <>
-                      <tr key={game.id} className="border-b last:border-0 hover:bg-gray-50">
+                    <Fragment key={game.id}>
+                      <tr className="seasonWeekGameRow">
                         <td className={`p-2 text-right ${awayScore > homeScore ? 'font-bold' : ''}`}>
                             {away?.schoolName} <span className="text-xs text-gray-500 font-normal">({away?.nickname})</span>
                         </td>
@@ -162,14 +159,14 @@ function SeasonWeekPage() {
                         </td>
                       </tr>
                       {isFinal && allPerformers.length > 0 && (
-                        <tr key={`${game.id}-performers`} className="border-b bg-gray-50">
+                        <tr className="seasonWeekPerformerRow">
                           <td colSpan={6} className="px-3 py-1 text-xs text-gray-500">
                             <span className="font-semibold text-gray-600">Top performers: </span>
                             {topPerformerLine(allPerformers)}
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
                 {displayedGames.length === 0 && (
