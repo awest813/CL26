@@ -79,6 +79,9 @@ function validatePlayoffRoundShape(playoffs: PlayoffState): string | null {
   const roundNames: PlayoffRoundName[] = ['ROUND1', 'QUARTERFINAL', 'SEMIFINAL', 'FINAL'];
   for (const roundName of roundNames) {
     const games = playoffs.rounds[roundName];
+    if (!Array.isArray(games)) {
+      return `${roundName} round data is missing or invalid.`;
+    }
     if (games.length > expectedRoundCounts[roundName]) {
       return `${roundName} has too many games (${games.length}).`;
     }
@@ -115,6 +118,16 @@ function validatePlayoffs(season: SeasonState): SeasonValidationResult | null {
       error: 'Playoff seeds contain duplicate seed numbers.',
       phase: season.phase,
     };
+  }
+
+  for (let seed = 1; seed <= 12; seed += 1) {
+    if (!uniqueSeedNumbers.has(seed)) {
+      return {
+        isValid: false,
+        error: 'Playoff seeds must include each seed number 1 through 12 exactly once.',
+        phase: season.phase,
+      };
+    }
   }
 
   if (uniqueTeamIds.size !== 12) {
