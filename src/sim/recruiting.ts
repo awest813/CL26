@@ -5,7 +5,7 @@ import namesData from '../data/names.json' with { type: 'json' };
 const REGIONS = ['Northeast', 'Mid-Atlantic', 'South', 'Midwest', 'West'];
 const POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 const PITCHES: RecruitingPitch[] = ['PLAYING_TIME', 'PROXIMITY', 'ACADEMIC', 'PRESTIGE', 'CHAMPIONSHIP', 'CAMPUS_LIFE'];
-export const RECRUITING_POSITION_FILTERS: Array<Position | 'ALL'> = ['ALL', ...POSITIONS];
+export const RECRUITING_POSITION_FILTERS: Array<Position | 'ALL'> = ['ALL', 'A', 'M', 'D', 'LSM', 'FO', 'G'];
 export const PITCH_LABELS: Record<RecruitingPitch, string> = {
   PLAYING_TIME: 'Play Time',
   PROXIMITY: 'Home',

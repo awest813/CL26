@@ -30,6 +30,10 @@ function getRecruitInterest(recruit: { interestByTeamId?: Record<string, number>
   return recruit.interestByTeamId?.[teamId] ?? 0;
 }
 
+function isRecruitingPitch(value: string): value is RecruitingPitch {
+  return value in PITCH_LABELS;
+}
+
 function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
   const color =
     motivation.importance === 'HIGH'
@@ -183,10 +187,14 @@ function RecruitingBoardPage() {
       return;
     }
 
+    if (!isRecruitingPitch(nextPitch)) {
+      return;
+    }
+
     dispatch(
       setRecruitPitch({
         recruitId,
-        pitch: nextPitch as RecruitingPitch,
+        pitch: nextPitch,
       }),
     );
   }
