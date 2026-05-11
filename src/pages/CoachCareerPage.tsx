@@ -10,6 +10,9 @@ import {
   setPracticeFocus,
   setTactics,
   upgradeCoachSkill,
+  acceptJobOffer,
+  declineAllJobOffers,
+  selectUserEffectivePrestige,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
   processSigningDay,
@@ -118,9 +121,11 @@ function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
 function CoachCareerPage() {
   const dispatch = useAppDispatch();
   const teams = useAppSelector((state) => state.league.teams);
+  const conferences = useAppSelector((state) => state.league.conferences);
   const coach = useAppSelector((state) => state.coach);
   const season = useAppSelector((state) => state.season);
   const recordsByTeamId = useAppSelector(selectTeamRecords);
+  const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
 
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
@@ -128,6 +133,16 @@ function CoachCareerPage() {
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
   const teamNameById = useMemo(() => new Map(teams.map((team) => [team.id, `${team.schoolName}`])), [teams]);
+  const conferenceNameById = useMemo(
+    () => new Map(conferences.map((conference) => [conference.id, conference.name])),
+    [conferences],
+  );
+  const effectiveRecruitingTeams = useMemo(() => {
+    if (!coach.selectedTeamId || effectivePrestige == null) return teams;
+    return teams.map((team) =>
+      team.id === coach.selectedTeamId ? { ...team, prestige: effectivePrestige } : team,
+    );
+  }, [coach.selectedTeamId, effectivePrestige, teams]);
 
   const boardSet = useMemo(() => new Set(coach.boardRecruitIds), [coach.boardRecruitIds]);
   const positionNeedByPosition = useMemo(() => buildPositionNeedByPosition(coach.managedRoster), [coach.managedRoster]);
@@ -289,6 +304,17 @@ function CoachCareerPage() {
             <div className="text-gray-500 text-sm mt-0.5">
               {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {coach.careerTier} Program &bull; Skill {coach.profile.skill} &bull; Age {coach.profile.age}
             </div>
+            {selectedTeam && effectivePrestige != null && (
+              <div className="text-xs text-gray-500 mt-1">
+                Effective prestige:{' '}
+                <span className="font-semibold text-gray-700">{effectivePrestige}</span>
+                {coach.programPrestigeDrift !== 0 && (
+                  <span className={coach.programPrestigeDrift > 0 ? 'text-green-600 font-semibold ml-1' : 'text-red-500 font-semibold ml-1'}>
+                    {coach.programPrestigeDrift > 0 ? `↑${coach.programPrestigeDrift}` : `↓${Math.abs(coach.programPrestigeDrift)}`} from base
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-500 uppercase mb-1">Career Record</div>
@@ -606,6 +632,51 @@ function CoachCareerPage() {
             </div>
           </div>
 
+          {coach.pendingJobOffers.length > 0 && (
+            <div className="mb-4 p-3 rounded border bg-white">
+              <div className="flex justify-between items-start gap-3 mb-3">
+                <div>
+                  <h4 className="m-0 text-sm font-bold">Career Opportunity</h4>
+                  <p className="text-xs text-gray-500 mt-0.5 mb-0">
+                    Strong results have created interest from other programs. Accepting resets your roster and recruiting board.
+                  </p>
+                </div>
+                <button className="btn text-xs" onClick={() => dispatch(declineAllJobOffers())}>
+                  Decline All (+3 security)
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {coach.pendingJobOffers.map((offer) => {
+                  const offerTeam = teams.find((team) => team.id === offer.teamId);
+                  if (!offerTeam) return null;
+                  return (
+                    <div key={offer.teamId} className="border rounded p-3">
+                      <div className="flex justify-between gap-2">
+                        <div>
+                          <div className="font-semibold">
+                            {offerTeam.schoolName} {offerTeam.nickname}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {conferenceNameById.get(offerTeam.conferenceId) ?? 'Independent'} · Prestige {offerTeam.prestige}
+                          </div>
+                        </div>
+                        <span className={offer.tier === 'UPGRADE' ? 'text-green-600 text-xs font-bold' : 'text-blue-600 text-xs font-bold'}>
+                          {offer.tier}
+                        </span>
+                      </div>
+                      <button
+                        className="btn btn-primary text-xs mt-3"
+                        onClick={() => dispatch(acceptJobOffer(offer.teamId))}
+                      >
+                        Accept Offer
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-2 flex-wrap">
             {signedClassThisYear.length === 0 && (
               <button
@@ -685,7 +756,7 @@ function CoachCareerPage() {
                   />
                   <button
                     className="btn btn-primary text-sm"
-                    onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams }))}
+                    onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams: effectiveRecruitingTeams }))}
                   >
                     Start Recruiting
                   </button>

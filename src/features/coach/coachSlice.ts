@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { CareerRecord, CoachArchetype, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
+import { createSelector, createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
@@ -80,6 +80,8 @@ export interface CoachState {
   coachSkillPoints: number;
   skillTree: CoachSkillTree;
   programResources: ProgramResources;
+  programPrestigeDrift: number;
+  pendingJobOffers: JobOffer[];
   seasonHistory: SeasonHistoryEntry[];
   careerRecord: CareerRecord;
   // Roster management
@@ -126,6 +128,8 @@ const initialState: CoachState = {
     boosters: 50,
     facilities: 50,
   },
+  programPrestigeDrift: 0,
+  pendingJobOffers: [],
   seasonHistory: [],
   careerRecord: {
     totalWins: 0,
@@ -168,6 +172,8 @@ const coachSlice = createSlice({
         const defaults = CAREER_TIER_DEFAULTS[action.payload.careerTier];
         state.programResources = defaults.resources;
         state.adPressure = defaults.adPressure;
+        state.programPrestigeDrift = 0;
+        state.pendingJobOffers = [];
     },
     initializeRecruitingBoard: (state, action: PayloadAction<{ seed: number; teams: Team[] }>) => {
         state.recruitingSeed = action.payload.seed;
@@ -275,6 +281,43 @@ const coachSlice = createSlice({
     setAdPressure: (state, action: PayloadAction<number>) => {
         state.adPressure = Math.max(0, Math.min(100, action.payload));
     },
+    applyPrestigeDrift: (state, action: PayloadAction<number>) => {
+        state.programPrestigeDrift = Math.max(-20, Math.min(30, state.programPrestigeDrift + action.payload));
+    },
+    setPendingJobOffers: (state, action: PayloadAction<JobOffer[]>) => {
+        state.pendingJobOffers = action.payload;
+    },
+    declineAllJobOffers: (state) => {
+        state.pendingJobOffers = [];
+        state.jobSecurity = Math.max(0, Math.min(100, state.jobSecurity + 3));
+    },
+    applyJobOfferAcceptance: (state, action: PayloadAction<{
+        teamId: string;
+        careerTier: CoachState['careerTier'];
+        programExpectations: ProgramExpectations;
+    }>) => {
+        state.selectedTeamId = action.payload.teamId;
+        state.careerTier = action.payload.careerTier;
+        state.programExpectations = action.payload.programExpectations;
+        state.programPrestigeDrift = 0;
+        state.pendingJobOffers = [];
+        state.recruitPool = [];
+        state.boardRecruitIds = [];
+        state.weeklyHoursByRecruitId = {};
+        state.activePitchesByRecruitId = {};
+        state.recruitingWeekIndex = 0;
+        state.scholarshipsAvailable = 12;
+        state.signedRecruitsByYear = {};
+        state.managedRoster = null;
+        state.starterIds = [];
+        state.teamFatigue = 20;
+        if (action.payload.careerTier) {
+            const defaults = CAREER_TIER_DEFAULTS[action.payload.careerTier];
+            state.programResources = defaults.resources;
+            state.adPressure = defaults.adPressure;
+        }
+        state.jobSecurity = action.payload.programExpectations.securityBaseline;
+    },
     recordSeasonEnd: (state, action: PayloadAction<SeasonHistoryEntry>) => {
         if (state.seasonHistory.some((entry) => entry.year === action.payload.year)) {
             return;
@@ -356,6 +399,10 @@ export const {
     addCoachXp,
     upgradeCoachSkill,
     setAdPressure,
+    applyPrestigeDrift,
+    setPendingJobOffers,
+    declineAllJobOffers,
+    applyJobOfferAcceptance,
     applyRecruitingUpdates,
     finalizeSigningClass,
     updateJobSecurity,
@@ -365,6 +412,37 @@ export const {
     setStarterIds,
     toggleStarter,
 } = coachSlice.actions;
+
+export function careerTierFromPrestige(prestige: number): NonNullable<CoachState['careerTier']> {
+    if (prestige >= 78) return 'CONTENDER';
+    if (prestige >= 58) return 'STABLE';
+    return 'REBUILD';
+}
+
+export function expectationsFromPrestige(prestige: number): ProgramExpectations {
+    if (prestige >= 78) {
+        return { winTarget: 9, rankTarget: 12, securityBaseline: 64 };
+    }
+    if (prestige >= 58) {
+        return { winTarget: 7, rankTarget: 35, securityBaseline: 58 };
+    }
+    return { winTarget: 5, rankTarget: 70, securityBaseline: 52 };
+}
+
+export const acceptJobOffer = createAsyncThunk(
+    'coach/acceptJobOffer',
+    async (teamId: string, { getState, dispatch }) => {
+        const state = getState() as RootState;
+        const team = state.league.teams.find((t) => t.id === teamId);
+        if (!team) return;
+
+        dispatch(applyJobOfferAcceptance({
+            teamId,
+            careerTier: careerTierFromPrestige(team.prestige),
+            programExpectations: expectationsFromPrestige(team.prestige),
+        }));
+    },
+);
 
 
 export const advanceRecruitingWeek = createAsyncThunk(
@@ -484,6 +562,19 @@ export const processSigningDay = createAsyncThunk(
             signedRecruits,
         }));
     }
+);
+
+export const selectUserEffectivePrestige = createSelector(
+    [
+        (state: RootState) => state.league.teams,
+        (state: RootState) => state.coach.selectedTeamId,
+        (state: RootState) => state.coach.programPrestigeDrift,
+    ],
+    (teams, selectedTeamId, drift) => {
+        const team = teams.find((t) => t.id === selectedTeamId);
+        if (!team) return null;
+        return Math.max(1, Math.min(100, team.prestige + drift));
+    },
 );
 
 export const coachReducer = coachSlice.reducer;

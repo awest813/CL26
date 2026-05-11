@@ -11,11 +11,14 @@ import {
   resetRecruitingForNewSeason,
   setManagedRoster,
   setStarterIds,
+  applyPrestigeDrift,
+  setPendingJobOffers,
 } from './coachSlice';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
 import { computeRankings } from '../../sim/rankings';
+import { seedToNumber } from '../../sim/rng';
 
 const BASE_WEEKLY_XP = 8;
 const WINNING_WEEK_XP_BONUS = 3;
@@ -27,6 +30,15 @@ const FACILITY_PRESSURE_RELIEF_DIVISOR = 6;
 const SECURITY_PENALTY_NEUTRAL_PRESSURE = 50;
 const SECURITY_PENALTY_DIVISOR = 6;
 const TOTAL_TEAMS = 128;
+
+function computePrestigeDriftDelta(champion: boolean, madePlayoffs: boolean, winDiff: number): number {
+  if (champion) return 4;
+  if (madePlayoffs) return 2;
+  if (winDiff >= 0) return 1;
+  if (winDiff <= -4) return -3;
+  if (winDiff <= -2) return -2;
+  return 0;
+}
 
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
   'coach/runCareerWeeklyCycle',
@@ -151,6 +163,12 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     );
 
     const newJobSecurity = Math.max(0, Math.min(100, coach.jobSecurity + securityDelta - pressurePenalty));
+    const prestigeDriftDelta = computePrestigeDriftDelta(champion, madePlayoffs, winDiff);
+    const currentTeam = teams.find((team) => team.id === coach.selectedTeamId);
+    const currentEffectivePrestige = Math.max(
+      1,
+      Math.min(100, (currentTeam?.prestige ?? 50) + (coach.programPrestigeDrift ?? 0) + prestigeDriftDelta),
+    );
 
     // Signing class stats
     const signedClass = coach.signedRecruitsByYear[season.year] ?? [];
@@ -172,6 +190,29 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
 
     dispatch(setAdPressure(boostedPressure));
     dispatch(updateJobSecurity(newJobSecurity));
+    dispatch(applyPrestigeDrift(prestigeDriftDelta));
+    if (newJobSecurity >= 68 || champion) {
+      const candidateOffers = teams
+        .filter((team) => team.id !== coach.selectedTeamId && team.prestige >= currentEffectivePrestige)
+        .map((team) => ({
+          team,
+          sortKey: seedToNumber(JSON.stringify([season.seasonSeed, season.year, coach.selectedTeamId, team.id])),
+        }))
+        .sort((a, b) => {
+          const upgradeDelta = (b.team.prestige - currentEffectivePrestige) - (a.team.prestige - currentEffectivePrestige);
+          if (upgradeDelta !== 0) return upgradeDelta;
+          return a.sortKey - b.sortKey;
+        })
+        .slice(0, champion ? 2 : 1)
+        .map(({ team }) => ({
+          teamId: team.id,
+          tier: team.prestige > currentEffectivePrestige ? 'UPGRADE' as const : 'LATERAL' as const,
+          presentedAtYear: season.year,
+        }));
+      dispatch(setPendingJobOffers(candidateOffers));
+    } else {
+      dispatch(setPendingJobOffers([]));
+    }
     dispatch(resetRecruitingForNewSeason());
   },
 );
