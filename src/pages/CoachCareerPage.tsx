@@ -135,6 +135,7 @@ function CoachCareerPage() {
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
+  const [jobOfferError, setJobOfferError] = useState<string | null>(null);
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
   const teamNameById = useMemo(() => new Map(teams.map((team) => [team.id, `${team.schoolName}`])), [teams]);
@@ -316,8 +317,13 @@ function CoachCareerPage() {
   const seasonStatusLabel = recordedSeason ? 'Final Season Record' : 'Season Performance';
 
   async function onAcceptOffer(teamId: string) {
-    await dispatch(acceptJobOffer(teamId));
-    await dispatch(initializeManagedRoster());
+    setJobOfferError(null);
+    try {
+      await dispatch(acceptJobOffer(teamId)).unwrap();
+      await dispatch(initializeManagedRoster()).unwrap();
+    } catch {
+      setJobOfferError('Could not finalize the coaching move. Please try again.');
+    }
   }
 
   return (
@@ -680,6 +686,7 @@ function CoachCareerPage() {
                   <p className="text-xs text-gray-500 mt-0.5 mb-0">
                     Strong results have created interest from other programs. Accepting resets your roster and recruiting board.
                   </p>
+                  {jobOfferError && <p className="text-xs text-red-600 mt-2 mb-0">{jobOfferError}</p>}
                 </div>
                 <button className="btn text-xs" onClick={() => dispatch(declineAllJobOffers())}>
                   Decline All (+3 security)
