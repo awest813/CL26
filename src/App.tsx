@@ -15,6 +15,8 @@ import SeasonWeekPage from './pages/SeasonWeekPage';
 import PlayoffsPage from './pages/PlayoffsPage';
 import AlphaStagePage from './pages/AlphaStagePage';
 import RosterPage from './pages/RosterPage';
+import WeeklyHubPage from './pages/WeeklyHubPage';
+import RecruitingBoardPage from './pages/RecruitingBoardPage';
 import './App.css';
 
 function App() {
@@ -32,6 +34,8 @@ function App() {
         { path: 'career', element: <CoachCareerPage /> },
         { path: 'career/setup', element: <CoachCareerSetupPage /> },
         { path: 'career/roster', element: <RosterPage /> },
+        { path: 'career/week', element: <WeeklyHubPage /> },
+        { path: 'career/recruiting', element: <RecruitingBoardPage /> },
         { path: 'season', element: <SeasonPage /> },
         { path: 'schedule', element: <Navigate to="/season" replace /> },
         { path: 'season/standings', element: <SeasonStandingsPage /> },

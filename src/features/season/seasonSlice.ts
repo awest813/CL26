@@ -401,3 +401,76 @@ export const selectRankTrends = createSelector(
       return { ...row, previousRank: prev ?? null, delta };
     }),
 );
+
+/** Top 16 for rankings page — includes bubble teams (#13–#16). */
+export const selectTop16Rankings = createSelector(
+  [selectTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
+  (teams, records, gameResults) => computeRankings(teams, records, 16, computeAllSOS(gameResults, records)),
+);
+
+const EMPTY_RECORD = { confWins: 0, confLosses: 0, wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0 } as const;
+
+/**
+ * The user's game on the current week (undefined when not in REGULAR phase,
+ * no career team selected, or the user has a bye that week).
+ */
+export const selectUserUpcomingGame = createSelector(
+  [
+    (state: RootState) => state.season.scheduleByWeek,
+    (state: RootState) => state.season.currentWeekIndex,
+    (state: RootState) => state.coach.selectedTeamId,
+    (state: RootState) => state.season.phase,
+  ],
+  (scheduleByWeek, currentWeekIndex, selectedTeamId, phase) => {
+    if (phase !== 'REGULAR' || !selectedTeamId) return undefined;
+    const weekSchedule = scheduleByWeek[currentWeekIndex] ?? [];
+    return weekSchedule.find(
+      (g) => g.homeTeamId === selectedTeamId || g.awayTeamId === selectedTeamId,
+    );
+  },
+);
+
+/**
+ * The user's most recently completed game result (the last played week).
+ */
+export const selectUserLastResult = createSelector(
+  [
+    (state: RootState) => state.season.gameResults,
+    (state: RootState) => state.season.currentWeekIndex,
+    (state: RootState) => state.coach.selectedTeamId,
+  ],
+  (gameResults, currentWeekIndex, selectedTeamId) => {
+    if (!selectedTeamId || currentWeekIndex === 0) return undefined;
+    const lastWeek = currentWeekIndex - 1;
+    return gameResults.find(
+      (r) => r.weekIndex === lastWeek && (r.teamAId === selectedTeamId || r.teamBId === selectedTeamId),
+    );
+  },
+);
+
+/**
+ * The user's standing within their own conference:
+ * returns `{ place: number; total: number; confWins: number; confLosses: number }` or null.
+ */
+export const selectUserConferenceStanding = createSelector(
+  [
+    selectTeams,
+    selectTeamRecords,
+    (state: RootState) => state.coach.selectedTeamId,
+  ],
+  (teams, records, selectedTeamId) => {
+    if (!selectedTeamId) return null;
+    const userTeam = teams.find((t) => t.id === selectedTeamId);
+    if (!userTeam) return null;
+    const confTeams = teams.filter((t) => t.conferenceId === userTeam.conferenceId);
+    const sorted = confTeams
+      .map((t) => ({ id: t.id, rec: records[t.id] ?? EMPTY_RECORD }))
+      .sort((a, b) => {
+        if (b.rec.confWins !== a.rec.confWins) return b.rec.confWins - a.rec.confWins;
+        return b.rec.wins - a.rec.wins;
+      });
+    const place = sorted.findIndex((t) => t.id === selectedTeamId) + 1;
+    const userRec = records[selectedTeamId] ?? EMPTY_RECORD;
+    return { place, total: confTeams.length, confWins: userRec.confWins, confLosses: userRec.confLosses };
+  },
+);

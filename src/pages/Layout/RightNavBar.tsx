@@ -1,15 +1,24 @@
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '../../store/hooks';
-import { selectSeasonSummary, selectTop12Projection, selectTeamRecords } from '../../features/season/seasonSlice';
+import { selectSeasonSummary, selectTop12Projection, selectTeamRecords, selectUserConferenceStanding } from '../../features/season/seasonSlice';
 import { useMemo } from 'react';
+
+function ordinalSuffix(n: number): string {
+  if (n === 1) return 'st';
+  if (n === 2) return 'nd';
+  if (n === 3) return 'rd';
+  return 'th';
+}
 
 function RightNavBar() {
   const summary = useAppSelector(selectSeasonSummary);
   const onboardingStep = useAppSelector((state) => state.coach.onboardingStep);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
   const teams = useAppSelector((state) => state.league.teams);
+  const conferences = useAppSelector((state) => state.league.conferences);
   const records = useAppSelector(selectTeamRecords);
   const top12 = useAppSelector(selectTop12Projection);
+  const confStanding = useAppSelector(selectUserConferenceStanding);
 
   const seasonStarted = summary.phase !== 'PRE';
   const careerReady = onboardingStep === 'READY';
@@ -17,6 +26,11 @@ function RightNavBar() {
   const selectedTeam = useMemo(
     () => teams.find((t) => t.id === selectedTeamId) ?? null,
     [teams, selectedTeamId],
+  );
+
+  const userConference = useMemo(
+    () => (selectedTeam ? conferences.find((c) => c.id === selectedTeam.conferenceId) ?? null : null),
+    [conferences, selectedTeam],
   );
 
   const userRecord = selectedTeamId ? records[selectedTeamId] : null;
@@ -42,9 +56,7 @@ function RightNavBar() {
 
       {careerReady && selectedTeam && (
         <div className="rightNavSection dynastyPanel">
-          <h3 className="m-0 dynastyPanelSubheading">
-            My Program
-          </h3>
+          <h3 className="m-0 dynastyPanelSubheading">My Program</h3>
           <p className="m-0 dynastyPanelTeamName">
             {selectedTeam.schoolName} {selectedTeam.nickname}
           </p>
@@ -57,12 +69,33 @@ function RightNavBar() {
               {userSeed != null ? ` · #${userSeed} seed` : ''}
             </p>
           )}
+          {confStanding && seasonStarted && (
+            <p
+              className="m-0 text-xs mt-1 font-semibold"
+              style={{
+                color:
+                  confStanding.place <= 2
+                    ? '#15803d'
+                    : confStanding.place <= 4
+                      ? '#92400e'
+                      : '#b91c1c',
+              }}
+            >
+              {confStanding.place === 1 ? '🏆 ' : ''}
+              {confStanding.place}{ordinalSuffix(confStanding.place)} in {userConference?.name ?? 'Conference'}
+            </p>
+          )}
         </div>
       )}
 
       <div className="rightNavSection dynastyPanel">
         <h3 className="m-0">Quick Actions</h3>
         <div className="flex flex-col gap-2 mt-2">
+          {careerReady && (
+            <Link to="/career/week" className="btn dynastyRailBtn">
+              Weekly Hub
+            </Link>
+          )}
           <Link to={careerReady ? '/season' : '/career/setup'} className="btn dynastyRailBtn">
             {careerReady ? 'Season Hub' : 'Finish Career Setup'}
           </Link>
