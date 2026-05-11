@@ -36,6 +36,7 @@ const FOCUS_FATIGUE_DELTA: Record<PracticeFocus, number> = {
   CONDITIONING: -3,
   DISCIPLINE: 3,
 };
+const MAX_COACH_SKILL_LEVEL = 5;
 
 function fatiguePill(label: string): { bg: string; text: string } {
   if (label === 'Drained') return { bg: '#fef2f2', text: '#b91c1c' };
@@ -374,7 +375,7 @@ function WeeklyHubPage() {
         <div className="card">
           <h3 className="m-0 mb-3 text-base font-bold">Coach Skill Snapshot</h3>
           <div className="text-xs text-gray-500 mb-2">
-            Recruiting {coach.skillTree.recruiting}/5 · Development {coach.skillTree.development}/5 · Operations {coach.skillTree.operations}/5
+            Recruiting {coach.skillTree.recruiting}/{MAX_COACH_SKILL_LEVEL} · Development {coach.skillTree.development}/{MAX_COACH_SKILL_LEVEL} · Operations {coach.skillTree.operations}/{MAX_COACH_SKILL_LEVEL}
           </div>
           <ul className="m-0 pl-4 text-sm text-gray-600 space-y-1">
             {skillImpactNotes.map((line) => (
