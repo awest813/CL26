@@ -255,3 +255,9 @@ export interface CareerRecord {
   championships: number;
   seasonsCompleted: number;
 }
+
+export interface JobOffer {
+  teamId: string;
+  tier: 'UPGRADE' | 'LATERAL';
+  presentedAtYear: number;
+}

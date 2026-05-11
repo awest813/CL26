@@ -35,8 +35,8 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 
 ### In Progress / Needs Polish
 - [ ] Rankings criteria exposed in UI (current methodology not visible to user)
-- [ ] Week/game detail pages — more depth and drill-down UX
-- [ ] Career multi-year loop — program prestige drift, job security score
+- [x] Week/game detail pages — more depth and drill-down UX
+- [x] Career multi-year loop — program prestige drift, job security score
 - [ ] Responsive layout — tables are compact but not fully mobile-friendly
 
 ### Not Yet Started
@@ -55,8 +55,8 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 
 - [ ] Rankings methodology documented and visible in Rankings page
 - [ ] Playoff bracket flow is fully validated end-to-end via regression tests
-- [ ] Week/game detail pages provide enough depth to understand individual results
-- [ ] Career loop can complete two seasons (Year 1 offseason → Year 2 preseason)
+- [x] Week/game detail pages provide enough depth to understand individual results
+- [x] Career loop can complete two seasons (Year 1 offseason → Year 2 preseason)
 - [ ] UI is usable on common desktop and tablet viewports
 
 ---
@@ -155,13 +155,13 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 
 ---
 
-### M10 — Program Identity + Career Progression (In Progress)
-- [ ] Job security score driven by results vs. expectations
-- [ ] Program prestige drift (recruiting pull, fan pressure, resource band)
-- [ ] Multi-year career record tracking with history view
-- [ ] Job-offer flow after strong seasons
+### M10 — Program Identity + Career Progression ✅
+- [x] Job security score driven by results vs. expectations
+- [x] Program prestige drift (recruiting pull, fan pressure, resource band)
+- [x] Multi-year career record tracking with history view
+- [x] Job-offer flow after strong seasons
 
-**Candidate files:** `src/features/coach/coachSlice.ts` (prestige/security fields), new career-history page
+**Key files:** `src/features/coach/coachSlice.ts`, `src/features/coach/careerThunks.ts`, `src/pages/CoachCareerPage.tsx`, `src/pages/SeasonWeekPage.tsx`
 
 **Done when:** A coach can feel a meaningful arc across at least two seasons with visible consequences for performance.
 
