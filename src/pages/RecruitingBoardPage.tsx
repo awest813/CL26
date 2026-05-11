@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import {
   addRecruitToBoard,
+  clearRecruitPitch,
   removeRecruitFromBoard,
   setRecruitHours,
   setRecruitPitch,
@@ -9,18 +10,26 @@ import {
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
 import { selectSeasonSummary } from '../features/season/seasonSlice';
-import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
+import {
+  buildPositionNeedByPosition,
+  estimateRecruitFit,
+  getTeamPitchGrade,
+  isRecruitingPitch,
+  PITCH_LABELS,
+  RECRUITING_POSITION_FILTERS,
+} from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { RecruitingPitch, RecruitMotivation } from '../types/sim';
 
-const PITCH_LABELS: Record<RecruitingPitch, string> = {
-  PLAYING_TIME: 'Play Time',
-  PROXIMITY: 'Home',
-  ACADEMIC: 'Academics',
-  PRESTIGE: 'Prestige',
-  CHAMPIONSHIP: 'Winning',
-  CAMPUS_LIFE: 'Campus',
-};
+type PositionFilterValue = (typeof RECRUITING_POSITION_FILTERS)[number];
+
+function cappedInterest(value: number) {
+  return Math.min(100, value);
+}
+
+function getRecruitInterest(recruit: { interestByTeamId?: Record<string, number> }, teamId: string) {
+  return recruit.interestByTeamId?.[teamId] ?? 0;
+}
 
 function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
   const color =
@@ -48,7 +57,7 @@ function RecruitingBoardPage() {
   const season = useAppSelector(selectSeasonSummary);
 
   const [search, setSearch] = useState('');
-  const [positionFilter, setPositionFilter] = useState('ALL');
+  const [positionFilter, setPositionFilter] = useState<PositionFilterValue>('ALL');
   const isCoachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
@@ -108,12 +117,41 @@ function RecruitingBoardPage() {
       .sort((a, b) => b.interest - a.interest);
   }, [boardRecruits, coach.weeklyHoursByRecruitId, coach.activePitchesByRecruitId, selectedTeam, teamNameById, positionNeedByPosition]);
 
-  const visibleRecruits = useMemo(() => {
+  const filteredRecruits = useMemo(() => {
     return coach.recruitPool
       .filter((r) => (positionFilter === 'ALL' ? true : r.position === positionFilter))
       .filter((r) => r.name.toLowerCase().includes(search.toLowerCase()))
-      .slice(0, 60);
   }, [coach.recruitPool, positionFilter, search]);
+
+  const visibleRecruits = useMemo(() => {
+    return filteredRecruits
+      .map((recruit) => ({
+        recruit,
+        fit: selectedTeam ? estimateRecruitFit(recruit, selectedTeam) : 0,
+        interest: selectedTeam ? getRecruitInterest(recruit, selectedTeam.id) : 0,
+      }))
+      .sort((a, b) => {
+        const aCommittedToUser = a.recruit.committedTeamId === selectedTeamId ? 1 : 0;
+        const bCommittedToUser = b.recruit.committedTeamId === selectedTeamId ? 1 : 0;
+        if (bCommittedToUser !== aCommittedToUser) return bCommittedToUser - aCommittedToUser;
+
+        const aCommittedElsewhere = a.recruit.committedTeamId && a.recruit.committedTeamId !== selectedTeamId ? 1 : 0;
+        const bCommittedElsewhere = b.recruit.committedTeamId && b.recruit.committedTeamId !== selectedTeamId ? 1 : 0;
+        if (aCommittedElsewhere !== bCommittedElsewhere) return aCommittedElsewhere - bCommittedElsewhere;
+
+        const aOnBoard = boardSet.has(a.recruit.id) ? 1 : 0;
+        const bOnBoard = boardSet.has(b.recruit.id) ? 1 : 0;
+        if (bOnBoard !== aOnBoard) return bOnBoard - aOnBoard;
+
+        if (b.interest !== a.interest) return b.interest - a.interest;
+        if (b.fit !== a.fit) return b.fit - a.fit;
+
+        if (b.recruit.stars !== a.recruit.stars) return b.recruit.stars - a.recruit.stars;
+        return b.recruit.potential - a.recruit.potential;
+      })
+      .map(({ recruit }) => recruit)
+      .slice(0, 75);
+  }, [boardSet, filteredRecruits, selectedTeam, selectedTeamId]);
 
   const committedToUserCount = coach.recruitPool.filter(
     (r) => r.committedTeamId === selectedTeamId,
@@ -138,6 +176,24 @@ function RecruitingBoardPage() {
     const withoutCurrent = totalHours - current;
     const allowed = Math.min(MAX_HOURS_PER_RECRUIT, Math.max(0, WEEKLY_HOURS_CAP - withoutCurrent));
     dispatch(setRecruitHours({ recruitId, hours: Math.min(requested, allowed) }));
+  }
+
+  function onPitchChange(recruitId: string, nextPitch: string) {
+    if (!nextPitch) {
+      dispatch(clearRecruitPitch(recruitId));
+      return;
+    }
+
+    if (!isRecruitingPitch(nextPitch)) {
+      return;
+    }
+
+    dispatch(
+      setRecruitPitch({
+        recruitId,
+        pitch: nextPitch,
+      }),
+    );
   }
 
   if (coach.recruitPool.length === 0) {
@@ -287,14 +343,7 @@ function RecruitingBoardPage() {
                       <td className="py-2 pr-2">
                         <select
                           value={activePitch ?? ''}
-                          onChange={(e) =>
-                            dispatch(
-                              setRecruitPitch({
-                                recruitId: recruit.id,
-                                pitch: e.target.value as RecruitingPitch,
-                              }),
-                            )
-                          }
+                          onChange={(e) => onPitchChange(recruit.id, e.target.value)}
                           className="text-xs p-1 border rounded w-full mb-1"
                         >
                           <option value="">No Pitch</option>
@@ -322,10 +371,10 @@ function RecruitingBoardPage() {
                         <div className="w-full bg-gray-100 rounded-full h-1.5 mb-0.5">
                           <div
                             className={`h-1.5 rounded-full ${interest >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                            style={{ width: `${Math.min(100, interest)}%` }}
+                            style={{ width: `${cappedInterest(interest)}%` }}
                           />
                         </div>
-                        <div className="text-xs text-center text-gray-500">{interest}%</div>
+                        <div className="text-xs text-center text-gray-500">{cappedInterest(interest)}%</div>
                       </td>
                       <td className="py-2 text-right">
                         <input
@@ -356,7 +405,12 @@ function RecruitingBoardPage() {
         {/* ── Prospect pool ── */}
         <div className="card">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-base font-bold m-0">Prospect Pool</h3>
+            <div>
+              <h3 className="text-base font-bold m-0">Prospect Pool</h3>
+              <div className="text-xs text-gray-500 mt-1">
+                Showing {visibleRecruits.length} of {filteredRecruits.length} matches
+              </div>
+            </div>
             <button
               className="text-xs text-blue-600 hover:underline bg-transparent border-0 cursor-pointer"
               onClick={() => { setSearch(''); setPositionFilter('ALL'); }}
@@ -372,20 +426,18 @@ function RecruitingBoardPage() {
               placeholder="Search name…"
               className="flex-1 p-1.5 text-sm border rounded"
             />
-            <select
-              value={positionFilter}
-              onChange={(e) => setPositionFilter(e.target.value)}
-              className="p-1.5 text-sm border rounded w-20"
-            >
-              <option value="ALL">All</option>
-              <option value="A">A</option>
-              <option value="M">M</option>
-              <option value="D">D</option>
-              <option value="LSM">LSM</option>
-              <option value="FO">FO</option>
-              <option value="G">G</option>
-            </select>
-          </div>
+              <select
+                value={positionFilter}
+                onChange={(e) => setPositionFilter(e.target.value as PositionFilterValue)}
+                className="p-1.5 text-sm border rounded w-20"
+              >
+                {RECRUITING_POSITION_FILTERS.map((position) => (
+                  <option key={position} value={position}>
+                    {position}
+                  </option>
+                ))}
+              </select>
+            </div>
 
           <div className="overflow-y-auto" style={{ maxHeight: '560px' }}>
             <table className="w-full text-sm">
@@ -416,6 +468,11 @@ function RecruitingBoardPage() {
                         <div className="text-xs text-gray-500">
                           {recruit.position} · {recruit.region}
                         </div>
+                        {selectedTeam && (
+                          <div className="text-xs text-gray-400">
+                            Interest {cappedInterest(getRecruitInterest(recruit, selectedTeam.id))}%
+                          </div>
+                        )}
                         {isCommittedElsewhere && (
                           <div className="text-xs text-red-500">
                             Committed: {teamNameById.get(recruit.committedTeamId!) ?? 'Other'}

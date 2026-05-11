@@ -5,6 +5,19 @@ import namesData from '../data/names.json' with { type: 'json' };
 const REGIONS = ['Northeast', 'Mid-Atlantic', 'South', 'Midwest', 'West'];
 const POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 const PITCHES: RecruitingPitch[] = ['PLAYING_TIME', 'PROXIMITY', 'ACADEMIC', 'PRESTIGE', 'CHAMPIONSHIP', 'CAMPUS_LIFE'];
+export const RECRUITING_POSITION_FILTERS: Array<Position | 'ALL'> = ['ALL', 'A', 'M', 'D', 'LSM', 'FO', 'G'];
+export const PITCH_LABELS: Record<RecruitingPitch, string> = {
+  PLAYING_TIME: 'Play Time',
+  PROXIMITY: 'Home',
+  ACADEMIC: 'Academics',
+  PRESTIGE: 'Prestige',
+  CHAMPIONSHIP: 'Winning',
+  CAMPUS_LIFE: 'Campus',
+};
+
+export function isRecruitingPitch(value: string): value is RecruitingPitch {
+  return value in PITCH_LABELS;
+}
 const POSITION_TARGETS: Record<Position, number> = {
   A: 5,
   M: 7,
@@ -128,6 +141,8 @@ export function calculateTeamGrade(team: Team, pitch: RecruitingPitch): string {
        return team.prestige > 90 ? 'A+' : team.prestige > 75 ? 'A' : 'C';
     case 'CAMPUS_LIFE':
        return 'B+'; // Everyone has decent campus life in sim
+    default:
+      return 'C';
   }
 }
 
