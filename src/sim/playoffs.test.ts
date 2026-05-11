@@ -60,19 +60,13 @@ describe('playoff loop', () => {
       state = simulatePlayoffRound(state, teams, 98765);
       assert.equal(state.currentRound, 'SEMIFINAL');
       assert.equal(state.rounds.SEMIFINAL.length, 2);
-      assert.equal(
-        state.rounds.SEMIFINAL.every((game) => game.homeSeed === seedByTeamId.get(game.homeTeamId) && game.awaySeed === seedByTeamId.get(game.awayTeamId)),
-        true,
-      );
+      assert.ok(state.rounds.SEMIFINAL.every((game) => game.homeSeed === seedByTeamId.get(game.homeTeamId) && game.awaySeed === seedByTeamId.get(game.awayTeamId)));
 
       state = simulatePlayoffRound(state, teams, 98765);
       assert.equal(state.currentRound, 'FINAL');
       assert.equal(state.rounds.FINAL.length, 1);
       assert.equal(state.championTeamId, null);
-      assert.equal(
-        state.rounds.FINAL.every((game) => game.homeSeed === seedByTeamId.get(game.homeTeamId) && game.awaySeed === seedByTeamId.get(game.awayTeamId)),
-        true,
-      );
+      assert.ok(state.rounds.FINAL.every((game) => game.homeSeed === seedByTeamId.get(game.homeTeamId) && game.awaySeed === seedByTeamId.get(game.awayTeamId)));
 
       state = simulatePlayoffRound(state, teams, 98765);
       assert.equal(state.currentRound, 'FINAL');

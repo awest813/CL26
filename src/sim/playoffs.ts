@@ -89,8 +89,8 @@ function roundSeedOffset(round: PlayoffRoundName): number {
   return 400;
 }
 
-function seedForTeam(state: PlayoffState, teamId: string): number {
-  const seed = state.seeds.find((entry) => entry.teamId === teamId)?.seed;
+function seedForTeam(seedByTeamId: Map<string, number>, teamId: string): number {
+  const seed = seedByTeamId.get(teamId);
   if (seed === undefined) {
     throw new Error(`Missing playoff seed for team ${teamId}.`);
   }
@@ -99,6 +99,7 @@ function seedForTeam(state: PlayoffState, teamId: string): number {
 
 function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): PlayoffGame[] {
   const bySeed = new Map(state.seeds.map((item) => [item.seed, item.teamId]));
+  const seedByTeamId = new Map(state.seeds.map((item) => [item.teamId, item.seed]));
   const round1 = state.rounds.ROUND1;
   const quarter = state.rounds.QUARTERFINAL;
   const semis = state.rounds.SEMIFINAL;
@@ -118,8 +119,8 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
         id: makeGameId('QUARTERFINAL', 1),
         round: 'QUARTERFINAL',
         slot: 1,
-        homeSeed: seedForTeam(state, bySeed.get(1) as string),
-        awaySeed: seedForTeam(state, winner8_9),
+        homeSeed: seedForTeam(seedByTeamId, bySeed.get(1) as string),
+        awaySeed: seedForTeam(seedByTeamId, winner8_9),
         homeTeamId: bySeed.get(1) as string,
         awayTeamId: winner8_9,
         winnerTeamId: null,
@@ -129,8 +130,8 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
         id: makeGameId('QUARTERFINAL', 2),
         round: 'QUARTERFINAL',
         slot: 2,
-        homeSeed: seedForTeam(state, bySeed.get(4) as string),
-        awaySeed: seedForTeam(state, winner5_12),
+        homeSeed: seedForTeam(seedByTeamId, bySeed.get(4) as string),
+        awaySeed: seedForTeam(seedByTeamId, winner5_12),
         homeTeamId: bySeed.get(4) as string,
         awayTeamId: winner5_12,
         winnerTeamId: null,
@@ -140,8 +141,8 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
         id: makeGameId('QUARTERFINAL', 3),
         round: 'QUARTERFINAL',
         slot: 3,
-        homeSeed: seedForTeam(state, bySeed.get(2) as string),
-        awaySeed: seedForTeam(state, winner7_10),
+        homeSeed: seedForTeam(seedByTeamId, bySeed.get(2) as string),
+        awaySeed: seedForTeam(seedByTeamId, winner7_10),
         homeTeamId: bySeed.get(2) as string,
         awayTeamId: winner7_10,
         winnerTeamId: null,
@@ -151,8 +152,8 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
         id: makeGameId('QUARTERFINAL', 4),
         round: 'QUARTERFINAL',
         slot: 4,
-        homeSeed: seedForTeam(state, bySeed.get(3) as string),
-        awaySeed: seedForTeam(state, winner6_11),
+        homeSeed: seedForTeam(seedByTeamId, bySeed.get(3) as string),
+        awaySeed: seedForTeam(seedByTeamId, winner6_11),
         homeTeamId: bySeed.get(3) as string,
         awayTeamId: winner6_11,
         winnerTeamId: null,
@@ -176,8 +177,8 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
         id: makeGameId('SEMIFINAL', 1),
         round: 'SEMIFINAL',
         slot: 1,
-        homeSeed: seedForTeam(state, winnerQ1),
-        awaySeed: seedForTeam(state, winnerQ2),
+        homeSeed: seedForTeam(seedByTeamId, winnerQ1),
+        awaySeed: seedForTeam(seedByTeamId, winnerQ2),
         homeTeamId: winnerQ1,
         awayTeamId: winnerQ2,
         winnerTeamId: null,
@@ -187,8 +188,8 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
         id: makeGameId('SEMIFINAL', 2),
         round: 'SEMIFINAL',
         slot: 2,
-        homeSeed: seedForTeam(state, winnerQ3),
-        awaySeed: seedForTeam(state, winnerQ4),
+        homeSeed: seedForTeam(seedByTeamId, winnerQ3),
+        awaySeed: seedForTeam(seedByTeamId, winnerQ4),
         homeTeamId: winnerQ3,
         awayTeamId: winnerQ4,
         winnerTeamId: null,
@@ -210,8 +211,8 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
         id: makeGameId('FINAL', 1),
         round: 'FINAL',
         slot: 1,
-        homeSeed: seedForTeam(state, winnerS1),
-        awaySeed: seedForTeam(state, winnerS2),
+        homeSeed: seedForTeam(seedByTeamId, winnerS1),
+        awaySeed: seedForTeam(seedByTeamId, winnerS2),
         homeTeamId: winnerS1,
         awayTeamId: winnerS2,
         winnerTeamId: null,
