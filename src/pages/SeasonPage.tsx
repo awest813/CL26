@@ -46,190 +46,176 @@ function SeasonPage() {
   const hasValidSeed = Number.isFinite(seedInput);
 
   const handleStartSeason = () => {
-      if (!hasValidSeed) return;
-      dispatch(startNewSeason({ seed: seedInput }));
+    if (!hasValidSeed) return;
+    dispatch(startNewSeason({ seed: seedInput }));
   };
 
   const handleSimWeek = () => {
-      dispatch(simCurrentWeek());
+    dispatch(simCurrentWeek());
   };
 
   const handleSimSeason = () => {
-      if(confirm("Simulate the rest of the regular season?")) {
-        dispatch(simSeason());
-      }
+    if (confirm('Simulate the rest of the regular season?')) {
+      dispatch(simSeason());
+    }
   };
 
   const handleReset = () => {
-      if(confirm("Are you sure you want to reset the season? This cannot be undone.")) {
-          dispatch(resetSeason());
-      }
+    if (confirm('Are you sure you want to reset the season? This cannot be undone.')) {
+      dispatch(resetSeason());
+    }
   };
 
   const handleNewSeason = () => {
-      if(confirm("Start a new season? Current season results are preserved in your career history.")) {
-          dispatch(resetSeason());
-          navigate('/season');
-      }
+    if (confirm('Start a new season? Current season results are preserved in your career history.')) {
+      dispatch(resetSeason());
+      navigate('/season');
+    }
   };
 
   if (!hasSeason) {
-      return (
-          <div className="card max-w-lg mx-auto">
-              <h2>Start New Season</h2>
-              <p className="mb-2 text-gray-500">Configure your season settings below.</p>
-              <p className="mb-4 text-sm text-gray-600">
-                The season seed controls schedule generation and the entire CPU league roster draw. Those rosters stay
-                fixed for this year and refresh when you start a later season with a new seed.
-              </p>
+    return (
+      <div className="pageStack">
+        <div className="pageHeader">
+          <h2>Start New Season</h2>
+          <p className="pageHeader-sub">Configure your seed to generate this year&apos;s schedules and CPU rosters.</p>
+        </div>
 
-              <div className="flex gap-4 items-end mb-4">
-                  <label className="flex-1">
-                      <span className="text-sm font-semibold">Season Seed</span>
-                      <input
-                        type="number"
-                        value={seedInput}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value.trim() === '') {
-                            setSeedInput(Number.NaN);
-                            return;
-                          }
-                          setSeedInput(Number(value));
-                        }}
-                        className="p-2 border rounded w-full"
-                      />
-                  </label>
-                  <button
-                      className="btn"
-                      onClick={() => setSeedInput(Math.floor(Math.random() * 10000))}
-                  >
-                      Random
-                  </button>
-              </div>
+        <div className="card max-w-lg mx-auto w-full">
+          <p className="m-0 mb-4 text-sm text-gray-600">
+            The season seed controls schedule generation and the entire CPU league roster draw. Those rosters stay
+            fixed for this year and refresh when you start a later season with a new seed.
+          </p>
 
-              {!hasValidSeed && (
-                <p className="text-sm text-red-600 mt-1">Enter a valid numeric seed to begin.</p>
-              )}
-
-              <div className="flex justify-end">
-                  <button
-                      className="btn btn-primary"
-                      onClick={handleStartSeason}
-                      disabled={!hasValidSeed}
-                  >
-                      Begin Season
-                  </button>
-              </div>
+          <div className="flex gap-4 items-end mb-4">
+            <label className="flex-1">
+              <span className="text-sm font-semibold">Season Seed</span>
+              <input
+                type="number"
+                value={seedInput}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.trim() === '') {
+                    setSeedInput(Number.NaN);
+                    return;
+                  }
+                  setSeedInput(Number(value));
+                }}
+                className="p-2 border rounded w-full"
+              />
+            </label>
+            <button className="btn" onClick={() => setSeedInput(Math.floor(Math.random() * 10000))}>
+              Random
+            </button>
           </div>
-      );
+
+          {!hasValidSeed && <p className="text-sm text-red-600 mt-1">Enter a valid numeric seed to begin.</p>}
+
+          <div className="flex justify-end">
+            <button className="btn btn-primary" onClick={handleStartSeason} disabled={!hasValidSeed}>
+              Begin Season
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex-col gap-4">
+    <div className="pageStack">
       <div className="card">
-        <div className="flex justify-between items-center mb-4">
-            <div>
-                <h2 className="m-0 text-xl font-bold">Season Dashboard</h2>
-                <div className="text-sm text-gray-500 mt-1">
-                    Week {displayWeek + 1} of 12 &bull; {PHASE_LABELS[summary.phase] ?? summary.phase}
-                </div>
-            </div>
+        <div className="seasonHeaderRow">
+          <div className="pageHeader m-0">
+            <h2 className="m-0 text-xl font-bold">Season Dashboard</h2>
+            <p className="pageHeader-sub">
+              Week {displayWeek + 1} of 12 &bull; {PHASE_LABELS[summary.phase] ?? summary.phase}
+            </p>
+          </div>
 
-            {summary.phase === 'REGULAR' && (
-                <div className="flex gap-2">
-                     <button
-                        className="btn btn-primary"
-                        onClick={handleSimWeek}
-                     >
-                        Sim Week {displayWeek + 1}
-                     </button>
-                     <button
-                        className="btn"
-                        onClick={handleSimSeason}
-                     >
-                        Sim To End
-                     </button>
-                </div>
-            )}
-             {summary.phase === 'PLAYOFF' && (
-                 <div className="flex gap-2">
-                     <Link to="/playoffs" className="btn btn-primary">Go to Playoffs</Link>
-                 </div>
-             )}
-             {summary.phase === 'OFFSEASON' && (
-                 <div className="flex gap-2">
-                     <Link to="/playoffs" className="btn">View Playoff Results</Link>
-                     <button className="btn btn-primary" onClick={handleNewSeason}>
-                         Begin New Season
-                     </button>
-                 </div>
-             )}
+          {summary.phase === 'REGULAR' && (
+            <div className="seasonActionGroup">
+              <button className="btn btn-primary" onClick={handleSimWeek}>
+                Sim Week {displayWeek + 1}
+              </button>
+              <button className="btn" onClick={handleSimSeason}>
+                Sim To End
+              </button>
+            </div>
+          )}
+          {summary.phase === 'PLAYOFF' && (
+            <div className="seasonActionGroup">
+              <Link to="/playoffs" className="btn btn-primary">
+                Go to Playoffs
+              </Link>
+            </div>
+          )}
+          {summary.phase === 'OFFSEASON' && (
+            <div className="seasonActionGroup">
+              <Link to="/playoffs" className="btn">
+                View Playoff Results
+              </Link>
+              <button className="btn btn-primary" onClick={handleNewSeason}>
+                Begin New Season
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-2 text-sm mt-4 border-t pt-2">
-             <Link to="/season/standings" className="text-blue-600 hover:underline">View Standings</Link>
-             <span>&bull;</span>
-             <Link to={`/season/week/${displayWeek}`} className="text-blue-600 hover:underline">Full Weekly Schedule</Link>
-             <span>&bull;</span>
-             <button onClick={handleReset} className="text-red-600 hover:underline bg-transparent border-0 cursor-pointer p-0 ml-auto">
-                 Reset Season
-             </button>
+        <div className="seasonLinkRow">
+          <Link to="/season/standings" className="seasonInlineLink">
+            View Standings
+          </Link>
+          <Link to={`/season/week/${displayWeek}`} className="seasonInlineLink">
+            Full Weekly Schedule
+          </Link>
+          <button onClick={handleReset} className="seasonInlineLink seasonInlineLink-danger ml-auto">
+            Reset Season
+          </button>
         </div>
       </div>
 
       <div className="card">
-        <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <h3 className="m-0 text-lg font-semibold">Week {displayWeek + 1} Matchups</h3>
-            <select
-                value={conferenceFilter}
-                onChange={(e) => setConferenceFilter(e.target.value)}
-                className="p-1 text-sm border rounded"
-            >
-                <option value="ALL">All Conferences</option>
-                {conferences.map((conf) => (
-                  <option key={conf.id} value={conf.id}>
-                    {conf.name}
-                  </option>
-                ))}
-            </select>
+        <div className="seasonHeaderRow border-b pb-2 mb-4">
+          <h3 className="m-0 text-lg font-semibold">Week {displayWeek + 1} Matchups</h3>
+          <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded">
+            <option value="ALL">All Conferences</option>
+            {conferences.map((conf) => (
+              <option key={conf.id} value={conf.id}>
+                {conf.name}
+              </option>
+            ))}
+          </select>
         </div>
 
-        <div className="flex-col gap-2">
+        <div className="seasonMatchupList">
           {filteredGames.slice(0, 10).map(({ game, result }) => {
             const home = teamById.get(game.homeTeamId);
             const away = teamById.get(game.awayTeamId);
             return (
-              <div key={game.id} className="p-2 border-b border-gray-100 flex justify-between items-center hover:bg-gray-50">
+              <div key={game.id} className="seasonMatchupRow">
                 <div className="flex-1 text-right">
-                    <span className="font-semibold">{away?.schoolName}</span>
-                    <span className="text-xs text-gray-500 ml-1">({away?.nickname})</span>
+                  <span className="font-semibold">{away?.schoolName}</span>
+                  <span className="text-xs text-gray-500 ml-1">({away?.nickname})</span>
                 </div>
                 <div className="mx-4 font-mono font-bold text-lg min-w-[60px] text-center">
-                    {result ? (
-                        <span>{result.scoreB} - {result.scoreA}</span>
-                    ) : (
-                        <span className="text-gray-400 text-sm">vs</span>
-                    )}
+                  {result ? <span>{result.scoreB} - {result.scoreA}</span> : <span className="text-gray-400 text-sm">vs</span>}
                 </div>
                 <div className="flex-1 text-left">
-                    <span className="font-semibold">{home?.schoolName}</span>
-                    <span className="text-xs text-gray-500 ml-1">({home?.nickname})</span>
+                  <span className="font-semibold">{home?.schoolName}</span>
+                  <span className="text-xs text-gray-500 ml-1">({home?.nickname})</span>
                 </div>
               </div>
             );
           })}
 
-          {filteredGames.length === 0 && (
-              <p className="text-center text-gray-500 py-4">No games found for this filter.</p>
-          )}
+          {filteredGames.length === 0 && <p className="text-center text-gray-500 py-4">No games found for this filter.</p>}
 
           {filteredGames.length > 10 && (
-             <div className="text-center mt-2 p-2 bg-gray-50 rounded cursor-pointer hover:bg-gray-100">
-                 <Link to={`/season/week/${displayWeek}`} className="text-sm text-blue-600 font-semibold block">
-                    View all {filteredGames.length} games for Week {displayWeek + 1} &rarr;
-                 </Link>
-             </div>
+            <div className="seasonMatchupFooter">
+              <Link to={`/season/week/${displayWeek}`} className="text-sm text-blue-600 font-semibold block">
+                View all {filteredGames.length} games for Week {displayWeek + 1} &rarr;
+              </Link>
+            </div>
           )}
         </div>
       </div>
