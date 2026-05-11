@@ -15,6 +15,7 @@ const PHASE_STATUS_LABEL: Record<string, string> = {
 
 function Home() {
   const season = useAppSelector(state => state.season);
+  const hasCareerTeam = useAppSelector((state) => Boolean(state.coach.selectedTeamId));
   const { year, phase, currentWeekIndex, seasonSeed } = season;
 
   const statusLabel =
@@ -24,7 +25,10 @@ function Home() {
     if (phase === 'PRE') return { label: 'Start New Season', link: '/season', primary: true };
     if (phase === 'REGULAR') return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
     if (phase === 'PLAYOFF') return { label: 'Go to Playoffs', link: '/playoffs', primary: true };
-    if (phase === 'OFFSEASON') return { label: 'Review Season', link: '/season', primary: false };
+    if (phase === 'OFFSEASON') {
+      if (hasCareerTeam) return { label: 'Finalize Offseason', link: '/career', primary: true };
+      return { label: 'Review Season', link: '/season', primary: false };
+    }
     return { label: 'View Season', link: '/season', primary: false };
   })();
 

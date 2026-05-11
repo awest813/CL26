@@ -57,7 +57,10 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
     const coach = state.coach;
 
     const canAdvanceRecruiting = coach.recruitPool.length > 0 && Boolean(coach.selectedTeamId);
-    const canSimSeasonWeek = season.phase === 'REGULAR' && season.scheduleByWeek.length === 12 && season.currentWeekIndex < 12;
+    const canSimSeasonWeek =
+      season.phase === 'REGULAR' &&
+      season.scheduleByWeek.length > 0 &&
+      season.currentWeekIndex < season.scheduleByWeek.length;
 
     if (!canSimSeasonWeek) {
       return 'skipped';

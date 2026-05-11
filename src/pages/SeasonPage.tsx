@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   selectSeasonHasStarted,
   selectSeasonSummary,
@@ -26,7 +26,6 @@ interface NextStepAction {
 
 function SeasonPage() {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const [seedInput, setSeedInput] = useState(2026);
   const [conferenceFilter, setConferenceFilter] = useState('ALL');
   const summary = useAppSelector(selectSeasonSummary);
@@ -70,7 +69,12 @@ function SeasonPage() {
       };
     }
     if (summary.phase === 'PLAYOFF') return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open Playoffs →' };
-    if (summary.phase === 'OFFSEASON') return { label: 'Finalize offseason actions, then begin the next year.', link: '/career', cta: 'Open Career Office →' };
+    if (summary.phase === 'OFFSEASON') {
+      if (coachReady) {
+        return { label: 'Finalize offseason actions, then begin the next year.', link: '/career', cta: 'Open Career Office →' };
+      }
+      return { label: 'Season is complete. Begin a fresh season when ready.', link: null, cta: null };
+    }
     return { label: 'Season is in pre-season setup.', link: null, cta: null };
   }, [coachReady, hasSeason, summary.phase]);
 
@@ -96,9 +100,8 @@ function SeasonPage() {
   };
 
   const handleNewSeason = () => {
-    if (confirm('Start a new season? Current season results are preserved in your career history.')) {
+    if (confirm('Start a fresh season from pre-season? This will clear current season progression.')) {
       dispatch(resetSeason());
-      navigate('/season');
     }
   };
 
@@ -183,9 +186,15 @@ function SeasonPage() {
               <Link to="/playoffs" className="btn">
                 View Playoff Results
               </Link>
-              <button className="btn btn-primary" onClick={handleNewSeason}>
-                Begin New Season
-              </button>
+              {coachReady ? (
+                <Link to="/career" className="btn btn-primary">
+                  Open Career Office
+                </Link>
+              ) : (
+                <button className="btn btn-primary" onClick={handleNewSeason}>
+                  Begin New Season
+                </button>
+              )}
             </div>
           )}
         </div>
