@@ -22,7 +22,7 @@ const navSections: Array<{ title: string; items: NavItem[] }> = [
       { to: '/career', label: 'Coach Office', hint: 'Career dashboard' },
       { to: '/career/recruiting', label: 'Recruiting Board', hint: 'Prospects & targets' },
       { to: '/career/roster', label: 'Roster', hint: 'Depth chart & players' },
-      { to: '/career/setup', label: 'Staff Setup', hint: 'Profile and team' },
+      { to: '/career/setup', label: 'Career Setup', hint: 'Profile and program' },
     ],
   },
   {
@@ -39,7 +39,6 @@ const navSections: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { to: '/conferences', label: 'Conference Browser', hint: 'All 128 teams' },
       { to: '/exhibition', label: 'Exhibition Lab', hint: 'Single game sandbox' },
-      { to: '/alpha', label: 'Roadmap', hint: 'Current build status' },
     ],
   },
 ];

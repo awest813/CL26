@@ -86,9 +86,9 @@ function Home() {
             <strong>League Standings</strong>
             <div className="link-card-meta">Conference and overall records</div>
           </Link>
-          <Link to="/alpha" className="link-card">
-            <strong>Alpha Progress</strong>
-            <div className="link-card-meta">Feature checklist + next priorities</div>
+          <Link to="/rankings" className="link-card">
+            <strong>Rankings &amp; Polls</strong>
+            <div className="link-card-meta">Top 25 and playoff projection</div>
           </Link>
         </div>
       </section>
