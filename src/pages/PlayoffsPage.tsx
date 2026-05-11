@@ -30,6 +30,7 @@ function PlayoffsPage() {
   const canStart = summary.phase === 'PLAYOFF' && !playoffState;
   const canSim = summary.phase === 'PLAYOFF' && !!playoffState && !playoffState.championTeamId;
   const isComplete = !!playoffState?.championTeamId;
+  const hasCareerTeam = Boolean(coach.selectedTeamId);
 
   // When a champion is crowned and a coach team is selected, record the season
   useEffect(() => {
@@ -108,9 +109,15 @@ function PlayoffsPage() {
                 </button>
             )}
             {isComplete && (
-                <button className="btn btn-primary" onClick={handleNewSeason}>
-                    Begin New Season
-                </button>
+                hasCareerTeam ? (
+                  <button className="btn btn-primary" onClick={() => navigate('/career')}>
+                      Open Career Office
+                  </button>
+                ) : (
+                  <button className="btn btn-primary" onClick={handleNewSeason}>
+                      Begin New Season
+                  </button>
+                )
             )}
         </div>
       </div>

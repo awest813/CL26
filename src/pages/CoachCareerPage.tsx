@@ -298,6 +298,10 @@ function CoachCareerPage() {
 
   const winProgress = Math.min(100, Math.round((userRecord.wins / Math.max(1, winTarget)) * 100));
   const isOffseason = season.phase === 'OFFSEASON';
+  const canAdvanceWeeklyCycle =
+    season.phase === 'REGULAR' &&
+    season.scheduleByWeek.length === 12 &&
+    season.currentWeekIndex < 12;
   const seasonEndProcessed = isOffseason && coach.seasonHistory.some(e => e.year === season.year);
 
   return (
@@ -781,13 +785,19 @@ function CoachCareerPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-end gap-1">
-                  {!isOffseason ? (
+                  {canAdvanceWeeklyCycle ? (
                     <button className="btn btn-primary" onClick={onAdvance}>
                       Advance Week {coach.recruitingWeekIndex + 1}
                     </button>
                   ) : null}
-                  {coach.boardRecruitIds.length === 0 && !isOffseason && (
+                  {coach.boardRecruitIds.length === 0 && canAdvanceWeeklyCycle && (
                     <div className="text-xs text-amber-700">No active targets: season advances with CPU recruiting only.</div>
+                  )}
+                  {season.phase === 'PRE' && (
+                    <div className="text-xs text-gray-500">Start the season from the Season Dashboard to unlock weekly advancement.</div>
+                  )}
+                  {season.phase === 'PLAYOFF' && (
+                    <div className="text-xs text-gray-500">Weekly cycle is locked during playoffs.</div>
                   )}
                 </div>
               )}
