@@ -10,6 +10,8 @@ import { RootState } from '../../store/store';
 export const WEEKLY_HOURS_CAP = 120;
 export const MAX_HOURS_PER_RECRUIT = 20;
 const AD_PRESSURE_DIVISOR = 60;
+const MIN_PRESTIGE_DRIFT = -20;
+const MAX_PRESTIGE_DRIFT = 30;
 
 const CAREER_TIER_DEFAULTS: Record<'REBUILD' | 'STABLE' | 'CONTENDER', { resources: ProgramResources; adPressure: number }> = {
   // Rebuilds get lower NIL/facility baselines and less pressure to win immediately.
@@ -282,7 +284,10 @@ const coachSlice = createSlice({
         state.adPressure = Math.max(0, Math.min(100, action.payload));
     },
     applyPrestigeDrift: (state, action: PayloadAction<number>) => {
-        state.programPrestigeDrift = Math.max(-20, Math.min(30, state.programPrestigeDrift + action.payload));
+        state.programPrestigeDrift = Math.max(
+            MIN_PRESTIGE_DRIFT,
+            Math.min(MAX_PRESTIGE_DRIFT, state.programPrestigeDrift + action.payload),
+        );
     },
     setPendingJobOffers: (state, action: PayloadAction<JobOffer[]>) => {
         state.pendingJobOffers = action.payload;

@@ -4,6 +4,10 @@ import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
 
+const WIN_COLOR = '#16a34a';
+const LOSS_COLOR = '#ef4444';
+const SCORE_BUTTON_STYLE = { background: 'transparent', border: 0 } as const;
+
 function topPerformerLine(players: PlayerGameStats[]): string {
   return players
     .slice(0, 2)
@@ -46,7 +50,7 @@ function UserGameCard({
   const topPerformers = [...(isTeamA ? result.topPlayersA : result.topPlayersB)];
 
   return (
-    <section className="card" style={{ borderLeft: `4px solid ${won ? '#16a34a' : '#ef4444'}` }}>
+    <section className="card" style={{ borderLeft: `4px solid ${won ? WIN_COLOR : LOSS_COLOR}` }}>
       <div className="flex justify-between items-start gap-3">
         <div>
           <div className="text-xs text-gray-500 uppercase font-semibold">Your Game</div>
@@ -218,7 +222,7 @@ function SeasonWeekPage() {
                               type="button"
                               disabled={!isFinal}
                               className="font-mono font-bold"
-                              style={{ background: 'transparent', border: 0, cursor: isFinal ? 'pointer' : 'default' }}
+                              style={{ ...SCORE_BUTTON_STYLE, cursor: isFinal ? 'pointer' : 'default' }}
                               onClick={() => setExpandedGameId(expandedGameId === game.id ? null : game.id)}
                               aria-expanded={expandedGameId === game.id}
                               aria-label={isFinal ? `Toggle details for ${away?.schoolName} at ${home?.schoolName}` : undefined}

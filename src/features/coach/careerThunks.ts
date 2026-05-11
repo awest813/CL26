@@ -30,13 +30,18 @@ const FACILITY_PRESSURE_RELIEF_DIVISOR = 6;
 const SECURITY_PENALTY_NEUTRAL_PRESSURE = 50;
 const SECURITY_PENALTY_DIVISOR = 6;
 const TOTAL_TEAMS = 128;
+const CHAMPION_PRESTIGE_DRIFT = 4;
+const PLAYOFF_PRESTIGE_DRIFT = 2;
+const TARGET_MET_PRESTIGE_DRIFT = 1;
+const MODERATE_MISS_PRESTIGE_DRIFT = -2;
+const SEVERE_MISS_PRESTIGE_DRIFT = -3;
 
 function computePrestigeDriftDelta(champion: boolean, madePlayoffs: boolean, winDiff: number): number {
-  if (champion) return 4;
-  if (madePlayoffs) return 2;
-  if (winDiff >= 0) return 1;
-  if (winDiff <= -4) return -3;
-  if (winDiff <= -2) return -2;
+  if (champion) return CHAMPION_PRESTIGE_DRIFT;
+  if (madePlayoffs) return PLAYOFF_PRESTIGE_DRIFT;
+  if (winDiff >= 0) return TARGET_MET_PRESTIGE_DRIFT;
+  if (winDiff <= -4) return SEVERE_MISS_PRESTIGE_DRIFT;
+  if (winDiff <= -2) return MODERATE_MISS_PRESTIGE_DRIFT;
   return 0;
 }
 
@@ -203,8 +208,9 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
           sortKey: seedToNumber(`${season.seasonSeed}:${season.year}:${coach.selectedTeamId}:${team.id}`),
         }))
         .sort((a, b) => {
-          const upgradeDelta = (b.team.prestige - currentEffectivePrestige) - (a.team.prestige - currentEffectivePrestige);
-          if (upgradeDelta !== 0) return upgradeDelta;
+          const prestigeComparison =
+            (b.team.prestige - currentEffectivePrestige) - (a.team.prestige - currentEffectivePrestige);
+          if (prestigeComparison !== 0) return prestigeComparison;
           return a.sortKey - b.sortKey;
         })
         .slice(0, champion ? 2 : 1)
