@@ -321,8 +321,9 @@ function CoachCareerPage() {
     try {
       await dispatch(acceptJobOffer(teamId)).unwrap();
       await dispatch(initializeManagedRoster()).unwrap();
-    } catch {
-      setJobOfferError('Could not finalize the coaching move. Please try again.');
+    } catch (error) {
+      console.error('Failed to accept coach job offer.', error);
+      setJobOfferError('The coaching move did not complete. Reload the page and try again.');
     }
   }
 
