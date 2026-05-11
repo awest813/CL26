@@ -313,9 +313,9 @@ export function summarizeCoachSkillImpacts(input: CoachSkillImpactInput): string
   const operationsPrep = roundToThreeDecimals(operations * 0.6);
 
   return [
-    `Recruiting pressure: ${recruitingDeltaPct >= 0 ? '+' : ''}${recruitingDeltaPct}% weekly interest swing from archetype, tree, NIL, and boosters.`,
+    `Recruiting effectiveness: ${recruitingDeltaPct >= 0 ? '+' : ''}${recruitingDeltaPct}% weekly interest swing from archetype, tree, NIL, and boosters.`,
     `Development prep: +${developmentPrep.toFixed(1)} discipline edge with facilities ${facilities} supporting long-term growth.`,
-    `Operations control: +${operationsPrep.toFixed(1)} goalie prep and about ${operationsFatigueControl}% fatigue reduction from weekly load.`,
+    `Operations control: +${operationsPrep.toFixed(1)} goalie prep and ${operationsFatigueControl}% fatigue reduction from weekly load.`,
   ];
 }
 

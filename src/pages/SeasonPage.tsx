@@ -18,6 +18,12 @@ const PHASE_LABELS: Record<string, string> = {
   OFFSEASON: 'Offseason',
 };
 
+interface NextStepAction {
+  label: string;
+  link: string | null;
+  cta: string | null;
+}
+
 function SeasonPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -47,7 +53,7 @@ function SeasonPage() {
   const hasValidSeed = Number.isFinite(seedInput);
   const coachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
 
-  const nextStep = useMemo(() => {
+  const nextStep = useMemo<NextStepAction>(() => {
     if (!hasSeason) return { label: 'Start this season to unlock the weekly loop.', link: null, cta: null };
     if (summary.phase === 'REGULAR') {
       return coachReady
