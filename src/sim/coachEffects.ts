@@ -115,6 +115,20 @@ export interface CoachGamePlan {
   focusLabel: string;
 }
 
+export interface CoachSkillImpactInput {
+  archetype?: CoachArchetype;
+  skillTree?: {
+    recruiting?: number;
+    development?: number;
+    operations?: number;
+  };
+  resources?: {
+    nil?: number;
+    boosters?: number;
+    facilities?: number;
+  };
+}
+
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 const roundToThreeDecimals = (value: number): number => Math.round(value * 1000) / 1000;
 
@@ -271,6 +285,37 @@ export function summarizeCoachGamePlan(plan: CoachGamePlan): string[] {
   }
 
   return lines.slice(0, 3);
+}
+
+export function summarizeCoachSkillImpacts(input: CoachSkillImpactInput): string[] {
+  const archetype = input.archetype ?? 'RECRUITER';
+  const recruiting = clamp(input.skillTree?.recruiting ?? 0, 0, 5);
+  const development = clamp(input.skillTree?.development ?? 0, 0, 5);
+  const operations = clamp(input.skillTree?.operations ?? 0, 0, 5);
+  const nil = clamp(input.resources?.nil ?? 50, 25, 90);
+  const boosters = clamp(input.resources?.boosters ?? 50, 25, 95);
+  const facilities = clamp(input.resources?.facilities ?? 50, 25, 95);
+
+  const archetypeRecruitingBonus =
+    archetype === 'RECRUITER' ? 1.15
+    : archetype === 'DEVELOPER' ? 0.95
+    : 1;
+  const recruitingMultiplier =
+    archetypeRecruitingBonus *
+    (1 + recruiting * 0.03) *
+    (1 + (nil - 50) / 300) *
+    (1 + (boosters - 50) / 400);
+  const recruitingDeltaPct = Math.round((recruitingMultiplier - 1) * 100);
+
+  const operationsFatigueControl = Math.round((1 - clamp(1 - operations * 0.03, 0.82, 1)) * 100);
+  const developmentPrep = roundToThreeDecimals(development * 0.9);
+  const operationsPrep = roundToThreeDecimals(operations * 0.6);
+
+  return [
+    `Recruiting pressure: ${recruitingDeltaPct >= 0 ? '+' : ''}${recruitingDeltaPct}% weekly interest swing from archetype, tree, NIL, and boosters.`,
+    `Development prep: +${developmentPrep.toFixed(1)} discipline edge with facilities ${facilities} supporting long-term growth.`,
+    `Operations control: +${operationsPrep.toFixed(1)} goalie prep and about ${operationsFatigueControl}% fatigue reduction from weekly load.`,
+  ];
 }
 
 export function advanceFatigue(

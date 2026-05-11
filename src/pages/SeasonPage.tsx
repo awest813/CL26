@@ -27,6 +27,7 @@ function SeasonPage() {
   const hasSeason = useAppSelector(selectSeasonHasStarted);
   const teams = useAppSelector((state) => state.league.teams);
   const conferences = useAppSelector((state) => state.league.conferences);
+  const coach = useAppSelector((state) => state.coach);
 
   const displayWeek = Math.min(summary.currentWeekIndex, 11);
   const weekSelector = useMemo(() => selectWeekGames(displayWeek), [displayWeek]);
@@ -44,6 +45,27 @@ function SeasonPage() {
   }, [thisWeekGames, conferenceFilter, teamById]);
 
   const hasValidSeed = Number.isFinite(seedInput);
+  const coachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
+
+  const nextStep = useMemo(() => {
+    if (!hasSeason) return { label: 'Start this season to unlock the weekly loop.', link: null as string | null, cta: null as string | null };
+    if (summary.phase === 'REGULAR') {
+      return coachReady
+        ? {
+            label: 'Use Weekly Hub to advance season + recruiting together.',
+            link: '/career/week',
+            cta: 'Open Weekly Hub →',
+          }
+        : {
+            label: 'Sim from this page, or create a coach to run the full weekly loop.',
+            link: '/career/setup',
+            cta: 'Set Up Coach →',
+          };
+    }
+    if (summary.phase === 'PLAYOFF') return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open Playoffs →' };
+    if (summary.phase === 'OFFSEASON') return { label: 'Finalize offseason actions, then begin the next year.', link: '/career', cta: 'Open Career Office →' };
+    return { label: 'Season is in pre-season setup.', link: null as string | null, cta: null as string | null };
+  }, [coachReady, hasSeason, summary.phase]);
 
   const handleStartSeason = () => {
     if (!hasValidSeed) return;
@@ -171,6 +193,14 @@ function SeasonPage() {
           <button onClick={handleReset} className="seasonInlineLink seasonInlineLink-danger ml-auto">
             Reset Season
           </button>
+        </div>
+        <div className="mt-3 border-t pt-3 flex items-center justify-between gap-3">
+          <div className="text-sm text-gray-600">{nextStep.label}</div>
+          {nextStep.link && nextStep.cta && (
+            <Link to={nextStep.link} className="btn btn-primary text-sm">
+              {nextStep.cta}
+            </Link>
+          )}
         </div>
       </div>
 
