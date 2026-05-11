@@ -13,7 +13,7 @@ function topPerformerLine(players: PlayerGameStats[]): string {
       if (p.assists > 0) parts.push(`${p.assists}a`);
       if (p.saves > 0) parts.push(`${p.saves}sv`);
       const stats = parts.join(' ');
-      return `${p.name} (${p.position}${stats ? ': ' + stats : ''})`;
+      return `${p.name} (${p.position}${stats ? `: ${stats}` : ''})`;
     })
     .join(' · ');
 }

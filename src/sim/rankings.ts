@@ -27,25 +27,25 @@ export function computeAllSOS(
   gameResults: GameResult[],
   recordsByTeamId: Record<string, TeamRecord>,
 ): Record<string, number> {
-  const opponentWinPcts: Record<string, number[]> = {};
+  const opponentWinPctsByTeamId: Record<string, number[]> = {};
 
   for (const result of gameResults) {
     const tA = result.teamAId;
     const tB = result.teamBId;
     if (!tA || !tB) continue;
 
-    if (!opponentWinPcts[tA]) opponentWinPcts[tA] = [];
-    if (!opponentWinPcts[tB]) opponentWinPcts[tB] = [];
+    if (!opponentWinPctsByTeamId[tA]) opponentWinPctsByTeamId[tA] = [];
+    if (!opponentWinPctsByTeamId[tB]) opponentWinPctsByTeamId[tB] = [];
 
     const recA = recordsByTeamId[tA];
     const recB = recordsByTeamId[tB];
 
-    if (recB) opponentWinPcts[tA].push(winPct(recB.wins, recB.losses));
-    if (recA) opponentWinPcts[tB].push(winPct(recA.wins, recA.losses));
+    if (recB) opponentWinPctsByTeamId[tA].push(winPct(recB.wins, recB.losses));
+    if (recA) opponentWinPctsByTeamId[tB].push(winPct(recA.wins, recA.losses));
   }
 
   const sosByTeamId: Record<string, number> = {};
-  for (const [teamId, pcts] of Object.entries(opponentWinPcts)) {
+  for (const [teamId, pcts] of Object.entries(opponentWinPctsByTeamId)) {
     sosByTeamId[teamId] = pcts.length > 0 ? pcts.reduce((a, b) => a + b, 0) / pcts.length : 0;
   }
   return sosByTeamId;

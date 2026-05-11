@@ -78,8 +78,7 @@ export const simCurrentWeek = createAsyncThunk(
     const prevRecords = selectTeamRecords(state);
     const prevSos = computeAllSOS(existingResults, prevRecords);
     const prevRankings = computeRankings(teams, prevRecords, 25, prevSos);
-    const previousRankByTeamId: Record<string, number> = {};
-    prevRankings.forEach((r) => { previousRankByTeamId[r.teamId] = r.rank; });
+    const previousRankByTeamId = Object.fromEntries(prevRankings.map((r) => [r.teamId, r.rank]));
 
     const gamesToPlay = scheduleByWeek[currentWeekIndex];
     const results: GameResult[] = [];
