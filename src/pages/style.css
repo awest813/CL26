@@ -290,8 +290,6 @@
   margin-bottom: 1rem;
   text-align: left;
 }
-
-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 0.5rem;
@@ -304,10 +302,28 @@ td {
   text-align: left;
 }
 
+thead th {
+  background: #f1f5f9;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+tbody tr:hover {
+  background-color: #f8fafc;
+}
+
 .footer {
   margin-top: 1rem;
-  font-size: 0.875rem;
-  color: #666;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  letter-spacing: 0.02em;
 }
 
 .pageStack {
@@ -583,4 +599,59 @@ input {
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+/* Playoff game loser dimming */
+.line-through-gentle {
+  opacity: 0.55;
+}
+
+/* Champion banner — used in PlayoffsPage */
+.champion-banner {
+  border: 2px solid #ca8a04;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+  padding: 1.25rem;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(202, 138, 4, 0.2);
+}
+
+.champion-banner-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #92400e;
+  margin: 0 0 0.35rem;
+}
+
+.champion-banner-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  color: #78350f;
+  margin: 0;
+}
+
+.champion-banner-you {
+  margin: 0.5rem 0 0;
+  color: #15803d;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Consistent page-level header block */
+.pageHeader {
+  margin-bottom: 1rem;
+}
+
+.pageHeader h2 {
+  margin: 0;
+}
+
+.pageHeader-sub {
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
 }
