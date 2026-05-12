@@ -94,10 +94,10 @@ export const selectTeamWithRosterSummary = createSelector(
       positionSummary,
       classSummary,
       unitStrengths: {
-        offense: rosterAverage(attackers.map((player) => Math.round((player.shooting + player.passing + player.IQ) / 3))),
-        defense: rosterAverage(defenders.map((player) => Math.round((player.defense + player.speed + player.IQ) / 3))),
+        offense: rosterAverage(attackers.map((player) => (player.shooting + player.passing + player.IQ) / 3)),
+        defense: rosterAverage(defenders.map((player) => (player.defense + player.speed + player.IQ) / 3)),
         faceoff: rosterAverage(faceoff.map((player) => player.overall)),
-        goalie: rosterAverage(goalies.map((player) => Math.round((player.defense + player.IQ) / 2))),
+        goalie: rosterAverage(goalies.map((player) => (player.defense + player.IQ) / 2)),
         experience: Math.round(
           (seniors * SENIOR_EXPERIENCE_WEIGHT + underclassmen * UNDERCLASS_EXPERIENCE_WEIGHT) / roster.length,
         ),

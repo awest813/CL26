@@ -25,13 +25,12 @@ export function validateLeagueData(conferences: Conference[], teams: Team[]): st
     if (isBlank(conference.id)) errors.push('Conference id cannot be blank.');
     if (isBlank(conference.name)) errors.push(`Conference ${conference.id || '(missing id)'} name cannot be blank.`);
     if (conferenceIds.has(conference.id)) errors.push(`Duplicate conference id: ${conference.id}`);
-    conferenceIds.add(conference.id);
+    if (!isBlank(conference.id)) conferenceIds.add(conference.id);
   }
 
   for (const team of teams) {
     if (isBlank(team.id)) errors.push('Team id cannot be blank.');
     if (teamIds.has(team.id)) errors.push(`Duplicate team id: ${team.id}`);
-    teamIds.add(team.id);
 
     if (isBlank(team.schoolName)) errors.push(`Team ${team.id || '(missing id)'} schoolName cannot be blank.`);
     if (isBlank(team.nickname)) errors.push(`Team ${team.id || '(missing id)'} nickname cannot be blank.`);
@@ -42,6 +41,7 @@ export function validateLeagueData(conferences: Conference[], teams: Team[]): st
     if (!Number.isFinite(team.prestige) || team.prestige < 1 || team.prestige > 100) {
       errors.push(`Team ${team.id || '(missing id)'} prestige must be between 1 and 100.`);
     }
+    if (!isBlank(team.id)) teamIds.add(team.id);
   }
 
   for (const conference of conferences) {
