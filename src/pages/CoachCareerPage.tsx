@@ -25,7 +25,6 @@ import {
 } from '../features/coach/careerThunks';
 import { selectTeamRecords, startNewSeason } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
-import { summarizeSigningClass } from '../sim/offseason';
 import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, RecruitingPitch, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
@@ -206,10 +205,17 @@ function CoachCareerPage() {
     (recruit) => recruit.committedTeamId && recruit.committedTeamId === coach.selectedTeamId
   ).length;
   const signedClassThisYear = coach.signedRecruitsByYear[season.year] ?? [];
-  const signedClassRecruits = signedClassThisYear
-    .map((signed) => coach.recruitPool.find((recruit) => recruit.id === signed.recruitId))
-    .filter((recruit): recruit is NonNullable<typeof recruit> => Boolean(recruit));
-  const signedClassSummary = summarizeSigningClass(signedClassRecruits);
+  const signedClassSummary = useMemo(() => {
+    if (signedClassThisYear.length === 0) {
+      return { totalStars: 0, averageStars: 0, blueChipCount: 0 };
+    }
+    const totalStars = signedClassThisYear.reduce((sum, recruit) => sum + recruit.stars, 0);
+    return {
+      totalStars,
+      averageStars: Number((totalStars / signedClassThisYear.length).toFixed(2)),
+      blueChipCount: signedClassThisYear.filter((recruit) => recruit.stars >= 4).length,
+    };
+  }, [signedClassThisYear]);
 
   const userRecord = coach.selectedTeamId
     ? recordsByTeamId[coach.selectedTeamId] ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0, pointsFor: 0, pointsAgainst: 0 }
@@ -297,7 +303,7 @@ function CoachCareerPage() {
   }
 
   async function onNewSeason() {
-    const nextSeed = (coach.recruitingSeed ?? 2026) + 1;
+    const nextSeed = season.seasonSeed + 1;
     await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed }));
     await dispatch(startNewSeason({ seed: nextSeed }));
   }

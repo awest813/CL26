@@ -1,7 +1,5 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectTeamRecords, resetSeason } from '../features/season/seasonSlice';
-import { recordSeasonEnd } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName } from '../types/sim';
 
@@ -31,41 +29,6 @@ function PlayoffsPage() {
   const canSim = summary.phase === 'PLAYOFF' && !!playoffState && !playoffState.championTeamId;
   const isComplete = !!playoffState?.championTeamId;
   const hasCareerTeam = Boolean(coach.selectedTeamId);
-
-  // When a champion is crowned and a coach team is selected, record the season
-  useEffect(() => {
-    if (!playoffState?.championTeamId || !coach.selectedTeamId) return;
-    // Guard: only record once per season year
-    if (coach.seasonHistory.some(h => h.year === summary.year)) return;
-
-    const coachRecord = records[coach.selectedTeamId] ?? { wins: 0, losses: 0 };
-    const madePlayoffs = playoffState.seeds.some(s => s.teamId === coach.selectedTeamId);
-    const isChampion = playoffState.championTeamId === coach.selectedTeamId;
-    const signedByYear = coach.signedRecruitsByYear[summary.year] ?? [];
-
-    dispatch(recordSeasonEnd({
-      year: summary.year,
-      wins: coachRecord.wins,
-      losses: coachRecord.losses,
-      madePlayoffs,
-      champion: isChampion,
-      recruitsSigned: signedByYear.length,
-      avgRecruitStars: signedByYear.length > 0
-        ? signedByYear.reduce((sum, r) => sum + r.stars, 0) / signedByYear.length
-        : 0,
-      jobSecurityEnd: coach.jobSecurity,
-    }));
-  }, [
-    coach.jobSecurity,
-    coach.seasonHistory,
-    coach.selectedTeamId,
-    coach.signedRecruitsByYear,
-    dispatch,
-    playoffState?.championTeamId,
-    playoffState?.seeds,
-    records,
-    summary.year,
-  ]);
 
   const handleNewSeason = () => {
     if (confirm('Start a new season? Current season results will be preserved in your career history.')) {

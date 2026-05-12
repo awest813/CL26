@@ -223,7 +223,8 @@ function WeeklyHubPage() {
     season.scheduleByWeek.length > 0 &&
     season.currentWeekIndex < season.scheduleByWeek.length;
 
-  const currentWeekDisplay = season.currentWeekIndex + 1;
+  const maxWeekDisplay = Math.max(1, season.scheduleByWeek.length);
+  const currentWeekDisplay = Math.min(season.currentWeekIndex + 1, maxWeekDisplay);
 
   if (!isCoachReady) {
     return <Navigate to="/career/setup" replace />;

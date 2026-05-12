@@ -116,7 +116,9 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const coach = state.coach;
     const season = state.season;
 
+    if (season.phase !== 'OFFSEASON') return;
     if (!coach.selectedTeamId || !coach.programExpectations) return;
+    if (coach.seasonHistory.some((entry) => entry.year === season.year)) return;
 
     const records = selectTeamRecords(state);
     const teams = state.league.teams;
