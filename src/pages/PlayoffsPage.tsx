@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectTeamRecords, resetSeason } from '../features/season/seasonSlice';
+import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, resetSeason } from '../features/season/seasonSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName } from '../types/sim';
 
@@ -20,7 +20,6 @@ function PlayoffsPage() {
   const summary = useAppSelector(selectSeasonSummary);
   const playoffState = useAppSelector(selectPlayoffState);
   const teams = useAppSelector((state) => state.league.teams);
-  const records = useAppSelector(selectTeamRecords);
   const coach = useAppSelector((state) => state.coach);
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const seedByTeamId = new Map((playoffState?.seeds ?? []).map((seed) => [seed.teamId, seed.seed]));

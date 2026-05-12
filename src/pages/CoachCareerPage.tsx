@@ -204,7 +204,10 @@ function CoachCareerPage() {
   const committedToUserCount = coach.recruitPool.filter(
     (recruit) => recruit.committedTeamId && recruit.committedTeamId === coach.selectedTeamId
   ).length;
-  const signedClassThisYear = coach.signedRecruitsByYear[season.year] ?? [];
+  const signedClassThisYear = useMemo(
+    () => coach.signedRecruitsByYear[season.year] ?? [],
+    [coach.signedRecruitsByYear, season.year],
+  );
   const signedClassSummary = useMemo(() => {
     if (signedClassThisYear.length === 0) {
       return { totalStars: 0, averageStars: 0, blueChipCount: 0 };
