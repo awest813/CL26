@@ -201,7 +201,11 @@ export function validateSchedule(scheduleByWeek: ScheduledGame[][], teams: Team[
   const teamIds = teams.map((team) => team.id);
   const seenMatchups = new Set<string>();
   const gamesByTeam = new Map<string, number>();
+  const conferenceGamesByTeam = new Map<string, number>();
+  const nonConferenceGamesByTeam = new Map<string, number>();
   teamIds.forEach((id) => gamesByTeam.set(id, 0));
+  teamIds.forEach((id) => conferenceGamesByTeam.set(id, 0));
+  teamIds.forEach((id) => nonConferenceGamesByTeam.set(id, 0));
 
   scheduleByWeek.forEach((weekGames, weekIndex) => {
     if (weekGames.length !== 64) {
@@ -225,6 +229,9 @@ export function validateSchedule(scheduleByWeek: ScheduledGame[][], teams: Team[
 
       gamesByTeam.set(game.homeTeamId, (gamesByTeam.get(game.homeTeamId) ?? 0) + 1);
       gamesByTeam.set(game.awayTeamId, (gamesByTeam.get(game.awayTeamId) ?? 0) + 1);
+      const gameTypeMap = game.conferenceGame ? conferenceGamesByTeam : nonConferenceGamesByTeam;
+      gameTypeMap.set(game.homeTeamId, (gameTypeMap.get(game.homeTeamId) ?? 0) + 1);
+      gameTypeMap.set(game.awayTeamId, (gameTypeMap.get(game.awayTeamId) ?? 0) + 1);
     });
 
     if (seenThisWeek.size !== teamIds.length) {
@@ -235,6 +242,18 @@ export function validateSchedule(scheduleByWeek: ScheduledGame[][], teams: Team[
   gamesByTeam.forEach((count, teamId) => {
     if (count !== 12) {
       errors.push(`Team ${teamId} expected 12 games, got ${count}.`);
+    }
+  });
+
+  conferenceGamesByTeam.forEach((count, teamId) => {
+    if (count !== 7) {
+      errors.push(`Team ${teamId} expected 7 conference games, got ${count}.`);
+    }
+  });
+
+  nonConferenceGamesByTeam.forEach((count, teamId) => {
+    if (count !== 5) {
+      errors.push(`Team ${teamId} expected 5 non-conference games, got ${count}.`);
     }
   });
 

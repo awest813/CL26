@@ -14,9 +14,14 @@ function Header() {
 
   return (
     <header className="header dynastyHeader">
-      <div>
-        <p className="dynastyEyebrow">College Dynasty Mode</p>
-        <h1 className="dynastyTitle">College Lacrosse Head Coach Sim</h1>
+      <div className="dynastyBrandLockup">
+        <div className="lacrosseLogoMark" aria-hidden="true">
+          <span>CL</span>
+        </div>
+        <div>
+          <p className="dynastyEyebrow">Fictional College Lacrosse</p>
+          <h1 className="dynastyTitle">CL26 Head Coach</h1>
+        </div>
       </div>
       <div className="dynastyHeaderMeta">
         <div className="dynastyMetaCard">

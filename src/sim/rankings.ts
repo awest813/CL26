@@ -77,6 +77,10 @@ function scoreTeam(row: RankingInputRow, sos: number): number {
   return computeRankingBreakdown(row.team, row.record, sos).totalPoints;
 }
 
+function pointDifferential(record: TeamRecord): number {
+  return record.pointsFor - record.pointsAgainst;
+}
+
 export function computeRankings(
   teams: Team[],
   recordsByTeamId: Record<string, TeamRecord>,
@@ -89,7 +93,17 @@ export function computeRankings(
       const sos = sosByTeamId?.[team.id] ?? 0;
       return { team, record, score: scoreTeam({ team, record }, sos) };
     })
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => {
+      const roundedScoreDiff = Math.round(b.score - a.score);
+      if (roundedScoreDiff !== 0) return roundedScoreDiff;
+      if (b.record.wins !== a.record.wins) return b.record.wins - a.record.wins;
+      const pointDiff = pointDifferential(b.record) - pointDifferential(a.record);
+      if (pointDiff !== 0) return pointDiff;
+      if (b.team.prestige !== a.team.prestige) return b.team.prestige - a.team.prestige;
+      const nameCompare = a.team.schoolName.localeCompare(b.team.schoolName);
+      if (nameCompare !== 0) return nameCompare;
+      return a.team.id.localeCompare(b.team.id);
+    })
     .slice(0, topN)
     .map((row, index) => ({
       rank: index + 1,

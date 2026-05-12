@@ -173,6 +173,29 @@ function AlphaStagePage() {
       </section>
 
       <section className="card">
+        <h3>Lacrosse Elements Sprint Target</h3>
+        <p className="text-sm text-gray-500">
+          Release scope is locked to deterministic branding, data integrity, roster clarity, schedule/playoff correctness,
+          rankings transparency, and balanced match simulation.
+        </p>
+        <div className="rosterSummaryGrid">
+          {[
+            'Consistent CL26 labels and lacrosse playoff language',
+            '128 teams validate as 16 balanced conferences',
+            'Roster summaries expose unit strengths and class balance',
+            'Schedule stays 7 conference + 5 non-conference games',
+            'Poll formula and tie-breakers are visible',
+            'Match outputs stay deterministic under the same seed',
+          ].map((target) => (
+            <div key={target} className="rosterSummaryTile">
+              <span>Success criteria</span>
+              <strong>{target}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card">
         <h3>Recommended Next Steps</h3>
         <ol style={{ margin: '0.5rem 0 0 1rem' }}>
           <li>Complete playoff round simulation in-save and verify bracket progression + champion persistence.</li>

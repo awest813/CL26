@@ -63,7 +63,7 @@ function Home() {
     <div className="pageStack">
       <section className="home-hero" aria-labelledby="home-hero-title">
         <div className="home-hero-inner">
-          <p className="home-hero-eyebrow">128 teams · 12-game season · 12-team playoff</p>
+          <p className="home-hero-eyebrow">CL26 · 128 fictional programs · deterministic lacrosse</p>
           <h2 id="home-hero-title" className="home-hero-title">
             Own the clipboard. Build the dynasty.
           </h2>
@@ -124,8 +124,8 @@ function Home() {
             <div className="link-card-meta">Conference and overall records</div>
           </Link>
           <Link to="/rankings" className="link-card">
-            <strong>Rankings &amp; Polls</strong>
-            <div className="link-card-meta">Top 25 and playoff projection</div>
+            <strong>Top 25 Poll</strong>
+            <div className="link-card-meta">Poll movement and playoff projection</div>
           </Link>
           {seasonStarted && (
             <Link to="/playoffs" className="link-card">
@@ -152,4 +152,3 @@ function Home() {
 }
 
 export default Home;
-

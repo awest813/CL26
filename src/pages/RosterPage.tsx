@@ -32,11 +32,20 @@ const YEAR_LABELS: Record<number, string> = {
   4: 'Sr',
 };
 
-function overallColor(overall: number): string {
-  if (overall >= 80) return '#16a34a';
-  if (overall >= 70) return '#4ade80';
-  if (overall >= 60) return '#f59e0b';
-  return '#9ca3af';
+function ratingClass(overall: number): string {
+  if (overall >= 80) return 'rating-good';
+  if (overall >= 70) return 'rating-solid';
+  if (overall >= 60) return 'rating-warning';
+  return 'rating-muted';
+}
+
+function computeAverageOfThreeAttributes<T>(players: T[], selector: (player: T) => [number, number, number]): number {
+  if (players.length === 0) return 0;
+  const total = players.reduce((sum, player) => {
+    const [first, second, third] = selector(player);
+    return sum + first + second + third;
+  }, 0);
+  return Math.round(total / (3 * players.length));
 }
 
 function StarDisplay({ count }: { count: number }) {
@@ -75,7 +84,7 @@ function PlayerRow({
       <td className="py-1.5 pr-3 font-medium">{player.name}</td>
       <td className="py-1.5 pr-3 text-gray-500 text-xs">{YEAR_LABELS[player.year] ?? `Yr${player.year}`}</td>
       <td className="py-1.5 pr-3 text-gray-500 text-xs">{player.age}</td>
-      <td className="py-1.5 pr-3 font-bold" style={{ color: overallColor(player.overall) }}>{player.overall}</td>
+      <td className={`py-1.5 pr-3 font-bold ${ratingClass(player.overall)}`}>{player.overall}</td>
       <td className="py-1.5 pr-2 text-xs text-gray-500">{player.shooting}</td>
       <td className="py-1.5 pr-2 text-xs text-gray-500">{player.passing}</td>
       <td className="py-1.5 pr-2 text-xs text-gray-500">{player.speed}</td>
@@ -136,6 +145,19 @@ function RosterPage() {
     : 0;
 
   const graduatingCount = roster.filter((p) => p.year === 4).length;
+  const classBalance = [1, 2, 3, 4].map((year) => ({
+    year,
+    label: YEAR_LABELS[year] ?? `Yr${year}`,
+    count: roster.filter((player) => player.year === year).length,
+  }));
+  const offensiveCore = computeAverageOfThreeAttributes(
+    roster.filter((player) => player.position === 'A' || player.position === 'M'),
+    (player) => [player.shooting, player.passing, player.IQ],
+  );
+  const defensiveCore = computeAverageOfThreeAttributes(
+    roster.filter((player) => player.position === 'D' || player.position === 'LSM' || player.position === 'G'),
+    (player) => [player.defense, player.speed, player.IQ],
+  );
 
 
   if (!coach.selectedTeamId || !coach.profile) {
@@ -176,7 +198,26 @@ function RosterPage() {
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-400 uppercase mb-1">Roster OVR</div>
-            <div className="text-2xl font-bold" style={{ color: overallColor(rosterOverall) }}>{rosterOverall}</div>
+            <div className={`text-2xl font-bold ${ratingClass(rosterOverall)}`}>{rosterOverall}</div>
+          </div>
+        </div>
+
+        <div className="rosterSummaryGrid">
+          <div className="rosterSummaryTile">
+            <span>Offensive core</span>
+            <strong>{offensiveCore}</strong>
+          </div>
+          <div className="rosterSummaryTile">
+            <span>Defensive core</span>
+            <strong>{defensiveCore}</strong>
+          </div>
+          <div className="rosterSummaryTile">
+            <span>Class mix</span>
+            <strong>{classBalance.map((row) => `${row.label} ${row.count}`).join(' · ')}</strong>
+          </div>
+          <div className="rosterSummaryTile">
+            <span>Senior exits</span>
+            <strong>{graduatingCount}</strong>
           </div>
         </div>
 
@@ -185,7 +226,7 @@ function RosterPage() {
           {depthSummary.map((d) => (
             <div key={d.position} className="text-center">
               <div className="text-xs text-gray-400 font-semibold uppercase">{d.position}</div>
-              <div className="text-lg font-bold" style={{ color: overallColor(d.avgOverall) }}>{d.avgOverall}</div>
+              <div className={`text-lg font-bold ${ratingClass(d.avgOverall)}`}>{d.avgOverall}</div>
               <div className="text-xs text-gray-500">{d.starters}S / {d.backups}B</div>
             </div>
           ))}

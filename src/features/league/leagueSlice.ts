@@ -4,6 +4,7 @@ import { Conference, LeagueData, Team } from '../../types/sim';
 import { RootState } from '../../store/store';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
+import { assertValidLeagueData } from '../../sim/leagueDataValidation';
 
 interface LeagueState extends LeagueData {}
 
@@ -11,6 +12,30 @@ const initialState: LeagueState = {
   conferences: teamsData.conferences as Conference[],
   teams: teamsData.teams as Team[],
 };
+
+assertValidLeagueData(initialState.conferences, initialState.teams);
+
+const POSITION_ORDER = ['A', 'M', 'D', 'LSM', 'FO', 'G'] as const;
+const YEAR_LABELS = {
+  1: 'Fr',
+  2: 'So',
+  3: 'Jr',
+  4: 'Sr',
+} as const;
+const SENIOR_EXPERIENCE_WEIGHT = 100;
+const UNDERCLASS_EXPERIENCE_WEIGHT = 35;
+
+function rosterAverage(values: number[]): number {
+  return values.length > 0 ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
+}
+
+function averageThreeAttributes(first: number, second: number, third: number): number {
+  return (first + second + third) / 3;
+}
+
+function averageTwoAttributes(first: number, second: number): number {
+  return (first + second) / 2;
+}
 
 const leagueSlice = createSlice({
   name: 'league',
@@ -47,13 +72,44 @@ export const selectTeamWithRosterSummary = createSelector(
     const roster = generateRoster(team, leagueSeasonRosterSeed(seasonSeed));
     const overall = Math.round(roster.reduce((sum, player) => sum + player.overall, 0) / roster.length);
     const topPlayers = [...roster].sort((a, b) => b.overall - a.overall).slice(0, 5);
+    const positionSummary = POSITION_ORDER.map((position) => {
+      const players = roster.filter((player) => player.position === position);
+      return {
+        position,
+        count: players.length,
+        avgOverall: rosterAverage(players.map((player) => player.overall)),
+      };
+    });
+    const classSummary = ([1, 2, 3, 4] as const).map((year) => ({
+      year,
+      label: YEAR_LABELS[year],
+      count: roster.filter((player) => player.year === year).length,
+    }));
+    const attackers = roster.filter((player) => player.position === 'A' || player.position === 'M');
+    const defenders = roster.filter((player) => player.position === 'D' || player.position === 'LSM');
+    const faceoff = roster.filter((player) => player.position === 'FO');
+    const goalies = roster.filter((player) => player.position === 'G');
+    const seniors = roster.filter((player) => player.year === 4).length;
+    const underclassmen = roster.filter((player) => player.year <= 2).length;
 
     return {
       teamId,
       team,
+      displayName: `${team.schoolName} ${team.nickname}`,
       rosterSize: roster.length,
       rosterOverall: overall,
       topPlayers,
+      positionSummary,
+      classSummary,
+      unitStrengths: {
+        offense: rosterAverage(attackers.map((player) => averageThreeAttributes(player.shooting, player.passing, player.IQ))),
+        defense: rosterAverage(defenders.map((player) => averageThreeAttributes(player.defense, player.speed, player.IQ))),
+        faceoff: rosterAverage(faceoff.map((player) => player.overall)),
+        goalie: rosterAverage(goalies.map((player) => averageTwoAttributes(player.defense, player.IQ))),
+        experience: Math.round(
+          (seniors * SENIOR_EXPERIENCE_WEIGHT + underclassmen * UNDERCLASS_EXPERIENCE_WEIGHT) / roster.length,
+        ),
+      },
     };
   },
 );

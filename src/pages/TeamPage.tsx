@@ -51,7 +51,7 @@ function TeamPage() {
         <div className="teamHeroHeader">
           <div>
             <h2 className="m-0">
-              {teamSummary.team.schoolName} {teamSummary.team.nickname}
+              {teamSummary.displayName}
             </h2>
             <p className="teamHeroSubhead">
               {conference?.name ?? teamSummary.team.conferenceId} · {teamSummary.team.region}
@@ -84,6 +84,10 @@ function TeamPage() {
             <div className="teamInfoRow">
               <span className="teamInfoLabel">Top-player mix</span>
               <strong>{topPlayerPositionMix || 'N/A'}</strong>
+            </div>
+            <div className="teamInfoRow">
+              <span className="teamInfoLabel">Class balance</span>
+              <strong>{teamSummary.classSummary.map((row) => `${row.label} ${row.count}`).join(' · ')}</strong>
             </div>
           </div>
         </section>
@@ -123,6 +127,57 @@ function TeamPage() {
           </div>
         </section>
       </div>
+
+      <section className="card">
+        <div className="seasonHeaderRow">
+          <div>
+            <h3 className="m-0">Roster Identity</h3>
+            <p className="pageHeader-sub">Unit strengths generated from position groups, experience, and the current season seed.</p>
+          </div>
+        </div>
+        <div className="rosterSummaryGrid">
+          <div className="rosterSummaryTile">
+            <span>Offense</span>
+            <strong>{teamSummary.unitStrengths.offense}</strong>
+          </div>
+          <div className="rosterSummaryTile">
+            <span>Defense</span>
+            <strong>{teamSummary.unitStrengths.defense}</strong>
+          </div>
+          <div className="rosterSummaryTile">
+            <span>Faceoff</span>
+            <strong>{teamSummary.unitStrengths.faceoff}</strong>
+          </div>
+          <div className="rosterSummaryTile">
+            <span>Goalie</span>
+            <strong>{teamSummary.unitStrengths.goalie}</strong>
+          </div>
+          <div className="rosterSummaryTile">
+            <span>Experience</span>
+            <strong>{teamSummary.unitStrengths.experience}</strong>
+          </div>
+        </div>
+        <div className="dataTableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Position</th>
+                <th>Players</th>
+                <th>Avg OVR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamSummary.positionSummary.map((row) => (
+                <tr key={row.position}>
+                  <td>{row.position}</td>
+                  <td>{row.count}</td>
+                  <td>{row.avgOverall}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="card">
         <div className="seasonHeaderRow">

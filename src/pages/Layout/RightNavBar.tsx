@@ -10,6 +10,12 @@ function ordinalSuffix(n: number): string {
   return 'th';
 }
 
+function standingClassName(place: number): string {
+  if (place <= 2) return 'standing-good';
+  if (place <= 4) return 'standing-watch';
+  return 'standing-danger';
+}
+
 function RightNavBar() {
   const summary = useAppSelector(selectSeasonSummary);
   const onboardingStep = useAppSelector((state) => state.coach.onboardingStep);
@@ -41,7 +47,7 @@ function RightNavBar() {
   const phaseLabel: Record<string, string> = {
     PRE: 'Preseason',
     REGULAR: `Week ${summary.currentWeekIndex + 1} of 12`,
-    PLAYOFF: 'NCAA Tournament',
+    PLAYOFF: 'College Lacrosse Playoff',
     OFFSEASON: 'Offseason',
   };
 
@@ -70,17 +76,7 @@ function RightNavBar() {
             </p>
           )}
           {confStanding && seasonStarted && (
-            <p
-              className="m-0 text-xs mt-1 font-semibold"
-              style={{
-                color:
-                  confStanding.place <= 2
-                    ? '#15803d'
-                    : confStanding.place <= 4
-                      ? '#92400e'
-                      : '#b91c1c',
-              }}
-            >
+            <p className={`m-0 text-xs mt-1 font-semibold ${standingClassName(confStanding.place)}`}>
               {confStanding.place === 1 ? '🏆 ' : ''}
               {confStanding.place}{ordinalSuffix(confStanding.place)} in {userConference?.name ?? 'Conference'}
             </p>
@@ -103,7 +99,7 @@ function RightNavBar() {
             {careerReady ? 'Coach Office' : 'Create Coach Profile'}
           </Link>
           <Link to="/rankings" className="btn dynastyRailBtn">
-            National Polls
+            Top 25 Poll
           </Link>
           {seasonStarted && (
             <Link to="/playoffs" className="btn dynastyRailBtn">
