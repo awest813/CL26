@@ -229,9 +229,9 @@ export function validateSchedule(scheduleByWeek: ScheduledGame[][], teams: Team[
 
       gamesByTeam.set(game.homeTeamId, (gamesByTeam.get(game.homeTeamId) ?? 0) + 1);
       gamesByTeam.set(game.awayTeamId, (gamesByTeam.get(game.awayTeamId) ?? 0) + 1);
-      const homeConferenceCount = game.conferenceGame ? conferenceGamesByTeam : nonConferenceGamesByTeam;
-      homeConferenceCount.set(game.homeTeamId, (homeConferenceCount.get(game.homeTeamId) ?? 0) + 1);
-      homeConferenceCount.set(game.awayTeamId, (homeConferenceCount.get(game.awayTeamId) ?? 0) + 1);
+      const gameTypeMap = game.conferenceGame ? conferenceGamesByTeam : nonConferenceGamesByTeam;
+      gameTypeMap.set(game.homeTeamId, (gameTypeMap.get(game.homeTeamId) ?? 0) + 1);
+      gameTypeMap.set(game.awayTeamId, (gameTypeMap.get(game.awayTeamId) ?? 0) + 1);
     });
 
     if (seenThisWeek.size !== teamIds.length) {

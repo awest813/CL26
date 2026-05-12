@@ -29,6 +29,10 @@ function rosterAverage(values: number[]): number {
   return values.length > 0 ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
 }
 
+function averageThreeAttributes(first: number, second: number, third: number): number {
+  return (first + second + third) / 3;
+}
+
 const leagueSlice = createSlice({
   name: 'league',
   initialState,
@@ -94,8 +98,8 @@ export const selectTeamWithRosterSummary = createSelector(
       positionSummary,
       classSummary,
       unitStrengths: {
-        offense: rosterAverage(attackers.map((player) => (player.shooting + player.passing + player.IQ) / 3)),
-        defense: rosterAverage(defenders.map((player) => (player.defense + player.speed + player.IQ) / 3)),
+        offense: rosterAverage(attackers.map((player) => averageThreeAttributes(player.shooting, player.passing, player.IQ))),
+        defense: rosterAverage(defenders.map((player) => averageThreeAttributes(player.defense, player.speed, player.IQ))),
         faceoff: rosterAverage(faceoff.map((player) => player.overall)),
         goalie: rosterAverage(goalies.map((player) => (player.defense + player.IQ) / 2)),
         experience: Math.round(

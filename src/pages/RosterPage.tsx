@@ -39,7 +39,7 @@ function ratingClass(overall: number): string {
   return 'rating-muted';
 }
 
-function averageThreeRatings<T>(players: T[], selector: (player: T) => [number, number, number]): number {
+function computeAverageOfThreeAttributes<T>(players: T[], selector: (player: T) => [number, number, number]): number {
   if (players.length === 0) return 0;
   const total = players.reduce((sum, player) => {
     const [first, second, third] = selector(player);
@@ -150,11 +150,11 @@ function RosterPage() {
     label: YEAR_LABELS[year] ?? `Yr${year}`,
     count: roster.filter((player) => player.year === year).length,
   }));
-  const offensiveCore = averageThreeRatings(
+  const offensiveCore = computeAverageOfThreeAttributes(
     roster.filter((player) => player.position === 'A' || player.position === 'M'),
     (player) => [player.shooting, player.passing, player.IQ],
   );
-  const defensiveCore = averageThreeRatings(
+  const defensiveCore = computeAverageOfThreeAttributes(
     roster.filter((player) => player.position === 'D' || player.position === 'LSM' || player.position === 'G'),
     (player) => [player.defense, player.speed, player.IQ],
   );
