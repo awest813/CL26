@@ -140,4 +140,18 @@ describe('computeRankings with SOS', () => {
     expect(withoutSos[0].teamId).toBe(withZeroSos[0].teamId);
     expect(withoutSos[0].points).toBe(withZeroSos[0].points);
   });
+
+  test('uses deterministic prestige tie-breaker when rounded ranking points match', () => {
+    const lowerPrestige = makeTeam('a', 65);
+    const higherPrestige = makeTeam('b', 75);
+    const records = {
+      'a': makeRecord(3, 1, 44, 30),
+      'b': makeRecord(3, 1, 44, 30),
+    };
+
+    const ranked = computeRankings([lowerPrestige, higherPrestige], records, 2);
+
+    expect(ranked[0].teamId).toBe('b');
+    expect(ranked[1].teamId).toBe('a');
+  });
 });

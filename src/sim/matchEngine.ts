@@ -59,6 +59,8 @@ const OVERTIME_MIN_WIN_CHANCE = 0.35;
 const OVERTIME_MAX_WIN_CHANCE = 0.65;
 const MIN_SCORING_RUN_FOR_HIGHLIGHT = 3;
 const SCORING_RUN_HIGHLIGHT_CHANCE = 0.6;
+const BASE_POSSESSIONS = 78;
+const TEMPO_POSSESSION_SWING = 8;
 
 function resolveStarterSet(roster: Player[], starterIds?: string[]): Set<string> | null {
   if (!starterIds || starterIds.length === 0) return null;
@@ -145,8 +147,8 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
 }
 
 function tempoModifier(tempo: Tactics['tempo']): number {
-  if (tempo === 'slow') return -8;
-  if (tempo === 'fast') return 8;
+  if (tempo === 'slow') return -TEMPO_POSSESSION_SWING;
+  if (tempo === 'fast') return TEMPO_POSSESSION_SWING;
   return 0;
 }
 
@@ -291,7 +293,7 @@ export function simulateGame(
   const modifiersA = resolveGameplayModifiers(teamA);
   const modifiersB = resolveGameplayModifiers(teamB);
 
-  const totalPossessions = Math.max(60, 78 + tempoModifier(tacticsA.tempo) + tempoModifier(tacticsB.tempo));
+  const totalPossessions = Math.max(60, BASE_POSSESSIONS + tempoModifier(tacticsA.tempo) + tempoModifier(tacticsB.tempo));
   const shareA = computeFaceoffShare(rng, ratingA, ratingB, modifiersA, modifiersB);
   const possessionsA = Math.round(totalPossessions * shareA);
   const possessionsB = totalPossessions - possessionsA;

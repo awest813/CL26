@@ -1,10 +1,14 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert';
-import { validateSchedule } from './schedule.ts';
-import type { Team, ScheduledGame } from '../types/sim.ts';
+import { generateSeasonSchedule, validateSchedule } from './schedule.ts';
+import type { Conference, Team, ScheduledGame } from '../types/sim.ts';
 
-function createValidData(): { teams: Team[], schedule: ScheduledGame[][] } {
+function createValidData(): { teams: Team[], conferences: Conference[], schedule: ScheduledGame[][] } {
     const teams: Team[] = [];
+    const conferences: Conference[] = [];
+    for (let i = 0; i < 16; i++) {
+        conferences.push({ id: `c${i}`, name: `Conference ${i}` });
+    }
     for (let i = 0; i < 128; i++) {
         teams.push({
             id: `t${i}`,
@@ -16,34 +20,9 @@ function createValidData(): { teams: Team[], schedule: ScheduledGame[][] } {
         });
     }
 
-    const teamIds = teams.map(t => t.id);
-    const schedule: ScheduledGame[][] = [];
+    const schedule = generateSeasonSchedule(teams, conferences, 260512);
 
-    const numTeams = teamIds.length;
-    let circle = [...teamIds];
-
-    for (let week = 0; week < 12; week++) {
-        const weekGames: ScheduledGame[] = [];
-        for (let i = 0; i < numTeams / 2; i++) {
-            const home = circle[i];
-            const away = circle[numTeams - 1 - i];
-            weekGames.push({
-                id: `g-${week}-${home}-${away}`,
-                weekIndex: week,
-                homeTeamId: home,
-                awayTeamId: away,
-                conferenceGame: false
-            });
-        }
-        schedule.push(weekGames);
-
-        const fixed = circle[0];
-        const rest = circle.slice(1);
-        rest.unshift(rest.pop() as string);
-        circle = [fixed, ...rest];
-    }
-
-    return { teams, schedule };
+    return { teams, conferences, schedule };
 }
 
 describe('validateSchedule', () => {
@@ -114,5 +93,14 @@ describe('validateSchedule', () => {
 
         assert.ok(errors.some(e => e.includes('Team t0 expected 12 games, got 11')));
         assert.ok(errors.some(e => e.includes('Team t1 expected 12 games, got 13')));
+    });
+
+    test('returns error if a team does not play 7 conference and 5 non-conference games', () => {
+        const { teams, schedule } = createValidData();
+        schedule[0][0] = { ...schedule[0][0], conferenceGame: false };
+        const errors = validateSchedule(schedule, teams);
+
+        assert.ok(errors.some(e => e.includes('expected 7 conference games, got 6')));
+        assert.ok(errors.some(e => e.includes('expected 5 non-conference games, got 6')));
     });
 });

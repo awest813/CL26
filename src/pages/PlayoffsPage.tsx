@@ -6,10 +6,10 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName } from '../types/sim';
 
 const ROUND_LABELS: Record<PlayoffRoundName, string> = {
-    'ROUND1': 'First Round',
-    'QUARTERFINAL': 'Quarterfinals',
+    'ROUND1': 'First Round (5–12)',
+    'QUARTERFINAL': 'Quarterfinals (Top-4 byes enter)',
     'SEMIFINAL': 'Semifinals',
-    'FINAL': 'Championship'
+    'FINAL': 'National Championship'
 };
 
 function displaySeed(gameSeed: number, teamId: string, seedByTeamId: Map<string, number>): number | undefined {
@@ -89,7 +89,7 @@ function PlayoffsPage() {
       {/* Header controls */}
       <div className="card flex justify-between items-center">
         <div>
-            <h2 className="m-0">NCAA Tournament</h2>
+            <h2 className="m-0">College Lacrosse Playoff</h2>
             <div className="text-sm text-gray-500 mt-1">
                 {isComplete
                   ? `${summary.year} Season Complete`
@@ -138,7 +138,7 @@ function PlayoffsPage() {
       )}
 
       {playoffState && (
-        <div className="grid2" style={{ gridTemplateColumns: '280px 1fr' }}>
+        <div className="playoffLayoutGrid">
             {/* Seeding panel */}
             <div className="card">
                 <h3>Tournament Seeds</h3>
@@ -185,6 +185,9 @@ function PlayoffsPage() {
                     return (
                         <div key={round} className="card">
                             <h3 className="text-base font-bold border-b pb-2 mb-3">{ROUND_LABELS[round]}</h3>
+                            {round === 'ROUND1' && (
+                              <p className="text-xs text-gray-500">Seeds 1–4 have automatic byes. Winners advance to seeded quarterfinal matchups.</p>
+                            )}
                             <div className="grid2 gap-3">
                                 {games.map((game) => {
                                      const home = teamById.get(game.homeTeamId);

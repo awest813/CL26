@@ -72,17 +72,17 @@ function RankingsPage() {
   return (
     <div className="pageStack">
       <div className="pageHeader">
-        <h2>Rankings &amp; Polls</h2>
+        <h2>Top 25 Poll &amp; Playoff Projection</h2>
         <p className="pageHeader-sub">
           {isPostseason
             ? `Final ${summary.year} regular-season power rankings.`
-            : 'Deterministic power ranking — updated after each simulated week.'}
+            : 'Deterministic lacrosse poll — updated after each simulated week with transparent score drivers.'}
         </p>
       </div>
 
       <div className="grid2">
       <section className="card">
-        <h3 className="m-0">Top 25 <span className="text-sm font-normal text-gray-400 ml-1">{weekLabel}</span></h3>
+        <h3 className="m-0">Top 25 Poll <span className="text-sm font-normal text-gray-400 ml-1">{weekLabel}</span></h3>
         <p className="text-sm text-gray-500 mt-1 mb-2">
           {isPostseason
             ? 'Final regular-season power rankings.'
@@ -122,7 +122,7 @@ function RankingsPage() {
         <h3 className="m-0">{isPostseason ? 'Tournament Field' : 'Playoff Projection'} <span className="text-sm font-normal text-gray-400 ml-1">Top 12</span></h3>
         <p className="text-sm text-gray-500 mt-1 mb-2">
           {isPostseason
-            ? 'Final seeding used for the NCAA Tournament.'
+            ? 'Final seeding used for the College Lacrosse Playoff.'
             : 'If the season ended today, this would be the projected 12-team field.'}
         </p>
 
@@ -193,6 +193,7 @@ function RankingsPage() {
           </summary>
           <p className="text-sm text-gray-500 mt-2">
             Scores are deterministic — built from season performance plus a baseline program prestige signal.
+            Ties on rounded points break by wins, point differential, prestige, school name, then team id.
           </p>
           <div className="grid2" style={{ marginTop: '0.75rem', gap: '0.5rem' }}>
             {[
