@@ -144,12 +144,12 @@ function RosterPage() {
   const offensiveCore = Math.round(
     roster
       .filter((player) => player.position === 'A' || player.position === 'M')
-      .reduce((sum, player, _index, players) => sum + (player.shooting + player.passing + player.IQ) / 3 / players.length, 0),
+      .reduce((sum, player, _index, players) => sum + (player.shooting + player.passing + player.IQ) / (3 * players.length), 0),
   );
   const defensiveCore = Math.round(
     roster
       .filter((player) => player.position === 'D' || player.position === 'LSM' || player.position === 'G')
-      .reduce((sum, player, _index, players) => sum + (player.defense + player.speed + player.IQ) / 3 / players.length, 0),
+      .reduce((sum, player, _index, players) => sum + (player.defense + player.speed + player.IQ) / (3 * players.length), 0),
   );
 
 

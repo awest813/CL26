@@ -94,7 +94,7 @@ export function computeRankings(
       return { team, record, score: scoreTeam({ team, record }, sos) };
     })
     .sort((a, b) => {
-      const roundedScoreDiff = Math.round(b.score) - Math.round(a.score);
+      const roundedScoreDiff = Math.round(b.score - a.score);
       if (roundedScoreDiff !== 0) return roundedScoreDiff;
       if (b.record.wins !== a.record.wins) return b.record.wins - a.record.wins;
       const pointDiff = pointDifferential(b.record) - pointDifferential(a.record);

@@ -22,6 +22,8 @@ const YEAR_LABELS = {
   3: 'Jr',
   4: 'Sr',
 } as const;
+const SENIOR_EXPERIENCE_WEIGHT = 100;
+const UNDERCLASS_EXPERIENCE_WEIGHT = 35;
 
 function rosterAverage(values: number[]): number {
   return values.length > 0 ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
@@ -96,7 +98,9 @@ export const selectTeamWithRosterSummary = createSelector(
         defense: rosterAverage(defenders.map((player) => Math.round((player.defense + player.speed + player.IQ) / 3))),
         faceoff: rosterAverage(faceoff.map((player) => player.overall)),
         goalie: rosterAverage(goalies.map((player) => Math.round((player.defense + player.IQ) / 2))),
-        experience: Math.round((seniors * 100 + underclassmen * 35) / roster.length),
+        experience: Math.round(
+          (seniors * SENIOR_EXPERIENCE_WEIGHT + underclassmen * UNDERCLASS_EXPERIENCE_WEIGHT) / roster.length,
+        ),
       },
     };
   },
