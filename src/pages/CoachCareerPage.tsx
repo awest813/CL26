@@ -204,21 +204,17 @@ function CoachCareerPage() {
   const committedToUserCount = coach.recruitPool.filter(
     (recruit) => recruit.committedTeamId && recruit.committedTeamId === coach.selectedTeamId
   ).length;
-  const signedClassThisYear = useMemo(
-    () => coach.signedRecruitsByYear[season.year] ?? [],
-    [coach.signedRecruitsByYear, season.year],
-  );
-  const signedClassSummary = useMemo(() => {
-    if (signedClassThisYear.length === 0) {
-      return { totalStars: 0, averageStars: 0, blueChipCount: 0 };
-    }
-    const totalStars = signedClassThisYear.reduce((sum, recruit) => sum + recruit.stars, 0);
-    return {
-      totalStars,
-      averageStars: Number((totalStars / signedClassThisYear.length).toFixed(2)),
-      blueChipCount: signedClassThisYear.filter((recruit) => recruit.stars >= 4).length,
-    };
-  }, [signedClassThisYear]);
+  const signedClassThisYear = coach.signedRecruitsByYear[season.year] ?? [];
+  const signedClassSummary = signedClassThisYear.length === 0
+    ? { totalStars: 0, averageStars: 0, blueChipCount: 0 }
+    : (() => {
+      const totalStars = signedClassThisYear.reduce((sum, recruit) => sum + recruit.stars, 0);
+      return {
+        totalStars,
+        averageStars: Number((totalStars / signedClassThisYear.length).toFixed(2)),
+        blueChipCount: signedClassThisYear.filter((recruit) => recruit.stars >= 4).length,
+      };
+    })();
 
   const userRecord = coach.selectedTeamId
     ? recordsByTeamId[coach.selectedTeamId] ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0, pointsFor: 0, pointsAgainst: 0 }
