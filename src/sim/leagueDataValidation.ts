@@ -30,7 +30,7 @@ export function validateLeagueData(conferences: Conference[], teams: Team[]): st
 
   for (const team of teams) {
     if (isBlank(team.id)) errors.push('Team id cannot be blank.');
-    if (teamIds.has(team.id)) errors.push(`Duplicate team id: ${team.id}`);
+    if (!isBlank(team.id) && teamIds.has(team.id)) errors.push(`Duplicate team id: ${team.id}`);
 
     if (isBlank(team.schoolName)) errors.push(`Team ${team.id || '(missing id)'} schoolName cannot be blank.`);
     if (isBlank(team.nickname)) errors.push(`Team ${team.id || '(missing id)'} nickname cannot be blank.`);
