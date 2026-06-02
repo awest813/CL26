@@ -78,6 +78,48 @@ describe('Recruiting Week Simulation', () => {
         assert.strictEqual(newInterest, 45, `Interest should drop by 5 on dealbreaker (got ${newInterest})`);
     });
 
+    test('B+ pitch grade outperforms C grade for the same pitch and hours', () => {
+        const recruit = mockRecruit('r1', {
+            interestByTeamId: { 'team-1': 40 },
+            motivations: [
+                { pitch: 'CAMPUS_LIFE', importance: 'HIGH' },
+                { pitch: 'PROXIMITY', importance: 'MEDIUM' },
+                { pitch: 'ACADEMIC', importance: 'LOW' },
+            ],
+        });
+
+        const withBPlus = simulateRecruitingWeek(
+            [recruit],
+            ['r1'],
+            { 'r1': 10 },
+            { 'r1': 'CAMPUS_LIFE' },
+            { 'r1': 'B+' },
+            {},
+            {},
+            'team-1',
+            12345,
+            0,
+        );
+
+        const withC = simulateRecruitingWeek(
+            [recruit],
+            ['r1'],
+            { 'r1': 10 },
+            { 'r1': 'CAMPUS_LIFE' },
+            { 'r1': 'C' },
+            {},
+            {},
+            'team-1',
+            12345,
+            0,
+        );
+
+        assert.ok(
+            withBPlus.interestByRecruitId['r1']['team-1'] > withC.interestByRecruitId['r1']['team-1'],
+            'B+ should provide a larger recruiting gain than C',
+        );
+    });
+
     test('CPU teams gain interest', () => {
         const recruit = mockRecruit('r1', { interestByTeamId: { 'cpu-1': 50, 'team-1': 50 } });
         const result = simulateRecruitingWeek(

@@ -12,6 +12,7 @@ function getGradeMultiplier(grade?: string): number {
   if (!grade) return 1.0;
   if (grade === 'A+') return 1.5;
   if (grade === 'A') return 1.35;
+  if (grade === 'B+') return 1.27;
   if (grade === 'B') return 1.2;
   if (grade === 'C') return 1.0;
   if (grade === 'D') return 0.8;
@@ -73,7 +74,8 @@ export function simulateRecruitingWeek(
 
         // Archetype bonus (RECRUITER +15%, DEVELOPER -5%, TACTICIAN ±0%)
         // Coach skill scales from 0.85x at skill 40 to 1.15x at skill 99
-        const skillMult = 0.85 + ((coachSkill - 40) / 59) * 0.3;
+        const boundedCoachSkill = Math.max(40, Math.min(99, coachSkill));
+        const skillMult = 0.85 + ((boundedCoachSkill - 40) / 59) * 0.3;
         const baseGain = rawGain * archetypeBonus * skillMult;
 
         let pitchBonus = 0;
