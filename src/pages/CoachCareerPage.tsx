@@ -305,6 +305,8 @@ function CoachCareerPage() {
     const nextSeed = season.seasonSeed + 1;
     await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed }));
     await dispatch(startNewSeason({ seed: nextSeed }));
+    setSeedInput(nextSeed);
+    dispatch(initializeRecruitingBoard({ seed: nextSeed, teams: effectiveRecruitingTeams }));
   }
 
   const isOffseason = season.phase === 'OFFSEASON';

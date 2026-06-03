@@ -12,7 +12,7 @@ import {
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
 import { runCareerWeeklyCycle } from '../features/coach/careerThunks';
-import { buildCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
+import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, GameResult } from '../types/sim';
 
@@ -30,12 +30,6 @@ const PRACTICE_FOCUS_DESCRIPTIONS: Record<PracticeFocus, string> = {
   DISCIPLINE: 'Cuts turnovers and penalties; no direct scoring edge.',
 };
 
-const FOCUS_FATIGUE_DELTA: Record<PracticeFocus, number> = {
-  OFFENSE: 6,
-  DEFENSE: 7,
-  CONDITIONING: -3,
-  DISCIPLINE: 3,
-};
 const MAX_COACH_SKILL_LEVEL = 5;
 
 function fatiguePill(label: string): { bg: string; text: string } {
@@ -187,9 +181,15 @@ function WeeklyHubPage() {
 
   const { bg: fatigueBg, text: fatigueText } = fatiguePill(gamePlan.fatigueLabel);
 
-  // Projected fatigue after this week
-  const focusDelta = FOCUS_FATIGUE_DELTA[coach.practiceFocus];
-  const projectedFatigue = Math.max(0, Math.min(100, coach.teamFatigue + focusDelta));
+  // Projected fatigue after this week — uses the same formula as the actual weekly cycle
+  const projectedFatigue = Math.round(
+    advanceFatigue(
+      coach.teamFatigue,
+      coach.practiceFocus,
+      coach.profile?.archetype,
+      coach.skillTree?.operations,
+    ),
+  );
 
   // Board recruits
   const boardRecruits = useMemo(
