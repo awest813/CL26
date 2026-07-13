@@ -1,5 +1,5 @@
 import type { Player, Position, Recruit, RecruitingPitch, RecruitMotivation, Team } from '../types/sim.ts';
-import { makeRng, pickOne, randInt } from './rng.ts';
+import { makeRng, pickOne, randInt, seedToNumber } from './rng.ts';
 import namesData from '../data/names.json' with { type: 'json' };
 
 const REGIONS = ['Northeast', 'Mid-Atlantic', 'South', 'Midwest', 'West'];
@@ -27,6 +27,16 @@ const POSITION_TARGETS: Record<Position, number> = {
   G: 2,
 };
 
+function shuffleInPlace<T>(rng: () => number, values: T[]): T[] {
+  for (let i = values.length - 1; i > 0; i -= 1) {
+    const j = randInt(rng, 0, i);
+    const tmp = values[i];
+    values[i] = values[j];
+    values[j] = tmp;
+  }
+  return values;
+}
+
 export function generateRecruitPool(seed: number, count = 180): Recruit[] {
   const rng = makeRng(seed);
 
@@ -36,8 +46,8 @@ export function generateRecruitPool(seed: number, count = 180): Recruit[] {
     const potentialBase = 58 + stars * 7;
     const potential = Math.min(99, potentialBase + randInt(rng, -5, 6));
 
-    // Generate unique motivations
-    const shuffledPitches = [...PITCHES].sort(() => rng() - 0.5);
+    // Generate unique motivations via Fisher–Yates shuffle
+    const shuffledPitches = shuffleInPlace(rng, [...PITCHES]);
     const motivations: RecruitMotivation[] = [
       { pitch: shuffledPitches[0], importance: 'HIGH' },
       { pitch: shuffledPitches[1], importance: 'MEDIUM' },
@@ -63,7 +73,8 @@ export function generateRecruitPool(seed: number, count = 180): Recruit[] {
 }
 
 export function generateSuitors(recruit: Recruit, teams: Team[], seed: number): Record<string, number> {
-  const rng = makeRng(seed);
+  // Mix recruit id into the seed so each prospect gets unique suitor noise.
+  const rng = makeRng(seedToNumber(`${seed}:${recruit.id}`));
   const suitors: Record<string, number> = {};
 
   // Score all teams for fit

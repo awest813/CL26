@@ -30,7 +30,10 @@ function Home() {
 
   const primaryAction: DashboardAction = (() => {
     if (phase === 'PRE') return { label: 'Start New Season', link: '/season', primary: true };
-    if (phase === 'REGULAR') return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
+    if (phase === 'REGULAR') {
+      if (careerReady) return { label: `Weekly Hub — Week ${currentWeekIndex + 1}`, link: '/career/week', primary: true };
+      return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
+    }
     if (phase === 'PLAYOFF') return { label: 'Go to Playoffs', link: '/playoffs', primary: true };
     if (phase === 'OFFSEASON') {
       if (careerReady) return { label: 'Finalize Offseason', link: '/career', primary: true };

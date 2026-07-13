@@ -46,7 +46,7 @@ export function buildRecordsFromResults(
         home.confWins += 1;
         away.confLosses += 1;
       }
-    } else {
+    } else if (game.awayScore > game.homeScore) {
       away.wins += 1;
       home.losses += 1;
       if (isConferenceGame) {
@@ -54,6 +54,7 @@ export function buildRecordsFromResults(
         home.confLosses += 1;
       }
     }
+    // Equal scores are ignored (engine should not produce ties).
   });
 
   return records;

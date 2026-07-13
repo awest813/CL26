@@ -17,7 +17,7 @@ import {
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
-import { computeRankings } from '../../sim/rankings';
+import { computeAllSOS, computeRankings } from '../../sim/rankings';
 import { seedToNumber } from '../../sim/rng';
 
 const BASE_WEEKLY_XP = 8;
@@ -126,7 +126,8 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const wins = userRecord.wins;
     const losses = userRecord.losses;
 
-    const rankingsTable = computeRankings(teams, records, 128);
+    const sos = computeAllSOS(season.gameResults, records);
+    const rankingsTable = computeRankings(teams, records, 128, sos);
     const userPollRow = rankingsTable.find((r) => r.teamId === coach.selectedTeamId);
     const pollRank = userPollRow?.rank ?? TOTAL_TEAMS;
     const rankTarget = coach.programExpectations.rankTarget;

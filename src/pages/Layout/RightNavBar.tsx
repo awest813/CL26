@@ -72,7 +72,7 @@ function RightNavBar() {
               {userRecord.confWins + userRecord.confLosses > 0
                 ? ` · ${userRecord.confWins}–${userRecord.confLosses} conf`
                 : ''}
-              {userSeed != null ? ` · #${userSeed} seed` : ''}
+              {userSeed != null ? ` · #${userSeed} proj.` : ''}
             </p>
           )}
           {confStanding && seasonStarted && (

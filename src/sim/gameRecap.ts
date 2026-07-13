@@ -15,8 +15,9 @@ function formatPct(numerator: number, denominator: number): string {
 
 export function buildGameRecap(game: GameSummary, awayName: string, homeName: string): GameRecap {
   const homeWon = game.homeScore > game.awayScore;
-  const winnerName = homeWon ? homeName : awayName;
-  const loserName = homeWon ? awayName : homeName;
+  const awayWon = game.awayScore > game.homeScore;
+  const winnerName = homeWon ? homeName : awayWon ? awayName : homeName;
+  const loserName = homeWon ? awayName : awayWon ? homeName : awayName;
   const margin = Math.abs(game.homeScore - game.awayScore);
 
   const awayShooting = formatPct(game.teamStatsAway.goals, game.teamStatsAway.shots);
@@ -56,9 +57,37 @@ export function buildGameRecap(game: GameSummary, awayName: string, homeName: st
 
   return {
     gameId: game.id,
-    summary: `${winnerName} beat ${loserName} by ${margin} (${game.awayScore}-${game.homeScore}).`,
+    summary: margin === 0
+      ? `${homeName} and ${awayName} finished level (${game.awayScore}-${game.homeScore}).`
+      : `${winnerName} beat ${loserName} by ${margin} (${game.awayScore}-${game.homeScore}).`,
     keyEdge,
     mvp,
     efficiencyNote: `${awayName} shot ${awayShooting}% · ${homeName} shot ${homeShooting}%`,
+  };
+}
+
+/** Adapt a persisted GameResult into the compact GameSummary shape used by recaps. */
+export function gameResultToSummary(result: {
+  id?: string;
+  weekIndex?: number;
+  teamAId: string;
+  teamBId: string;
+  scoreA: number;
+  scoreB: number;
+  statsA: GameSummary['teamStatsHome'];
+  statsB: GameSummary['teamStatsAway'];
+  topPlayersA: NonNullable<GameSummary['topPerformers']>;
+  topPlayersB: NonNullable<GameSummary['topPerformers']>;
+}): GameSummary {
+  return {
+    id: result.id ?? `${result.teamAId}-${result.teamBId}`,
+    weekIndex: result.weekIndex ?? 0,
+    homeTeamId: result.teamAId,
+    awayTeamId: result.teamBId,
+    homeScore: result.scoreA,
+    awayScore: result.scoreB,
+    teamStatsHome: result.statsA,
+    teamStatsAway: result.statsB,
+    topPerformers: [...result.topPlayersA, ...result.topPlayersB],
   };
 }

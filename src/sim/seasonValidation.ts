@@ -94,9 +94,14 @@ function validatePlayoffs(season: SeasonState): SeasonValidationResult | null {
   const playoffs = season.playoffs;
 
   if (!playoffs) {
+    // PLAYOFF with null bracket is a valid transitional state after the regular
+    // season ends and before the user initializes the bracket.
+    if (season.phase === 'PLAYOFF') {
+      return null;
+    }
     return {
       isValid: false,
-      error: 'Season phase is PLAYOFF/OFFSEASON but playoff state is missing.',
+      error: 'Season phase is OFFSEASON but playoff state is missing.',
       phase: season.phase,
     };
   }

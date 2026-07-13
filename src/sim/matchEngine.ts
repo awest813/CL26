@@ -298,8 +298,14 @@ export function simulateGame(
   const possessionsA = Math.round(totalPossessions * shareA);
   const possessionsB = totalPossessions - possessionsA;
 
-  const statsA: TeamGameStats = { teamId: teamA.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, causedTurnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersA.groundBallBonus + groundBallBonusFromTactics(tacticsA))), penalties: 0, faceoffPct: Math.round(shareA * 1000) / 10 };
-  const statsB: TeamGameStats = { teamId: teamB.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, causedTurnovers: 0, groundBalls: Math.max(8, randInt(rng, 22, 35) + Math.round(modifiersB.groundBallBonus + groundBallBonusFromTactics(tacticsB))), penalties: 0, faceoffPct: Math.round((1 - shareA) * 1000) / 10 };
+  const statsA: TeamGameStats = { teamId: teamA.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, causedTurnovers: 0, groundBalls: Math.max(4, randInt(rng, 10, 18) + Math.round(modifiersA.groundBallBonus + groundBallBonusFromTactics(tacticsA))), penalties: 0, faceoffPct: 50 };
+  const statsB: TeamGameStats = { teamId: teamB.team.id, goals: 0, shots: 0, saves: 0, turnovers: 0, causedTurnovers: 0, groundBalls: Math.max(4, randInt(rng, 10, 18) + Math.round(modifiersB.groundBallBonus + groundBallBonusFromTactics(tacticsB))), penalties: 0, faceoffPct: 50 };
+  let faceoffWinsA = 0;
+  let faceoffWinsB = 0;
+
+  // Opening faceoff — align FO win with the possession-share model (no extra RNG).
+  if (shareA >= 0.5) faceoffWinsA += 1;
+  else faceoffWinsB += 1;
 
   const pStatsA = new Map<string, PlayerGameStats>();
   const pStatsB = new Map<string, PlayerGameStats>();
@@ -344,7 +350,6 @@ export function simulateGame(
 
     if (rng() < penaltyChance) {
       offenseStats.penalties += 1;
-      defenseStats.causedTurnovers = (defenseStats.causedTurnovers ?? 0) + 1;
       if (highlights.length < 20 && rng() < 0.25) {
         const c = clockForPossession(possessionIndex, totalPossessions);
         highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} flagged for a push, possession flips.`);
@@ -418,7 +423,7 @@ export function simulateGame(
 
     if (scoringRunLength >= MIN_SCORING_RUN_FOR_HIGHLIGHT && highlights.length < 20 && rng() < SCORING_RUN_HIGHLIGHT_CHANCE) {
       const c = clockForPossession(possessionIndex, totalPossessions);
-      highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} are on a ${scoringRunLength}-goal run.`);
+      highlights.push(`Q${c.quarter} ${c.time} — ${offenseInput.team.schoolName} on a ${scoringRunLength}-goal run.`);
     }
   }
 
@@ -437,6 +442,8 @@ export function simulateGame(
     // Overtime uses the same faceoff model as regulation for the opening draw, then alternates possessions as a compact sudden-death abstraction.
     const overtimeShareA = computeFaceoffShare(rng, ratingA, ratingB, modifiersA, modifiersB);
     let offenseIsA = rng() < overtimeShareA;
+    if (offenseIsA) faceoffWinsA += 1;
+    else faceoffWinsB += 1;
 
     for (let i = 0; i < overtimeTotalPossessions; i += 1) {
       const possessionIndex = totalPossessions + (overtimePeriods - 1) * overtimeTotalPossessions + i;
@@ -457,12 +464,32 @@ export function simulateGame(
   if (statsA.goals === statsB.goals) {
     const teamAStrength = ratingA.offense + modifiersA.offense + ratingA.faceoff * OVERTIME_FACEOFF_WEIGHT;
     const teamBStrength = ratingB.offense + modifiersB.offense + ratingB.faceoff * OVERTIME_FACEOFF_WEIGHT;
-    if (resolveDeadlockWinner(rng, teamAStrength, teamBStrength) === 'A') {
+    const winnerSide = resolveDeadlockWinner(rng, teamAStrength, teamBStrength);
+    if (winnerSide === 'A') {
       statsA.goals += 1;
+      statsA.shots += 1;
+      const shooter = weightedPlayerForGoal(rng, ratingA);
+      ensurePlayerStats(pStatsA, shooter, teamA.team.id).goals += 1;
+      highlights.push(`Final — ${shooter.name} scores the sudden-death winner for ${teamA.team.schoolName}.`);
     } else {
       statsB.goals += 1;
+      statsB.shots += 1;
+      const shooter = weightedPlayerForGoal(rng, ratingB);
+      ensurePlayerStats(pStatsB, shooter, teamB.team.id).goals += 1;
+      highlights.push(`Final — ${shooter.name} scores the sudden-death winner for ${teamB.team.schoolName}.`);
     }
   }
+
+  // Additional faceoff draws after goals keep FO% aligned with the live game (opening FO already counted).
+  const extraFaceoffs = Math.max(0, statsA.goals + statsB.goals);
+  for (let i = 0; i < extraFaceoffs; i += 1) {
+    const drawShare = computeFaceoffShare(rng, ratingA, ratingB, modifiersA, modifiersB);
+    if (rng() < drawShare) faceoffWinsA += 1;
+    else faceoffWinsB += 1;
+  }
+  const faceoffTotal = Math.max(1, faceoffWinsA + faceoffWinsB);
+  statsA.faceoffPct = Math.round((faceoffWinsA / faceoffTotal) * 1000) / 10;
+  statsB.faceoffPct = Math.round((1000 - statsA.faceoffPct * 10)) / 10;
 
   if (overtimePeriods > 0) {
     const winnerName = statsA.goals > statsB.goals ? teamA.team.schoolName : teamB.team.schoolName;
@@ -487,6 +514,15 @@ export function simulateGame(
   const topA = [...pStatsA.values()].sort((a, b) => b.goals + b.assists + b.saves - (a.goals + a.assists + a.saves)).slice(0, 5);
   const topB = [...pStatsB.values()].sort((a, b) => b.goals + b.assists + b.saves - (a.goals + a.assists + a.saves)).slice(0, 5);
 
+  const priorityHighlights = highlights.filter(
+    (line) => /overtime|sudden-death|-goal run/i.test(line),
+  );
+  const otherHighlights = highlights.filter(
+    (line) => !/overtime|sudden-death|-goal run/i.test(line),
+  );
+  const highlightBudget = Math.max(priorityHighlights.length, randInt(rng, 10, 20));
+  const finalHighlights = [...priorityHighlights, ...otherHighlights].slice(0, highlightBudget);
+
   return {
     seed,
     teamAId: teamA.team.id,
@@ -499,6 +535,6 @@ export function simulateGame(
     statsB,
     topPlayersA: topA,
     topPlayersB: topB,
-    highlights: highlights.slice(0, randInt(rng, 10, 20)),
+    highlights: finalHighlights,
   };
 }

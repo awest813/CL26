@@ -330,7 +330,7 @@ export const selectTeamRecords = createSelector(
                   if (game.scoreA > game.scoreB) {
                       records[game.teamAId].wins += 1;
                       if (isConferenceGame) records[game.teamAId].confWins += 1;
-                  } else {
+                  } else if (game.scoreB > game.scoreA) {
                       records[game.teamAId].losses += 1;
                       if (isConferenceGame) records[game.teamAId].confLosses += 1;
                   }
@@ -342,7 +342,7 @@ export const selectTeamRecords = createSelector(
                   if (game.scoreB > game.scoreA) {
                       records[game.teamBId].wins += 1;
                       if (isConferenceGame) records[game.teamBId].confWins += 1;
-                  } else {
+                  } else if (game.scoreA > game.scoreB) {
                       records[game.teamBId].losses += 1;
                       if (isConferenceGame) records[game.teamBId].confLosses += 1;
                   }

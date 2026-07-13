@@ -94,7 +94,10 @@ function SeasonPage() {
   };
 
   const handleReset = () => {
-    if (confirm('Are you sure you want to reset the season? This cannot be undone.')) {
+    const message = coachReady
+      ? 'Reset the season schedule and results? Your coach career, roster, and recruiting board will stay — but season week progress will no longer match recruiting week until you start a new season from Career Office.'
+      : 'Are you sure you want to reset the season? This cannot be undone.';
+    if (confirm(message)) {
       dispatch(resetSeason());
     }
   };
@@ -166,12 +169,20 @@ function SeasonPage() {
 
           {summary.phase === 'REGULAR' && (
             <div className="seasonActionGroup">
-              <button className="btn btn-primary" onClick={handleSimWeek}>
-                Sim Week {displayWeek + 1}
-              </button>
-              <button className="btn" onClick={handleSimSeason}>
-                Sim To End
-              </button>
+              {coachReady ? (
+                <Link to="/career/week" className="btn btn-primary">
+                  Advance in Weekly Hub
+                </Link>
+              ) : (
+                <>
+                  <button className="btn btn-primary" onClick={handleSimWeek}>
+                    Sim Week {displayWeek + 1}
+                  </button>
+                  <button className="btn" onClick={handleSimSeason}>
+                    Sim To End
+                  </button>
+                </>
+              )}
             </div>
           )}
           {summary.phase === 'PLAYOFF' && (

@@ -285,7 +285,11 @@ export function simulatePlayoffRound(
       baseSeed + roundSeedOffset(round) + index,
     );
 
-    const winnerTeamId = result.scoreA >= result.scoreB ? game.homeTeamId : game.awayTeamId;
+    const winnerTeamId = result.scoreA > result.scoreB
+      ? game.homeTeamId
+      : result.scoreB > result.scoreA
+        ? game.awayTeamId
+        : game.homeTeamId; // engine forbids ties; home advances if one appears
 
     return {
       ...game,

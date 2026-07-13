@@ -224,4 +224,61 @@ describe('match engine gameplay modifiers', () => {
 
     assert.ok(foundScoringRunHighlight);
   });
+
+  test('penalties do not inflate caused turnovers', () => {
+    const rosterA = generateRoster(teamA, 'penalty-cto');
+    const rosterB = generateRoster(teamB, 'penalty-cto');
+    const result = simulateGame(
+      { team: teamA, roster: rosterA },
+      { team: teamB, roster: rosterB },
+      tactics,
+      tactics,
+      77,
+    );
+
+    assert.ok((result.statsA.causedTurnovers ?? 0) <= result.statsB.turnovers);
+    assert.ok((result.statsB.causedTurnovers ?? 0) <= result.statsA.turnovers);
+  });
+
+  test('faceoff percentages are on a 0-100 scale and sum near 100', () => {
+    const rosterA = generateRoster(teamA, 'fo-pct');
+    const rosterB = generateRoster(teamB, 'fo-pct');
+    const result = simulateGame(
+      { team: teamA, roster: rosterA },
+      { team: teamB, roster: rosterB },
+      tactics,
+      tactics,
+      88,
+    );
+
+    assert.ok(result.statsA.faceoffPct >= 0 && result.statsA.faceoffPct <= 100);
+    assert.ok(result.statsB.faceoffPct >= 0 && result.statsB.faceoffPct <= 100);
+    assert.ok(Math.abs(result.statsA.faceoffPct + result.statsB.faceoffPct - 100) < 0.2);
+  });
+
+  test('player goal totals match team scores', () => {
+    const rosterA = generateRoster(teamA, 'goal-attribution');
+    const rosterB = generateRoster(teamB, 'goal-attribution');
+    const result = simulateGame(
+      { team: teamA, roster: rosterA },
+      { team: teamB, roster: rosterB },
+      tactics,
+      tactics,
+      91,
+    );
+
+    const goalsA = result.topPlayersA.reduce((sum, player) => sum + player.goals, 0);
+    const goalsB = result.topPlayersB.reduce((sum, player) => sum + player.goals, 0);
+    // topPlayers is capped at 5 per side, so only assert when totals fit in the board
+    if (result.topPlayersA.length < 5) {
+      assert.strictEqual(goalsA, result.scoreA);
+    } else {
+      assert.ok(goalsA <= result.scoreA);
+    }
+    if (result.topPlayersB.length < 5) {
+      assert.strictEqual(goalsB, result.scoreB);
+    } else {
+      assert.ok(goalsB <= result.scoreB);
+    }
+  });
 });

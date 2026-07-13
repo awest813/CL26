@@ -28,7 +28,7 @@ import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts 
 import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, RecruitingPitch, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
-import { computeRankings } from '../sim/rankings';
+import { computeAllSOS, computeRankings } from '../sim/rankings';
 
 const PITCH_LABELS: Record<RecruitingPitch, string> = {
   PLAYING_TIME: 'Play Time',
@@ -129,6 +129,7 @@ function CoachCareerPage() {
   const coach = useAppSelector((state) => state.coach);
   const season = useAppSelector((state) => state.season);
   const recordsByTeamId = useAppSelector(selectTeamRecords);
+  const gameResults = useAppSelector((state) => state.season.gameResults);
   const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
 
   const [search, setSearch] = useState('');
@@ -204,6 +205,7 @@ function CoachCareerPage() {
   const committedToUserCount = coach.recruitPool.filter(
     (recruit) => recruit.committedTeamId && recruit.committedTeamId === coach.selectedTeamId
   ).length;
+  const signingDayResolved = Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, season.year);
   const signedClassThisYear = coach.signedRecruitsByYear[season.year] ?? [];
   const signedClassSummary = signedClassThisYear.length === 0
     ? { totalStars: 0, averageStars: 0, blueChipCount: 0 }
@@ -227,9 +229,10 @@ function CoachCareerPage() {
 
   const pollRank = useMemo(() => {
     if (!coach.selectedTeamId || season.phase === 'PRE') return null;
-    const table = computeRankings(teams, recordsByTeamId, 128);
+    const sos = computeAllSOS(gameResults, recordsByTeamId);
+    const table = computeRankings(teams, recordsByTeamId, 128, sos);
     return table.find((r) => r.teamId === coach.selectedTeamId)?.rank ?? null;
-  }, [coach.selectedTeamId, season.phase, teams, recordsByTeamId]);
+  }, [coach.selectedTeamId, season.phase, teams, recordsByTeamId, gameResults]);
 
   const coachGamePlan = useMemo(
     () =>
@@ -733,7 +736,7 @@ function CoachCareerPage() {
           )}
 
           <div className="flex gap-2 flex-wrap">
-            {signedClassThisYear.length === 0 && (
+            {!signingDayResolved && (
               <button
                 className="btn btn-primary"
                 onClick={() => dispatch(processSigningDay())}
@@ -741,7 +744,7 @@ function CoachCareerPage() {
                 Resolve Signing Day
               </button>
             )}
-            {!seasonEndProcessed && signedClassThisYear.length > 0 && (
+            {signingDayResolved && !seasonEndProcessed && (
               <button
                 className="btn btn-primary"
                 onClick={onEndSeason}
@@ -757,10 +760,12 @@ function CoachCareerPage() {
                 Begin Next Season →
               </button>
             )}
-            {signedClassThisYear.length > 0 && (
+            {signingDayResolved && (
               <div className="text-xs text-gray-500 self-center">
                 {!seasonEndProcessed
-                  ? 'Finalize to update career record and job security.'
+                  ? signedClassThisYear.length === 0
+                    ? 'No signees this year — finalize to update career record and continue.'
+                    : 'Finalize to update career record and job security.'
                   : 'Season recorded. Start next year when ready.'}
               </div>
             )}
@@ -777,8 +782,9 @@ function CoachCareerPage() {
           </div>
           <div className="flex gap-4 text-sm items-start">
             <div className="text-right">
-              <div className="text-xs text-gray-500">Committed</div>
-              <div className="font-bold">{committedToUserCount} / 12</div>
+              <div className="text-xs text-gray-500">Commits</div>
+              <div className="font-bold">{committedToUserCount}</div>
+              <div className="text-xs text-gray-400">{coach.scholarshipsAvailable} scholarships left</div>
             </div>
             <div className="text-right">
               <div className="text-xs text-gray-500">Hours Left</div>

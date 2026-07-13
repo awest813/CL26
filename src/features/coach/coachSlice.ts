@@ -560,8 +560,8 @@ export const processSigningDay = createAsyncThunk(
             return;
         }
 
-        const alreadySigned = coach.signedRecruitsByYear[state.season.year] ?? [];
-        if (alreadySigned.length > 0) {
+        // Empty classes are valid — key presence means signing day already resolved.
+        if (Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, state.season.year)) {
             return;
         }
 
