@@ -17,6 +17,7 @@ import {
   assertCanSoftResetSeason,
   assertCanStartNewSeason,
   canStartNewSeason,
+  playoffStageFor,
   seasonCapabilities,
 } from '../../sim/seasonPhase';
 import { applyPlayoffRoundFatigue } from '../coach/coachSlice';
@@ -359,6 +360,11 @@ export const selectSeasonHasStarted = (state: RootState) => state.season.phase !
 export const selectSeasonCapabilities = createSelector(
   [(state: RootState) => state.season],
   (season) => seasonCapabilities(season),
+);
+
+export const selectPlayoffStage = createSelector(
+  [(state: RootState) => state.season.phase, (state: RootState) => state.season.playoffs],
+  (phase, playoffs) => playoffStageFor(phase, playoffs ?? null),
 );
 
 export const selectWeekGames = (weekIndex: number) => createSelector(

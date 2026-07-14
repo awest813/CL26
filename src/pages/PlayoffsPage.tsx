@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, resetSeason } from '../features/season/seasonSlice';
+import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectSeasonCapabilities, resetSeason } from '../features/season/seasonSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName } from '../types/sim';
 
@@ -20,14 +20,15 @@ function PlayoffsPage() {
   const navigate = useNavigate();
   const summary = useAppSelector(selectSeasonSummary);
   const playoffState = useAppSelector(selectPlayoffState);
+  const capabilities = useAppSelector(selectSeasonCapabilities);
   const teams = useAppSelector((state) => state.league.teams);
   const coach = useAppSelector((state) => state.coach);
   const [actionError, setActionError] = useState<string | null>(null);
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const seedByTeamId = new Map((playoffState?.seeds ?? []).map((seed) => [seed.teamId, seed.seed]));
 
-  const canStart = summary.phase === 'PLAYOFF' && !playoffState;
-  const canSim = summary.phase === 'PLAYOFF' && !!playoffState && !playoffState.championTeamId;
+  const canStart = capabilities.canStartPlayoffs;
+  const canSim = capabilities.canSimPlayoffRound;
   const isComplete = !!playoffState?.championTeamId;
   const hasCareerTeam = Boolean(coach.selectedTeamId);
   const userTeamId = coach.selectedTeamId;

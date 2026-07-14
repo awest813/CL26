@@ -8,6 +8,8 @@ import {
   assertCanStartNewSeason,
   canSoftResetSeason,
   canStartNewSeason,
+  careerOffseasonCapabilities,
+  nextPhaseForEvent,
   playoffStageFor,
   seasonCapabilities,
 } from './seasonPhase.ts';
@@ -119,5 +121,47 @@ describe('seasonPhase state machine', () => {
     assert.equal(caps.canStartPlayoffs, true);
     assert.equal(caps.canSimPlayoffRound, false);
     assert.equal(caps.canResetSeason, false);
+  });
+
+  test('nextPhaseForEvent encodes the happy-path table', () => {
+    assert.equal(nextPhaseForEvent('PRE', 'BEGIN_SEASON'), 'REGULAR');
+    assert.equal(nextPhaseForEvent('REGULAR', 'COMPLETE_REGULAR_SEASON'), 'PLAYOFF');
+    assert.equal(nextPhaseForEvent('PLAYOFF', 'INIT_PLAYOFF_BRACKET', { playoffs: null }), 'PLAYOFF');
+    assert.equal(
+      nextPhaseForEvent('PLAYOFF', 'CROWN_CHAMPION', { playoffs: emptyBracket }),
+      'OFFSEASON',
+    );
+    assert.equal(nextPhaseForEvent('OFFSEASON', 'ADVANCE_NEXT_YEAR'), 'REGULAR');
+    assert.equal(nextPhaseForEvent('PLAYOFF', 'RESET_TO_PRE'), null);
+    assert.equal(nextPhaseForEvent('REGULAR', 'BEGIN_SEASON'), null);
+  });
+
+  test('careerOffseasonCapabilities sequences signing → finalize → advance', () => {
+    const base = {
+      phase: 'OFFSEASON' as const,
+      year: 2026,
+      hasSelectedTeam: true,
+      hasProgramExpectations: true,
+      signedRecruitsByYear: {} as Record<number, unknown>,
+      seasonHistory: [] as Array<{ year: number }>,
+    };
+
+    let caps = careerOffseasonCapabilities(base);
+    assert.equal(caps.canProcessSigningDay, true);
+    assert.equal(caps.canFinalizeSeason, false);
+    assert.equal(caps.canAdvanceNextYear, false);
+
+    caps = careerOffseasonCapabilities({ ...base, signedRecruitsByYear: { 2026: [] } });
+    assert.equal(caps.canProcessSigningDay, false);
+    assert.equal(caps.canFinalizeSeason, true);
+    assert.equal(caps.canAdvanceNextYear, false);
+
+    caps = careerOffseasonCapabilities({
+      ...base,
+      signedRecruitsByYear: { 2026: [] },
+      seasonHistory: [{ year: 2026 }],
+    });
+    assert.equal(caps.canFinalizeSeason, false);
+    assert.equal(caps.canAdvanceNextYear, true);
   });
 });

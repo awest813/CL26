@@ -5,6 +5,7 @@ import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getT
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
 import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
+import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
 
 export const WEEKLY_HOURS_CAP = 120;
@@ -597,13 +598,15 @@ export const processSigningDay = createAsyncThunk(
     async (_, { getState, dispatch }) => {
         const state = getState() as RootState;
         const coach = state.coach;
-
-        if (!coach.selectedTeamId || state.season.phase !== 'OFFSEASON') {
-            return;
-        }
-
-        // Empty classes are valid — key presence means signing day already resolved.
-        if (Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, state.season.year)) {
+        const ceremony = careerOffseasonCapabilities({
+            phase: state.season.phase,
+            year: state.season.year,
+            hasSelectedTeam: Boolean(coach.selectedTeamId),
+            hasProgramExpectations: Boolean(coach.programExpectations),
+            signedRecruitsByYear: coach.signedRecruitsByYear,
+            seasonHistory: coach.seasonHistory,
+        });
+        if (!ceremony.canProcessSigningDay) {
             return;
         }
 

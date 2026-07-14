@@ -22,6 +22,11 @@ import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
 import { computeAllSOS, computeRankings } from '../../sim/rankings';
 import { seedToNumber } from '../../sim/rng';
+import {
+  canSimRegularWeek,
+  careerOffseasonCapabilities,
+  hasSeasonHistoryForYear,
+} from '../../sim/seasonPhase';
 import { startNewSeason } from '../season/seasonSlice';
 
 const BASE_WEEKLY_XP = 8;
@@ -61,12 +66,7 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
     const coach = state.coach;
 
     const canAdvanceRecruiting = coach.recruitPool.length > 0 && Boolean(coach.selectedTeamId);
-    const canSimSeasonWeek =
-      season.phase === 'REGULAR' &&
-      season.scheduleByWeek.length > 0 &&
-      season.currentWeekIndex < season.scheduleByWeek.length;
-
-    if (!canSimSeasonWeek) {
+    if (!canSimRegularWeek(season)) {
       return 'skipped';
     }
 
@@ -122,9 +122,16 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
 
     if (season.phase !== 'OFFSEASON') return;
     if (!coach.selectedTeamId || !coach.programExpectations) return;
-    if (coach.seasonHistory.some((entry) => entry.year === season.year)) return;
-    // Signing day must resolve before finalize (empty class still writes []).
-    if (!Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, season.year)) return;
+
+    const ceremony = careerOffseasonCapabilities({
+      phase: season.phase,
+      year: season.year,
+      hasSelectedTeam: Boolean(coach.selectedTeamId),
+      hasProgramExpectations: Boolean(coach.programExpectations),
+      signedRecruitsByYear: coach.signedRecruitsByYear,
+      seasonHistory: coach.seasonHistory,
+    });
+    if (!ceremony.canFinalizeSeason) return;
 
     const records = selectTeamRecords(state);
     const teams = state.league.teams;
@@ -313,9 +320,16 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
 
     if (season.phase !== 'OFFSEASON') return null;
     if (!coach.selectedTeamId) return null;
-    if (!coach.seasonHistory.some((entry) => entry.year === season.year)) return null;
-    // Signing day must have produced an entry for this year (empty class still records []).
-    if (!Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, season.year)) return null;
+
+    const ceremony = careerOffseasonCapabilities({
+      phase: season.phase,
+      year: season.year,
+      hasSelectedTeam: Boolean(coach.selectedTeamId),
+      hasProgramExpectations: Boolean(coach.programExpectations),
+      signedRecruitsByYear: coach.signedRecruitsByYear,
+      seasonHistory: coach.seasonHistory,
+    });
+    if (!ceremony.canAdvanceNextYear) return null;
 
     const nextSeed = season.seasonSeed + 1;
     await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed }));
@@ -343,7 +357,7 @@ export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { sta
     if (state.season.phase !== 'PRE') {
       throw new Error('beginFirstSeason only runs from preseason.');
     }
-    if (state.coach.seasonHistory.some((entry) => entry.year === state.season.year)) {
+    if (hasSeasonHistoryForYear(state.coach.seasonHistory, state.season.year)) {
       throw new Error(
         `Year ${state.season.year} is already in career history. Finish the offseason handoff or start a new game from Home.`,
       );

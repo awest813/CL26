@@ -29,6 +29,7 @@ import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade } fr
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, RecruitingPitch, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
 import { computeAllSOS, computeRankings } from '../sim/rankings';
+import { careerOffseasonCapabilities } from '../sim/seasonPhase';
 
 const PITCH_LABELS: Record<RecruitingPitch, string> = {
   PLAYING_TIME: 'Play Time',
@@ -206,6 +207,14 @@ function CoachCareerPage() {
     (recruit) => recruit.committedTeamId && recruit.committedTeamId === coach.selectedTeamId
   ).length;
   const signingDayResolved = Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, season.year);
+  const offseasonCaps = careerOffseasonCapabilities({
+    phase: season.phase,
+    year: season.year,
+    hasSelectedTeam: Boolean(coach.selectedTeamId),
+    hasProgramExpectations: Boolean(coach.programExpectations),
+    signedRecruitsByYear: coach.signedRecruitsByYear,
+    seasonHistory: coach.seasonHistory,
+  });
   const signedClassThisYear = coach.signedRecruitsByYear[season.year] ?? [];
   const signedClassSummary = signedClassThisYear.length === 0
     ? { totalStars: 0, averageStars: 0, blueChipCount: 0 }
@@ -316,7 +325,8 @@ function CoachCareerPage() {
     season.phase === 'REGULAR' &&
     season.scheduleByWeek.length > 0 &&
     season.currentWeekIndex < season.scheduleByWeek.length;
-  const seasonEndProcessed = isOffseason && coach.seasonHistory.some(e => e.year === season.year);
+  const seasonEndProcessed = isOffseason && offseasonCaps.canAdvanceNextYear;
+  const canBeginNextYear = offseasonCaps.canAdvanceNextYear;
   const latestSeasonHistory = coach.seasonHistory.length > 0
     ? coach.seasonHistory[coach.seasonHistory.length - 1]
     : null;
@@ -735,7 +745,7 @@ function CoachCareerPage() {
           )}
 
           <div className="flex gap-2 flex-wrap">
-            {!signingDayResolved && (
+            {offseasonCaps.canProcessSigningDay && (
               <button
                 className="btn btn-primary"
                 onClick={() => dispatch(processSigningDay())}
@@ -743,7 +753,7 @@ function CoachCareerPage() {
                 Resolve Signing Day
               </button>
             )}
-            {signingDayResolved && !seasonEndProcessed && (
+            {offseasonCaps.canFinalizeSeason && (
               <button
                 className="btn btn-primary"
                 onClick={onEndSeason}
@@ -751,7 +761,7 @@ function CoachCareerPage() {
                 Finalize Season &amp; Update Record
               </button>
             )}
-            {seasonEndProcessed && (
+            {canBeginNextYear && (
               <button
                 className="btn btn-primary"
                 onClick={onNewSeason}

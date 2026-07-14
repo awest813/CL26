@@ -1,6 +1,12 @@
 /**
  * Pure season phase state machine.
  * Thunks/reducers call these helpers so illegal transitions are rejected in one place.
+ *
+ * Canonical flow:
+ *   PRE --BEGIN_SEASON--> REGULAR --COMPLETE_REGULAR--> PLAYOFF(pending)
+ *     --INIT_BRACKET--> PLAYOFF(active) --CROWN_CHAMPION--> OFFSEASON
+ *     --ADVANCE_NEXT_YEAR--> REGULAR
+ *   Any soft-resettable phase --RESET_TO_PRE--> PRE (force bypasses soft lock)
  */
 import type { PlayoffState, SeasonState } from '../types/sim';
 
@@ -20,6 +26,13 @@ export type SeasonCapabilities = {
   canStartPlayoffs: boolean;
   canSimPlayoffRound: boolean;
   canResetSeason: boolean;
+  /** Season is OFFSEASON; career ceremony gates are checked separately. */
+  canAdvanceNextYear: boolean;
+};
+
+export type CareerOffseasonCapabilities = {
+  canProcessSigningDay: boolean;
+  canFinalizeSeason: boolean;
   canAdvanceNextYear: boolean;
 };
 
@@ -65,6 +78,41 @@ export function canSimulatePlayoffRound(
  */
 export function canSoftResetSeason(phase: SeasonPhase): boolean {
   return phase === 'PRE' || phase === 'REGULAR';
+}
+
+export function hasSigningDayResolved(
+  signedRecruitsByYear: Record<number, unknown>,
+  year: number,
+): boolean {
+  return Object.prototype.hasOwnProperty.call(signedRecruitsByYear, year);
+}
+
+export function hasSeasonHistoryForYear(
+  seasonHistory: Array<{ year: number }>,
+  year: number,
+): boolean {
+  return seasonHistory.some((entry) => entry.year === year);
+}
+
+export function careerOffseasonCapabilities(input: {
+  phase: SeasonPhase;
+  year: number;
+  hasSelectedTeam: boolean;
+  hasProgramExpectations: boolean;
+  signedRecruitsByYear: Record<number, unknown>;
+  seasonHistory: Array<{ year: number }>;
+}): CareerOffseasonCapabilities {
+  const inOffseason = input.phase === 'OFFSEASON' && input.hasSelectedTeam;
+  const signingDone = hasSigningDayResolved(input.signedRecruitsByYear, input.year);
+  const finalized = hasSeasonHistoryForYear(input.seasonHistory, input.year);
+
+  return {
+    canProcessSigningDay: Boolean(inOffseason && !signingDone),
+    canFinalizeSeason: Boolean(
+      inOffseason && input.hasProgramExpectations && signingDone && !finalized,
+    ),
+    canAdvanceNextYear: Boolean(inOffseason && signingDone && finalized),
+  };
 }
 
 export function assertCanStartNewSeason(phase: SeasonPhase): void {
@@ -136,7 +184,7 @@ export function seasonCapabilities(
   season: Pick<SeasonState, 'phase' | 'scheduleByWeek' | 'currentWeekIndex' | 'completedWeeks' | 'playoffs'>,
 ): SeasonCapabilities {
   return {
-    canBeginSeason: canStartNewSeason(season.phase) && season.phase === 'PRE',
+    canBeginSeason: season.phase === 'PRE',
     canSimWeek: canSimRegularWeek(season),
     canStartPlayoffs: canInitializePlayoffs(season),
     canSimPlayoffRound: canSimulatePlayoffRound(season),
@@ -160,4 +208,34 @@ export function playoffStageFor(
   if (!playoffs) return 'PENDING';
   if (playoffs.championTeamId) return 'COMPLETE';
   return 'ACTIVE';
+}
+
+/**
+ * Pure phase transition table for documentation and regression.
+ * Returns null when the event is illegal from `from` (caller should reject).
+ * Bracket pointer is required for playoff sub-stages.
+ */
+export function nextPhaseForEvent(
+  from: SeasonPhase,
+  event: SeasonPhaseEvent,
+  ctx: { playoffs: PlayoffState | null } = { playoffs: null },
+): SeasonPhase | null {
+  switch (event) {
+    case 'BEGIN_SEASON':
+      return from === 'PRE' || from === 'OFFSEASON' ? 'REGULAR' : null;
+    case 'COMPLETE_REGULAR_SEASON':
+      return from === 'REGULAR' ? 'PLAYOFF' : null;
+    case 'INIT_PLAYOFF_BRACKET':
+      return from === 'PLAYOFF' && ctx.playoffs == null ? 'PLAYOFF' : null;
+    case 'CROWN_CHAMPION':
+      return from === 'PLAYOFF' && ctx.playoffs != null && !ctx.playoffs.championTeamId
+        ? 'OFFSEASON'
+        : null;
+    case 'RESET_TO_PRE':
+      return canSoftResetSeason(from) ? 'PRE' : null;
+    case 'ADVANCE_NEXT_YEAR':
+      return from === 'OFFSEASON' ? 'REGULAR' : null;
+    default:
+      return null;
+  }
 }
