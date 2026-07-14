@@ -127,11 +127,11 @@ describe('Recruiting Logic', () => {
     test('estimateRecruitFit includes motivations', () => {
         const team = {
             prestige: 90,
-            state: 'MA'
+            region: 'Northeast',
         } as unknown as Team;
 
         const recruit = {
-            homeState: 'MA',
+            region: 'Northeast',
             stars: 3,
             potential: 70,
             motivations: [
@@ -141,9 +141,23 @@ describe('Recruiting Logic', () => {
             ]
         } as unknown as Recruit;
 
-        // Should have a high fit because Prestige (High) is A and Proximity (Medium) is A
         const fit = estimateRecruitFit(recruit, team);
+        const baseline = estimateRecruitFit(
+          { ...recruit, motivations: [] } as unknown as Recruit,
+          team,
+        );
+        assert.ok(fit > baseline, `Expected motivation bonus (fit ${fit} vs baseline ${baseline})`);
         assert.ok(fit > 60, `Expected high fit, got ${fit}`);
+    });
+
+    test('proximity grades treat neighboring regions as soft matches', () => {
+        const team = { prestige: 70, region: 'Southeast' } as Team;
+        const same = { region: 'Southeast' } as Recruit;
+        const neighbor = { region: 'South' } as Recruit;
+        const far = { region: 'West' } as Recruit;
+        assert.strictEqual(getTeamPitchGrade(team, 'PROXIMITY', same), 'A+');
+        assert.strictEqual(getTeamPitchGrade(team, 'PROXIMITY', neighbor), 'B');
+        assert.strictEqual(getTeamPitchGrade(team, 'PROXIMITY', far), 'D');
     });
 
     test('generateSuitors creates initial interest for CPU teams', async () => {

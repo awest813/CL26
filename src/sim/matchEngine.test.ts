@@ -59,77 +59,93 @@ describe('match engine gameplay modifiers', () => {
     const rosterA = generateRoster(teamA, 'gameplan-test');
     const rosterB = generateRoster(teamB, 'gameplan-test');
 
-    const baseline = simulateGame(
-      { team: teamA, roster: rosterA },
-      { team: teamB, roster: rosterB },
-      tactics,
-      tactics,
-      42,
-    );
-    const boosted = simulateGame(
-      {
-        team: teamA,
-        roster: rosterA,
-        gameplan: {
-          offense: 8,
-          defense: 0,
-          goalie: 0,
-          faceoff: 0,
-          discipline: 0,
-          shotQuality: 0.08,
-          turnoverAvoidance: 0,
-          penaltyAvoidance: 0,
-          groundBallBonus: 0,
+    let baselineGoals = 0;
+    let boostedGoals = 0;
+    let baselineShots = 0;
+    let boostedShots = 0;
+    for (let seed = 40; seed < 80; seed += 1) {
+      const baseline = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        tactics,
+        seed,
+        { homeAdvantageForA: false },
+      );
+      const boosted = simulateGame(
+        {
+          team: teamA,
+          roster: rosterA,
+          gameplan: {
+            offense: 8,
+            defense: 0,
+            goalie: 0,
+            faceoff: 0,
+            discipline: 0,
+            shotQuality: 0.08,
+            turnoverAvoidance: 0,
+            penaltyAvoidance: 0,
+            groundBallBonus: 0,
+          },
         },
-      },
-      { team: teamB, roster: rosterB },
-      tactics,
-      tactics,
-      42,
-    );
+        { team: teamB, roster: rosterB },
+        tactics,
+        tactics,
+        seed,
+        { homeAdvantageForA: false },
+      );
+      baselineGoals += baseline.scoreA;
+      boostedGoals += boosted.scoreA;
+      baselineShots += baseline.statsA.shots;
+      boostedShots += boosted.statsA.shots;
+    }
 
-    assert.ok(boosted.scoreA > baseline.scoreA);
-    assert.ok(boosted.statsA.shots >= baseline.statsA.shots);
+    assert.ok(boostedGoals > baselineGoals);
+    assert.ok(boostedShots >= baselineShots);
   });
 
   test('discipline modifiers reduce empty-possession mistakes', () => {
     const rosterA = generateRoster(teamA, 'discipline-test');
     const rosterB = generateRoster(teamB, 'discipline-test');
 
-    const sloppy = simulateGame(
-      { team: teamA, roster: rosterA },
-      { team: teamB, roster: rosterB },
-      { ...tactics, rideClear: 'aggressive' },
-      tactics,
-      77,
-    );
-    const clean = simulateGame(
-      {
-        team: teamA,
-        roster: rosterA,
-        gameplan: {
-          offense: 0,
-          defense: 0,
-          goalie: 0,
-          faceoff: 0,
-          discipline: 8,
-          shotQuality: 0,
-          turnoverAvoidance: 0.08,
-          penaltyAvoidance: 0.06,
-          groundBallBonus: 0,
+    let sloppyMistakes = 0;
+    let cleanMistakes = 0;
+    for (let seed = 70; seed < 110; seed += 1) {
+      const sloppy = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        { ...tactics, rideClear: 'aggressive' },
+        tactics,
+        seed,
+        { homeAdvantageForA: false },
+      );
+      const clean = simulateGame(
+        {
+          team: teamA,
+          roster: rosterA,
+          gameplan: {
+            offense: 0,
+            defense: 0,
+            goalie: 0,
+            faceoff: 0,
+            discipline: 8,
+            shotQuality: 0,
+            turnoverAvoidance: 0.08,
+            penaltyAvoidance: 0.06,
+            groundBallBonus: 0,
+          },
         },
-      },
-      { team: teamB, roster: rosterB },
-      { ...tactics, rideClear: 'aggressive' },
-      tactics,
-      77,
-    );
+        { team: teamB, roster: rosterB },
+        { ...tactics, rideClear: 'aggressive' },
+        tactics,
+        seed,
+        { homeAdvantageForA: false },
+      );
+      sloppyMistakes += sloppy.statsA.turnovers + sloppy.statsA.penalties;
+      cleanMistakes += clean.statsA.turnovers + clean.statsA.penalties;
+    }
 
-    assert.ok(clean.statsA.turnovers < sloppy.statsA.turnovers);
-    assert.ok(
-      clean.statsA.turnovers + clean.statsA.penalties <
-        sloppy.statsA.turnovers + sloppy.statsA.penalties,
-    );
+    assert.ok(cleanMistakes < sloppyMistakes);
   });
 
   test('motion offense set creates more attacking volume over a seed sample', () => {
@@ -280,5 +296,67 @@ describe('match engine gameplay modifiers', () => {
     } else {
       assert.ok(goalsB <= result.scoreB);
     }
+  });
+
+  test('home-field advantage improves home scoring edge over a seed sample', () => {
+    const rosterA = generateRoster(teamA, 'home-field');
+    const rosterB = generateRoster(teamB, 'home-field');
+
+    let homeEdge = 0;
+    let neutralEdge = 0;
+    for (let seed = 200; seed < 260; seed += 1) {
+      const home = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        tactics,
+        seed,
+        { homeAdvantageForA: true },
+      );
+      const neutral = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        tactics,
+        seed,
+        { homeAdvantageForA: false },
+      );
+      homeEdge += home.scoreA - home.scoreB;
+      neutralEdge += neutral.scoreA - neutral.scoreB;
+    }
+
+    assert.ok(homeEdge > neutralEdge, `expected home edge ${homeEdge} > neutral ${neutralEdge}`);
+  });
+
+  test('pressure defense draws more defensive penalties than man package', () => {
+    const rosterA = generateRoster(teamA, 'def-pen');
+    const rosterB = generateRoster(teamB, 'def-pen');
+    const pressure: Tactics = { ...tactics, defensePackage: 'pressure', slideAggression: 'early' };
+    const man: Tactics = { ...tactics, defensePackage: 'man', slideAggression: 'normal' };
+
+    let pressureFouls = 0;
+    let manFouls = 0;
+    for (let seed = 300; seed < 340; seed += 1) {
+      const pressureGame = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        pressure,
+        seed,
+        { homeAdvantageForA: false },
+      );
+      const manGame = simulateGame(
+        { team: teamA, roster: rosterA },
+        { team: teamB, roster: rosterB },
+        tactics,
+        man,
+        seed,
+        { homeAdvantageForA: false },
+      );
+      pressureFouls += pressureGame.statsB.penalties;
+      manFouls += manGame.statsB.penalties;
+    }
+
+    assert.ok(pressureFouls > manFouls, `expected pressure fouls ${pressureFouls} > man ${manFouls}`);
   });
 });

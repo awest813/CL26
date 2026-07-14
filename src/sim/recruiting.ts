@@ -1,8 +1,9 @@
 import type { Player, Position, Recruit, RecruitingPitch, RecruitMotivation, Team } from '../types/sim.ts';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng.ts';
 import namesData from '../data/names.json' with { type: 'json' };
+import { LEAGUE_REGIONS } from './leagueDataValidation.ts';
 
-const REGIONS = ['Northeast', 'Mid-Atlantic', 'South', 'Midwest', 'West'];
+const REGIONS = [...LEAGUE_REGIONS];
 const POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 const PITCHES: RecruitingPitch[] = ['PLAYING_TIME', 'PROXIMITY', 'ACADEMIC', 'PRESTIGE', 'CHAMPIONSHIP', 'CAMPUS_LIFE'];
 export const RECRUITING_POSITION_FILTERS: Array<Position | 'ALL'> = ['ALL', 'A', 'M', 'D', 'LSM', 'FO', 'G'];
@@ -14,6 +15,29 @@ export const PITCH_LABELS: Record<RecruitingPitch, string> = {
   CHAMPIONSHIP: 'Winning',
   CAMPUS_LIFE: 'Campus',
 };
+
+/** Neighboring regions still score as a soft proximity match. */
+const REGION_NEIGHBORS: Record<string, string[]> = {
+  Northeast: ['Mid-Atlantic', 'North'],
+  'Mid-Atlantic': ['Northeast', 'Southeast', 'South'],
+  Southeast: ['Mid-Atlantic', 'South'],
+  South: ['Southeast', 'Southwest', 'Midwest', 'Mid-Atlantic'],
+  Midwest: ['North', 'South', 'Southwest', 'West'],
+  Southwest: ['South', 'West', 'Midwest'],
+  West: ['Southwest', 'Midwest', 'North'],
+  North: ['Northeast', 'Midwest', 'West'],
+};
+
+export function regionsAreProximate(teamRegion: string, recruitRegion: string): boolean {
+  if (teamRegion === recruitRegion) return true;
+  return (REGION_NEIGHBORS[teamRegion] ?? []).includes(recruitRegion);
+}
+
+export function proximityPitchGrade(teamRegion: string, recruitRegion: string): string {
+  if (teamRegion === recruitRegion) return 'A+';
+  if (regionsAreProximate(teamRegion, recruitRegion)) return 'B';
+  return 'D';
+}
 
 export function isRecruitingPitch(value: string): value is RecruitingPitch {
   return value in PITCH_LABELS;
@@ -101,8 +125,16 @@ export function generateSuitors(recruit: Recruit, teams: Team[], seed: number): 
 export function estimateRecruitFit(recruit: Recruit, team: Team): number {
   const prestigeWeight = team.prestige * 0.55;
   const starWeight = recruit.stars * 8;
-  const regionBonus = recruit.region === team.region ? 9 : 0;
-  return Math.round(prestigeWeight + starWeight + regionBonus);
+  const regionBonus = team.region === recruit.region ? 9 : regionsAreProximate(team.region, recruit.region) ? 4 : 0;
+  const motivationBonus = recruit.motivations.reduce((sum, motivation) => {
+    if (motivation.pitch === 'PRESTIGE' && motivation.importance === 'HIGH' && team.prestige >= 78) return sum + 4;
+    if (motivation.pitch === 'PROXIMITY' && motivation.importance === 'HIGH' && regionsAreProximate(team.region, recruit.region)) {
+      return sum + 3;
+    }
+    if (motivation.pitch === 'CHAMPIONSHIP' && motivation.importance === 'HIGH' && team.prestige >= 85) return sum + 3;
+    return sum;
+  }, 0);
+  return Math.round(prestigeWeight + starWeight + regionBonus + motivationBonus);
 }
 
 export function buildPositionNeedByPosition(roster?: Player[] | null): Record<Position, number> {
@@ -133,23 +165,22 @@ function playingTimeGradeFromNeed(recruit: Recruit, positionNeedByPosition?: Rec
   return 'C';
 }
 
-export function calculateTeamGrade(team: Team, pitch: RecruitingPitch): string {
+export function calculateTeamGrade(team: Team, pitch: RecruitingPitch, recruitRegion?: string): string {
   // Simplified logic for grades
   switch (pitch) {
     case 'PLAYING_TIME':
       // Simplified: Assume team needs players if prestige is lower
       return team.prestige < 50 ? 'A+' : team.prestige < 70 ? 'B' : 'C';
     case 'PROXIMITY':
-      // This needs region comparison context, simplifying to generic 'B' for now as placeholder
-      // In real logic, we'd pass the recruit's region
-      return 'B';
+      if (!recruitRegion) return 'B';
+      return proximityPitchGrade(team.region, recruitRegion);
     case 'ACADEMIC':
       // Random deterministic based on name length? Or just prestige correlation
       return team.prestige > 80 ? 'A' : team.prestige > 60 ? 'B' : 'C';
     case 'PRESTIGE':
-      return team.prestige > 85 ? 'A+' : team.prestige > 70 ? 'A' : team.prestige > 55 ? 'B' : 'C';
+      return team.prestige > 85 ? 'A+' : team.prestige > 70 ? 'A' : team.prestige > 55 ? 'B' : team.prestige > 40 ? 'C' : 'D';
     case 'CHAMPIONSHIP':
-       return team.prestige > 90 ? 'A+' : team.prestige > 75 ? 'A' : 'C';
+       return team.prestige > 90 ? 'A+' : team.prestige > 75 ? 'A' : team.prestige > 55 ? 'C' : 'D';
     case 'CAMPUS_LIFE':
        return 'B+'; // Everyone has decent campus life in sim
     default:
@@ -168,7 +199,7 @@ export function getTeamPitchGrade(
        if (needDrivenGrade) return needDrivenGrade;
    }
    if (pitch === 'PROXIMITY') {
-       return team.region === recruit.region ? 'A+' : 'D';
+       return proximityPitchGrade(team.region, recruit.region);
    }
-   return calculateTeamGrade(team, pitch);
+   return calculateTeamGrade(team, pitch, recruit.region);
 }

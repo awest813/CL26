@@ -387,10 +387,19 @@ const coachSlice = createSlice({
             }
         });
     },
-    finalizeSigningClass: (state, action: PayloadAction<{ seasonYear: number; signedRecruits: SignedRecruit[] }>) => {
-        const { seasonYear, signedRecruits } = action.payload;
+    finalizeSigningClass: (state, action: PayloadAction<{ seasonYear: number; signedRecruits: SignedRecruit[]; unsignedCommitRecruitIds?: string[] }>) => {
+        const { seasonYear, signedRecruits, unsignedCommitRecruitIds = [] } = action.payload;
         state.signedRecruitsByYear[seasonYear] = signedRecruits;
         state.scholarshipsAvailable = Math.max(0, state.scholarshipsAvailable - signedRecruits.length);
+        // Clear verbal commits that did not receive a scholarship so UI doesn't keep "Committed!" forever.
+        if (unsignedCommitRecruitIds.length > 0) {
+            const unsigned = new Set(unsignedCommitRecruitIds);
+            state.recruitPool.forEach((recruit) => {
+                if (unsigned.has(recruit.id) && recruit.committedTeamId === state.selectedTeamId) {
+                    recruit.committedTeamId = null;
+                }
+            });
+        }
     },
     setManagedRoster: (state, action: PayloadAction<Player[]>) => {
         state.managedRoster = action.payload;
@@ -493,8 +502,14 @@ export const advanceRecruitingWeek = createAsyncThunk(
         const coach = state.coach;
         const teams = state.league.teams;
 
-        const selectedTeam = teams.find(t => t.id === coach.selectedTeamId);
-        if (!selectedTeam) return;
+        const baseTeam = teams.find(t => t.id === coach.selectedTeamId);
+        if (!baseTeam) return;
+
+        const effectivePrestige = Math.max(
+            1,
+            Math.min(100, baseTeam.prestige + (coach.programPrestigeDrift ?? 0)),
+        );
+        const selectedTeam = { ...baseTeam, prestige: effectivePrestige };
 
         // Generate grades
         const pitchGradesByRecruitId: Record<string, string> = {};
@@ -597,10 +612,15 @@ export const processSigningDay = createAsyncThunk(
                 position: recruit.position,
                 potential: recruit.potential,
             }));
+        const signedIdSet = new Set(signingOutcome.signedRecruitIds);
+        const unsignedCommitRecruitIds = committedToUser
+            .filter((recruit) => !signedIdSet.has(recruit.id))
+            .map((recruit) => recruit.id);
 
         dispatch(finalizeSigningClass({
             seasonYear: state.season.year,
             signedRecruits,
+            unsignedCommitRecruitIds,
         }));
     }
 );

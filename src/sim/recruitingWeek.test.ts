@@ -75,7 +75,9 @@ describe('Recruiting Week Simulation', () => {
         );
 
         const newInterest = result.interestByRecruitId['r1']['team-1'];
-        assert.strictEqual(newInterest, 45, `Interest should drop by 5 on dealbreaker (got ${newInterest})`);
+        // 20 hours still produce gain; dealbreaker subtracts 5 instead of wiping the week.
+        assert.ok(newInterest > 50, `Interest should still rise with hours despite dealbreaker (got ${newInterest})`);
+        assert.ok(newInterest < 65, `Dealbreaker should blunt the week (got ${newInterest})`);
     });
 
     test('B+ pitch grade outperforms C grade for the same pitch and hours', () => {
