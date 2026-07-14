@@ -1,6 +1,13 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from './playoffs.ts';
+import { generateRoster } from './generateRoster.ts';
+import {
+  buildPlayoffState,
+  homeAwayByTournamentSeed,
+  selectPlayoffField,
+  simulatePlayoffRound,
+  type PlayoffCoachContext,
+} from './playoffs.ts';
 import type { RankingRow, Team } from '../types/sim.ts';
 
 function createTeams(count = 12): Team[] {
@@ -45,6 +52,87 @@ describe('playoff loop', () => {
     assert.equal(state.rounds.ROUND1[0].awaySeed, 12);
   });
 
+  test('homeAwayByTournamentSeed puts the better seed at home', () => {
+    const seedByTeamId = new Map([
+      ['team-3', 3],
+      ['team-8', 8],
+    ]);
+    const matchup = homeAwayByTournamentSeed('team-8', 'team-3', seedByTeamId);
+    assert.equal(matchup.homeTeamId, 'team-3');
+    assert.equal(matchup.awayTeamId, 'team-8');
+    assert.equal(matchup.homeSeed, 3);
+    assert.equal(matchup.awaySeed, 8);
+  });
+
+  test('quarterfinals place top-4 bye hosts against correct Round 1 winners', () => {
+    const teams = createTeams(12);
+    const seeds = selectPlayoffField(createTop12Rankings());
+    let state = buildPlayoffState(seeds);
+    state = simulatePlayoffRound(state, teams, 4242);
+
+    assert.equal(state.currentRound, 'QUARTERFINAL');
+    assert.equal(state.rounds.QUARTERFINAL.length, 4);
+
+    const qf = state.rounds.QUARTERFINAL;
+    const r1 = state.rounds.ROUND1;
+    assert.equal(qf[0].homeTeamId, 'team-1');
+    assert.equal(qf[0].awayTeamId, r1.find((g) => g.slot === 4)?.winnerTeamId);
+    assert.equal(qf[1].homeTeamId, 'team-4');
+    assert.equal(qf[1].awayTeamId, r1.find((g) => g.slot === 1)?.winnerTeamId);
+    assert.equal(qf[2].homeTeamId, 'team-2');
+    assert.equal(qf[2].awayTeamId, r1.find((g) => g.slot === 3)?.winnerTeamId);
+    assert.equal(qf[3].homeTeamId, 'team-3');
+    assert.equal(qf[3].awayTeamId, r1.find((g) => g.slot === 2)?.winnerTeamId);
+  });
+
+  test('semifinals and final host by tournament seed, not bracket slot order', () => {
+    const teams = createTeams(12);
+    const seeds = selectPlayoffField(createTop12Rankings());
+    const seedByTeamId = new Map(seeds.map((seed) => [seed.teamId, seed.seed]));
+
+    let state = buildPlayoffState(seeds);
+    state = simulatePlayoffRound(state, teams, 1111);
+    state = simulatePlayoffRound(state, teams, 1111);
+
+    assert.equal(state.currentRound, 'SEMIFINAL');
+    for (const game of state.rounds.SEMIFINAL) {
+      assert.ok(
+        game.homeSeed < game.awaySeed,
+        `SF slot ${game.slot}: home seed ${game.homeSeed} should beat away ${game.awaySeed}`,
+      );
+      assert.equal(game.homeSeed, seedByTeamId.get(game.homeTeamId));
+      assert.equal(game.awaySeed, seedByTeamId.get(game.awayTeamId));
+    }
+
+    state = simulatePlayoffRound(state, teams, 1111);
+    assert.equal(state.currentRound, 'FINAL');
+    const final = state.rounds.FINAL[0];
+    assert.ok(final.homeSeed < final.awaySeed);
+    assert.equal(final.homeSeed, seedByTeamId.get(final.homeTeamId));
+  });
+
+  test('simulatePlayoffRound applies coach tactics when coach context is provided', () => {
+    const teams = createTeams(12);
+    const seeds = selectPlayoffField(createTop12Rankings());
+    const coach: PlayoffCoachContext = {
+      teamId: 'team-5',
+      roster: generateRoster(teams[4], 'test-roster'),
+      starterIds: [],
+      tactics: {
+        tempo: 'fast',
+        rideClear: 'aggressive',
+        slideAggression: 'aggressive',
+        offenseSet: 'motion',
+        defensePackage: 'zone',
+      },
+    };
+
+    let state = buildPlayoffState(seeds);
+    state = simulatePlayoffRound(state, teams, 5555, 'test-roster', coach);
+    const r1Game = state.rounds.ROUND1.find((g) => g.homeTeamId === 'team-5' || g.awayTeamId === 'team-5');
+    assert.ok(r1Game?.result, 'coach team Round 1 game should simulate');
+  });
+
   test('simulatePlayoffRound advances through full bracket and produces champion deterministically', () => {
     const teams = createTeams(12);
     const seeds = selectPlayoffField(createTop12Rankings());
@@ -61,12 +149,14 @@ describe('playoff loop', () => {
       assert.equal(state.currentRound, 'SEMIFINAL');
       assert.equal(state.rounds.SEMIFINAL.length, 2);
       assert.ok(state.rounds.SEMIFINAL.every((game) => game.homeSeed === seedByTeamId.get(game.homeTeamId) && game.awaySeed === seedByTeamId.get(game.awayTeamId)));
+      assert.ok(state.rounds.SEMIFINAL.every((game) => game.homeSeed < game.awaySeed));
 
       state = simulatePlayoffRound(state, teams, 98765);
       assert.equal(state.currentRound, 'FINAL');
       assert.equal(state.rounds.FINAL.length, 1);
       assert.equal(state.championTeamId, null);
       assert.ok(state.rounds.FINAL.every((game) => game.homeSeed === seedByTeamId.get(game.homeTeamId) && game.awaySeed === seedByTeamId.get(game.awayTeamId)));
+      assert.ok(state.rounds.FINAL.every((game) => game.homeSeed < game.awaySeed));
 
       state = simulatePlayoffRound(state, teams, 98765);
       assert.equal(state.currentRound, 'FINAL');

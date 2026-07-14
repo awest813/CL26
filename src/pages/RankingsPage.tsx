@@ -26,7 +26,7 @@ function RankingsPage() {
     ? 'Final'
     : summary.completedWeeks > 0
       ? `Week ${summary.completedWeeks}`
-      : 'Pre-Season';
+      : 'Preseason';
 
   const teamById = useMemo(() => {
     return new Map(teams.map((team) => [team.id, team]));

@@ -6,13 +6,13 @@ import {
   selectWeekGames,
   simCurrentWeek,
   simSeason,
-  startNewSeason,
   resetSeason,
 } from '../features/season/seasonSlice';
+import { beginFirstSeason } from '../features/coach/careerThunks';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 const PHASE_LABELS: Record<string, string> = {
-  PRE: 'Pre-Season',
+  PRE: 'Preseason',
   REGULAR: 'Regular Season',
   PLAYOFF: 'Playoffs',
   OFFSEASON: 'Offseason',
@@ -28,6 +28,7 @@ function SeasonPage() {
   const dispatch = useAppDispatch();
   const [seedInput, setSeedInput] = useState(2026);
   const [conferenceFilter, setConferenceFilter] = useState('ALL');
+  const [startError, setStartError] = useState<string | null>(null);
   const summary = useAppSelector(selectSeasonSummary);
   const hasSeason = useAppSelector(selectSeasonHasStarted);
   const teams = useAppSelector((state) => state.league.teams);
@@ -75,12 +76,17 @@ function SeasonPage() {
       }
       return { label: 'Season is complete. Begin a fresh season when ready.', link: null, cta: null };
     }
-    return { label: 'Season is in pre-season setup.', link: null, cta: null };
+    return { label: 'Season is in preseason setup.', link: null, cta: null };
   }, [coachReady, hasSeason, summary.phase]);
 
-  const handleStartSeason = () => {
+  const handleStartSeason = async () => {
     if (!hasValidSeed) return;
-    dispatch(startNewSeason({ seed: seedInput }));
+    setStartError(null);
+    try {
+      await dispatch(beginFirstSeason({ seed: seedInput })).unwrap();
+    } catch (err) {
+      setStartError(err instanceof Error ? err.message : String(err));
+    }
   };
 
   const handleSimWeek = () => {
@@ -95,16 +101,16 @@ function SeasonPage() {
 
   const handleReset = () => {
     const message = coachReady
-      ? 'Reset the season schedule and results? Your coach career, roster, and recruiting board will stay — but season week progress will no longer match recruiting week until you start a new season from Career Office.'
+      ? 'Reset the season schedule and results? Your coach career, roster, and recruiting board will stay — calendar year is preserved, but you will need to begin the season again from Preseason.'
       : 'Are you sure you want to reset the season? This cannot be undone.';
     if (confirm(message)) {
-      dispatch(resetSeason());
+      dispatch(resetSeason(coachReady ? { preserveYear: true } : undefined));
     }
   };
 
   const handleNewSeason = () => {
-    if (confirm('Start a fresh season from pre-season? This will clear current season progression.')) {
-      dispatch(resetSeason());
+    if (confirm('Start a fresh season from preseason? This will clear current season progression.')) {
+      dispatch(resetSeason(coachReady ? { preserveYear: true } : undefined));
     }
   };
 
@@ -112,14 +118,26 @@ function SeasonPage() {
     return (
       <div className="pageStack">
         <div className="pageHeader">
-          <h2>Start New Season</h2>
-          <p className="pageHeader-sub">Configure your seed to generate this year&apos;s schedules and CPU rosters.</p>
+          <h2>Begin Season</h2>
+          <p className="pageHeader-sub">
+            {coachReady
+              ? 'Set the season seed to generate schedules, refresh your roster draw, and open recruiting.'
+              : 'Configure your seed to generate this year\'s schedules and CPU rosters.'}
+          </p>
         </div>
+
+        {!coachReady && (
+          <div className="card border border-amber-200 bg-amber-50 text-sm text-amber-900">
+            Career setup is not finished. You can still start a spectator season, or{' '}
+            <Link to="/career/setup" className="underline font-semibold">create your coach</Link> first for the full loop.
+          </div>
+        )}
 
         <div className="card max-w-lg mx-auto w-full">
           <p className="m-0 mb-4 text-sm text-gray-600">
             The season seed controls schedule generation and the entire CPU league roster draw. Those rosters stay
             fixed for this year and refresh when you start a later season with a new seed.
+            {coachReady && ' Your managed roster and recruiting board will sync to this seed when you begin.'}
           </p>
 
           <div className="flex gap-4 items-end mb-4">
@@ -145,6 +163,7 @@ function SeasonPage() {
           </div>
 
           {!hasValidSeed && <p className="text-sm text-red-600 mt-1">Enter a valid numeric seed to begin.</p>}
+          {startError && <p className="text-sm text-red-600 mt-1">{startError}</p>}
 
           <div className="flex justify-end">
             <button className="btn btn-primary" onClick={handleStartSeason} disabled={!hasValidSeed}>

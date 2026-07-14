@@ -832,7 +832,10 @@ function CoachCareerPage() {
                     <div className="text-xs text-amber-700">No active targets: season advances with CPU recruiting only.</div>
                   )}
                   {season.phase === 'PRE' && (
-                    <div className="text-xs text-gray-500">Start the season from the Season Dashboard to unlock weekly advancement.</div>
+                    <div className="text-xs text-gray-500">
+                      Preseason: begin the season from the Season Dashboard to open recruiting and the weekly cycle.
+                      You can still build a prospect board now — hours advance once the season starts.
+                    </div>
                   )}
                   {season.phase === 'PLAYOFF' && (
                     <div className="text-xs text-gray-500">Weekly cycle is locked during playoffs.</div>

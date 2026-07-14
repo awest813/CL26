@@ -935,6 +935,7 @@ input:focus-visible {
 /* Playoff game loser dimming */
 .line-through-gentle {
   opacity: 0.55;
+  text-decoration: line-through;
 }
 
 /* Collapsible details/summary — used in RankingsPage formula section */

@@ -11,7 +11,7 @@ type DashboardAction = {
 };
 
 const PHASE_STATUS_LABEL: Record<string, string> = {
-  PRE: 'Pre-Season',
+  PRE: 'Preseason',
   PLAYOFF: 'Playoffs',
   OFFSEASON: 'Offseason',
 };
@@ -29,7 +29,10 @@ function Home() {
     phase === 'REGULAR' ? `Week ${currentWeekIndex + 1}` : (PHASE_STATUS_LABEL[phase] ?? phase);
 
   const primaryAction: DashboardAction = (() => {
-    if (phase === 'PRE') return { label: 'Start New Season', link: '/season', primary: true };
+    if (phase === 'PRE') {
+      if (!careerReady) return { label: 'Career Setup', link: '/career/setup', primary: true };
+      return { label: 'Begin Season', link: '/season', primary: true };
+    }
     if (phase === 'REGULAR') {
       if (careerReady) return { label: `Weekly Hub — Week ${currentWeekIndex + 1}`, link: '/career/week', primary: true };
       return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
@@ -100,7 +103,7 @@ function Home() {
           </div>
           <div className="stat-item">
             <dt className="stat-label">Seed</dt>
-            <dd className="value value-compact">{seasonSeed || '-'}</dd>
+            <dd className="value value-compact">{seasonStarted ? seasonSeed : '—'}</dd>
           </div>
         </dl>
       </section>

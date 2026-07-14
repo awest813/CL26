@@ -327,3 +327,33 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
     return nextSeed;
   },
 );
+
+/**
+ * PRE → REGULAR handoff for the first (or reset) season.
+ * Generates the schedule, refreshes the managed roster to the season seed, and opens recruiting.
+ */
+export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { state: RootState }>(
+  'coach/beginFirstSeason',
+  async ({ seed }, { dispatch, getState }) => {
+    const state = getState();
+    if (state.season.phase !== 'PRE') {
+      throw new Error('beginFirstSeason only runs from preseason.');
+    }
+
+    await dispatch(startNewSeason({ seed })).unwrap();
+
+    const after = getState();
+    if (after.coach.selectedTeamId && after.coach.onboardingStep === 'READY') {
+      await dispatch(initializeManagedRoster());
+      const drift = after.coach.programPrestigeDrift ?? 0;
+      const recruitingTeams = after.league.teams.map((team) =>
+        team.id === after.coach.selectedTeamId
+          ? { ...team, prestige: Math.max(1, Math.min(100, team.prestige + drift)) }
+          : team,
+      );
+      dispatch(initializeRecruitingBoard({ seed, teams: recruitingTeams }));
+    }
+
+    return seed;
+  },
+);

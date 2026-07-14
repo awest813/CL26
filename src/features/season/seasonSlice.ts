@@ -10,6 +10,7 @@ import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../
 import { computeAllSOS, computePlayoffProjection, computeRankings } from '../../sim/rankings';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { seedToNumber } from '../../sim/rng';
+import { applyPlayoffRoundFatigue } from '../coach/coachSlice';
 
 const DEFAULT_TACTICS = {
   tempo: 'normal',
@@ -177,6 +178,20 @@ export const startPlayoffs = createAsyncThunk(
     'season/startPlayoffs',
     async (_, { getState }) => {
         const state = getState() as RootState;
+
+        if (state.season.phase !== 'PLAYOFF') {
+            throw new Error('Regular season must be complete before starting playoffs.');
+        }
+        if (state.season.playoffs) {
+            throw new Error('Playoff bracket has already been initialized.');
+        }
+        if (
+            state.season.scheduleByWeek.length === 0 ||
+            state.season.completedWeeks < state.season.scheduleByWeek.length
+        ) {
+            throw new Error('Cannot start playoffs before the regular season schedule is finished.');
+        }
+
         const teams = selectTeams(state);
         const records = selectTeamRecords(state);
         const sos = computeAllSOS(state.season.gameResults, records);
@@ -191,7 +206,7 @@ export const startPlayoffs = createAsyncThunk(
 
 export const simNextPlayoffRound = createAsyncThunk(
     'season/simNextPlayoffRound',
-    async (_, { getState }) => {
+    async (_, { dispatch, getState }) => {
         const state = getState() as RootState;
         const playoffState = state.season.playoffs;
         const teams = selectTeams(state);
@@ -201,6 +216,7 @@ export const simNextPlayoffRound = createAsyncThunk(
 
         // Use a base seed for simulation
         const baseSeed = state.season.seasonSeed + 9999;
+        const rosterSeed = leagueSeasonRosterSeed(state.season.seasonSeed);
 
         const coachGamePlan = coach.selectedTeamId
           ? buildCoachGamePlan({
@@ -213,24 +229,52 @@ export const simNextPlayoffRound = createAsyncThunk(
             })
           : null;
 
-        const coachPlay =
-          coach.selectedTeamId && coach.managedRoster && coach.managedRoster.length > 0
-            ? {
-                teamId: coach.selectedTeamId,
-                roster: coach.managedRoster,
-                starterIds: coach.starterIds,
-                tactics: coachGamePlan?.tactics ?? DEFAULT_TACTICS,
-                modifiers: coachGamePlan?.modifiers,
-              }
-            : null;
+        // Always apply coach tactics/modifiers when a program is selected — fall back to
+        // generated roster if managed roster is empty (same as regular-season week sim).
+        let coachPlay: {
+          teamId: string;
+          roster: ReturnType<typeof generateRoster>;
+          starterIds: string[];
+          tactics: typeof DEFAULT_TACTICS | NonNullable<typeof coachGamePlan>['tactics'];
+          modifiers: NonNullable<typeof coachGamePlan>['modifiers'] | undefined;
+        } | null = null;
 
-        return simulatePlayoffRound(
+        if (coach.selectedTeamId) {
+          const coachTeam = teams.find((t) => t.id === coach.selectedTeamId);
+          const roster =
+            coach.managedRoster && coach.managedRoster.length > 0
+              ? coach.managedRoster
+              : coachTeam
+                ? generateRoster(coachTeam, rosterSeed)
+                : [];
+          coachPlay = {
+            teamId: coach.selectedTeamId,
+            roster,
+            starterIds: coach.starterIds,
+            tactics: coachGamePlan?.tactics ?? DEFAULT_TACTICS,
+            modifiers: coachGamePlan?.modifiers,
+          };
+        }
+
+        const roundBefore = playoffState.currentRound;
+        const nextState = simulatePlayoffRound(
           playoffState,
           teams,
           baseSeed,
-          leagueSeasonRosterSeed(state.season.seasonSeed),
+          rosterSeed,
           coachPlay,
         );
+
+        // Playoff round fatigue: playing teams take a week of load; byes / eliminated rest.
+        if (coach.selectedTeamId) {
+          const playedThisRound = playoffState.rounds[roundBefore].some(
+            (game) =>
+              game.homeTeamId === coach.selectedTeamId || game.awayTeamId === coach.selectedTeamId,
+          );
+          dispatch(applyPlayoffRoundFatigue({ played: playedThisRound }));
+        }
+
+        return nextState;
     }
 );
 
@@ -242,7 +286,11 @@ const seasonSlice = createSlice({
     setCurrentWeek: (state, action: PayloadAction<number>) => {
       state.currentWeekIndex = action.payload;
     },
-    resetSeason: () => initialState,
+    /** Clears schedule/results/playoffs back to PRE. Optionally keeps calendar year for mid-career resets. */
+    resetSeason: (state, action: PayloadAction<{ preserveYear?: boolean } | undefined>) => {
+      const year = action?.payload?.preserveYear ? state.year : initialState.year;
+      return { ...initialState, year };
+    },
   },
   extraReducers: (builder) => {
     builder

@@ -536,7 +536,7 @@ function WeeklyHubPage() {
                   : season.phase === 'OFFSEASON'
                     ? 'Head to Career to finalize the offseason.'
                     : season.phase === 'PRE'
-                      ? 'Start the season from the Season Dashboard.'
+                      ? 'Begin the season from the Season Dashboard to unlock weekly advances.'
                       : 'Season complete.'}
             </p>
           </div>
@@ -561,7 +561,7 @@ function WeeklyHubPage() {
             )}
             {season.phase === 'PRE' && (
               <Link to="/season" className="btn btn-primary">
-                Season Dashboard →
+                Begin Season →
               </Link>
             )}
             <Link to="/season" className="btn text-sm">

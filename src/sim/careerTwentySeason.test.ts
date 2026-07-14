@@ -6,12 +6,11 @@ import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { leagueReducer } from '../features/league/leagueSlice.ts';
-import { seasonReducer, startNewSeason, startPlayoffs, simNextPlayoffRound, selectTeamRecords } from '../features/season/seasonSlice.ts';
+import { seasonReducer, startPlayoffs, simNextPlayoffRound, selectTeamRecords } from '../features/season/seasonSlice.ts';
 import {
   coachReducer,
   setCoachProfile,
   completeCareerSetup,
-  initializeRecruitingBoard,
   addRecruitToBoard,
   setRecruitHours,
   setRecruitPitch,
@@ -23,7 +22,7 @@ import {
 import {
   runCareerWeeklyCycle,
   processSeasonEnd,
-  initializeManagedRoster,
+  beginFirstSeason,
   beginNextCareerSeason,
 } from '../features/coach/careerThunks.ts';
 import { uiReducer } from '../features/ui/uiSlice.ts';
@@ -52,17 +51,6 @@ function createCareerStore() {
 }
 
 type CareerStore = ReturnType<typeof createCareerStore>;
-
-function effectiveTeams(state: RootState) {
-  const selectedTeamId = state.coach.selectedTeamId;
-  const drift = state.coach.programPrestigeDrift ?? 0;
-  if (!selectedTeamId) return state.league.teams;
-  return state.league.teams.map((team) =>
-    team.id === selectedTeamId
-      ? { ...team, prestige: Math.max(1, Math.min(100, team.prestige + drift)) }
-      : team,
-  );
-}
 
 function spendSkillPoints(store: CareerStore) {
   const order: Array<keyof CoachSkillTree> = ['recruiting', 'development', 'operations'];
@@ -233,15 +221,16 @@ describe('20-season head coach career loop', () => {
         programExpectations: setup.programExpectations,
       }),
     );
-    await store.dispatch(initializeManagedRoster());
 
     const seed = 2026;
-    await store.dispatch(startNewSeason({ seed }));
-    store.dispatch(initializeRecruitingBoard({ seed, teams: effectiveTeams(store.getState() as RootState) }));
+    await store.dispatch(beginFirstSeason({ seed }));
 
     assert.ok(store.getState().coach.managedRoster?.length);
+    assert.ok(store.getState().coach.recruitPool.length > 0);
+    assert.strictEqual(store.getState().coach.recruitingSeed, seed);
     assert.strictEqual(store.getState().season.phase, 'REGULAR');
     assert.strictEqual(store.getState().season.year, 2026);
+    assert.strictEqual(store.getState().season.seasonSeed, seed);
 
     for (let seasonIndex = 0; seasonIndex < SEASON_COUNT; seasonIndex += 1) {
       await runOneSeason(store, seasonIndex);

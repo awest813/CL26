@@ -4,7 +4,7 @@ import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit,
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
 import { resolveSigningDay } from '../../sim/offseason';
-import { advanceFatigue } from '../../sim/coachEffects';
+import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
 import { RootState } from '../../store/store';
 
 export const WEEKLY_HOURS_CAP = 120;
@@ -265,6 +265,15 @@ const coachSlice = createSlice({
             ),
         );
     },
+    applyPlayoffRoundFatigue: (state, action: PayloadAction<{ played: boolean }>) => {
+        state.teamFatigue = playoffRoundFatigue(
+            state.teamFatigue,
+            action.payload.played,
+            state.practiceFocus,
+            state.profile?.archetype ?? 'RECRUITER',
+            state.skillTree?.operations ?? 0,
+        );
+    },
     updateJobSecurity: (state, action: PayloadAction<number>) => {
         state.jobSecurity = Math.max(0, Math.min(100, action.payload));
     },
@@ -433,6 +442,7 @@ export const {
     clearRecruitPitch,
     setPracticeFocus,
     advanceCoachWeek,
+    applyPlayoffRoundFatigue,
     allocateProgramResources,
     addCoachXp,
     upgradeCoachSkill,

@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import { applyCoachWeekSettings, advanceFatigue, buildCoachGamePlan, summarizeCoachGamePlan } from './coachEffects.ts';
+import { applyCoachWeekSettings, advanceFatigue, playoffRoundFatigue, buildCoachGamePlan, summarizeCoachGamePlan } from './coachEffects.ts';
 
 const base = {
   tempo: 'normal' as const,
@@ -78,6 +78,13 @@ describe('coach effects', () => {
     const baseline = advanceFatigue(25, 'DEFENSE', 'RECRUITER', 0);
     const skilledOps = advanceFatigue(25, 'DEFENSE', 'RECRUITER', 5);
     assert.ok(skilledOps < baseline);
+  });
+
+  test('playoff round rest recovers fatigue; playing advances it', () => {
+    const rested = playoffRoundFatigue(60, false, 'OFFENSE', 'RECRUITER', 0);
+    const played = playoffRoundFatigue(60, true, 'OFFENSE', 'RECRUITER', 0);
+    assert.ok(rested < 60);
+    assert.ok(played > 60);
   });
 
   test('skill tree boosts lacrosse control points in the game plan', () => {
