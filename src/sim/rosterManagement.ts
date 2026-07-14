@@ -7,6 +7,11 @@ const FACILITIES_BONUS_DIVISOR = 22;
 const OPERATIONS_BONUS_DIVISOR = 2;
 const BOOSTERS_GROWTH_THRESHOLD = 75;
 const TRAIT_BUMP_PROBABILITY = 0.62;
+/** Attributes above this grow slowly; above HARD_CAP they stop. */
+const DEVELOPMENT_SOFT_CAP = 86;
+const DEVELOPMENT_HARD_CAP = 92;
+const WEEKLY_GROWTH_SOFT_OVERALL = 86;
+const WEEKLY_GROWTH_HARD_OVERALL = 92;
 
 type CoachArchetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
 type PracticeFocus = 'OFFENSE' | 'DEFENSE' | 'CONDITIONING' | 'DISCIPLINE';
@@ -22,14 +27,20 @@ export interface CoachDevelopmentInputs {
 
 /** Convert star rating to an approximate overall baseline */
 function starsToBaseline(stars: number): number {
-  // 2★ ~55, 3★ ~65, 4★ ~75, 5★ ~87
-  return 43 + stars * 11;
+  // 2★ ~53, 3★ ~61, 4★ ~69, 5★ ~77 — elite signees are good, not finished products
+  return 37 + stars * 8;
 }
 
 function potentialBaselineBonus(potential: number | undefined, stars: number): number {
   const p = potential ?? 52 + stars * 9;
   const clamped = Math.max(40, Math.min(99, p));
-  return (clamped - 72) * 0.32;
+  return (clamped - 72) * 0.18;
+}
+
+function growthRoom(attribute: number): number {
+  if (attribute >= DEVELOPMENT_HARD_CAP) return 0;
+  if (attribute >= DEVELOPMENT_SOFT_CAP) return 1;
+  return DEVELOPMENT_HARD_CAP - attribute;
 }
 
 /** Generate a player from a signed recruit record */
@@ -91,11 +102,15 @@ export function developPlayers(
   return roster.map((player) => {
     // Freshmen and sophomores develop more
     const growthCeiling =
-      (player.year === 1 ? 5 : player.year === 2 ? 4 : player.year === 3 ? 3 : 1) + totalBonus;
-    const growth = randInt(rng, 0, Math.min(9, growthCeiling));
+      (player.year === 1 ? 4 : player.year === 2 ? 3 : player.year === 3 ? 2 : 1) + totalBonus;
+    const growth = randInt(rng, 0, Math.min(6, growthCeiling));
     if (growth === 0) return player;
 
-    const bump = (base: number) => clamp(base + randInt(rng, 0, growth));
+    const bump = (base: number) => {
+      const room = growthRoom(base);
+      if (room <= 0) return base;
+      return clamp(base + randInt(rng, 0, Math.min(growth, room)));
+    };
     const shooting = bump(player.shooting);
     const passing = bump(player.passing);
     const speed = bump(player.speed);
@@ -122,6 +137,7 @@ function applyTargetedTraitGrowth(player: Player, rng: () => number, targets: Pl
   };
 
   for (const key of targets) {
+    if (growthRoom(updates[key]) <= 0) continue;
     if (rng() < TRAIT_BUMP_PROBABILITY) {
       updates[key] = clamp(updates[key] + 1);
     }
@@ -155,7 +171,7 @@ export function applyWeeklyTraitGrowth(
   const growthSlots = Math.max(
     2,
     Math.min(
-      8,
+      6,
       2 +
         Math.floor((options?.developmentSkill ?? 0) / 2) +
         Math.floor((coachSkill - 60) / 15) +
@@ -175,6 +191,8 @@ export function applyWeeklyTraitGrowth(
   for (let i = 0; i < growthSlots; i += 1) {
     const playerIndex = randInt(rng, 0, mutable.length - 1);
     const player = mutable[playerIndex];
+    if (player.overall >= WEEKLY_GROWTH_HARD_OVERALL) continue;
+    if (player.overall >= WEEKLY_GROWTH_SOFT_OVERALL && rng() > 0.35) continue;
     mutable[playerIndex] = applyTargetedTraitGrowth(player, rng, chosenTraits);
   }
 

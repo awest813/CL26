@@ -74,4 +74,29 @@ describe('roster management progression systems', () => {
     const highOverallGain = highSupport.reduce((sum, p) => sum + (p.overall - 70), 0);
     assert.ok(highOverallGain >= lowOverallGain);
   });
+
+  test('offseason development soft-caps elite attributes', () => {
+    const roster = Array.from({ length: 6 }, (_, i) => ({
+      ...basePlayer(`cap-${i}`),
+      year: 1 as const,
+      shooting: 91,
+      passing: 91,
+      speed: 91,
+      defense: 91,
+      IQ: 91,
+      stamina: 91,
+      discipline: 91,
+      overall: 91,
+      skill: 91,
+    }));
+    const grown = developPlayers(roster, makeRng(222), {
+      coachArchetype: 'DEVELOPER',
+      developmentSkill: 5,
+      facilitiesLevel: 95,
+      operationsSkill: 5,
+      boostersLevel: 95,
+    });
+    assert.ok(grown.every((player) => player.overall <= 94));
+    assert.ok(grown.every((player) => player.shooting <= 93));
+  });
 });

@@ -198,7 +198,7 @@ function ExhibitionPage() {
                 <td>{exhibition.lastResult.statsA.causedTurnovers ?? 0}</td>
                 <td>{exhibition.lastResult.statsA.groundBalls}</td>
                 <td>{exhibition.lastResult.statsA.penalties}</td>
-                <td>{exhibition.lastResult.statsA.faceoffPct}</td>
+                <td>{exhibition.lastResult.statsA.faceoffPct}%</td>
               </tr>
               <tr>
                 <td>{exhibition.lastResult.teamBName}</td>
@@ -209,7 +209,7 @@ function ExhibitionPage() {
                 <td>{exhibition.lastResult.statsB.causedTurnovers ?? 0}</td>
                 <td>{exhibition.lastResult.statsB.groundBalls}</td>
                 <td>{exhibition.lastResult.statsB.penalties}</td>
-                <td>{exhibition.lastResult.statsB.faceoffPct}</td>
+                <td>{exhibition.lastResult.statsB.faceoffPct}%</td>
               </tr>
             </tbody>
           </table>

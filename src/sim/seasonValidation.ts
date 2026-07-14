@@ -27,10 +27,11 @@ function validateRegularSeason(season: SeasonState, teamCount: number): SeasonVa
     };
   }
 
-  if (season.currentWeekIndex < 0 || season.currentWeekIndex > season.scheduleByWeek.length) {
+  // REGULAR must still have weeks remaining; finished schedule flips to PLAYOFF.
+  if (season.currentWeekIndex < 0 || season.currentWeekIndex >= season.scheduleByWeek.length) {
     return {
       isValid: false,
-      error: `Current week index (${season.currentWeekIndex}) is outside schedule bounds (0-${season.scheduleByWeek.length}).`,
+      error: `Current week index (${season.currentWeekIndex}) is outside active regular-season bounds (0-${season.scheduleByWeek.length - 1}).`,
       phase: season.phase,
     };
   }
@@ -68,6 +69,24 @@ function validateRegularSeason(season: SeasonState, teamCount: number): SeasonVa
   return null;
 }
 
+function validatePreseason(season: SeasonState): SeasonValidationResult | null {
+  if (season.scheduleByWeek.length > 0 || season.gameResults.length > 0 || season.playoffs) {
+    return {
+      isValid: false,
+      error: 'Preseason should not retain schedule, results, or playoff bracket state.',
+      phase: season.phase,
+    };
+  }
+  if (season.completedWeeks !== 0 || season.currentWeekIndex !== 0 || season.isComplete) {
+    return {
+      isValid: false,
+      error: 'Preseason week counters should be cleared (week 0, not complete).',
+      phase: season.phase,
+    };
+  }
+  return null;
+}
+
 function validatePlayoffRoundShape(playoffs: PlayoffState): string | null {
   const expectedRoundCounts: Record<PlayoffRoundName, number> = {
     ROUND1: 4,
@@ -94,9 +113,24 @@ function validatePlayoffs(season: SeasonState): SeasonValidationResult | null {
   const playoffs = season.playoffs;
 
   if (!playoffs) {
+    // PLAYOFF with null bracket is a valid transitional state after the regular
+    // season ends and before the user initializes the bracket.
+    if (season.phase === 'PLAYOFF') {
+      if (
+        season.scheduleByWeek.length > 0 &&
+        season.completedWeeks < season.scheduleByWeek.length
+      ) {
+        return {
+          isValid: false,
+          error: 'PLAYOFF phase with pending bracket requires the regular season schedule to be finished.',
+          phase: season.phase,
+        };
+      }
+      return null;
+    }
     return {
       isValid: false,
-      error: 'Season phase is PLAYOFF/OFFSEASON but playoff state is missing.',
+      error: 'Season phase is OFFSEASON but playoff state is missing.',
       phase: season.phase,
     };
   }
@@ -165,6 +199,11 @@ export function validateSeasonState(season: SeasonState, teams: Team[]): SeasonV
       error: 'League data not loaded (0 teams found). Please refresh or reset.',
       phase: season.phase,
     };
+  }
+
+  if (season.phase === 'PRE') {
+    const preseasonError = validatePreseason(season);
+    if (preseasonError) return preseasonError;
   }
 
   if (season.phase === 'REGULAR') {

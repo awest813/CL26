@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import {
     buildPositionNeedByPosition,
     generateRecruitPool,
+    generateSuitors,
     calculateTeamGrade,
     getTeamPitchGrade,
     estimateRecruitFit,
@@ -126,11 +127,11 @@ describe('Recruiting Logic', () => {
     test('estimateRecruitFit includes motivations', () => {
         const team = {
             prestige: 90,
-            state: 'MA'
+            region: 'Northeast',
         } as unknown as Team;
 
         const recruit = {
-            homeState: 'MA',
+            region: 'Northeast',
             stars: 3,
             potential: 70,
             motivations: [
@@ -140,9 +141,23 @@ describe('Recruiting Logic', () => {
             ]
         } as unknown as Recruit;
 
-        // Should have a high fit because Prestige (High) is A and Proximity (Medium) is A
         const fit = estimateRecruitFit(recruit, team);
+        const baseline = estimateRecruitFit(
+          { ...recruit, motivations: [] } as unknown as Recruit,
+          team,
+        );
+        assert.ok(fit > baseline, `Expected motivation bonus (fit ${fit} vs baseline ${baseline})`);
         assert.ok(fit > 60, `Expected high fit, got ${fit}`);
+    });
+
+    test('proximity grades treat neighboring regions as soft matches', () => {
+        const team = { prestige: 70, region: 'Southeast' } as Team;
+        const same = { region: 'Southeast' } as Recruit;
+        const neighbor = { region: 'South' } as Recruit;
+        const far = { region: 'West' } as Recruit;
+        assert.strictEqual(getTeamPitchGrade(team, 'PROXIMITY', same), 'A+');
+        assert.strictEqual(getTeamPitchGrade(team, 'PROXIMITY', neighbor), 'B');
+        assert.strictEqual(getTeamPitchGrade(team, 'PROXIMITY', far), 'D');
     });
 
     test('generateSuitors creates initial interest for CPU teams', async () => {
@@ -166,6 +181,24 @@ describe('Recruiting Logic', () => {
         // Note: With only 3 teams and random selection of 3-5, all might be selected.
         // Let's check that we have some suitors.
         assert.ok(Object.keys(result).length > 0, 'Should generate suitors');
+    });
+
+    test('generateSuitors uses per-recruit seed mixing for variety', () => {
+        const teams = [
+            { id: 't1', schoolName: 'A', nickname: 'A', conferenceId: 'c', region: 'East', prestige: 80 },
+            { id: 't2', schoolName: 'B', nickname: 'B', conferenceId: 'c', region: 'East', prestige: 78 },
+            { id: 't3', schoolName: 'C', nickname: 'C', conferenceId: 'c', region: 'West', prestige: 75 },
+            { id: 't4', schoolName: 'D', nickname: 'D', conferenceId: 'c', region: 'West', prestige: 70 },
+            { id: 't5', schoolName: 'E', nickname: 'E', conferenceId: 'c', region: 'South', prestige: 65 },
+            { id: 't6', schoolName: 'F', nickname: 'F', conferenceId: 'c', region: 'Midwest', prestige: 60 },
+        ] as Team[];
+
+        const pool = generateRecruitPool(2026, 8);
+        const suitorFingerprints = pool.map((recruit) =>
+            JSON.stringify(Object.entries(generateSuitors(recruit, teams, 2026)).sort()),
+        );
+        const unique = new Set(suitorFingerprints);
+        assert.ok(unique.size > 1, 'Different recruits should not share identical suitor maps');
     });
 
     test('isRecruitingPitch validates pitch keys', () => {

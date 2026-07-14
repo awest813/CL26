@@ -220,6 +220,9 @@ function RecruitingBoardPage() {
         <p className="pageHeader-sub">
           Week {coach.recruitingWeekIndex} · {season.year} Class ·{' '}
           {committedToUserCount} committed · {coach.scholarshipsAvailable} scholarships available
+          {committedToUserCount > coach.scholarshipsAvailable
+            ? ' · Signing day will keep only the best fits up to your scholarship cap'
+            : ''}
         </p>
       </div>
 
@@ -241,7 +244,10 @@ function RecruitingBoardPage() {
           </div>
           <div>
             <div className="text-xs text-gray-400 uppercase mb-0.5">Committed</div>
-            <div className="font-bold">{committedToUserCount}</div>
+            <div className={`font-bold ${committedToUserCount > coach.scholarshipsAvailable ? 'text-amber-600' : ''}`}>
+              {committedToUserCount}
+              {committedToUserCount > coach.scholarshipsAvailable ? ' ⚠' : ''}
+            </div>
           </div>
           <div>
             <div className="text-xs text-gray-400 uppercase mb-0.5">Scholarships left</div>

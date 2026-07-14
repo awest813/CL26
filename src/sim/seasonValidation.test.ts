@@ -16,20 +16,21 @@ function createTeams(count = 8): Team[] {
 
 function createRegularSeasonState(teamCount = 8): SeasonState {
   const teams = createTeams(teamCount);
-  const scheduleByWeek = [
+  const makeWeek = (weekIndex: number) =>
     teams.reduce((games, _, i) => {
       if (i % 2 === 0) {
         games.push({
-          id: `w1-g${i}`,
-          weekIndex: 0,
+          id: `w${weekIndex + 1}-g${i}`,
+          weekIndex,
           homeTeamId: teams[i].id,
           awayTeamId: teams[i + 1].id,
           conferenceGame: true,
         });
       }
       return games;
-    }, [] as SeasonState['scheduleByWeek'][number]),
-  ];
+    }, [] as SeasonState['scheduleByWeek'][number]);
+
+  const scheduleByWeek = [makeWeek(0), makeWeek(1)];
 
   const gameResults: SeasonState['gameResults'] = scheduleByWeek[0].map((game, idx) => ({
     id: game.id,
@@ -118,6 +119,93 @@ describe('validateSeasonState', () => {
 
     assert.strictEqual(result.isValid, false);
     assert.match(result.error ?? '', /results mismatch/i);
+  });
+
+  test('allows PLAYOFF phase with null bracket before initialization', () => {
+    const teams = createTeams(12);
+    const state: SeasonState = {
+      year: 2026,
+      currentWeekIndex: 12,
+      completedWeeks: 12,
+      gameResults: [],
+      scheduleByWeek: [],
+      isComplete: false,
+      phase: 'PLAYOFF',
+      seasonSeed: 101,
+      playoffs: null,
+      previousRankByTeamId: {},
+    };
+
+    const result = validateSeasonState(state, teams);
+
+    assert.strictEqual(result.isValid, true);
+  });
+
+  test('fails PLAYOFF pending bracket when regular season is unfinished', () => {
+    const teams = createTeams(8);
+    const state = createRegularSeasonState(8);
+    state.phase = 'PLAYOFF';
+    state.playoffs = null;
+    // completedWeeks still 1 of 1 — ok. Force unfinished:
+    state.scheduleByWeek.push(state.scheduleByWeek[0]);
+    state.completedWeeks = 1;
+    state.currentWeekIndex = 1;
+
+    const result = validateSeasonState(state, teams);
+    assert.strictEqual(result.isValid, false);
+    assert.match(result.error ?? '', /schedule to be finished/i);
+  });
+
+  test('passes clean PRE state and fails dirty PRE leftovers', () => {
+    const teams = createTeams(8);
+    const clean: SeasonState = {
+      year: 2026,
+      currentWeekIndex: 0,
+      completedWeeks: 0,
+      gameResults: [],
+      scheduleByWeek: [],
+      isComplete: false,
+      phase: 'PRE',
+      seasonSeed: 0,
+      playoffs: null,
+      previousRankByTeamId: {},
+    };
+    assert.strictEqual(validateSeasonState(clean, teams).isValid, true);
+
+    const dirty = { ...clean, scheduleByWeek: createRegularSeasonState(8).scheduleByWeek };
+    assert.strictEqual(validateSeasonState(dirty, teams).isValid, false);
+  });
+
+  test('fails REGULAR when week index equals schedule length', () => {
+    const teams = createTeams(8);
+    const state = createRegularSeasonState(8);
+    state.currentWeekIndex = state.scheduleByWeek.length;
+    state.completedWeeks = state.scheduleByWeek.length;
+
+    const result = validateSeasonState(state, teams);
+    assert.strictEqual(result.isValid, false);
+    assert.match(result.error ?? '', /outside active regular-season bounds/i);
+  });
+
+  test('fails OFFSEASON phase if playoff state is missing', () => {
+    const teams = createTeams(12);
+    const state: SeasonState = {
+      year: 2026,
+      currentWeekIndex: 12,
+      completedWeeks: 12,
+      gameResults: [],
+      scheduleByWeek: [],
+      isComplete: true,
+      phase: 'OFFSEASON',
+      seasonSeed: 101,
+      playoffs: null,
+      previousRankByTeamId: {},
+    };
+
+    const result = validateSeasonState(state, teams);
+
+    assert.strictEqual(result.isValid, false);
+    assert.match(result.error ?? '', /playoff state is missing/i);
   });
 
   test('fails playoff phase if playoff seeds are invalid', () => {

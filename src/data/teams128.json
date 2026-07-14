@@ -173,7 +173,7 @@
     {
       "id": "t014",
       "schoolName": "Silver Lake University",
-      "nickname": "Bears",
+      "nickname": "Lynx",
       "conferenceId": "c2",
       "region": "West",
       "prestige": 77
@@ -181,7 +181,7 @@
     {
       "id": "t015",
       "schoolName": "Pioneer State",
-      "nickname": "Falcons",
+      "nickname": "Pioneers",
       "conferenceId": "c2",
       "region": "North",
       "prestige": 82
@@ -189,7 +189,7 @@
     {
       "id": "t016",
       "schoolName": "Stonebridge College",
-      "nickname": "Rangers",
+      "nickname": "Sentinels",
       "conferenceId": "c2",
       "region": "Northeast",
       "prestige": 87
@@ -200,7 +200,7 @@
       "nickname": "Mountaineers",
       "conferenceId": "c3",
       "region": "Southeast",
-      "prestige": 62
+      "prestige": 64
     },
     {
       "id": "t018",
@@ -208,7 +208,7 @@
       "nickname": "Sharks",
       "conferenceId": "c3",
       "region": "Midwest",
-      "prestige": 64
+      "prestige": 65
     },
     {
       "id": "t019",
@@ -232,7 +232,7 @@
       "nickname": "Timberwolves",
       "conferenceId": "c3",
       "region": "West",
-      "prestige": 79
+      "prestige": 78
     },
     {
       "id": "t022",
@@ -240,7 +240,7 @@
       "nickname": "Rams",
       "conferenceId": "c3",
       "region": "North",
-      "prestige": 84
+      "prestige": 82
     },
     {
       "id": "t023",
@@ -248,7 +248,7 @@
       "nickname": "Eagles",
       "conferenceId": "c3",
       "region": "Northeast",
-      "prestige": 89
+      "prestige": 86
     },
     {
       "id": "t024",
@@ -256,7 +256,7 @@
       "nickname": "Dockers",
       "conferenceId": "c3",
       "region": "Mid-Atlantic",
-      "prestige": 48
+      "prestige": 52
     },
     {
       "id": "t025",
@@ -272,7 +272,7 @@
       "nickname": "Jackrabbits",
       "conferenceId": "c4",
       "region": "South",
-      "prestige": 71
+      "prestige": 70
     },
     {
       "id": "t027",
@@ -280,7 +280,7 @@
       "nickname": "Royals",
       "conferenceId": "c4",
       "region": "Southwest",
-      "prestige": 76
+      "prestige": 74
     },
     {
       "id": "t028",
@@ -288,15 +288,15 @@
       "nickname": "Lakers",
       "conferenceId": "c4",
       "region": "West",
-      "prestige": 81
+      "prestige": 79
     },
     {
       "id": "t029",
       "schoolName": "Mountain View Tech",
-      "nickname": "Sentinels",
+      "nickname": "Watchmen",
       "conferenceId": "c4",
       "region": "North",
-      "prestige": 86
+      "prestige": 83
     },
     {
       "id": "t030",
@@ -304,7 +304,7 @@
       "nickname": "Moose",
       "conferenceId": "c4",
       "region": "Northeast",
-      "prestige": 45
+      "prestige": 49
     },
     {
       "id": "t031",
@@ -312,15 +312,15 @@
       "nickname": "Waves",
       "conferenceId": "c4",
       "region": "Mid-Atlantic",
-      "prestige": 50
+      "prestige": 53
     },
     {
       "id": "t032",
       "schoolName": "Pine Grove State",
-      "nickname": "Pioneers",
+      "nickname": "Trailblazers",
       "conferenceId": "c4",
       "region": "Southeast",
-      "prestige": 55
+      "prestige": 57
     },
     {
       "id": "t033",
@@ -328,7 +328,7 @@
       "nickname": "Miners",
       "conferenceId": "c5",
       "region": "South",
-      "prestige": 76
+      "prestige": 75
     },
     {
       "id": "t034",
@@ -336,7 +336,7 @@
       "nickname": "Raptors",
       "conferenceId": "c5",
       "region": "Southwest",
-      "prestige": 78
+      "prestige": 76
     },
     {
       "id": "t035",
@@ -344,7 +344,7 @@
       "nickname": "Summit",
       "conferenceId": "c5",
       "region": "West",
-      "prestige": 83
+      "prestige": 80
     },
     {
       "id": "t036",
@@ -352,7 +352,7 @@
       "nickname": "Beavers",
       "conferenceId": "c5",
       "region": "North",
-      "prestige": 88
+      "prestige": 85
     },
     {
       "id": "t037",
@@ -360,7 +360,7 @@
       "nickname": "Patriots",
       "conferenceId": "c5",
       "region": "Northeast",
-      "prestige": 47
+      "prestige": 51
     },
     {
       "id": "t038",
@@ -368,7 +368,7 @@
       "nickname": "Seagulls",
       "conferenceId": "c5",
       "region": "Mid-Atlantic",
-      "prestige": 52
+      "prestige": 55
     },
     {
       "id": "t039",
@@ -376,7 +376,7 @@
       "nickname": "Bison",
       "conferenceId": "c5",
       "region": "Southeast",
-      "prestige": 57
+      "prestige": 59
     },
     {
       "id": "t040",
@@ -384,7 +384,7 @@
       "nickname": "Stars",
       "conferenceId": "c5",
       "region": "Midwest",
-      "prestige": 62
+      "prestige": 63
     },
     {
       "id": "t041",
@@ -392,7 +392,7 @@
       "nickname": "Axemen",
       "conferenceId": "c6",
       "region": "Southwest",
-      "prestige": 83
+      "prestige": 81
     },
     {
       "id": "t042",
@@ -400,7 +400,7 @@
       "nickname": "Lanterns",
       "conferenceId": "c6",
       "region": "West",
-      "prestige": 85
+      "prestige": 82
     },
     {
       "id": "t043",
@@ -408,7 +408,7 @@
       "nickname": "Cascades",
       "conferenceId": "c6",
       "region": "North",
-      "prestige": 90
+      "prestige": 86
     },
     {
       "id": "t044",
@@ -416,7 +416,7 @@
       "nickname": "Alpinists",
       "conferenceId": "c6",
       "region": "Northeast",
-      "prestige": 49
+      "prestige": 52
     },
     {
       "id": "t045",
@@ -424,7 +424,7 @@
       "nickname": "Builders",
       "conferenceId": "c6",
       "region": "Mid-Atlantic",
-      "prestige": 54
+      "prestige": 57
     },
     {
       "id": "t046",
@@ -432,7 +432,7 @@
       "nickname": "Trappers",
       "conferenceId": "c6",
       "region": "Southeast",
-      "prestige": 59
+      "prestige": 61
     },
     {
       "id": "t047",
@@ -440,7 +440,7 @@
       "nickname": "Plainsmen",
       "conferenceId": "c6",
       "region": "Midwest",
-      "prestige": 64
+      "prestige": 65
     },
     {
       "id": "t048",
@@ -456,7 +456,7 @@
       "nickname": "Islanders",
       "conferenceId": "c7",
       "region": "West",
-      "prestige": 90
+      "prestige": 84
     },
     {
       "id": "t050",
@@ -464,7 +464,7 @@
       "nickname": "Statesmen",
       "conferenceId": "c7",
       "region": "North",
-      "prestige": 46
+      "prestige": 50
     },
     {
       "id": "t051",
@@ -472,7 +472,7 @@
       "nickname": "Dragons",
       "conferenceId": "c7",
       "region": "Northeast",
-      "prestige": 51
+      "prestige": 54
     },
     {
       "id": "t052",
@@ -480,7 +480,7 @@
       "nickname": "Bells",
       "conferenceId": "c7",
       "region": "Mid-Atlantic",
-      "prestige": 56
+      "prestige": 58
     },
     {
       "id": "t053",
@@ -488,7 +488,7 @@
       "nickname": "Mavericks",
       "conferenceId": "c7",
       "region": "Southeast",
-      "prestige": 61
+      "prestige": 62
     },
     {
       "id": "t054",
@@ -504,7 +504,7 @@
       "nickname": "Olympians",
       "conferenceId": "c7",
       "region": "South",
-      "prestige": 71
+      "prestige": 70
     },
     {
       "id": "t056",
@@ -512,7 +512,7 @@
       "nickname": "Pelicans",
       "conferenceId": "c7",
       "region": "Southwest",
-      "prestige": 76
+      "prestige": 73
     },
     {
       "id": "t057",
@@ -648,7 +648,7 @@
       "nickname": "Engineers",
       "conferenceId": "c10",
       "region": "Mid-Atlantic",
-      "prestige": 65
+      "prestige": 66
     },
     {
       "id": "t074",
@@ -664,7 +664,7 @@
       "nickname": "Kings",
       "conferenceId": "c10",
       "region": "Midwest",
-      "prestige": 72
+      "prestige": 71
     },
     {
       "id": "t076",
@@ -672,7 +672,7 @@
       "nickname": "Logs",
       "conferenceId": "c10",
       "region": "South",
-      "prestige": 77
+      "prestige": 76
     },
     {
       "id": "t077",
@@ -680,15 +680,15 @@
       "nickname": "Metros",
       "conferenceId": "c10",
       "region": "Southwest",
-      "prestige": 82
+      "prestige": 80
     },
     {
       "id": "t078",
       "schoolName": "New England Tech",
-      "nickname": "Patriots",
+      "nickname": "Harbormen",
       "conferenceId": "c10",
       "region": "West",
-      "prestige": 87
+      "prestige": 84
     },
     {
       "id": "t079",
@@ -696,7 +696,7 @@
       "nickname": "Monarchs",
       "conferenceId": "c10",
       "region": "North",
-      "prestige": 46
+      "prestige": 50
     },
     {
       "id": "t080",
@@ -704,7 +704,7 @@
       "nickname": "Prairie Dogs",
       "conferenceId": "c10",
       "region": "Northeast",
-      "prestige": 51
+      "prestige": 54
     },
     {
       "id": "t081",
@@ -720,7 +720,7 @@
       "nickname": "Rockies",
       "conferenceId": "c11",
       "region": "Midwest",
-      "prestige": 74
+      "prestige": 73
     },
     {
       "id": "t083",
@@ -728,7 +728,7 @@
       "nickname": "Tigers",
       "conferenceId": "c11",
       "region": "South",
-      "prestige": 79
+      "prestige": 77
     },
     {
       "id": "t084",
@@ -736,7 +736,7 @@
       "nickname": "Peaks",
       "conferenceId": "c11",
       "region": "Southwest",
-      "prestige": 84
+      "prestige": 82
     },
     {
       "id": "t085",
@@ -744,7 +744,7 @@
       "nickname": "Vanguards",
       "conferenceId": "c11",
       "region": "West",
-      "prestige": 89
+      "prestige": 86
     },
     {
       "id": "t086",
@@ -752,7 +752,7 @@
       "nickname": "Commodores",
       "conferenceId": "c11",
       "region": "North",
-      "prestige": 48
+      "prestige": 52
     },
     {
       "id": "t087",
@@ -760,7 +760,7 @@
       "nickname": "Winds",
       "conferenceId": "c11",
       "region": "Northeast",
-      "prestige": 53
+      "prestige": 56
     },
     {
       "id": "t088",
@@ -768,7 +768,7 @@
       "nickname": "Musketeers",
       "conferenceId": "c11",
       "region": "Mid-Atlantic",
-      "prestige": 58
+      "prestige": 60
     },
     {
       "id": "t089",
@@ -776,7 +776,7 @@
       "nickname": "Floods",
       "conferenceId": "c12",
       "region": "Midwest",
-      "prestige": 79
+      "prestige": 77
     },
     {
       "id": "t090",
@@ -784,7 +784,7 @@
       "nickname": "Zions",
       "conferenceId": "c12",
       "region": "South",
-      "prestige": 81
+      "prestige": 78
     },
     {
       "id": "t091",
@@ -792,15 +792,15 @@
       "nickname": "Atlantic",
       "conferenceId": "c12",
       "region": "Southwest",
-      "prestige": 86
+      "prestige": 82
     },
     {
       "id": "t092",
       "schoolName": "Bayou State",
-      "nickname": "Gators",
+      "nickname": "Cypress",
       "conferenceId": "c12",
       "region": "West",
-      "prestige": 45
+      "prestige": 48
     },
     {
       "id": "t093",
@@ -808,7 +808,7 @@
       "nickname": "Centurions",
       "conferenceId": "c12",
       "region": "North",
-      "prestige": 50
+      "prestige": 53
     },
     {
       "id": "t094",
@@ -816,7 +816,7 @@
       "nickname": "Dakotas",
       "conferenceId": "c12",
       "region": "Northeast",
-      "prestige": 55
+      "prestige": 57
     },
     {
       "id": "t095",
@@ -824,7 +824,7 @@
       "nickname": "Emperors",
       "conferenceId": "c12",
       "region": "Mid-Atlantic",
-      "prestige": 60
+      "prestige": 61
     },
     {
       "id": "t096",
@@ -837,10 +837,10 @@
     {
       "id": "t097",
       "schoolName": "Great Lakes College",
-      "nickname": "Lakers",
+      "nickname": "Whitecaps",
       "conferenceId": "c13",
       "region": "South",
-      "prestige": 86
+      "prestige": 83
     },
     {
       "id": "t098",
@@ -848,7 +848,7 @@
       "nickname": "Dutchmen",
       "conferenceId": "c13",
       "region": "Southwest",
-      "prestige": 88
+      "prestige": 84
     },
     {
       "id": "t099",
@@ -856,7 +856,7 @@
       "nickname": "Potatoes",
       "conferenceId": "c13",
       "region": "West",
-      "prestige": 47
+      "prestige": 50
     },
     {
       "id": "t100",
@@ -864,15 +864,15 @@
       "nickname": "Shores",
       "conferenceId": "c13",
       "region": "North",
-      "prestige": 52
+      "prestige": 54
     },
     {
       "id": "t101",
       "schoolName": "Kansas Plains College",
-      "nickname": "Jayhawks",
+      "nickname": "Sunflowers",
       "conferenceId": "c13",
       "region": "Northeast",
-      "prestige": 57
+      "prestige": 59
     },
     {
       "id": "t102",
@@ -880,12 +880,12 @@
       "nickname": "Bayous",
       "conferenceId": "c13",
       "region": "Mid-Atlantic",
-      "prestige": 62
+      "prestige": 63
     },
     {
       "id": "t103",
       "schoolName": "Michigan Coast University",
-      "nickname": "Wolverines",
+      "nickname": "Ironclads",
       "conferenceId": "c13",
       "region": "Southeast",
       "prestige": 67
@@ -896,23 +896,23 @@
       "nickname": "Gamblers",
       "conferenceId": "c13",
       "region": "Midwest",
-      "prestige": 72
+      "prestige": 71
     },
     {
       "id": "t105",
       "schoolName": "Ohio River College",
-      "nickname": "Buckeyes",
+      "nickname": "Harbor Hawks",
       "conferenceId": "c14",
       "region": "Southwest",
-      "prestige": 93
+      "prestige": 87
     },
     {
       "id": "t106",
       "schoolName": "Pennsylvania Tech",
-      "nickname": "Quakers",
+      "nickname": "Keystones",
       "conferenceId": "c14",
       "region": "West",
-      "prestige": 49
+      "prestige": 53
     },
     {
       "id": "t107",
@@ -920,7 +920,7 @@
       "nickname": "Canadiens",
       "conferenceId": "c14",
       "region": "North",
-      "prestige": 54
+      "prestige": 57
     },
     {
       "id": "t108",
@@ -928,20 +928,20 @@
       "nickname": "Reds",
       "conferenceId": "c14",
       "region": "Northeast",
-      "prestige": 59
+      "prestige": 61
     },
     {
       "id": "t109",
       "schoolName": "South Carolina Tech",
-      "nickname": "Gamecocks",
+      "nickname": "Palmettos",
       "conferenceId": "c14",
       "region": "Mid-Atlantic",
-      "prestige": 64
+      "prestige": 65
     },
     {
       "id": "t110",
       "schoolName": "Texas Plains College",
-      "nickname": "Longhorns",
+      "nickname": "Lone Stars",
       "conferenceId": "c14",
       "region": "Southeast",
       "prestige": 69
@@ -952,7 +952,7 @@
       "nickname": "Utes",
       "conferenceId": "c14",
       "region": "Midwest",
-      "prestige": 74
+      "prestige": 73
     },
     {
       "id": "t112",
@@ -960,7 +960,7 @@
       "nickname": "Greens",
       "conferenceId": "c14",
       "region": "South",
-      "prestige": 79
+      "prestige": 76
     },
     {
       "id": "t113",
@@ -973,7 +973,7 @@
     {
       "id": "t114",
       "schoolName": "Appalachian State Tech",
-      "nickname": "Mountaineers",
+      "nickname": "Ridge Runners",
       "conferenceId": "c15",
       "region": "North",
       "prestige": 56
@@ -981,7 +981,7 @@
     {
       "id": "t115",
       "schoolName": "Bison Range University",
-      "nickname": "Bison",
+      "nickname": "Thunder",
       "conferenceId": "c15",
       "region": "Northeast",
       "prestige": 61
@@ -1032,15 +1032,15 @@
       "nickname": "Surfers",
       "conferenceId": "c16",
       "region": "North",
-      "prestige": 61
+      "prestige": 63
     },
     {
       "id": "t122",
       "schoolName": "Iowa Corn College",
-      "nickname": "Cornhuskers",
+      "nickname": "Northstars",
       "conferenceId": "c16",
       "region": "Northeast",
-      "prestige": 63
+      "prestige": 64
     },
     {
       "id": "t123",
@@ -1064,7 +1064,7 @@
       "nickname": "Skyscrapers",
       "conferenceId": "c16",
       "region": "Midwest",
-      "prestige": 78
+      "prestige": 77
     },
     {
       "id": "t126",
@@ -1072,7 +1072,7 @@
       "nickname": "Trailers",
       "conferenceId": "c16",
       "region": "South",
-      "prestige": 83
+      "prestige": 81
     },
     {
       "id": "t127",
@@ -1080,7 +1080,7 @@
       "nickname": "Sounds",
       "conferenceId": "c16",
       "region": "Southwest",
-      "prestige": 88
+      "prestige": 85
     },
     {
       "id": "t128",
@@ -1088,7 +1088,7 @@
       "nickname": "Rios",
       "conferenceId": "c16",
       "region": "West",
-      "prestige": 47
+      "prestige": 51
     }
   ]
 }

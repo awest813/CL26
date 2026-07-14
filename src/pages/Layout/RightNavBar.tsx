@@ -40,6 +40,10 @@ function RightNavBar() {
   );
 
   const userRecord = selectedTeamId ? records[selectedTeamId] : null;
+  const playoffState = useAppSelector((state) => state.season.playoffs);
+  const userBracketSeed = selectedTeamId && playoffState
+    ? playoffState.seeds.find((s) => s.teamId === selectedTeamId)?.seed ?? null
+    : null;
   const userSeed = selectedTeamId
     ? top12.find((s) => s.teamId === selectedTeamId)?.rank ?? null
     : null;
@@ -50,6 +54,17 @@ function RightNavBar() {
     PLAYOFF: 'College Lacrosse Playoff',
     OFFSEASON: 'Offseason',
   };
+
+  const seedLabel =
+    summary.phase === 'PLAYOFF' || summary.phase === 'OFFSEASON'
+      ? userBracketSeed != null
+        ? ` · #${userBracketSeed} seed`
+        : playoffState
+          ? ' · missed field'
+          : ''
+      : userSeed != null
+        ? ` · #${userSeed} proj.`
+        : '';
 
   return (
     <aside className="rightNav dynastyRightRail">
@@ -72,7 +87,7 @@ function RightNavBar() {
               {userRecord.confWins + userRecord.confLosses > 0
                 ? ` · ${userRecord.confWins}–${userRecord.confLosses} conf`
                 : ''}
-              {userSeed != null ? ` · #${userSeed} seed` : ''}
+              {seedLabel}
             </p>
           )}
           {confStanding && seasonStarted && (
@@ -87,9 +102,24 @@ function RightNavBar() {
       <div className="rightNavSection dynastyPanel">
         <h3 className="m-0">Quick Actions</h3>
         <div className="flex flex-col gap-2 mt-2">
-          {careerReady && (
+          {careerReady && summary.phase === 'REGULAR' && (
             <Link to="/career/week" className="btn dynastyRailBtn">
               Weekly Hub
+            </Link>
+          )}
+          {careerReady && summary.phase === 'PLAYOFF' && (
+            <Link to="/playoffs" className="btn dynastyRailBtn">
+              Playoff Bracket
+            </Link>
+          )}
+          {careerReady && summary.phase === 'PRE' && (
+            <Link to="/season" className="btn dynastyRailBtn">
+              Begin Season
+            </Link>
+          )}
+          {careerReady && summary.phase === 'OFFSEASON' && (
+            <Link to="/career" className="btn dynastyRailBtn">
+              Career Office
             </Link>
           )}
           <Link to={careerReady ? '/season' : '/career/setup'} className="btn dynastyRailBtn">
@@ -101,7 +131,7 @@ function RightNavBar() {
           <Link to="/rankings" className="btn dynastyRailBtn">
             Top 25 Poll
           </Link>
-          {seasonStarted && (
+          {seasonStarted && summary.phase !== 'PLAYOFF' && (
             <Link to="/playoffs" className="btn dynastyRailBtn">
               Playoff Bracket
             </Link>

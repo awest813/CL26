@@ -1,7 +1,5 @@
 import type { Recruit, RecruitingPitch, TeamId } from '../types/sim.ts';
-import { makeRng } from './rng.ts';
-
-import { randInt } from './rng.ts';
+import { makeRng, randInt } from './rng.ts';
 
 export interface RecruitingWeekResult {
   interestByRecruitId: Record<string, Record<string, number>>; // recruitId -> teamId -> interest
@@ -91,8 +89,9 @@ export function simulateRecruitingWeek(
         weeklyGain = Math.max(0, Math.round(baseGain + pitchBonus + positionNeedBonus));
       }
 
+      // Dealbreaker penalizes the week instead of wiping earned gains.
       if (dealbreakerViolationsByRecruitId[recruit.id]) {
-        weeklyGain = -5;
+        weeklyGain -= 5;
       }
 
       const decay = boardSet.has(recruit.id) ? 0 : 2;
@@ -101,19 +100,19 @@ export function simulateRecruitingWeek(
     }
 
     // --- 2. CPU Teams Logic ---
-    // Simple logic: existing suitors grow interest slowly (3-6 pts)
+    // Passive CPU pressure is intentionally softer than a focused user hour allocation.
     Object.keys(nextInterestMap).forEach(teamId => {
         if (teamId === selectedTeamId) return; // Skip user
 
         const prev = nextInterestMap[teamId];
-        // CPU teams "try" ~80% of the time, gaining 3-6 points
         const effort = rng();
         let gain = 0;
-        if (effort > 0.2) {
-             gain = randInt(rng, 3, 6);
-        } else {
-             // Occasionally they lose interest or stagnate
-             gain = randInt(rng, -2, 1);
+        if (effort > 0.45) {
+             // ~55% of weeks: modest 1-3 point bump
+             gain = randInt(rng, 1, 3);
+        } else if (effort < 0.2) {
+             // Occasional cool-off
+             gain = randInt(rng, -2, 0);
         }
 
         const next = Math.max(0, Math.min(100, prev + gain));
@@ -129,6 +128,11 @@ export function simulateRecruitingWeek(
             if (interest > bestInterest) {
                 bestInterest = interest;
                 bestTeamId = teamId;
+            } else if (interest === bestInterest && bestTeamId != null) {
+              // Deterministic tie-break by team id so Object key order cannot flip outcomes.
+              if (teamId.localeCompare(bestTeamId) < 0) {
+                bestTeamId = teamId;
+              }
             }
         }
     });

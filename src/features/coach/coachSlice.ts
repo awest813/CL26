@@ -4,7 +4,8 @@ import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit,
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
 import { resolveSigningDay } from '../../sim/offseason';
-import { advanceFatigue } from '../../sim/coachEffects';
+import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
+import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
 
 export const WEEKLY_HOURS_CAP = 120;
@@ -265,6 +266,15 @@ const coachSlice = createSlice({
             ),
         );
     },
+    applyPlayoffRoundFatigue: (state, action: PayloadAction<{ played: boolean }>) => {
+        state.teamFatigue = playoffRoundFatigue(
+            state.teamFatigue,
+            action.payload.played,
+            state.practiceFocus,
+            state.profile?.archetype ?? 'RECRUITER',
+            state.skillTree?.operations ?? 0,
+        );
+    },
     updateJobSecurity: (state, action: PayloadAction<number>) => {
         state.jobSecurity = Math.max(0, Math.min(100, action.payload));
     },
@@ -281,7 +291,13 @@ const coachSlice = createSlice({
         while (state.coachXp >= 100) {
             state.coachXp -= 100;
             state.coachLevel += 1;
-            state.coachSkillPoints += 1;
+            const treeMaxed = Object.values(state.skillTree).every((level) => level >= 5);
+            if (treeMaxed) {
+                // Tree is full — bank a small security bump instead of endless unused points.
+                state.jobSecurity = Math.max(0, Math.min(100, state.jobSecurity + 1));
+            } else {
+                state.coachSkillPoints += 1;
+            }
         }
     },
     upgradeCoachSkill: (state, action: PayloadAction<keyof CoachSkillTree>) => {
@@ -339,6 +355,16 @@ const coachSlice = createSlice({
         state.careerRecord.totalLosses += action.payload.losses;
         if (action.payload.madePlayoffs) state.careerRecord.playoffAppearances += 1;
         if (action.payload.champion) state.careerRecord.championships += 1;
+        if (state.profile) {
+            state.profile.age += 1;
+        }
+    },
+    updateProgramStanding: (state, action: PayloadAction<{
+        careerTier: NonNullable<CoachState['careerTier']>;
+        programExpectations: ProgramExpectations;
+    }>) => {
+        state.careerTier = action.payload.careerTier;
+        state.programExpectations = action.payload.programExpectations;
     },
     resetRecruitingForNewSeason: (state) => {
         state.recruitPool = [];
@@ -371,10 +397,19 @@ const coachSlice = createSlice({
             }
         });
     },
-    finalizeSigningClass: (state, action: PayloadAction<{ seasonYear: number; signedRecruits: SignedRecruit[] }>) => {
-        const { seasonYear, signedRecruits } = action.payload;
+    finalizeSigningClass: (state, action: PayloadAction<{ seasonYear: number; signedRecruits: SignedRecruit[]; unsignedCommitRecruitIds?: string[] }>) => {
+        const { seasonYear, signedRecruits, unsignedCommitRecruitIds = [] } = action.payload;
         state.signedRecruitsByYear[seasonYear] = signedRecruits;
         state.scholarshipsAvailable = Math.max(0, state.scholarshipsAvailable - signedRecruits.length);
+        // Clear verbal commits that did not receive a scholarship so UI doesn't keep "Committed!" forever.
+        if (unsignedCommitRecruitIds.length > 0) {
+            const unsigned = new Set(unsignedCommitRecruitIds);
+            state.recruitPool.forEach((recruit) => {
+                if (unsigned.has(recruit.id) && recruit.committedTeamId === state.selectedTeamId) {
+                    recruit.committedTeamId = null;
+                }
+            });
+        }
     },
     setManagedRoster: (state, action: PayloadAction<Player[]>) => {
         state.managedRoster = action.payload;
@@ -408,6 +443,7 @@ export const {
     clearRecruitPitch,
     setPracticeFocus,
     advanceCoachWeek,
+    applyPlayoffRoundFatigue,
     allocateProgramResources,
     addCoachXp,
     upgradeCoachSkill,
@@ -421,6 +457,7 @@ export const {
     updateJobSecurity,
     recordSeasonEnd,
     resetRecruitingForNewSeason,
+    updateProgramStanding,
     setManagedRoster,
     setStarterIds,
     toggleStarter,
@@ -476,8 +513,14 @@ export const advanceRecruitingWeek = createAsyncThunk(
         const coach = state.coach;
         const teams = state.league.teams;
 
-        const selectedTeam = teams.find(t => t.id === coach.selectedTeamId);
-        if (!selectedTeam) return;
+        const baseTeam = teams.find(t => t.id === coach.selectedTeamId);
+        if (!baseTeam) return;
+
+        const effectivePrestige = Math.max(
+            1,
+            Math.min(100, baseTeam.prestige + (coach.programPrestigeDrift ?? 0)),
+        );
+        const selectedTeam = { ...baseTeam, prestige: effectivePrestige };
 
         // Generate grades
         const pitchGradesByRecruitId: Record<string, string> = {};
@@ -555,13 +598,15 @@ export const processSigningDay = createAsyncThunk(
     async (_, { getState, dispatch }) => {
         const state = getState() as RootState;
         const coach = state.coach;
-
-        if (!coach.selectedTeamId || state.season.phase !== 'OFFSEASON') {
-            return;
-        }
-
-        const alreadySigned = coach.signedRecruitsByYear[state.season.year] ?? [];
-        if (alreadySigned.length > 0) {
+        const ceremony = careerOffseasonCapabilities({
+            phase: state.season.phase,
+            year: state.season.year,
+            hasSelectedTeam: Boolean(coach.selectedTeamId),
+            hasProgramExpectations: Boolean(coach.programExpectations),
+            signedRecruitsByYear: coach.signedRecruitsByYear,
+            seasonHistory: coach.seasonHistory,
+        });
+        if (!ceremony.canProcessSigningDay) {
             return;
         }
 
@@ -580,10 +625,15 @@ export const processSigningDay = createAsyncThunk(
                 position: recruit.position,
                 potential: recruit.potential,
             }));
+        const signedIdSet = new Set(signingOutcome.signedRecruitIds);
+        const unsignedCommitRecruitIds = committedToUser
+            .filter((recruit) => !signedIdSet.has(recruit.id))
+            .map((recruit) => recruit.id);
 
         dispatch(finalizeSigningClass({
             seasonYear: state.season.year,
             signedRecruits,
+            unsignedCommitRecruitIds,
         }));
     }
 );

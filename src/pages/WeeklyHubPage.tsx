@@ -8,6 +8,7 @@ import {
 import {
   setPracticeFocus,
   setRecruitHours,
+  selectUserEffectivePrestige,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
@@ -117,6 +118,7 @@ function WeeklyHubPage() {
   const records = useAppSelector(selectTeamRecords);
   const userUpcomingGame = useAppSelector(selectUserUpcomingGame);
   const userLastResult = useAppSelector(selectUserLastResult);
+  const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
   const isCoachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
@@ -148,14 +150,6 @@ function WeeklyHubPage() {
       }
     : null;
 
-  // Win probability (prestige-based)
-  const winProb =
-    selectedTeam && opponent
-      ? Math.round(
-          (selectedTeam.prestige / (selectedTeam.prestige + opponent.prestige)) * 100,
-        )
-      : null;
-
   // Coach game plan
   const gamePlan = useMemo(
     () =>
@@ -169,6 +163,39 @@ function WeeklyHubPage() {
       }),
     [coach.practiceFocus, coach.profile, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
+
+  // Win probability blends prestige, roster quality, home edge, fatigue, and practice mods.
+  const winProb = useMemo(() => {
+    if (!selectedTeam || !opponent) return null;
+    const roster = coach.managedRoster ?? [];
+    const rosterEdge =
+      roster.length > 0
+        ? roster.reduce((sum, player) => sum + player.overall, 0) / roster.length - 72
+        : 0;
+    const modEdge =
+      (gamePlan.modifiers.offense ?? 0) +
+      (gamePlan.modifiers.defense ?? 0) +
+      (gamePlan.modifiers.faceoff ?? 0) * 0.5;
+    const fatiguePenalty = coach.teamFatigue * 0.08;
+    const homeEdge = isHome ? 3 : -1;
+    const userStrength = Math.max(
+      20,
+      (effectivePrestige ?? selectedTeam.prestige) + rosterEdge + modEdge + homeEdge - fatiguePenalty,
+    );
+    const oppStrength = Math.max(20, opponent.prestige);
+    return Math.round((userStrength / (userStrength + oppStrength)) * 100);
+  }, [
+    coach.managedRoster,
+    coach.teamFatigue,
+    effectivePrestige,
+    gamePlan.modifiers.defense,
+    gamePlan.modifiers.faceoff,
+    gamePlan.modifiers.offense,
+    isHome,
+    opponent,
+    selectedTeam,
+  ]);
+
   const skillImpactNotes = useMemo(
     () =>
       summarizeCoachSkillImpacts({
@@ -509,7 +536,7 @@ function WeeklyHubPage() {
                   : season.phase === 'OFFSEASON'
                     ? 'Head to Career to finalize the offseason.'
                     : season.phase === 'PRE'
-                      ? 'Start the season from the Season Dashboard.'
+                      ? 'Begin the season from the Season Dashboard to unlock weekly advances.'
                       : 'Season complete.'}
             </p>
           </div>
@@ -534,7 +561,7 @@ function WeeklyHubPage() {
             )}
             {season.phase === 'PRE' && (
               <Link to="/season" className="btn btn-primary">
-                Season Dashboard →
+                Begin Season →
               </Link>
             )}
             <Link to="/season" className="btn text-sm">

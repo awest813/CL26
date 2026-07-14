@@ -34,16 +34,15 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 - [x] Regression test suite covering schedule, season validation, and playoff logic
 
 ### In Progress / Needs Polish
-- [ ] Rankings criteria exposed in UI (current methodology not visible to user)
+- [x] Rankings criteria exposed in UI (methodology + score breakdowns on Rankings page)
 - [x] Week/game detail pages — more depth and drill-down UX
-- [x] Career multi-year loop — program prestige drift, job security score
+- [x] Career multi-year loop — program prestige drift, job security score, 20-season regression harness
 - [ ] Responsive layout — tables are compact but not fully mobile-friendly
 
 ### Not Yet Started
 - [ ] Transfer portal and graduate-transfer rules
 - [ ] News feed and weekly storyline flavor
 - [ ] Rivalry game tagging and trophy events
-- [ ] Coach reputation and job-offer flow between seasons
 - [ ] Accessibility pass (keyboard navigation, semantic HTML, contrast audit)
 - [ ] Settings panel (sim speed, display density)
 
@@ -53,7 +52,7 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 
 An **alpha-ready** build means a user can complete a full deterministic year loop, understand outcomes clearly, and save/restore a coach career with stable persistence.
 
-- [ ] Rankings methodology documented and visible in Rankings page
+- [x] Rankings methodology documented and visible in Rankings page
 - [ ] Playoff bracket flow is fully validated end-to-end via regression tests
 - [x] Week/game detail pages provide enough depth to understand individual results
 - [x] Career loop can complete two seasons (Year 1 offseason → Year 2 preseason)
@@ -99,7 +98,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 
 **Key files:** `src/sim/rankings.ts`, `src/pages/RankingsPage.tsx`
 
-**Remaining:** surface ranking methodology in UI
+**Remaining:** none for M4 — methodology is visible on the Rankings page
 
 ---
 

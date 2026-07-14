@@ -342,3 +342,18 @@ export function advanceFatigue(
   const operationsReduction = clamp(1 - operationsSkill * 0.03, 0.82, 1);
   return clamp(bounded + rawDelta * archetypeReduction * operationsReduction, 0, 100);
 }
+
+/** Between playoff rounds: playing teams take a week of load; resting/bye teams recover. */
+export function playoffRoundFatigue(
+  previousFatigue: number,
+  played: boolean,
+  focus: PracticeFocus,
+  archetype: CoachArchetype = DEFAULT_COACH_ARCHETYPE,
+  operationsSkill = 0,
+): number {
+  if (!played) {
+    // Rest between rounds / unused bye — meaningful recovery toward fresh.
+    return clamp(previousFatigue - 12, 10, 100);
+  }
+  return advanceFatigue(previousFatigue, focus, archetype, operationsSkill);
+}

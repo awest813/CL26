@@ -1,5 +1,6 @@
 import { generateRoster } from './generateRoster';
 import { simulateGame } from './matchEngine';
+import { seedToNumber } from './rng';
 import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, RankingRow, TeamGameplayModifiers, Tactics, Team, TeamSimInput } from '../types/sim';
 
 const DEFAULT_TACTICS: Tactics = {
@@ -9,6 +10,16 @@ const DEFAULT_TACTICS: Tactics = {
   offenseSet: 'balanced',
   defensePackage: 'man',
 };
+
+function composePlayoffGameSeed(
+  baseSeed: number,
+  round: PlayoffRoundName,
+  gameId: string,
+  homeTeamId: string,
+  awayTeamId: string,
+): number {
+  return seedToNumber(JSON.stringify([baseSeed, round, gameId, homeTeamId, awayTeamId]));
+}
 
 /** User program context for playoff games (managed roster, depth chart, tactics). */
 export type PlayoffCoachContext = {
@@ -97,6 +108,20 @@ function seedForTeam(seedByTeamId: Map<string, number>, teamId: string): number 
   return seed;
 }
 
+/** Higher seed (lower number) hosts — used for SF/Final and any reseeded pairing. */
+export function homeAwayByTournamentSeed(
+  teamAId: string,
+  teamBId: string,
+  seedByTeamId: Map<string, number>,
+): { homeTeamId: string; awayTeamId: string; homeSeed: number; awaySeed: number } {
+  const seedA = seedForTeam(seedByTeamId, teamAId);
+  const seedB = seedForTeam(seedByTeamId, teamBId);
+  if (seedA <= seedB) {
+    return { homeTeamId: teamAId, awayTeamId: teamBId, homeSeed: seedA, awaySeed: seedB };
+  }
+  return { homeTeamId: teamBId, awayTeamId: teamAId, homeSeed: seedB, awaySeed: seedA };
+}
+
 function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): PlayoffGame[] {
   const bySeed = new Map(state.seeds.map((item) => [item.seed, item.teamId]));
   const seedByTeamId = new Map(state.seeds.map((item) => [item.teamId, item.seed]));
@@ -172,15 +197,15 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
       throw new Error('Quarterfinals must be complete before creating semifinal games.');
     }
 
+    const sf1 = homeAwayByTournamentSeed(winnerQ1, winnerQ2, seedByTeamId);
+    const sf2 = homeAwayByTournamentSeed(winnerQ3, winnerQ4, seedByTeamId);
+
     return [
       {
         id: makeGameId('SEMIFINAL', 1),
         round: 'SEMIFINAL',
         slot: 1,
-        homeSeed: seedForTeam(seedByTeamId, winnerQ1),
-        awaySeed: seedForTeam(seedByTeamId, winnerQ2),
-        homeTeamId: winnerQ1,
-        awayTeamId: winnerQ2,
+        ...sf1,
         winnerTeamId: null,
         result: null,
       },
@@ -188,10 +213,7 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
         id: makeGameId('SEMIFINAL', 2),
         round: 'SEMIFINAL',
         slot: 2,
-        homeSeed: seedForTeam(seedByTeamId, winnerQ3),
-        awaySeed: seedForTeam(seedByTeamId, winnerQ4),
-        homeTeamId: winnerQ3,
-        awayTeamId: winnerQ4,
+        ...sf2,
         winnerTeamId: null,
         result: null,
       },
@@ -206,15 +228,14 @@ function buildNextRoundGames(state: PlayoffState, round: PlayoffRoundName): Play
       throw new Error('Semifinals must be complete before creating the final game.');
     }
 
+    const finalMatchup = homeAwayByTournamentSeed(winnerS1, winnerS2, seedByTeamId);
+
     return [
       {
         id: makeGameId('FINAL', 1),
         round: 'FINAL',
         slot: 1,
-        homeSeed: seedForTeam(seedByTeamId, winnerS1),
-        awaySeed: seedForTeam(seedByTeamId, winnerS2),
-        homeTeamId: winnerS1,
-        awayTeamId: winnerS2,
+        ...finalMatchup,
         winnerTeamId: null,
         result: null,
       },
@@ -247,7 +268,7 @@ export function simulatePlayoffRound(
     throw new Error(`Round ${round} has already been simulated.`);
   }
 
-  const simulatedGames = games.map((game, index) => {
+  const simulatedGames = games.map((game) => {
     const homeTeam = teamById.get(game.homeTeamId);
     const awayTeam = teamById.get(game.awayTeamId);
 
@@ -282,10 +303,14 @@ export function simulatePlayoffRound(
       awayInput,
       homeTactics,
       awayTactics,
-      baseSeed + roundSeedOffset(round) + index,
+      composePlayoffGameSeed(baseSeed + roundSeedOffset(round), round, game.id, game.homeTeamId, game.awayTeamId),
     );
 
-    const winnerTeamId = result.scoreA >= result.scoreB ? game.homeTeamId : game.awayTeamId;
+    const winnerTeamId = result.scoreA > result.scoreB
+      ? game.homeTeamId
+      : result.scoreB > result.scoreA
+        ? game.awayTeamId
+        : game.homeTeamId; // engine forbids ties; home advances if one appears
 
     return {
       ...game,

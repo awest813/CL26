@@ -126,4 +126,10 @@ describe('buildGameRecap', () => {
     const recap = buildGameRecap(game, mockAwayName, mockHomeName);
     assert.strictEqual(recap.efficiencyNote, 'Away Team shot 0.0% · Home Team shot 0.0%');
   });
+
+  test('should handle tied scores without inventing a winner margin', () => {
+    const game = createGame({ homeScore: 10, awayScore: 10 });
+    const recap = buildGameRecap(game, mockAwayName, mockHomeName);
+    assert.strictEqual(recap.summary, 'Home Team and Away Team finished level (10-10).');
+  });
 });

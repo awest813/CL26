@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
+import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
 
 const WIN_COLOR = '#16a34a';
 const LOSS_COLOR = '#ef4444';
@@ -48,6 +49,9 @@ function UserGameCard({
   const userStats = isTeamA ? result.statsA : result.statsB;
   const opponentStats = isTeamA ? result.statsB : result.statsA;
   const topPerformers = [...(isTeamA ? result.topPlayersA : result.topPlayersB)];
+  const awayName = teamNameById.get(result.teamBId) ?? 'Away';
+  const homeName = teamNameById.get(result.teamAId) ?? 'Home';
+  const recap = buildGameRecap(gameResultToSummary(result), awayName, homeName);
 
   return (
     <section className="card" style={{ borderLeft: `4px solid ${won ? WIN_COLOR : LOSS_COLOR}` }}>
@@ -60,6 +64,8 @@ function UserGameCard({
           <div className="text-2xl font-bold mt-1">
             {userScore} <span className="text-gray-400">–</span> {oppScore}
           </div>
+          <p className="m-0 mt-2 text-sm text-gray-600">{recap.summary}</p>
+          <p className="m-0 mt-1 text-xs text-gray-500">{recap.keyEdge}</p>
         </div>
         <span className={won ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{won ? 'WIN' : 'LOSS'}</span>
       </div>
@@ -69,6 +75,21 @@ function UserGameCard({
         <div><span className="text-gray-400 text-xs block">Ground Balls</span>{userStats.groundBalls}–{opponentStats.groundBalls}</div>
         <div><span className="text-gray-400 text-xs block">Turnovers</span>{userStats.turnovers}–{opponentStats.turnovers}</div>
       </div>
+      <div className="text-xs text-gray-500 mt-2">{recap.efficiencyNote}</div>
+      {recap.mvp && (
+        <div className="text-sm text-gray-600 mt-2">
+          <span className="font-semibold">MVP: </span>
+          {recap.mvp.name} ({recap.mvp.position}
+          {recap.mvp.goals || recap.mvp.assists || recap.mvp.saves
+            ? `: ${[
+                recap.mvp.goals ? `${recap.mvp.goals}g` : null,
+                recap.mvp.assists ? `${recap.mvp.assists}a` : null,
+                recap.mvp.saves ? `${recap.mvp.saves}sv` : null,
+              ].filter(Boolean).join(' ')}`
+            : ''}
+          )
+        </div>
+      )}
       {topPerformers.length > 0 && (
         <div className="text-sm text-gray-600 mt-3">
           <span className="font-semibold">Your top performers: </span>
@@ -254,6 +275,17 @@ function SeasonWeekPage() {
                       {isFinal && expandedGameId === game.id && (
                         <tr className="seasonWeekDetailRow">
                           <td colSpan={6} className="px-3 py-2 text-xs text-gray-600 bg-gray-50">
+                            {(() => {
+                              const awayLabel = away ? `${away.schoolName} ${away.nickname}` : 'Away';
+                              const homeLabel = home ? `${home.schoolName} ${home.nickname}` : 'Home';
+                              const recap = buildGameRecap(gameResultToSummary(result), awayLabel, homeLabel);
+                              return (
+                                <>
+                                  <div className="font-semibold text-gray-700 mb-1">{recap.summary}</div>
+                                  <div className="text-gray-500 mb-2">{recap.keyEdge} · {recap.efficiencyNote}</div>
+                                </>
+                              );
+                            })()}
                             <div className="font-semibold text-gray-500 mb-2">Expanded stats shown away – home.</div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
                               <div><span className="text-gray-400 block">Saves</span>{result.statsB.saves} - {result.statsA.saves}</div>
@@ -263,7 +295,7 @@ function SeasonWeekPage() {
                             </div>
                             {result.highlights.length > 0 && (
                               <ul className="m-0 pl-4">
-                                {result.highlights.slice(0, 2).map((highlight) => (
+                                {result.highlights.slice(0, 4).map((highlight) => (
                                   <li key={highlight}>{highlight}</li>
                                 ))}
                               </ul>

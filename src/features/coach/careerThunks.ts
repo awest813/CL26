@@ -13,12 +13,21 @@ import {
   setStarterIds,
   applyPrestigeDrift,
   setPendingJobOffers,
+  initializeRecruitingBoard,
+  updateProgramStanding,
+  careerSetupFromPrestige,
 } from './coachSlice';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
-import { computeRankings } from '../../sim/rankings';
+import { computeAllSOS, computeRankings } from '../../sim/rankings';
 import { seedToNumber } from '../../sim/rng';
+import {
+  canSimRegularWeek,
+  careerOffseasonCapabilities,
+  hasSeasonHistoryForYear,
+} from '../../sim/seasonPhase';
+import { startNewSeason } from '../season/seasonSlice';
 
 const BASE_WEEKLY_XP = 8;
 const WINNING_WEEK_XP_BONUS = 3;
@@ -57,12 +66,7 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
     const coach = state.coach;
 
     const canAdvanceRecruiting = coach.recruitPool.length > 0 && Boolean(coach.selectedTeamId);
-    const canSimSeasonWeek =
-      season.phase === 'REGULAR' &&
-      season.scheduleByWeek.length > 0 &&
-      season.currentWeekIndex < season.scheduleByWeek.length;
-
-    if (!canSimSeasonWeek) {
+    if (!canSimRegularWeek(season)) {
       return 'skipped';
     }
 
@@ -118,7 +122,16 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
 
     if (season.phase !== 'OFFSEASON') return;
     if (!coach.selectedTeamId || !coach.programExpectations) return;
-    if (coach.seasonHistory.some((entry) => entry.year === season.year)) return;
+
+    const ceremony = careerOffseasonCapabilities({
+      phase: season.phase,
+      year: season.year,
+      hasSelectedTeam: Boolean(coach.selectedTeamId),
+      hasProgramExpectations: Boolean(coach.programExpectations),
+      signedRecruitsByYear: coach.signedRecruitsByYear,
+      seasonHistory: coach.seasonHistory,
+    });
+    if (!ceremony.canFinalizeSeason) return;
 
     const records = selectTeamRecords(state);
     const teams = state.league.teams;
@@ -126,7 +139,8 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const wins = userRecord.wins;
     const losses = userRecord.losses;
 
-    const rankingsTable = computeRankings(teams, records, 128);
+    const sos = computeAllSOS(season.gameResults, records);
+    const rankingsTable = computeRankings(teams, records, 128, sos);
     const userPollRow = rankingsTable.find((r) => r.teamId === coach.selectedTeamId);
     const pollRank = userPollRow?.rank ?? TOTAL_TEAMS;
     const rankTarget = coach.programExpectations.rankTarget;
@@ -205,6 +219,11 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     dispatch(setAdPressure(boostedPressure));
     dispatch(updateJobSecurity(newJobSecurity));
     dispatch(applyPrestigeDrift(prestigeDriftDelta));
+
+    // Raise or lower program expectations as prestige drifts across a long career.
+    const standing = careerSetupFromPrestige(currentEffectivePrestige);
+    dispatch(updateProgramStanding(standing));
+
     if (newJobSecurity >= 68 || champion) {
       const candidateOffers = teams
         .filter((team) => team.id !== coach.selectedTeamId && team.prestige >= currentEffectivePrestige)
@@ -286,5 +305,78 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
     const newStarters = buildDefaultStarters(newRoster);
     dispatch(setManagedRoster(newRoster));
     dispatch(setStarterIds(newStarters));
+  },
+);
+
+/**
+ * Offseason → next regular season handoff used by Career Office and regression harness.
+ * Requires signing day + season finalize to already be complete for the current year.
+ */
+export const beginNextCareerSeason = createAsyncThunk<number | null, void, { state: RootState }>(
+  'coach/beginNextCareerSeason',
+  async (_arg, { dispatch, getState }) => {
+    const state = getState();
+    const { season, coach, league } = state;
+
+    if (season.phase !== 'OFFSEASON') return null;
+    if (!coach.selectedTeamId) return null;
+
+    const ceremony = careerOffseasonCapabilities({
+      phase: season.phase,
+      year: season.year,
+      hasSelectedTeam: Boolean(coach.selectedTeamId),
+      hasProgramExpectations: Boolean(coach.programExpectations),
+      signedRecruitsByYear: coach.signedRecruitsByYear,
+      seasonHistory: coach.seasonHistory,
+    });
+    if (!ceremony.canAdvanceNextYear) return null;
+
+    const nextSeed = season.seasonSeed + 1;
+    await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed }));
+    await dispatch(startNewSeason({ seed: nextSeed })).unwrap();
+
+    const drift = getState().coach.programPrestigeDrift ?? 0;
+    const recruitingTeams = league.teams.map((team) =>
+      team.id === coach.selectedTeamId
+        ? { ...team, prestige: Math.max(1, Math.min(100, team.prestige + drift)) }
+        : team,
+    );
+    dispatch(initializeRecruitingBoard({ seed: nextSeed, teams: recruitingTeams }));
+    return nextSeed;
+  },
+);
+
+/**
+ * PRE → REGULAR handoff for the first (or soft-reset) season.
+ * Generates the schedule, refreshes the managed roster to the season seed, and opens recruiting.
+ */
+export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { state: RootState }>(
+  'coach/beginFirstSeason',
+  async ({ seed }, { dispatch, getState }) => {
+    const state = getState();
+    if (state.season.phase !== 'PRE') {
+      throw new Error('beginFirstSeason only runs from preseason.');
+    }
+    if (hasSeasonHistoryForYear(state.coach.seasonHistory, state.season.year)) {
+      throw new Error(
+        `Year ${state.season.year} is already in career history. Finish the offseason handoff or start a new game from Home.`,
+      );
+    }
+
+    await dispatch(startNewSeason({ seed })).unwrap();
+
+    const after = getState();
+    if (after.coach.selectedTeamId && after.coach.onboardingStep === 'READY') {
+      await dispatch(initializeManagedRoster());
+      const drift = after.coach.programPrestigeDrift ?? 0;
+      const recruitingTeams = after.league.teams.map((team) =>
+        team.id === after.coach.selectedTeamId
+          ? { ...team, prestige: Math.max(1, Math.min(100, team.prestige + drift)) }
+          : team,
+      );
+      dispatch(initializeRecruitingBoard({ seed, teams: recruitingTeams }));
+    }
+
+    return seed;
   },
 );

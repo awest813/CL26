@@ -26,7 +26,7 @@ function RankingsPage() {
     ? 'Final'
     : summary.completedWeeks > 0
       ? `Week ${summary.completedWeeks}`
-      : 'Pre-Season';
+      : 'Preseason';
 
   const teamById = useMemo(() => {
     return new Map(teams.map((team) => [team.id, team]));
@@ -187,29 +187,31 @@ function RankingsPage() {
       </section>
 
       <section className="card" style={{ gridColumn: '1 / -1' }}>
-        <details>
+        <h3 className="m-0 text-base">How the poll works</h3>
+        <p className="text-sm text-gray-500 mt-2 mb-0">
+          Scores are deterministic — built from season performance plus a baseline program prestige signal.
+          Ties on rounded points break by wins, point differential, prestige, school name, then team id.
+        </p>
+        <div className="grid2" style={{ marginTop: '0.75rem', gap: '0.5rem' }}>
+          {[
+            ['Overall win %', RANKING_WEIGHTS.overallWinPct],
+            ['Conference win %', RANKING_WEIGHTS.conferenceWinPct],
+            ['Point differential', RANKING_WEIGHTS.pointDifferential],
+            ['Program prestige', RANKING_WEIGHTS.prestige],
+            ['Scoring volume', RANKING_WEIGHTS.scoringVolume],
+            ['Strength of schedule', RANKING_WEIGHTS.strengthOfSchedule],
+          ].map(([label, weight]) => (
+            <div key={String(label)} className="flex justify-between text-sm border-b py-1">
+              <span className="text-gray-600">{label}</span>
+              <span className="font-mono font-semibold">×{weight}</span>
+            </div>
+          ))}
+        </div>
+
+        <details className="mt-4">
           <summary className="text-sm font-semibold cursor-pointer text-gray-600">
-            Ranking Formula &amp; Score Breakdown
+            Score breakdowns (expand)
           </summary>
-          <p className="text-sm text-gray-500 mt-2">
-            Scores are deterministic — built from season performance plus a baseline program prestige signal.
-            Ties on rounded points break by wins, point differential, prestige, school name, then team id.
-          </p>
-          <div className="grid2" style={{ marginTop: '0.75rem', gap: '0.5rem' }}>
-            {[
-              ['Overall win %', RANKING_WEIGHTS.overallWinPct],
-              ['Conference win %', RANKING_WEIGHTS.conferenceWinPct],
-              ['Point differential', RANKING_WEIGHTS.pointDifferential],
-              ['Program prestige', RANKING_WEIGHTS.prestige],
-              ['Scoring volume', RANKING_WEIGHTS.scoringVolume],
-              ['Strength of schedule', RANKING_WEIGHTS.strengthOfSchedule],
-            ].map(([label, weight]) => (
-              <div key={String(label)} className="flex justify-between text-sm border-b py-1">
-                <span className="text-gray-600">{label}</span>
-                <span className="font-mono font-semibold">×{weight}</span>
-              </div>
-            ))}
-          </div>
 
           {topTeamBreakdown && (
             <div style={{ marginTop: '1rem' }}>
