@@ -16,20 +16,21 @@ function createTeams(count = 8): Team[] {
 
 function createRegularSeasonState(teamCount = 8): SeasonState {
   const teams = createTeams(teamCount);
-  const scheduleByWeek = [
+  const makeWeek = (weekIndex: number) =>
     teams.reduce((games, _, i) => {
       if (i % 2 === 0) {
         games.push({
-          id: `w1-g${i}`,
-          weekIndex: 0,
+          id: `w${weekIndex + 1}-g${i}`,
+          weekIndex,
           homeTeamId: teams[i].id,
           awayTeamId: teams[i + 1].id,
           conferenceGame: true,
         });
       }
       return games;
-    }, [] as SeasonState['scheduleByWeek'][number]),
-  ];
+    }, [] as SeasonState['scheduleByWeek'][number]);
+
+  const scheduleByWeek = [makeWeek(0), makeWeek(1)];
 
   const gameResults: SeasonState['gameResults'] = scheduleByWeek[0].map((game, idx) => ({
     id: game.id,
