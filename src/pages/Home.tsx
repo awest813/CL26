@@ -55,7 +55,7 @@ function Home() {
     );
     if (!confirmed) return;
     dispatch(resetCoach());
-    dispatch(resetSeason());
+    dispatch(resetSeason({ force: true }));
     persistor.purge().then(() => {
       navigate('/career/setup');
     }).catch(() => {

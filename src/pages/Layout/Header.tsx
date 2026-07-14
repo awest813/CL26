@@ -14,6 +14,7 @@ function seasonPhaseLabel(phase: string, currentWeekIndex: number, scheduleLengt
 
 function continueTarget(phase: string, onboardingReady: boolean): { path: string; label: string } {
   if (!onboardingReady) return { path: '/career/setup', label: 'Start Career' };
+  if (phase === 'PRE') return { path: '/season', label: 'Begin Season' };
   if (phase === 'REGULAR') return { path: '/career/week', label: 'Continue' };
   if (phase === 'PLAYOFF') return { path: '/playoffs', label: 'Continue' };
   if (phase === 'OFFSEASON') return { path: '/career', label: 'Continue' };

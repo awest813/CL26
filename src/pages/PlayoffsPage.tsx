@@ -36,7 +36,7 @@ function PlayoffsPage() {
 
   const handleNewSeason = () => {
     if (confirm('Start a new season? Current season results will be preserved in your career history.')) {
-      dispatch(resetSeason());
+      dispatch(resetSeason({ force: true }));
       navigate('/season');
     }
   };

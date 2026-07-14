@@ -123,6 +123,8 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     if (season.phase !== 'OFFSEASON') return;
     if (!coach.selectedTeamId || !coach.programExpectations) return;
     if (coach.seasonHistory.some((entry) => entry.year === season.year)) return;
+    // Signing day must resolve before finalize (empty class still writes []).
+    if (!Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, season.year)) return;
 
     const records = selectTeamRecords(state);
     const teams = state.league.teams;
@@ -312,10 +314,12 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
     if (season.phase !== 'OFFSEASON') return null;
     if (!coach.selectedTeamId) return null;
     if (!coach.seasonHistory.some((entry) => entry.year === season.year)) return null;
+    // Signing day must have produced an entry for this year (empty class still records []).
+    if (!Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, season.year)) return null;
 
     const nextSeed = season.seasonSeed + 1;
     await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed }));
-    await dispatch(startNewSeason({ seed: nextSeed }));
+    await dispatch(startNewSeason({ seed: nextSeed })).unwrap();
 
     const drift = getState().coach.programPrestigeDrift ?? 0;
     const recruitingTeams = league.teams.map((team) =>
@@ -329,7 +333,7 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
 );
 
 /**
- * PRE → REGULAR handoff for the first (or reset) season.
+ * PRE → REGULAR handoff for the first (or soft-reset) season.
  * Generates the schedule, refreshes the managed roster to the season seed, and opens recruiting.
  */
 export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { state: RootState }>(
@@ -338,6 +342,11 @@ export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { sta
     const state = getState();
     if (state.season.phase !== 'PRE') {
       throw new Error('beginFirstSeason only runs from preseason.');
+    }
+    if (state.coach.seasonHistory.some((entry) => entry.year === state.season.year)) {
+      throw new Error(
+        `Year ${state.season.year} is already in career history. Finish the offseason handoff or start a new game from Home.`,
+      );
     }
 
     await dispatch(startNewSeason({ seed })).unwrap();

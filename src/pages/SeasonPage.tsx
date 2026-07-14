@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  selectSeasonCapabilities,
   selectSeasonHasStarted,
   selectSeasonSummary,
   selectWeekGames,
@@ -31,6 +32,7 @@ function SeasonPage() {
   const [startError, setStartError] = useState<string | null>(null);
   const summary = useAppSelector(selectSeasonSummary);
   const hasSeason = useAppSelector(selectSeasonHasStarted);
+  const capabilities = useAppSelector(selectSeasonCapabilities);
   const teams = useAppSelector((state) => state.league.teams);
   const conferences = useAppSelector((state) => state.league.conferences);
   const coach = useAppSelector((state) => state.coach);
@@ -100,6 +102,7 @@ function SeasonPage() {
   };
 
   const handleReset = () => {
+    if (!capabilities.canResetSeason) return;
     const message = coachReady
       ? 'Reset the season schedule and results? Your coach career, roster, and recruiting board will stay — calendar year is preserved, but you will need to begin the season again from Preseason.'
       : 'Are you sure you want to reset the season? This cannot be undone.';
@@ -110,7 +113,8 @@ function SeasonPage() {
 
   const handleNewSeason = () => {
     if (confirm('Start a fresh season from preseason? This will clear current season progression.')) {
-      dispatch(resetSeason(coachReady ? { preserveYear: true } : undefined));
+      // Non-career OFFSEASON path — force past soft-reset lock.
+      dispatch(resetSeason({ force: true }));
     }
   };
 
@@ -236,9 +240,11 @@ function SeasonPage() {
           <Link to={`/season/week/${displayWeek}`} className="seasonInlineLink">
             Full Weekly Schedule
           </Link>
-          <button onClick={handleReset} className="seasonInlineLink seasonInlineLink-danger ml-auto">
-            Reset Season
-          </button>
+          {capabilities.canResetSeason && (
+            <button onClick={handleReset} className="seasonInlineLink seasonInlineLink-danger ml-auto">
+              Reset Season
+            </button>
+          )}
         </div>
         <div className="mt-3 border-t pt-3 flex items-center justify-between gap-3">
           <div className="text-sm text-gray-600">{nextStep.label}</div>
