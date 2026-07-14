@@ -36,7 +36,7 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 ### In Progress / Needs Polish
 - [x] Rankings criteria exposed in UI (methodology + score breakdowns on Rankings page)
 - [x] Week/game detail pages — more depth and drill-down UX
-- [x] Career multi-year loop — program prestige drift, job security score
+- [x] Career multi-year loop — program prestige drift, job security score, 20-season regression harness
 - [ ] Responsive layout — tables are compact but not fully mobile-friendly
 
 ### Not Yet Started

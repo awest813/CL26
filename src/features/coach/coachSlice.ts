@@ -281,7 +281,13 @@ const coachSlice = createSlice({
         while (state.coachXp >= 100) {
             state.coachXp -= 100;
             state.coachLevel += 1;
-            state.coachSkillPoints += 1;
+            const treeMaxed = Object.values(state.skillTree).every((level) => level >= 5);
+            if (treeMaxed) {
+                // Tree is full — bank a small security bump instead of endless unused points.
+                state.jobSecurity = Math.max(0, Math.min(100, state.jobSecurity + 1));
+            } else {
+                state.coachSkillPoints += 1;
+            }
         }
     },
     upgradeCoachSkill: (state, action: PayloadAction<keyof CoachSkillTree>) => {
@@ -339,6 +345,16 @@ const coachSlice = createSlice({
         state.careerRecord.totalLosses += action.payload.losses;
         if (action.payload.madePlayoffs) state.careerRecord.playoffAppearances += 1;
         if (action.payload.champion) state.careerRecord.championships += 1;
+        if (state.profile) {
+            state.profile.age += 1;
+        }
+    },
+    updateProgramStanding: (state, action: PayloadAction<{
+        careerTier: NonNullable<CoachState['careerTier']>;
+        programExpectations: ProgramExpectations;
+    }>) => {
+        state.careerTier = action.payload.careerTier;
+        state.programExpectations = action.payload.programExpectations;
     },
     resetRecruitingForNewSeason: (state) => {
         state.recruitPool = [];
@@ -421,6 +437,7 @@ export const {
     updateJobSecurity,
     recordSeasonEnd,
     resetRecruitingForNewSeason,
+    updateProgramStanding,
     setManagedRoster,
     setStarterIds,
     toggleStarter,

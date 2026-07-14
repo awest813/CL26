@@ -20,10 +20,10 @@ import {
 import {
   runCareerWeeklyCycle,
   processSeasonEnd,
-  applyOffseasonRosterTurnover,
   initializeManagedRoster,
+  beginNextCareerSeason,
 } from '../features/coach/careerThunks';
-import { selectTeamRecords, startNewSeason } from '../features/season/seasonSlice';
+import { selectTeamRecords } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
 import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -305,11 +305,10 @@ function CoachCareerPage() {
   }
 
   async function onNewSeason() {
-    const nextSeed = season.seasonSeed + 1;
-    await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed }));
-    await dispatch(startNewSeason({ seed: nextSeed }));
-    setSeedInput(nextSeed);
-    dispatch(initializeRecruitingBoard({ seed: nextSeed, teams: effectiveRecruitingTeams }));
+    const nextSeed = await dispatch(beginNextCareerSeason()).unwrap();
+    if (typeof nextSeed === 'number') {
+      setSeedInput(nextSeed);
+    }
   }
 
   const isOffseason = season.phase === 'OFFSEASON';
@@ -471,9 +470,9 @@ function CoachCareerPage() {
             <div className="text-xs text-gray-400 uppercase font-semibold mb-2">
               Career History ({coach.seasonHistory.length} season{coach.seasonHistory.length !== 1 ? 's' : ''})
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-64 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead>
+                <thead className="sticky top-0 bg-white">
                   <tr className="text-left text-xs text-gray-400 border-b">
                     <th className="pb-1 pr-3">Season</th>
                     <th className="pb-1 pr-3">Record</th>
@@ -483,7 +482,7 @@ function CoachCareerPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {coach.seasonHistory.map((entry, i) => (
+                  {[...coach.seasonHistory].reverse().map((entry, i) => (
                     <SeasonHistoryRow key={entry.year} entry={entry} index={i} />
                   ))}
                 </tbody>
