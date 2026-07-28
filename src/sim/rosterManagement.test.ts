@@ -1,7 +1,14 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import type { Player } from '../types/sim.ts';
-import { applyWeeklyTraitGrowth, developPlayers } from './rosterManagement.ts';
+import type { Player, Position, SignedRecruit, Team } from '../types/sim.ts';
+import {
+  applyRosterTurnover,
+  applyWeeklyTraitGrowth,
+  developPlayers,
+  ROSTER_TARGET_SIZE,
+  trimRosterToTarget,
+} from './rosterManagement.ts';
+import { generateRoster } from './generateRoster.ts';
 import { makeRng } from './rng.ts';
 
 const basePlayer = (id: string): Player => ({
@@ -98,5 +105,126 @@ describe('roster management progression systems', () => {
     });
     assert.ok(grown.every((player) => player.overall <= 94));
     assert.ok(grown.every((player) => player.shooting <= 93));
+  });
+});
+
+const testTeam: Team = {
+  id: 'team-turnover',
+  schoolName: 'Harbor Point',
+  nickname: 'Gales',
+  conferenceId: 'conf-1',
+  region: 'Northeast',
+  prestige: 70,
+};
+
+function makeSignedClass(size: number): SignedRecruit[] {
+  const positions: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
+  return Array.from({ length: size }, (_, i) => ({
+    recruitId: `sr-${i}`,
+    signedAtYear: 2026,
+    stars: 4,
+    position: positions[i % positions.length],
+    potential: 85,
+  }));
+}
+
+function signedPlayerIdsFor(signed: SignedRecruit[]): Set<string> {
+  return new Set(signed.map((recruit) => `${testTeam.id}-recruit-${recruit.recruitId}-yr1`));
+}
+
+describe('offseason roster turnover', () => {
+  test('every signed recruit reaches the roster, even for a full class', () => {
+    const roster = generateRoster(testTeam, 'league-season-2026');
+
+    for (const classSize of [1, 6, 12]) {
+      const signed = makeSignedClass(classSize);
+      const next = applyRosterTurnover(roster, signed, testTeam, 2027);
+      const expectedIds = signedPlayerIdsFor(signed);
+      const landed = next.filter((player) => expectedIds.has(player.id));
+
+      assert.strictEqual(
+        landed.length,
+        classSize,
+        `class of ${classSize} lost ${classSize - landed.length} signees to roster trimming`,
+      );
+    }
+  });
+
+  test('turnover holds the roster target and a fieldable lineup at every position', () => {
+    let roster = generateRoster(testTeam, 'league-season-2026');
+
+    // Ten straight offseasons: graduation, transfers, and classes should not erode
+    // the roster past what a starting lineup needs.
+    for (let year = 0; year < 10; year += 1) {
+      roster = applyRosterTurnover(roster, makeSignedClass(year % 4 === 0 ? 0 : 5), testTeam, 2027 + year);
+
+      assert.ok(
+        roster.length >= ROSTER_TARGET_SIZE,
+        `year ${year} roster shrank to ${roster.length}`,
+      );
+
+      const counts: Record<Position, number> = { A: 0, M: 0, D: 0, LSM: 0, FO: 0, G: 0 };
+      for (const player of roster) counts[player.position] += 1;
+      assert.ok(counts.A >= 3, `year ${year} attack thin (${counts.A})`);
+      assert.ok(counts.M >= 3, `year ${year} midfield thin (${counts.M})`);
+      assert.ok(counts.D >= 3, `year ${year} defense thin (${counts.D})`);
+      assert.ok(counts.LSM >= 1 && counts.FO >= 1 && counts.G >= 1, `year ${year} missing a specialist`);
+      assert.ok(roster.every((player) => player.year >= 1 && player.year <= 4));
+    }
+  });
+
+  test('turnover is deterministic for the same seed', () => {
+    const roster = generateRoster(testTeam, 'league-season-2026');
+    const signed = makeSignedClass(7);
+
+    assert.deepStrictEqual(
+      applyRosterTurnover(roster, signed, testTeam, 2031),
+      applyRosterTurnover(roster, signed, testTeam, 2031),
+    );
+  });
+});
+
+describe('roster trimming', () => {
+  test('protected players survive and cuts take the weakest first', () => {
+    const overfull: Player[] = [
+      ...Array.from({ length: 6 }, (_, i) => ({ ...basePlayer(`star-${i}`), position: 'M' as const, overall: 88 })),
+      ...Array.from({ length: 6 }, (_, i) => ({ ...basePlayer(`scrub-${i}`), position: 'M' as const, overall: 44 })),
+      ...Array.from({ length: 4 }, (_, i) => ({ ...basePlayer(`d-${i}`), position: 'D' as const, overall: 70 })),
+      { ...basePlayer('lsm'), position: 'LSM' as const },
+      { ...basePlayer('fo'), position: 'FO' as const },
+      { ...basePlayer('g'), position: 'G' as const },
+      ...Array.from({ length: 3 }, (_, i) => ({ ...basePlayer(`a-${i}`), position: 'A' as const })),
+    ];
+    const protectedIds = new Set(['scrub-0', 'scrub-1']);
+
+    const trimmed = trimRosterToTarget(overfull, protectedIds, 18);
+    const trimmedIds = new Set(trimmed.map((player) => player.id));
+
+    assert.strictEqual(trimmed.length, 18);
+    for (const id of protectedIds) {
+      assert.ok(trimmedIds.has(id), `protected player ${id} was cut`);
+    }
+    // Unprotected scrubs go before any 88-overall midfielder.
+    assert.ok([...trimmedIds].filter((id) => id.startsWith('star-')).length === 6);
+  });
+
+  test('trimming never drops a position below its lineup minimum', () => {
+    const thin: Player[] = [
+      ...Array.from({ length: 14 }, (_, i) => ({ ...basePlayer(`m-${i}`), position: 'M' as const, overall: 60 })),
+      ...Array.from({ length: 3 }, (_, i) => ({ ...basePlayer(`a-${i}`), position: 'A' as const, overall: 41 })),
+      { ...basePlayer('g'), position: 'G' as const, overall: 40 },
+    ];
+
+    const trimmed = trimRosterToTarget(thin, new Set(), 12);
+    const counts: Record<string, number> = {};
+    for (const player of trimmed) counts[player.position] = (counts[player.position] ?? 0) + 1;
+
+    assert.strictEqual(counts.A, 3, 'attack minimum must hold even though they are the weakest');
+    assert.strictEqual(counts.G, 1, 'goalie must survive');
+  });
+
+  test('a roster already at or under target is returned untouched', () => {
+    const roster = [basePlayer('p1'), basePlayer('p2')];
+    assert.strictEqual(trimRosterToTarget(roster, new Set(), 5), roster);
   });
 });

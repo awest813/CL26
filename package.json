@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "test:regression": "bun test src/sim/schedule.test.ts && bun test src/sim/seasonValidation.test.ts && bun test src/sim/seasonPhase.test.ts && bun test src/sim/playoffs.test.ts && bun test src/sim/rankings.test.ts src/sim/matchEngine.test.ts src/sim/leagueDataValidation.test.ts && bun test --timeout 180000 src/sim/careerTwentySeason.test.ts"
+    "test:regression": "bun test src/sim/schedule.test.ts && bun test src/sim/seasonValidation.test.ts && bun test src/sim/seasonPhase.test.ts && bun test src/sim/playoffs.test.ts && bun test src/sim/rankings.test.ts src/sim/matchEngine.test.ts src/sim/leagueDataValidation.test.ts && bun test src/sim/coachEffects.test.ts src/sim/gameRecap.test.ts src/sim/offseason.test.ts src/sim/recruiting.test.ts src/sim/recruitingWeek.test.ts src/sim/rosterManagement.test.ts src/sim/timeUtils.test.ts && bun test --timeout 60000 src/features/coach/coachSlice.test.ts src/features/coach/careerHandoff.test.ts src/features/season/seasonSlice.test.ts && bun test --timeout 180000 src/sim/careerTwentySeason.test.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.2.1",

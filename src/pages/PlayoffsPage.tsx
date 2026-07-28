@@ -36,8 +36,9 @@ function PlayoffsPage() {
   const userMadeField = userSeed != null;
 
   const handleNewSeason = () => {
-    if (confirm('Start a new season? Current season results will be preserved in your career history.')) {
-      dispatch(resetSeason({ force: true }));
+    // Spectator path only (career saves go through the Career Office handoff instead).
+    if (confirm('Start a new season? This clears the current schedule, results, and bracket.')) {
+      dispatch(resetSeason({ force: true, preserveYear: true }));
       navigate('/season');
     }
   };

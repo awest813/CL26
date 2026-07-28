@@ -1,4 +1,5 @@
 import { GameResult, RankingRow, RankingScoreBreakdown, Team, TeamRecord } from '../types/sim';
+import { compareStringsAsc } from './ordering';
 
 interface RankingInputRow {
   team: Team;
@@ -100,9 +101,9 @@ export function computeRankings(
       const pointDiff = pointDifferential(b.record) - pointDifferential(a.record);
       if (pointDiff !== 0) return pointDiff;
       if (b.team.prestige !== a.team.prestige) return b.team.prestige - a.team.prestige;
-      const nameCompare = a.team.schoolName.localeCompare(b.team.schoolName);
+      const nameCompare = compareStringsAsc(a.team.schoolName, b.team.schoolName);
       if (nameCompare !== 0) return nameCompare;
-      return a.team.id.localeCompare(b.team.id);
+      return compareStringsAsc(a.team.id, b.team.id);
     })
     .slice(0, topN)
     .map((row, index) => ({

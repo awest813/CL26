@@ -65,11 +65,18 @@ export const selectTeamWithRosterSummary = createSelector(
     (state: RootState, teamId: string) => selectTeamById(state, teamId),
     (_state: RootState, teamId: string) => teamId,
     (state: RootState) => state.season.seasonSeed,
+    (state: RootState) => state.coach.selectedTeamId,
+    (state: RootState) => state.coach.managedRoster,
   ],
-  (team, teamId, seasonSeed) => {
+  (team, teamId, seasonSeed, coachedTeamId, managedRoster) => {
     if (!team) return null;
 
-    const roster = generateRoster(team, leagueSeasonRosterSeed(seasonSeed));
+    // The coached program plays its managed roster (signees, development, cuts), so the
+    // team page has to read from that instead of the procedural draw used for CPU teams.
+    const roster =
+      teamId === coachedTeamId && managedRoster && managedRoster.length > 0
+        ? managedRoster
+        : generateRoster(team, leagueSeasonRosterSeed(seasonSeed));
     const overall = Math.round(roster.reduce((sum, player) => sum + player.overall, 0) / roster.length);
     const topPlayers = [...roster].sort((a, b) => b.overall - a.overall).slice(0, 5);
     const positionSummary = POSITION_ORDER.map((position) => {

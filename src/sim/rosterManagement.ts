@@ -1,4 +1,5 @@
 import { Player, Position, SignedRecruit, Team } from '../types/sim';
+import { compareStringsAsc } from './ordering';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
 
@@ -201,13 +202,103 @@ export function applyWeeklyTraitGrowth(
 
 const POSITION_FILL_ORDER: Position[] = ['A', 'A', 'A', 'M', 'M', 'M', 'M', 'D', 'D', 'D', 'LSM', 'FO', 'G', 'A', 'M', 'D', 'M', 'D', 'A', 'M', 'D', 'LSM', 'M', 'D', 'A'];
 
+/** Roster target — matches the 25-slot shape produced by `generateRoster`. */
+export const ROSTER_TARGET_SIZE = 25;
+
+const REQUIRED_POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
+
+/** Bodies a trim pass must leave at each position so a lineup can still be fielded. */
+const POSITION_MINIMUMS: Record<Position, number> = { A: 3, M: 3, D: 3, LSM: 1, FO: 1, G: 1 };
+
+function countByPosition(players: Player[]): Record<Position, number> {
+  const counts: Record<Position, number> = { A: 0, M: 0, D: 0, LSM: 0, FO: 0, G: 0 };
+  players.forEach((player) => {
+    counts[player.position] += 1;
+  });
+  return counts;
+}
+
+/**
+ * Trim an over-full roster down to `targetSize`.
+ *
+ * Scholarship signees are never cut: the class is the payoff for a full season of
+ * recruiting, so returning depth makes room instead. Cuts take the weakest eligible
+ * player whose position still clears its minimum. If protections leave no legal cut,
+ * the roster stays slightly over target rather than voiding a signed player.
+ */
+export function trimRosterToTarget(
+  roster: Player[],
+  protectedIds: Set<string>,
+  targetSize: number = ROSTER_TARGET_SIZE,
+): Player[] {
+  if (roster.length <= targetSize) return roster;
+
+  const counts = countByPosition(roster);
+  const cutOrder = roster
+    .filter((player) => !protectedIds.has(player.id))
+    .sort((a, b) => a.overall - b.overall || compareStringsAsc(a.id, b.id));
+
+  const cutIds = new Set<string>();
+  for (const candidate of cutOrder) {
+    if (roster.length - cutIds.size <= targetSize) break;
+    if (counts[candidate.position] <= POSITION_MINIMUMS[candidate.position]) continue;
+    counts[candidate.position] -= 1;
+    cutIds.add(candidate.id);
+  }
+
+  return roster.filter((player) => !cutIds.has(player.id));
+}
+
+interface DepthPlayerTuning {
+  varianceMin: number;
+  varianceMax: number;
+  overallPenalty: number;
+}
+
+/** Emergency body added to cover a position no one on the roster plays. */
+const WALK_ON_TUNING: DepthPlayerTuning = { varianceMin: -10, varianceMax: 8, overallPenalty: 5 };
+/** Back-of-the-roster filler used to reach the roster target. */
+const ROSTER_FILL_TUNING: DepthPlayerTuning = { varianceMin: -12, varianceMax: 8, overallPenalty: 8 };
+
+/** Build a depth-chart body (walk-on / roster filler) for an open spot. */
+function makeDepthPlayer(
+  rng: () => number,
+  baseline: number,
+  position: Position,
+  id: string,
+  tuning: DepthPlayerTuning,
+): Player {
+  const variance = randInt(rng, tuning.varianceMin, tuning.varianceMax);
+  const overall = clamp(Math.round(baseline + variance - tuning.overallPenalty));
+  const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
+
+  return {
+    id,
+    name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
+    position,
+    year: 1,
+    age: 18,
+    skill,
+    shooting: clamp(Math.round(baseline + variance + (position === 'A' ? 6 : 0))),
+    passing: clamp(Math.round(baseline + randInt(rng, -8, 6))),
+    speed: clamp(Math.round(baseline + randInt(rng, -7, 7))),
+    defense: clamp(Math.round(baseline + randInt(rng, -9, 8) + (position === 'D' || position === 'LSM' ? 8 : 0))),
+    IQ: clamp(Math.round(baseline + randInt(rng, -5, 7))),
+    stamina: clamp(Math.round(baseline + randInt(rng, -6, 6))),
+    discipline: clamp(Math.round(baseline + randInt(rng, -5, 7))),
+    overall,
+  };
+}
+
 /**
  * Apply full roster turnover for the offseason:
  * 1. Develop returning players
  * 2. Remove seniors (year === 4) and apply transfer/attrition
  * 3. Age returning players (year++)
  * 4. Add incoming signed recruits as freshmen
- * 5. Fill any remaining open spots with generated walk-ons
+ * 5. Reserve spots for positions left below their lineup minimum
+ * 6. Trim surplus depth (never a signee) back to the roster target
+ * 7. Fill open spots with generated walk-ons
  */
 export function applyRosterTurnover(
   currentRoster: Player[],
@@ -250,65 +341,47 @@ export function applyRosterTurnover(
     convertRecruitToPlayer(sr, team, rng),
   );
 
-  // Step 5: Fill remaining spots with generated walk-ons up to 24 players
-  const combined = [...agedReturners, ...incomingFreshmen];
-  const TARGET_SIZE = 24;
-  const positionsCovered = new Set(combined.map((p) => p.position));
   const baseline = 45 + team.prestige * 0.4;
+  const withRecruits = [...agedReturners, ...incomingFreshmen];
 
-  // First ensure every required position is covered
-  const requiredPositions: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
-  const missingPositions = requiredPositions.filter((pos) => !positionsCovered.has(pos));
+  // Step 5: Work out which positions graduation left short of a fieldable lineup.
+  // These walk-ons are mandatory, so reserve their spots before trimming.
+  const counts = countByPosition(withRecruits);
+  const shortfalls: Position[] = [];
+  for (const pos of REQUIRED_POSITIONS) {
+    for (let i = counts[pos]; i < POSITION_MINIMUMS[pos]; i += 1) {
+      shortfalls.push(pos);
+    }
+  }
 
-  for (const pos of missingPositions) {
-    const variance = randInt(rng, -10, 8);
-    const overall = clamp(Math.round(baseline + variance - 5)); // walk-ons are below average
-    const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
-    combined.push({
-      id: `${team.id}-walkon-${pos}-${newSeed}-${combined.length}`,
-      name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
-      position: pos,
-      year: 1,
-      age: 18,
-      skill,
-      shooting: clamp(Math.round(baseline + variance + (pos === 'A' ? 6 : 0))),
-      passing: clamp(Math.round(baseline + randInt(rng, -8, 6))),
-      speed: clamp(Math.round(baseline + randInt(rng, -7, 7))),
-      defense: clamp(Math.round(baseline + randInt(rng, -9, 8) + (pos === 'D' || pos === 'LSM' ? 8 : 0))),
-      IQ: clamp(Math.round(baseline + randInt(rng, -5, 7))),
-      stamina: clamp(Math.round(baseline + randInt(rng, -6, 6))),
-      discipline: clamp(Math.round(baseline + randInt(rng, -5, 7))),
-      overall,
-    });
+  // Step 6: Trim surplus depth back to the roster target.
+  // Signees are protected — a class that outgrows the roster pushes out weak
+  // returners rather than being silently dropped on the floor.
+  const signedPlayerIds = new Set(incomingFreshmen.map((player) => player.id));
+  const combined = trimRosterToTarget(
+    withRecruits,
+    signedPlayerIds,
+    Math.max(0, ROSTER_TARGET_SIZE - shortfalls.length),
+  );
+
+  // Step 7: Cover the shortfalls, then fill the rest of the depth chart (walk-ons are below average)
+  for (const pos of shortfalls) {
+    combined.push(
+      makeDepthPlayer(rng, baseline, pos, `${team.id}-walkon-${pos}-${newSeed}-${combined.length}`, WALK_ON_TUNING),
+    );
   }
 
   // Fill to target size
   let fillIndex = 0;
-  while (combined.length < TARGET_SIZE && fillIndex < POSITION_FILL_ORDER.length) {
+  while (combined.length < ROSTER_TARGET_SIZE && fillIndex < POSITION_FILL_ORDER.length) {
     const pos = POSITION_FILL_ORDER[fillIndex];
     fillIndex++;
-    const variance = randInt(rng, -12, 8);
-    const overall = clamp(Math.round(baseline + variance - 8));
-    const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
-    combined.push({
-      id: `${team.id}-fill-${pos}-${newSeed}-${combined.length}`,
-      name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
-      position: pos,
-      year: 1,
-      age: 18,
-      skill,
-      shooting: clamp(Math.round(baseline + variance + (pos === 'A' ? 6 : 0))),
-      passing: clamp(Math.round(baseline + randInt(rng, -8, 6))),
-      speed: clamp(Math.round(baseline + randInt(rng, -7, 7))),
-      defense: clamp(Math.round(baseline + randInt(rng, -9, 8) + (pos === 'D' || pos === 'LSM' ? 8 : 0))),
-      IQ: clamp(Math.round(baseline + randInt(rng, -5, 7))),
-      stamina: clamp(Math.round(baseline + randInt(rng, -6, 6))),
-      discipline: clamp(Math.round(baseline + randInt(rng, -5, 7))),
-      overall,
-    });
+    combined.push(
+      makeDepthPlayer(rng, baseline, pos, `${team.id}-fill-${pos}-${newSeed}-${combined.length}`, ROSTER_FILL_TUNING),
+    );
   }
 
-  return combined.slice(0, TARGET_SIZE);
+  return combined;
 }
 
 /** Summarize roster depth by position */
@@ -337,19 +410,20 @@ export function getRosterDepthSummary(
   });
 }
 
+/** Starting slots available at each position. Single source of truth for depth charts. */
+export const STARTER_SLOTS_BY_POSITION: Record<Position, number> = {
+  A: 3,
+  M: 3,
+  D: 3,
+  LSM: 1,
+  FO: 1,
+  G: 1,
+};
+
 /** Build the default starter list from a roster (top players by position) */
 export function buildDefaultStarters(roster: Player[]): string[] {
-  const starterCounts: Record<Position, number> = {
-    A: 3,
-    M: 3,
-    D: 3,
-    LSM: 1,
-    FO: 1,
-    G: 1,
-  };
-
   const starters: string[] = [];
-  for (const [pos, count] of Object.entries(starterCounts) as [Position, number][]) {
+  for (const [pos, count] of Object.entries(STARTER_SLOTS_BY_POSITION) as [Position, number][]) {
     const posPlayers = roster
       .filter((p) => p.position === pos)
       .sort((a, b) => b.overall - a.overall)

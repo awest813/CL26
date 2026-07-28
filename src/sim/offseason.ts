@@ -1,4 +1,5 @@
 import type { Player, Position, Recruit } from '../types/sim';
+import { compareStringsAsc } from './ordering';
 
 export interface SigningDayResult {
   signedRecruitIds: string[];
@@ -61,7 +62,7 @@ export function resolveSigningDay(
       if (scoreB !== scoreA) return scoreB - scoreA;
       if (b.stars !== a.stars) return b.stars - a.stars;
       if (b.potential !== a.potential) return b.potential - a.potential;
-      return a.id.localeCompare(b.id);
+      return compareStringsAsc(a.id, b.id);
     });
 
     const picked = remaining.shift();

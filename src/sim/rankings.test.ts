@@ -154,4 +154,20 @@ describe('computeRankings with SOS', () => {
     expect(ranked[0].teamId).toBe('b');
     expect(ranked[1].teamId).toBe('a');
   });
+
+  test('fully tied teams break by codepoint order, not host locale collation', () => {
+    // Same score, wins, differential, and prestige: only the name/id tie-break is left.
+    // It must not depend on the runtime's default locale.
+    const teams = [
+      { ...makeTeam('t-2', 70), schoolName: 'a lower' },
+      { ...makeTeam('t-1', 70), schoolName: 'A upper' },
+    ];
+    const records = { 't-1': makeRecord(3, 1, 40, 30), 't-2': makeRecord(3, 1, 40, 30) };
+
+    const ranked = computeRankings(teams, records, 2);
+
+    // 'A upper' < 'a lower' by codepoint; locale collation would order them the other way.
+    expect(ranked.map((row) => row.teamId)).toEqual(['t-1', 't-2']);
+    expect(computeRankings([...teams].reverse(), records, 2).map((row) => row.teamId)).toEqual(['t-1', 't-2']);
+  });
 });

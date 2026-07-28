@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { toggleStarter } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position } from '../types/sim';
-import { getRosterDepthSummary } from '../sim/rosterManagement';
+import { getRosterDepthSummary, STARTER_SLOTS_BY_POSITION } from '../sim/rosterManagement';
 
 const POSITION_ORDER: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 
@@ -14,15 +14,6 @@ const POSITION_LABELS: Record<Position, string> = {
   LSM: 'LSM',
   FO: 'Faceoff',
   G: 'Goalie',
-};
-
-const STARTER_COUNTS: Record<Position, number> = {
-  A: 3,
-  M: 3,
-  D: 3,
-  LSM: 1,
-  FO: 1,
-  G: 1,
 };
 
 const YEAR_LABELS: Record<number, string> = {
@@ -265,7 +256,7 @@ function RosterPage() {
       {POSITION_ORDER.map((pos) => {
         const players = byPosition[pos];
         if (players.length === 0) return null;
-        const starterTarget = STARTER_COUNTS[pos];
+        const starterTarget = STARTER_SLOTS_BY_POSITION[pos];
         const currentStarters = players.filter((p) => starterSet.has(p.id)).length;
 
         return (

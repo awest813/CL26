@@ -1,4 +1,5 @@
 import type { Recruit, RecruitingPitch, TeamId } from '../types/sim.ts';
+import { compareStringsAsc } from './ordering.ts';
 import { makeRng, randInt } from './rng.ts';
 
 export interface RecruitingWeekResult {
@@ -130,7 +131,7 @@ export function simulateRecruitingWeek(
                 bestTeamId = teamId;
             } else if (interest === bestInterest && bestTeamId != null) {
               // Deterministic tie-break by team id so Object key order cannot flip outcomes.
-              if (teamId.localeCompare(bestTeamId) < 0) {
+              if (compareStringsAsc(teamId, bestTeamId) < 0) {
                 bestTeamId = teamId;
               }
             }

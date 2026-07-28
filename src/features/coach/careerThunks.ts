@@ -44,6 +44,9 @@ const PLAYOFF_PRESTIGE_DRIFT = 2;
 const TARGET_MET_PRESTIGE_DRIFT = 1;
 const MODERATE_MISS_PRESTIGE_DRIFT = -2;
 const SEVERE_MISS_PRESTIGE_DRIFT = -3;
+/** How far above your current standing a rival program will look to hire you. */
+const BASE_OFFER_PRESTIGE_REACH = 8;
+const CHAMPION_OFFER_PRESTIGE_REACH = 16;
 
 function computePrestigeDriftDelta(champion: boolean, madePlayoffs: boolean, winDiff: number): number {
   if (champion) return CHAMPION_PRESTIGE_DRIFT;
@@ -70,7 +73,12 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
       return 'skipped';
     }
 
-    await dispatch(simCurrentWeek());
+    // If the week sim fails, stop before handing out XP, growth, and fatigue for a
+    // week that was never played.
+    const weekAction = await dispatch(simCurrentWeek());
+    if (!simCurrentWeek.fulfilled.match(weekAction)) {
+      return 'skipped';
+    }
 
     // Recruiting updates are optional; season progression should still work even if
     // the user has no active targets on their board.
@@ -225,8 +233,18 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     dispatch(updateProgramStanding(standing));
 
     if (newJobSecurity >= 68 || champion) {
+      // Programs only poach within reach of your current standing — a title run opens
+      // a wider door than a merely secure year, but the league's blue bloods are not
+      // calling every coach who clears the security bar.
+      const offerReach = champion ? CHAMPION_OFFER_PRESTIGE_REACH : BASE_OFFER_PRESTIGE_REACH;
+      const maxOfferPrestige = currentEffectivePrestige + offerReach;
       const candidateOffers = teams
-        .filter((team) => team.id !== coach.selectedTeamId && team.prestige >= currentEffectivePrestige)
+        .filter(
+          (team) =>
+            team.id !== coach.selectedTeamId &&
+            team.prestige >= currentEffectivePrestige &&
+            team.prestige <= maxOfferPrestige,
+        )
         .map((team) => ({
           team,
           sortKey: seedToNumber(`${season.seasonSeed}:${season.year}:${coach.selectedTeamId}:${team.id}`),

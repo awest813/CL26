@@ -4,8 +4,9 @@ import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit,
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
 import { resolveSigningDay } from '../../sim/offseason';
+import { STARTER_SLOTS_BY_POSITION } from '../../sim/rosterManagement';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
-import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
+import { careerOffseasonCapabilities, hasSigningDayResolved } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
 
 export const WEEKLY_HOURS_CAP = 120;
@@ -322,6 +323,7 @@ const coachSlice = createSlice({
     },
     applyJobOfferAcceptance: (state, action: PayloadAction<{
         teamId: string;
+        seasonYear: number;
         careerTier: NonNullable<CoachState['careerTier']>;
         programExpectations: ProgramExpectations;
     }>) => {
@@ -336,7 +338,12 @@ const coachSlice = createSlice({
         state.activePitchesByRecruitId = {};
         state.recruitingWeekIndex = 0;
         state.scholarshipsAvailable = 12;
-        state.signedRecruitsByYear = {};
+        // The old school's class does not follow you, but signing day for the finished
+        // year stays marked as resolved — that flag also gates the offseason handoff,
+        // and clearing it would re-open a ceremony step the coach already completed.
+        state.signedRecruitsByYear = hasSigningDayResolved(state.signedRecruitsByYear, action.payload.seasonYear)
+            ? { [action.payload.seasonYear]: [] }
+            : {};
         state.managedRoster = null;
         state.starterIds = [];
         state.teamFatigue = 20;
@@ -422,9 +429,22 @@ const coachSlice = createSlice({
         const idx = state.starterIds.indexOf(playerId);
         if (idx >= 0) {
             state.starterIds.splice(idx, 1);
-        } else {
-            state.starterIds.push(playerId);
+            return;
         }
+
+        // Promotion has to respect the depth chart, not just the button that offered it:
+        // a position cannot field more starters than the lineup has slots.
+        const roster = state.managedRoster ?? [];
+        const positionById = new Map(roster.map((player) => [player.id, player.position]));
+        const position = positionById.get(playerId);
+        if (!position) return;
+
+        const startersAtPosition = state.starterIds.filter(
+            (id) => positionById.get(id) === position,
+        ).length;
+        if (startersAtPosition >= STARTER_SLOTS_BY_POSITION[position]) return;
+
+        state.starterIds.push(playerId);
     },
     resetCoach: () => initialState,
   },
@@ -500,6 +520,7 @@ export const acceptJobOffer = createAsyncThunk(
 
         dispatch(applyJobOfferAcceptance({
             teamId,
+            seasonYear: state.season.year,
             ...careerSetupFromPrestige(team.prestige),
         }));
     },

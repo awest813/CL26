@@ -16,6 +16,7 @@ import {
   assertCanSimulatePlayoffRound,
   assertCanSoftResetSeason,
   assertCanStartNewSeason,
+  canSimRegularWeek,
   canStartNewSeason,
   playoffStageFor,
   seasonCapabilities,
@@ -92,22 +93,22 @@ export const simCurrentWeek = createAsyncThunk(
 
     const gamesToPlay = scheduleByWeek[currentWeekIndex];
     const results: GameResult[] = [];
+    const teamById = new Map(teams.map((team) => [team.id, team]));
+
+    // Helper to get team
+    const getTeam = (teamId: string) => {
+        const team = teamById.get(teamId);
+        if (!team) throw new Error(`Team ${teamId} not found`);
+        return team;
+    }
 
     // Helper to get roster — uses managed roster for the coached team if available
     const getRoster = (teamId: string) => {
-        const team = teams.find(t => t.id === teamId);
-        if (!team) throw new Error(`Team ${teamId} not found`);
+        const team = getTeam(teamId);
         if (teamId === coachState.selectedTeamId && coachState.managedRoster && coachState.managedRoster.length > 0) {
             return coachState.managedRoster;
         }
         return generateRoster(team, leagueSeasonRosterSeed(seasonSeed));
-    }
-
-    // Helper to get team
-    const getTeam = (teamId: string) => {
-        const team = teams.find(t => t.id === teamId);
-        if (!team) throw new Error(`Team ${teamId} not found`);
-        return team;
     }
 
     // Determine tactics (default for now)
@@ -162,23 +163,26 @@ export const simCurrentWeek = createAsyncThunk(
       results.push(result);
     });
 
-    return { results, previousRankByTeamId };
+    return { results, previousRankByTeamId, weekIndex: currentWeekIndex };
   }
 );
 
-// Async thunk to simulate entire season (rest of it)
+// Async thunk to simulate the rest of the regular season.
 export const simSeason = createAsyncThunk(
   'season/simSeason',
   async (_, { dispatch, getState }) => {
-    const state = getState() as RootState;
-    let { currentWeekIndex } = state.season;
-    const { scheduleByWeek } = state.season;
+    const weekCount = (getState() as RootState).season.scheduleByWeek.length;
 
-    while (currentWeekIndex < scheduleByWeek.length) {
-      await dispatch(simCurrentWeek());
-      // Re-fetch state to check new index
-      const newState = getState() as RootState;
-      currentWeekIndex = newState.season.currentWeekIndex;
+    // Bounded by the schedule length: a week that fails to advance (rejected sim,
+    // phase change mid-loop) exits instead of re-dispatching forever.
+    for (let attempt = 0; attempt < weekCount; attempt += 1) {
+      const season = (getState() as RootState).season;
+      if (!canSimRegularWeek(season)) break;
+
+      const weekBefore = season.currentWeekIndex;
+      const action = await dispatch(simCurrentWeek());
+      if (!simCurrentWeek.fulfilled.match(action)) break;
+      if ((getState() as RootState).season.currentWeekIndex === weekBefore) break;
     }
   }
 );
@@ -318,6 +322,9 @@ const seasonSlice = createSlice({
       })
       .addCase(simCurrentWeek.fulfilled, (state, action) => {
         if (state.phase !== 'REGULAR') return;
+        // Reject stale fulfills (concurrent dispatch / TOCTOU) so a week can never be
+        // applied twice or skipped: results must belong to the week we are on.
+        if (action.payload.weekIndex !== state.currentWeekIndex) return;
         state.previousRankByTeamId = action.payload.previousRankByTeamId;
         state.gameResults.push(...action.payload.results);
         state.completedWeeks += 1;

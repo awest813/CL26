@@ -31,7 +31,8 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 - [x] Offseason signing day flow + roster turnover overlay
 - [x] Coach practice/fatigue modifiers wired into weekly sim inputs
 - [x] Redux persistence for `season` and `coach` slices; `league` reloads from JSON
-- [x] Regression test suite covering schedule, season validation, and playoff logic
+- [x] Regression test suite covering schedule, season validation, playoff logic, roster
+      turnover, offseason handoff, and season-slice phase guards
 
 ### In Progress / Needs Polish
 - [x] Rankings criteria exposed in UI (methodology + score breakdowns on Rankings page)
@@ -53,7 +54,7 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 An **alpha-ready** build means a user can complete a full deterministic year loop, understand outcomes clearly, and save/restore a coach career with stable persistence.
 
 - [x] Rankings methodology documented and visible in Rankings page
-- [ ] Playoff bracket flow is fully validated end-to-end via regression tests
+- [x] Playoff bracket flow is fully validated end-to-end via regression tests
 - [x] Week/game detail pages provide enough depth to understand individual results
 - [x] Career loop can complete two seasons (Year 1 offseason → Year 2 preseason)
 - [ ] UI is usable on common desktop and tablet viewports
@@ -87,7 +88,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Standings pages and per-week game views
 - [x] Refresh restores full season progress via persistence
 
-**Key files:** `src/sim/schedule.ts`, `src/sim/seasonSim.ts`, `src/features/season/seasonSlice.ts`, `src/pages/SeasonPage.tsx`, `src/pages/SeasonWeekPage.tsx`, `src/pages/SeasonStandingsPage.tsx`
+**Key files:** `src/sim/schedule.ts`, `src/features/season/seasonSlice.ts`, `src/pages/SeasonPage.tsx`, `src/pages/SeasonWeekPage.tsx`, `src/pages/SeasonStandingsPage.tsx`
 
 ---
 
@@ -150,7 +151,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Lightweight injury risk and availability impact
 - [x] Coach modifiers passed into `simulateGame` inputs (match engine stays pure)
 
-**Key files:** `src/sim/coachEffects.ts`, `src/sim/seasonSim.ts`, `src/pages/WeeklyHubPage.tsx`
+**Key files:** `src/sim/coachEffects.ts`, `src/features/coach/careerThunks.ts`, `src/pages/WeeklyHubPage.tsx`
 
 ---
 

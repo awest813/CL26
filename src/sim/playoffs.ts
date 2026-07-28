@@ -34,12 +34,13 @@ function makeGameId(round: PlayoffRoundName, slot: number): string {
   return `playoff-${round.toLowerCase()}-${slot}`;
 }
 
-export function selectPlayoffField(top12: RankingRow[]): PlayoffSeed[] {
-  if (top12.length < 12) {
-    throw new Error(`Top 12 projection requires 12 teams, received ${top12.length}.`);
+/** Take the top 12 of a ranking table as the seeded playoff field. */
+export function selectPlayoffField(rankings: RankingRow[]): PlayoffSeed[] {
+  if (rankings.length < 12) {
+    throw new Error(`Top 12 projection requires 12 teams, received ${rankings.length}.`);
   }
 
-  return top12.slice(0, 12).map((row, index) => ({
+  return rankings.slice(0, 12).map((row, index) => ({
     seed: index + 1,
     teamId: row.teamId,
   }));
@@ -340,6 +341,7 @@ export function simulatePlayoffRound(
       [nextRound]: nextGames,
     },
     currentRound: nextRound,
-    championTeamId: nextRound === 'FINAL' ? null : state.championTeamId,
+    // A champion is only crowned by the FINAL branch above; rounds before it stay open.
+    championTeamId: null,
   };
 }

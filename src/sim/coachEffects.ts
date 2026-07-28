@@ -78,6 +78,8 @@ const FATIGUE_PENALTY_RANGE = 76;
 const CONDITIONING_FATIGUE_REDUCTION = 0.52;
 const TACTICIAN_FATIGUE_MITIGATION = 0.88;
 const DEVELOPER_FATIGUE_MITIGATION = 0.94;
+const PLAYOFF_REST_RECOVERY = 12;
+const PLAYOFF_REST_FLOOR = 10;
 const FATIGUE_LABEL_DRAINED = 78;
 const FATIGUE_LABEL_WORN = 58;
 const FATIGUE_LABEL_MANAGED = 34;
@@ -353,7 +355,9 @@ export function playoffRoundFatigue(
 ): number {
   if (!played) {
     // Rest between rounds / unused bye — meaningful recovery toward fresh.
-    return clamp(previousFatigue - 12, 10, 100);
+    // Never above where the team started: resting cannot make a squad more tired.
+    const bounded = clamp(previousFatigue, 0, 100);
+    return Math.min(bounded, clamp(bounded - PLAYOFF_REST_RECOVERY, PLAYOFF_REST_FLOOR, 100));
   }
   return advanceFatigue(previousFatigue, focus, archetype, operationsSkill);
 }

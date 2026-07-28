@@ -87,6 +87,17 @@ describe('coach effects', () => {
     assert.ok(played > 60);
   });
 
+  test('resting on a bye never makes an already-fresh squad more tired', () => {
+    for (const startingFatigue of [0, 4, 10, 11, 25]) {
+      const rested = playoffRoundFatigue(startingFatigue, false, 'OFFENSE', 'RECRUITER', 0);
+      assert.ok(
+        rested <= startingFatigue,
+        `rest raised fatigue from ${startingFatigue} to ${rested}`,
+      );
+      assert.ok(rested >= 0);
+    }
+  });
+
   test('skill tree boosts lacrosse control points in the game plan', () => {
     const basePlan = buildCoachGamePlan({
       baseTactics: base,
