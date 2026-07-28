@@ -5,9 +5,9 @@ import {
   applyRosterTurnover,
   applyWeeklyTraitGrowth,
   developPlayers,
-  ROSTER_TARGET_SIZE,
   trimRosterToTarget,
 } from './rosterManagement.ts';
+import { ROSTER_TARGET_SIZE } from './gameRules.ts';
 import { generateRoster } from './generateRoster.ts';
 import { makeRng } from './rng.ts';
 

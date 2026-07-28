@@ -99,14 +99,27 @@ export interface ScheduledGame {
 export interface TeamGameStats {
   teamId: string;
   goals: number;
+  /** All shot attempts, including shots that missed the cage. */
   shots: number;
+  /** Shots that reached the cage — saved or scored. NCAA box scores split SOG from total shots. */
+  shotsOnGoal?: number;
   saves: number;
   turnovers: number;
   /** Turnovers forced on the opposing offense (caused turnovers). */
   causedTurnovers?: number;
   groundBalls: number;
   penalties: number;
+  /** Penalty minutes served: personal fouls are timed, technical fouls are :30. */
+  penaltyMinutes?: number;
+  faceoffsWon?: number;
+  faceoffsTaken?: number;
   faceoffPct: number;
+  /** Clearing the ball from the defensive half against the opponent's ride. */
+  clearsSuccessful?: number;
+  clearsAttempted?: number;
+  /** Extra-man offense — man-up chances created by an opponent's personal foul. */
+  manUpGoals?: number;
+  manUpOpportunities?: number;
 }
 
 export interface PlayerGameStats {

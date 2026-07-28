@@ -6,6 +6,7 @@
  * values as the single source of truth so the match engine, UI, and any future
  * clock simulation all stay consistent.
  */
+import type { Position } from '../types/sim';
 
 // ---------------------------------------------------------------------------
 // Period / clock
@@ -78,6 +79,79 @@ export const WOMEN_DEFAULT_LINEUP = {
   attackers: 4,
   total: 12,
 } as const;
+
+// ---------------------------------------------------------------------------
+// Positions
+// ---------------------------------------------------------------------------
+
+/** Field positions in depth-chart order. */
+export const POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
+
+/** Full position names as a broadcast or box score would list them. */
+export const POSITION_LABELS: Record<Position, string> = {
+  A: 'Attack',
+  M: 'Midfield',
+  D: 'Close Defense',
+  LSM: 'Long-Stick Midfield',
+  FO: 'Faceoff Specialist',
+  G: 'Goalie',
+};
+
+/** Compact labels for tables and chips. */
+export const POSITION_SHORT_LABELS: Record<Position, string> = {
+  A: 'Attack',
+  M: 'Midfield',
+  D: 'Defense',
+  LSM: 'LSM',
+  FO: 'FOGO',
+  G: 'Goalie',
+};
+
+/**
+ * Starting slots at each position.
+ *
+ * Ten men are on the field at once (see `MEN_ON_FIELD`): 3 attack, 3 midfield,
+ * 3 close defense, 1 goalie. The long-stick midfielder and the faceoff
+ * specialist are first-choice specialists who rotate into a midfield slot for
+ * defensive sets and the draw, which is why the depth chart names twelve roles.
+ */
+export const STARTER_SLOTS_BY_POSITION: Record<Position, number> = {
+  A: 3,
+  M: 3,
+  D: 3,
+  LSM: 1,
+  FO: 1,
+  G: 1,
+};
+
+/**
+ * Target roster shape for a program. Drives recruiting position needs, signing-day
+ * fit, and the procedural roster draw so all three agree on what a full team is.
+ */
+export const ROSTER_POSITION_TARGETS: Record<Position, number> = {
+  A: 5,
+  M: 8,
+  D: 6,
+  LSM: 2,
+  FO: 2,
+  G: 2,
+};
+
+/** Bodies a roster must keep at each position to field a legal lineup. */
+export const POSITION_MINIMUMS: Record<Position, number> = {
+  A: 3,
+  M: 3,
+  D: 3,
+  LSM: 1,
+  FO: 1,
+  G: 1,
+};
+
+/** Full roster size implied by the position targets. */
+export const ROSTER_TARGET_SIZE = POSITIONS.reduce(
+  (total, position) => total + ROSTER_POSITION_TARGETS[position],
+  0,
+);
 
 // ---------------------------------------------------------------------------
 // Roster limits (NCAA Division I opt-in House settlement model)

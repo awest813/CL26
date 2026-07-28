@@ -2,11 +2,11 @@ import type { Player, Position, Recruit, RecruitingPitch, RecruitMotivation, Tea
 import { makeRng, pickOne, randInt, seedToNumber } from './rng.ts';
 import namesData from '../data/names.json' with { type: 'json' };
 import { LEAGUE_REGIONS } from './leagueDataValidation.ts';
+import { POSITIONS, ROSTER_POSITION_TARGETS as POSITION_TARGETS } from './gameRules.ts';
 
 const REGIONS = [...LEAGUE_REGIONS];
-const POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 const PITCHES: RecruitingPitch[] = ['PLAYING_TIME', 'PROXIMITY', 'ACADEMIC', 'PRESTIGE', 'CHAMPIONSHIP', 'CAMPUS_LIFE'];
-export const RECRUITING_POSITION_FILTERS: Array<Position | 'ALL'> = ['ALL', 'A', 'M', 'D', 'LSM', 'FO', 'G'];
+export const RECRUITING_POSITION_FILTERS: Array<Position | 'ALL'> = ['ALL', ...POSITIONS];
 export const PITCH_LABELS: Record<RecruitingPitch, string> = {
   PLAYING_TIME: 'Play Time',
   PROXIMITY: 'Home',
@@ -42,14 +42,6 @@ export function proximityPitchGrade(teamRegion: string, recruitRegion: string): 
 export function isRecruitingPitch(value: string): value is RecruitingPitch {
   return value in PITCH_LABELS;
 }
-const POSITION_TARGETS: Record<Position, number> = {
-  A: 5,
-  M: 7,
-  D: 7,
-  LSM: 2,
-  FO: 1,
-  G: 2,
-};
 
 function shuffleInPlace<T>(rng: () => number, values: T[]): T[] {
   for (let i = values.length - 1; i > 0; i -= 1) {

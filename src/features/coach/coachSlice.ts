@@ -4,7 +4,7 @@ import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit,
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
 import { resolveSigningDay } from '../../sim/offseason';
-import { STARTER_SLOTS_BY_POSITION } from '../../sim/rosterManagement';
+import { STARTER_SLOTS_BY_POSITION } from '../../sim/gameRules';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
 import { careerOffseasonCapabilities, hasSigningDayResolved } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';

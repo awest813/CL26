@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
-import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
+import { buildGameRecap, clearLine, faceoffLine, gameResultToSummary, manUpLine, penaltyLine, shotLine } from '../sim/gameRecap';
 
 const WIN_COLOR = '#16a34a';
 const LOSS_COLOR = '#ef4444';
@@ -70,10 +70,14 @@ function UserGameCard({
         <span className={won ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{won ? 'WIN' : 'LOSS'}</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mt-3 pt-3 border-t">
-        <div><span className="text-gray-400 text-xs block">Shots</span>{userStats.shots}–{opponentStats.shots}</div>
+        <div><span className="text-gray-400 text-xs block">Shots (SOG)</span>{shotLine(userStats)}–{shotLine(opponentStats)}</div>
         <div><span className="text-gray-400 text-xs block">Saves</span>{userStats.saves}–{opponentStats.saves}</div>
         <div><span className="text-gray-400 text-xs block">Ground Balls</span>{userStats.groundBalls}–{opponentStats.groundBalls}</div>
         <div><span className="text-gray-400 text-xs block">Turnovers</span>{userStats.turnovers}–{opponentStats.turnovers}</div>
+        <div><span className="text-gray-400 text-xs block">Faceoffs</span>{faceoffLine(userStats)}–{faceoffLine(opponentStats)}</div>
+        <div><span className="text-gray-400 text-xs block">Clears</span>{clearLine(userStats)}–{clearLine(opponentStats)}</div>
+        <div><span className="text-gray-400 text-xs block">Man-Up</span>{manUpLine(userStats)}–{manUpLine(opponentStats)}</div>
+        <div><span className="text-gray-400 text-xs block">Penalties</span>{penaltyLine(userStats)}–{penaltyLine(opponentStats)}</div>
       </div>
       <div className="text-xs text-gray-500 mt-2">{recap.efficiencyNote}</div>
       {recap.mvp && (
@@ -288,10 +292,14 @@ function SeasonWeekPage() {
                             })()}
                             <div className="font-semibold text-gray-500 mb-2">Expanded stats shown away – home.</div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
+                              <div><span className="text-gray-400 block">Shots (SOG)</span>{shotLine(result.statsB)} - {shotLine(result.statsA)}</div>
                               <div><span className="text-gray-400 block">Saves</span>{result.statsB.saves} - {result.statsA.saves}</div>
                               <div><span className="text-gray-400 block">Ground Balls</span>{result.statsB.groundBalls} - {result.statsA.groundBalls}</div>
-                              <div><span className="text-gray-400 block">Penalties</span>{result.statsB.penalties} - {result.statsA.penalties}</div>
                               <div><span className="text-gray-400 block">Caused TO</span>{result.statsB.causedTurnovers ?? 0} - {result.statsA.causedTurnovers ?? 0}</div>
+                              <div><span className="text-gray-400 block">Clears</span>{clearLine(result.statsB)} - {clearLine(result.statsA)}</div>
+                              <div><span className="text-gray-400 block">Faceoffs</span>{faceoffLine(result.statsB)} - {faceoffLine(result.statsA)}</div>
+                              <div><span className="text-gray-400 block">Man-Up</span>{manUpLine(result.statsB)} - {manUpLine(result.statsA)}</div>
+                              <div><span className="text-gray-400 block">Penalties</span>{penaltyLine(result.statsB)} - {penaltyLine(result.statsA)}</div>
                             </div>
                             {result.highlights.length > 0 && (
                               <ul className="m-0 pl-4">

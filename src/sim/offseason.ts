@@ -1,5 +1,6 @@
 import type { Player, Position, Recruit } from '../types/sim';
 import { compareStringsAsc } from './ordering';
+import { ROSTER_POSITION_TARGETS as POSITION_TARGETS } from './gameRules';
 
 export interface SigningDayResult {
   signedRecruitIds: string[];
@@ -12,14 +13,6 @@ export interface ClassTalentSummary {
   blueChipCount: number;
 }
 
-const POSITION_TARGETS: Record<Position, number> = {
-  A: 5,
-  M: 7,
-  D: 7,
-  LSM: 2,
-  FO: 1,
-  G: 2,
-};
 
 function countRosterByPosition(roster: Player[]): Record<Position, number> {
   const counts: Record<Position, number> = { A: 0, M: 0, D: 0, LSM: 0, FO: 0, G: 0 };

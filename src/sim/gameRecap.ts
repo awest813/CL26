@@ -1,4 +1,42 @@
-import type { GameSummary, TopPerformer } from '../types/sim.ts';
+import type { GameSummary, TeamGameStats, TopPerformer } from '../types/sim.ts';
+
+/**
+ * Box-score formatters shared by the season and exhibition views.
+ * Every field beyond the original stat set is optional so results saved before
+ * those stats existed still render instead of showing `undefined`.
+ */
+
+/** Shots with shots-on-goal in parentheses: `35 (23)`. */
+export function shotLine(stats: TeamGameStats): string {
+  return stats.shotsOnGoal == null ? `${stats.shots}` : `${stats.shots} (${stats.shotsOnGoal})`;
+}
+
+/** Faceoffs won of faceoffs taken: `14/27`. Falls back to the stored percentage. */
+export function faceoffLine(stats: TeamGameStats): string {
+  if (stats.faceoffsWon == null || !stats.faceoffsTaken) return `${stats.faceoffPct}%`;
+  return `${stats.faceoffsWon}/${stats.faceoffsTaken}`;
+}
+
+/** Successful clears of clears attempted: `16/18`. */
+export function clearLine(stats: TeamGameStats): string {
+  if (stats.clearsAttempted == null) return '—';
+  return `${stats.clearsSuccessful ?? 0}/${stats.clearsAttempted}`;
+}
+
+/** Extra-man goals of man-up opportunities: `1/3`. */
+export function manUpLine(stats: TeamGameStats): string {
+  if (stats.manUpOpportunities == null) return '—';
+  return `${stats.manUpGoals ?? 0}/${stats.manUpOpportunities}`;
+}
+
+/** Penalty count with time served: `3 (2:30)`. */
+export function penaltyLine(stats: TeamGameStats): string {
+  if (stats.penaltyMinutes == null) return `${stats.penalties}`;
+  const totalSeconds = Math.round(stats.penaltyMinutes * 60);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+  return `${stats.penalties} (${minutes}:${seconds})`;
+}
 
 export interface GameRecap {
   gameId: string;
@@ -13,6 +51,13 @@ function formatPct(numerator: number, denominator: number): string {
   return ((numerator / denominator) * 100).toFixed(1);
 }
 
+/** Goalie save percentage in the usual `.512` form; empty when nothing was faced. */
+function formatSavePct(saves: number, goalsAllowed: number): string {
+  const shotsFaced = saves + goalsAllowed;
+  if (shotsFaced <= 0) return '';
+  return (saves / shotsFaced).toFixed(3).replace(/^0/, '');
+}
+
 export function buildGameRecap(game: GameSummary, awayName: string, homeName: string): GameRecap {
   const homeWon = game.homeScore > game.awayScore;
   const awayWon = game.awayScore > game.homeScore;
@@ -22,13 +67,44 @@ export function buildGameRecap(game: GameSummary, awayName: string, homeName: st
 
   const awayShooting = formatPct(game.teamStatsAway.goals, game.teamStatsAway.shots);
   const homeShooting = formatPct(game.teamStatsHome.goals, game.teamStatsHome.shots);
+  // Save percentage is saves over shots faced on goal — the keeper's own line.
+  const awaySavePct = formatSavePct(game.teamStatsAway.saves, game.teamStatsHome.goals);
+  const homeSavePct = formatSavePct(game.teamStatsHome.saves, game.teamStatsAway.goals);
 
   const foEdge = game.teamStatsHome.faceoffPct - game.teamStatsAway.faceoffPct;
   const gbEdge = game.teamStatsHome.groundBalls - game.teamStatsAway.groundBalls;
   const toEdge = game.teamStatsAway.turnovers - game.teamStatsHome.turnovers;
 
+  // Clearing and extra-man are the two possession battles a lacrosse coach reads first,
+  // so they outrank the generic ground-ball / turnover lines when they were decisive.
+  const homeClears = game.teamStatsHome.clearsAttempted ?? 0;
+  const awayClears = game.teamStatsAway.clearsAttempted ?? 0;
+  const homeClearPct = homeClears > 0 ? (game.teamStatsHome.clearsSuccessful ?? 0) / homeClears : null;
+  const awayClearPct = awayClears > 0 ? (game.teamStatsAway.clearsSuccessful ?? 0) / awayClears : null;
+  const homeManUp = game.teamStatsHome.manUpGoals ?? 0;
+  const awayManUp = game.teamStatsAway.manUpGoals ?? 0;
+
   let keyEdge = `${winnerName} controlled the details.`;
-  if (Math.abs(foEdge) >= 8) {
+  if (
+    homeClearPct != null &&
+    awayClearPct != null &&
+    Math.abs(homeClearPct - awayClearPct) >= 0.2
+  ) {
+    const isHome = homeClearPct > awayClearPct;
+    const team = isHome ? homeName : awayName;
+    const beaten = isHome ? awayName : homeName;
+    const rideStats = isHome
+      ? `${game.teamStatsAway.clearsSuccessful ?? 0}/${awayClears}`
+      : `${game.teamStatsHome.clearsSuccessful ?? 0}/${homeClears}`;
+    keyEdge = `${team}'s ride broke ${beaten} down (${rideStats} clearing).`;
+  } else if (Math.abs(homeManUp - awayManUp) >= 2) {
+    const isHome = homeManUp > awayManUp;
+    const team = isHome ? homeName : awayName;
+    const stats = isHome
+      ? `${homeManUp}/${game.teamStatsHome.manUpOpportunities ?? 0}`
+      : `${awayManUp}/${game.teamStatsAway.manUpOpportunities ?? 0}`;
+    keyEdge = `${team} cashed in with the extra man (${stats} man-up).`;
+  } else if (Math.abs(foEdge) >= 8) {
     const isHome = foEdge > 0;
     const team = isHome ? homeName : awayName;
     const stats = isHome
@@ -62,7 +138,9 @@ export function buildGameRecap(game: GameSummary, awayName: string, homeName: st
       : `${winnerName} beat ${loserName} by ${margin} (${game.awayScore}-${game.homeScore}).`,
     keyEdge,
     mvp,
-    efficiencyNote: `${awayName} shot ${awayShooting}% · ${homeName} shot ${homeShooting}%`,
+    efficiencyNote:
+      `${awayName} shot ${awayShooting}% · ${homeName} shot ${homeShooting}%` +
+      (awaySavePct && homeSavePct ? ` · saves ${awaySavePct}/${homeSavePct}` : ''),
   };
 }
 

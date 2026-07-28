@@ -1,4 +1,11 @@
 import { Player, Position, SignedRecruit, Team } from '../types/sim';
+import {
+  POSITIONS as REQUIRED_POSITIONS,
+  POSITION_MINIMUMS,
+  ROSTER_POSITION_TARGETS,
+  ROSTER_TARGET_SIZE,
+  STARTER_SLOTS_BY_POSITION,
+} from './gameRules';
 import { compareStringsAsc } from './ordering';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
@@ -200,15 +207,19 @@ export function applyWeeklyTraitGrowth(
   return mutable;
 }
 
-const POSITION_FILL_ORDER: Position[] = ['A', 'A', 'A', 'M', 'M', 'M', 'M', 'D', 'D', 'D', 'LSM', 'FO', 'G', 'A', 'M', 'D', 'M', 'D', 'A', 'M', 'D', 'LSM', 'M', 'D', 'A'];
-
-/** Roster target — matches the 25-slot shape produced by `generateRoster`. */
-export const ROSTER_TARGET_SIZE = 25;
-
-const REQUIRED_POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
-
-/** Bodies a trim pass must leave at each position so a lineup can still be fielded. */
-const POSITION_MINIMUMS: Record<Position, number> = { A: 3, M: 3, D: 3, LSM: 1, FO: 1, G: 1 };
+/** Position sitting furthest below its target squad count — the next hole to plug. */
+function neediestPosition(counts: Record<Position, number>): Position {
+  let best: Position = REQUIRED_POSITIONS[0];
+  let bestDeficit = -Infinity;
+  for (const position of REQUIRED_POSITIONS) {
+    const deficit = ROSTER_POSITION_TARGETS[position] - counts[position];
+    if (deficit > bestDeficit) {
+      bestDeficit = deficit;
+      best = position;
+    }
+  }
+  return best;
+}
 
 function countByPosition(players: Player[]): Record<Position, number> {
   const counts: Record<Position, number> = { A: 0, M: 0, D: 0, LSM: 0, FO: 0, G: 0 };
@@ -371,11 +382,12 @@ export function applyRosterTurnover(
     );
   }
 
-  // Fill to target size
-  let fillIndex = 0;
-  while (combined.length < ROSTER_TARGET_SIZE && fillIndex < POSITION_FILL_ORDER.length) {
-    const pos = POSITION_FILL_ORDER[fillIndex];
-    fillIndex++;
+  // Fill to target size, always adding at whichever position is furthest below its
+  // target so walk-ons plug real holes instead of following a fixed script.
+  const fillCounts = countByPosition(combined);
+  while (combined.length < ROSTER_TARGET_SIZE) {
+    const pos = neediestPosition(fillCounts);
+    fillCounts[pos] += 1;
     combined.push(
       makeDepthPlayer(rng, baseline, pos, `${team.id}-fill-${pos}-${newSeed}-${combined.length}`, ROSTER_FILL_TUNING),
     );
@@ -396,10 +408,9 @@ export function getRosterDepthSummary(
   roster: Player[],
   starterIds: string[],
 ): RosterDepthSummary[] {
-  const positions: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
   const starterSet = new Set(starterIds);
 
-  return positions.map((pos) => {
+  return REQUIRED_POSITIONS.map((pos) => {
     const posPlayers = roster.filter((p) => p.position === pos);
     const starters = posPlayers.filter((p) => starterSet.has(p.id)).length;
     const avgOverall =
@@ -409,16 +420,6 @@ export function getRosterDepthSummary(
     return { position: pos, starters, backups: posPlayers.length - starters, avgOverall };
   });
 }
-
-/** Starting slots available at each position. Single source of truth for depth charts. */
-export const STARTER_SLOTS_BY_POSITION: Record<Position, number> = {
-  A: 3,
-  M: 3,
-  D: 3,
-  LSM: 1,
-  FO: 1,
-  G: 1,
-};
 
 /** Build the default starter list from a roster (top players by position) */
 export function buildDefaultStarters(roster: Player[]): string[] {

@@ -5,6 +5,7 @@ import { RootState } from '../../store/store';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { assertValidLeagueData } from '../../sim/leagueDataValidation';
+import { POSITIONS as POSITION_ORDER } from '../../sim/gameRules';
 
 interface LeagueState extends LeagueData {}
 
@@ -15,7 +16,6 @@ const initialState: LeagueState = {
 
 assertValidLeagueData(initialState.conferences, initialState.teams);
 
-const POSITION_ORDER = ['A', 'M', 'D', 'LSM', 'FO', 'G'] as const;
 const YEAR_LABELS = {
   1: 'Fr',
   2: 'So',

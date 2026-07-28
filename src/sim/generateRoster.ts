@@ -1,17 +1,16 @@
 import { Player, Position, Team } from '../types/sim';
+import { POSITIONS, ROSTER_POSITION_TARGETS } from './gameRules';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
 
-const POSITION_DISTRIBUTION: Position[] = [
-  'A', 'A', 'A',
-  'M', 'M', 'M', 'M',
-  'D', 'D', 'D',
-  'LSM',
-  'FO',
-  'G',
-  'A', 'M', 'D', 'M', 'D', 'A', 'M', 'D',
-  'LSM', 'M', 'D', 'A',
-];
+/**
+ * Roster shape drawn straight from the target squad build, so the procedural draw,
+ * recruiting position needs, and offseason turnover all agree on what a full team
+ * looks like — including carrying real depth at goalie and the faceoff X.
+ */
+const POSITION_DISTRIBUTION: Position[] = POSITIONS.flatMap((position) =>
+  Array.from({ length: ROSTER_POSITION_TARGETS[position] }, () => position),
+);
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
 

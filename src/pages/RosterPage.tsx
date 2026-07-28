@@ -3,18 +3,10 @@ import { Link, Navigate } from 'react-router-dom';
 import { toggleStarter } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position } from '../types/sim';
-import { getRosterDepthSummary, STARTER_SLOTS_BY_POSITION } from '../sim/rosterManagement';
+import { getRosterDepthSummary } from '../sim/rosterManagement';
+import { MEN_ON_FIELD, POSITION_LABELS, POSITIONS, STARTER_SLOTS_BY_POSITION } from '../sim/gameRules';
 
-const POSITION_ORDER: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
-
-const POSITION_LABELS: Record<Position, string> = {
-  A: 'Attack',
-  M: 'Midfield',
-  D: 'Defense',
-  LSM: 'LSM',
-  FO: 'Faceoff',
-  G: 'Goalie',
-};
+const POSITION_ORDER = POSITIONS;
 
 const YEAR_LABELS: Record<number, string> = {
   1: 'Fr',
@@ -184,7 +176,10 @@ function RosterPage() {
               {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {season.year} Season &bull; {roster.length} players
             </div>
             <p className="text-xs text-gray-600 mt-2 mb-0 max-w-2xl">
-              Starters drive in-game ratings and who gets scoring chances. Bench players still contribute, but at a lower weight—set your depth chart before big weeks and the postseason.
+              {MEN_ON_FIELD} men are on the field at a time — 3 attack, 3 midfield, 3 close defense, and a goalie.
+              Your LSM and faceoff specialist are first-choice starters who rotate into a midfield slot for
+              defensive sets and the draw. Starters drive in-game ratings and scoring chances; bench players
+              still contribute at a lower weight, so set the depth chart before big weeks and the postseason.
             </p>
           </div>
           <div className="text-right">

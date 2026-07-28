@@ -109,13 +109,17 @@ describe('buildGameRecap', () => {
     assert.strictEqual(recap.mvp, null);
   });
 
-  test('should format shooting efficiency correctly', () => {
+  test('should format shooting efficiency and goalie save percentage', () => {
     const game = createGame({
-      teamStatsHome: { ...baseStats, teamId: 'home-1', goals: 10, shots: 40 }, // 25%
-      teamStatsAway: { ...baseStats, teamId: 'away-1', goals: 8, shots: 32 }, // 25%
+      // Home keeper faced 8 goals + 12 saves = 20 on goal (.600); away keeper 10 + 10 (.500).
+      teamStatsHome: { ...baseStats, teamId: 'home-1', goals: 10, shots: 40, saves: 12 }, // 25%
+      teamStatsAway: { ...baseStats, teamId: 'away-1', goals: 8, shots: 32, saves: 10 }, // 25%
     });
     const recap = buildGameRecap(game, mockAwayName, mockHomeName);
-    assert.strictEqual(recap.efficiencyNote, 'Away Team shot 25.0% · Home Team shot 25.0%');
+    assert.strictEqual(
+      recap.efficiencyNote,
+      'Away Team shot 25.0% · Home Team shot 25.0% · saves .500/.600',
+    );
   });
 
   test('should handle zero shots in efficiency note', () => {

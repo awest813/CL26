@@ -100,8 +100,15 @@ describe('match engine gameplay modifiers', () => {
       boostedShots += boosted.statsA.shots;
     }
 
-    assert.ok(boostedGoals > baselineGoals);
-    assert.ok(boostedShots >= baselineShots);
+    assert.ok(boostedGoals > baselineGoals, 'an offensive gameplan should produce more goals');
+    // A sharper offense finishes the looks it gets rather than grinding out extra
+    // attempts, so efficiency — not raw shot volume — is what has to improve.
+    const baselineShooting = baselineGoals / baselineShots;
+    const boostedShooting = boostedGoals / boostedShots;
+    assert.ok(
+      boostedShooting > baselineShooting,
+      `boosted shooting ${(boostedShooting * 100).toFixed(1)}% should beat baseline ${(baselineShooting * 100).toFixed(1)}%`,
+    );
   });
 
   test('discipline modifiers reduce empty-possession mistakes', () => {

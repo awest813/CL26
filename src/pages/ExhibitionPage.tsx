@@ -1,6 +1,7 @@
 import { FormEvent } from 'react';
 import { runExhibition, setSeed, setTactics, setTeams } from '../features/exhibition/exhibitionSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { clearLine, faceoffLine, manUpLine, penaltyLine, shotLine } from '../sim/gameRecap';
 import { Tactics } from '../types/sim';
 
 const tempoOptions: Tactics['tempo'][] = ['slow', 'normal', 'fast'];
@@ -179,37 +180,43 @@ function ExhibitionPage() {
               <tr>
                 <th>Team</th>
                 <th>Goals</th>
-                <th>Shots</th>
+                <th title="Shots (shots on goal)">Shots (SOG)</th>
                 <th>Saves</th>
                 <th>Turnovers</th>
-                <th>Caused TO</th>
+                <th title="Turnovers forced on the opposing offense">Caused TO</th>
                 <th>Ground Balls</th>
-                <th>Penalties</th>
-                <th>Faceoff%</th>
+                <th title="Clears successful / attempted">Clears</th>
+                <th title="Extra-man goals / man-up opportunities">Man-Up</th>
+                <th title="Penalties (time served)">Penalties</th>
+                <th title="Faceoffs won / taken">Faceoffs</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>{exhibition.lastResult.teamAName}</td>
                 <td>{exhibition.lastResult.statsA.goals}</td>
-                <td>{exhibition.lastResult.statsA.shots}</td>
+                <td>{shotLine(exhibition.lastResult.statsA)}</td>
                 <td>{exhibition.lastResult.statsA.saves}</td>
                 <td>{exhibition.lastResult.statsA.turnovers}</td>
                 <td>{exhibition.lastResult.statsA.causedTurnovers ?? 0}</td>
                 <td>{exhibition.lastResult.statsA.groundBalls}</td>
-                <td>{exhibition.lastResult.statsA.penalties}</td>
-                <td>{exhibition.lastResult.statsA.faceoffPct}%</td>
+                <td>{clearLine(exhibition.lastResult.statsA)}</td>
+                <td>{manUpLine(exhibition.lastResult.statsA)}</td>
+                <td>{penaltyLine(exhibition.lastResult.statsA)}</td>
+                <td>{faceoffLine(exhibition.lastResult.statsA)}</td>
               </tr>
               <tr>
                 <td>{exhibition.lastResult.teamBName}</td>
                 <td>{exhibition.lastResult.statsB.goals}</td>
-                <td>{exhibition.lastResult.statsB.shots}</td>
+                <td>{shotLine(exhibition.lastResult.statsB)}</td>
                 <td>{exhibition.lastResult.statsB.saves}</td>
                 <td>{exhibition.lastResult.statsB.turnovers}</td>
                 <td>{exhibition.lastResult.statsB.causedTurnovers ?? 0}</td>
                 <td>{exhibition.lastResult.statsB.groundBalls}</td>
-                <td>{exhibition.lastResult.statsB.penalties}</td>
-                <td>{exhibition.lastResult.statsB.faceoffPct}%</td>
+                <td>{clearLine(exhibition.lastResult.statsB)}</td>
+                <td>{manUpLine(exhibition.lastResult.statsB)}</td>
+                <td>{penaltyLine(exhibition.lastResult.statsB)}</td>
+                <td>{faceoffLine(exhibition.lastResult.statsB)}</td>
               </tr>
             </tbody>
           </table>
