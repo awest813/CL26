@@ -12,13 +12,7 @@ import {
 import { beginFirstSeason } from '../features/coach/careerThunks';
 import { selectIsCareerReady } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-
-const PHASE_LABELS: Record<string, string> = {
-  PRE: 'Preseason',
-  REGULAR: 'Regular Season',
-  PLAYOFF: 'Playoffs',
-  OFFSEASON: 'Offseason',
-};
+import { SEASON_PHASE_LABELS } from '../lib/seasonLabels';
 
 interface NextStepAction {
   label: string;
@@ -195,7 +189,7 @@ function SeasonPage() {
           <div className="pageHeader m-0">
             <h2 className="m-0 text-xl font-bold">Season Dashboard</h2>
             <p className="pageHeader-sub">
-              Week {displayWeek + 1} of 12 &bull; {PHASE_LABELS[summary.phase] ?? summary.phase}
+              Week {displayWeek + 1} of 12 &bull; {SEASON_PHASE_LABELS[summary.phase] ?? summary.phase}
             </p>
           </div>
 

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAppSelector } from '../../store/hooks';
 import { selectIsCareerReady } from '../../features/coach/coachSlice';
 import { selectSeasonSummary, selectTop12Projection, selectTeamRecords, selectUserConferenceStanding } from '../../features/season/seasonSlice';
+import { seasonPhaseRailLabel } from '../../lib/seasonLabels';
 import { useMemo } from 'react';
 
 function ordinalSuffix(n: number): string {
@@ -48,12 +49,7 @@ function RightNavBar() {
     ? top12.find((s) => s.teamId === selectedTeamId)?.rank ?? null
     : null;
 
-  const phaseLabel: Record<string, string> = {
-    PRE: 'Preseason',
-    REGULAR: `Week ${summary.currentWeekIndex + 1} of 12`,
-    PLAYOFF: 'College Lacrosse Playoff',
-    OFFSEASON: 'Offseason',
-  };
+  const phaseLabel = seasonPhaseRailLabel(summary.phase, summary.currentWeekIndex);
 
   const seedLabel =
     summary.phase === 'PLAYOFF' || summary.phase === 'OFFSEASON'
@@ -71,7 +67,7 @@ function RightNavBar() {
       <div className="rightNavSection dynastyPanel">
         <h3 className="m-0">Season Status</h3>
         <p className="m-0 dynastyPanelMuted">
-          {summary.year} · {phaseLabel[summary.phase] ?? summary.phase}
+          {summary.year} · {phaseLabel}
         </p>
       </div>
 

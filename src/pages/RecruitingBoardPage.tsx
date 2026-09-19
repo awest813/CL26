@@ -236,10 +236,7 @@ function RecruitingBoardPage() {
           </div>
           <div>
             <div className="text-xs text-gray-400 uppercase mb-0.5">Hours used</div>
-            <div
-              className="font-bold"
-              style={{ color: hoursRemaining < 0 ? '#dc2626' : '#15803d' }}
-            >
+            <div className={`font-bold ${hoursRemaining < 0 ? 'text-hours-over' : 'text-hours-ok'}`}>
               {totalHours} / {WEEKLY_HOURS_CAP}
             </div>
           </div>

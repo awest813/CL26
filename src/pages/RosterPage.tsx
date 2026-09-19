@@ -281,17 +281,17 @@ function RosterPage() {
               <table className="w-full">
                 <thead>
                   <tr className="text-left text-xs text-gray-400 border-b">
-                    <th className="pb-1.5 pr-2">Role</th>
-                    <th className="pb-1.5 pr-3">Name</th>
-                    <th className="pb-1.5 pr-3">Yr</th>
-                    <th className="pb-1.5 pr-3">Age</th>
-                    <th className="pb-1.5 pr-3">OVR</th>
-                    <th className="pb-1.5 pr-2">SHT</th>
-                    <th className="pb-1.5 pr-2">PAS</th>
-                    <th className="pb-1.5 pr-2">SPD</th>
-                    <th className="pb-1.5 pr-2">DEF</th>
-                    <th className="pb-1.5 pr-2">IQ</th>
-                    <th className="pb-1.5"></th>
+                    <th scope="col" className="pb-1.5 pr-2">Role</th>
+                    <th scope="col" className="pb-1.5 pr-3">Name</th>
+                    <th scope="col" className="pb-1.5 pr-3">Yr</th>
+                    <th scope="col" className="pb-1.5 pr-3">Age</th>
+                    <th scope="col" className="pb-1.5 pr-3">OVR</th>
+                    <th scope="col" className="pb-1.5 pr-2">SHT</th>
+                    <th scope="col" className="pb-1.5 pr-2">PAS</th>
+                    <th scope="col" className="pb-1.5 pr-2">SPD</th>
+                    <th scope="col" className="pb-1.5 pr-2">DEF</th>
+                    <th scope="col" className="pb-1.5 pr-2">IQ</th>
+                    <th scope="col" className="pb-1.5"></th>
                   </tr>
                 </thead>
                 <tbody>

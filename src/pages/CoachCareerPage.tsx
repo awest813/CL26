@@ -487,11 +487,11 @@ function CoachCareerPage() {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-white">
                   <tr className="text-left text-xs text-gray-400 border-b">
-                    <th className="pb-1 pr-3">Season</th>
-                    <th className="pb-1 pr-3">Record</th>
-                    <th className="pb-1 pr-3">Playoff</th>
-                    <th className="pb-1 pr-3">Recruiting</th>
-                    <th className="pb-1 text-right">Security</th>
+                    <th scope="col" className="pb-1 pr-3">Season</th>
+                    <th scope="col" className="pb-1 pr-3">Record</th>
+                    <th scope="col" className="pb-1 pr-3">Playoff</th>
+                    <th scope="col" className="pb-1 pr-3">Recruiting</th>
+                    <th scope="col" className="pb-1 text-right">Security</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -874,11 +874,11 @@ function CoachCareerPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500 border-b">
-                    <th className="pb-2">Recruit</th>
-                    <th className="pb-2">Competition</th>
-                    <th className="pb-2">Pitch/Grade</th>
-                    <th className="pb-2 w-24">Interest</th>
-                    <th className="pb-2 text-right">Hours</th>
+                    <th scope="col" className="pb-2">Recruit</th>
+                    <th scope="col" className="pb-2">Competition</th>
+                    <th scope="col" className="pb-2">Pitch/Grade</th>
+                    <th scope="col" className="pb-2 w-24">Interest</th>
+                    <th scope="col" className="pb-2 text-right">Hours</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -987,10 +987,10 @@ function CoachCareerPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0">
                 <tr className="text-left text-gray-500">
-                  <th className="p-2">Name</th>
-                  <th className="p-2">Rtg</th>
-                  <th className="p-2">Fit</th>
-                  <th className="p-2 text-right">Action</th>
+                  <th scope="col" className="p-2">Name</th>
+                  <th scope="col" className="p-2">Rtg</th>
+                  <th scope="col" className="p-2">Fit</th>
+                  <th scope="col" className="p-2 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>

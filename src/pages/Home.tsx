@@ -3,17 +3,12 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { resetCoach, selectIsCareerReady } from '../features/coach/coachSlice';
 import { resetSeason } from '../features/season/seasonSlice';
 import { persistor } from '../store/persistor';
+import { seasonPhaseHomeStatus } from '../lib/seasonLabels';
 
 type DashboardAction = {
   label: string;
   link: string;
   primary: boolean;
-};
-
-const PHASE_STATUS_LABEL: Record<string, string> = {
-  PRE: 'Preseason',
-  PLAYOFF: 'Playoffs',
-  OFFSEASON: 'Offseason',
 };
 
 function Home() {
@@ -24,8 +19,7 @@ function Home() {
   const { year, phase, currentWeekIndex, seasonSeed } = season;
   const seasonStarted = phase !== 'PRE';
 
-  const statusLabel =
-    phase === 'REGULAR' ? `Week ${currentWeekIndex + 1}` : (PHASE_STATUS_LABEL[phase] ?? phase);
+  const statusLabel = seasonPhaseHomeStatus(phase, currentWeekIndex);
 
   const primaryAction: DashboardAction = (() => {
     if (phase === 'PRE') {

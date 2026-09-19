@@ -4,6 +4,7 @@ import { useAppSelector } from '../store/hooks';
 import { selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary, selectTop16Rankings } from '../features/season/seasonSlice';
 import { selectTeams } from '../features/league/leagueSlice';
 import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
+import { seasonRankingsWeekLabel } from '../lib/seasonLabels';
 
 function rankDeltaDisplay(delta: number | null): ReactNode {
   if (delta === null) return <span className="text-gray-300 text-xs" aria-label="New to rankings">NEW</span>;
@@ -23,11 +24,7 @@ function RankingsPage() {
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
 
   const isPostseason = summary.phase === 'PLAYOFF' || summary.phase === 'OFFSEASON';
-  const weekLabel = isPostseason
-    ? 'Final'
-    : summary.completedWeeks > 0
-      ? `Week ${summary.completedWeeks}`
-      : 'Preseason';
+  const weekLabel = seasonRankingsWeekLabel(summary.phase, summary.completedWeeks);
 
   const teamById = useMemo(() => {
     return new Map(teams.map((team) => [team.id, team]));
