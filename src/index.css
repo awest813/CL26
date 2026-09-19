@@ -389,6 +389,12 @@ button:focus-visible {
 .rounded-sm { border-radius: 4px; }
 .rounded-lg { border-radius: var(--radius-lg); }
 .border-l-4 { border-left-width: 4px; border-left-style: solid; }
+.border-win { border-left-color: var(--success); }
+.border-loss { border-left-color: var(--danger); }
+.badge-win { background: var(--success-soft); color: var(--success); }
+.badge-loss { background: #fee2e2; color: var(--danger); }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
 .bg-gray-100 { background-color: #f3f4f6; }
 .text-green-700 { color: #15803d; }
 .text-yellow-700 { color: #a16207; }

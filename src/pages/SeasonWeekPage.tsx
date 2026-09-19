@@ -5,8 +5,6 @@ import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
 import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
 
-const WIN_COLOR = '#16a34a';
-const LOSS_COLOR = '#ef4444';
 const SCORE_BUTTON_STYLE = { background: 'transparent', border: 0 } as const;
 
 function topPerformerLine(players: PlayerGameStats[]): string {
@@ -54,7 +52,7 @@ function UserGameCard({
   const recap = buildGameRecap(gameResultToSummary(result), awayName, homeName);
 
   return (
-    <section className="card" style={{ borderLeft: `4px solid ${won ? WIN_COLOR : LOSS_COLOR}` }}>
+    <section className={`card border-l-4 ${won ? 'border-win' : 'border-loss'}`}>
       <div className="flex justify-between items-start gap-3">
         <div>
           <div className="text-xs text-gray-500 uppercase font-semibold">Your Game</div>
@@ -67,7 +65,7 @@ function UserGameCard({
           <p className="m-0 mt-2 text-sm text-gray-600">{recap.summary}</p>
           <p className="m-0 mt-1 text-xs text-gray-500">{recap.keyEdge}</p>
         </div>
-        <span className={won ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{won ? 'WIN' : 'LOSS'}</span>
+        <span className={won ? 'text-success font-bold' : 'text-danger font-bold'}>{won ? 'WIN' : 'LOSS'}</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mt-3 pt-3 border-t">
         <div><span className="text-gray-400 text-xs block">Shots</span>{userStats.shots}–{opponentStats.shots}</div>

@@ -24,28 +24,12 @@ import {
   beginNextCareerSeason,
 } from '../features/coach/careerThunks';
 import { selectTeamRecords } from '../features/season/seasonSlice';
-import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
-import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
+import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
+import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade, PITCH_LABELS } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, RecruitingPitch, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
 import { computeAllSOS, computeRankings } from '../sim/rankings';
 import { careerOffseasonCapabilities } from '../sim/seasonPhase';
-
-const PITCH_LABELS: Record<RecruitingPitch, string> = {
-  PLAYING_TIME: 'Play Time',
-  PROXIMITY: 'Home',
-  ACADEMIC: 'Academics',
-  PRESTIGE: 'Prestige',
-  CHAMPIONSHIP: 'Winning',
-  CAMPUS_LIFE: 'Campus',
-};
-
-const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
-  OFFENSE: 'Offense Install',
-  DEFENSE: 'Defense Install',
-  CONDITIONING: 'Conditioning',
-  DISCIPLINE: 'Discipline',
-};
 
 const ARCHETYPE_BONUSES: Record<string, string[]> = {
   RECRUITER: ['+15% weekly interest gain', 'Expanded recruit reach', 'Faster commitments on key needs'],

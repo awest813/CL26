@@ -14,16 +14,9 @@ import {
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
 import { runCareerWeeklyCycle } from '../features/coach/careerThunks';
-import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
+import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, GameResult } from '../types/sim';
-
-const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
-  OFFENSE: 'Offense Install',
-  DEFENSE: 'Defense Install',
-  CONDITIONING: 'Conditioning',
-  DISCIPLINE: 'Discipline',
-};
 
 const PRACTICE_FOCUS_DESCRIPTIONS: Record<PracticeFocus, string> = {
   OFFENSE: 'Boosts attack edge and tempo; defensive ratings dip slightly.',
@@ -67,21 +60,12 @@ function ResultBanner({ result, selectedTeamId, teams }: ResultBannerProps) {
     : result.topPlayersB.slice(0, 2);
 
   return (
-    <div
-      className="card"
-      style={{ borderLeft: `4px solid ${won ? '#16a34a' : '#ef4444'}` }}
-    >
+    <div className={`card border-l-4 ${won ? 'border-win' : 'border-loss'}`}>
       <div className="flex justify-between items-center mb-1">
         <span className="text-xs text-gray-500 uppercase font-semibold">
           Last Game — Week {(result.weekIndex ?? 0) + 1}
         </span>
-        <span
-          className="text-xs font-bold px-2 py-0.5 rounded-full"
-          style={{
-            background: won ? '#dcfce7' : '#fee2e2',
-            color: won ? '#15803d' : '#b91c1c',
-          }}
-        >
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${won ? 'badge-win' : 'badge-loss'}`}>
           {won ? 'WIN' : 'LOSS'}
         </span>
       </div>
