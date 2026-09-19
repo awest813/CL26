@@ -273,7 +273,9 @@ function SeasonPage() {
       <div className="card">
         <div className="seasonHeaderRow border-b pb-2 mb-4">
           <h3 className="m-0 text-lg font-semibold">Week {displayWeek + 1} Matchups</h3>
-          <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded">
+          <label className="text-sm">
+            Conference
+            <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded ml-1">
             <option value="ALL">All Conferences</option>
             {conferences.map((conf) => (
               <option key={conf.id} value={conf.id}>
@@ -281,6 +283,7 @@ function SeasonPage() {
               </option>
             ))}
           </select>
+          </label>
         </div>
 
         <div className="seasonMatchupList">

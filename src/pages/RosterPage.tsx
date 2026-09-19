@@ -2,10 +2,8 @@ import { useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toggleStarter } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { Player, Position } from '../types/sim';
+import { Player, Position, POSITION_ORDER } from '../types/sim';
 import { getRosterDepthSummary } from '../sim/rosterManagement';
-
-const POSITION_ORDER: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 
 const POSITION_LABELS: Record<Position, string> = {
   A: 'Attack',

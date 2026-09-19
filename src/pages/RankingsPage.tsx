@@ -93,11 +93,11 @@ function RankingsPage() {
         <table>
           <thead>
             <tr>
-              <th>Rank</th>
-              <th>Trend</th>
-              <th>Team</th>
-              <th>Record</th>
-              <th>Points</th>
+              <th scope="col">Rank</th>
+              <th scope="col">Trend</th>
+              <th scope="col">Team</th>
+              <th scope="col">Record</th>
+              <th scope="col">Points</th>
             </tr>
           </thead>
           <tbody>
@@ -130,10 +130,10 @@ function RankingsPage() {
         <table>
           <thead>
             <tr>
-              <th>Seed</th>
-              <th>Team</th>
-              <th>Record</th>
-              <th>Note</th>
+              <th scope="col">Seed</th>
+              <th scope="col">Team</th>
+              <th scope="col">Record</th>
+              <th scope="col">Note</th>
             </tr>
           </thead>
           <tbody>

@@ -20,28 +20,32 @@ function SeasonStandingsPage() {
       <div className="card">
         <div className="flex justify-between items-center mb-2">
           <h3 className="m-0">Conference Standings</h3>
-          <select
-            value={conferenceId}
-            onChange={(event) => setConferenceId(event.target.value)}
-            className="p-1 text-sm border rounded"
-          >
+          <label className="text-sm">
+            Conference
+            <select
+              value={conferenceId}
+              onChange={(event) => setConferenceId(event.target.value)}
+              className="p-1 text-sm border rounded ml-1"
+            >
             {conferences.map((conference) => (
               <option key={conference.id} value={conference.id}>
                 {conference.name}
               </option>
             ))}
           </select>
+          </label>
         </div>
 
         <table>
+          <caption className="text-sm text-gray-500 text-left mb-2">Conference standings</caption>
           <thead>
             <tr>
-              <th>Team</th>
-              <th>Conf</th>
-              <th>Overall</th>
-              <th>PF</th>
-              <th>PA</th>
-              <th>Diff</th>
+              <th scope="col">Team</th>
+              <th scope="col">Conf</th>
+              <th scope="col">Overall</th>
+              <th scope="col">PF</th>
+              <th scope="col">PA</th>
+              <th scope="col">Diff</th>
             </tr>
           </thead>
           <tbody>
@@ -71,13 +75,14 @@ function SeasonStandingsPage() {
       <div className="card">
         <h3 className="m-0 mb-2">Overall Standings</h3>
         <table>
+          <caption className="text-sm text-gray-500 text-left mb-2">Overall league standings</caption>
           <thead>
             <tr>
-              <th>#</th>
-              <th>Team</th>
-              <th>W-L</th>
-              <th>Conf</th>
-              <th>Diff</th>
+              <th scope="col">#</th>
+              <th scope="col">Team</th>
+              <th scope="col">W-L</th>
+              <th scope="col">Conf</th>
+              <th scope="col">Diff</th>
             </tr>
           </thead>
           <tbody>

@@ -5,8 +5,8 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
-import { leagueReducer } from '../features/league/leagueSlice.ts';
-import { seasonReducer, startPlayoffs, simNextPlayoffRound, selectTeamRecords } from '../features/season/seasonSlice.ts';
+import { leagueReducer } from '../league/leagueSlice.ts';
+import { seasonReducer, startPlayoffs, selectTeamRecords } from '../season/seasonSlice.ts';
 import {
   coachReducer,
   setCoachProfile,
@@ -18,17 +18,18 @@ import {
   upgradeCoachSkill,
   declineAllJobOffers,
   processSigningDay,
-} from '../features/coach/coachSlice.ts';
+} from './coachSlice.ts';
 import {
   runCareerWeeklyCycle,
   processSeasonEnd,
   beginFirstSeason,
   beginNextCareerSeason,
-} from '../features/coach/careerThunks.ts';
-import { exhibitionReducer } from '../features/exhibition/exhibitionSlice.ts';
-import { validateSeasonState } from '../sim/seasonValidation.ts';
-import type { RootState } from '../store/store.ts';
-import type { CoachSkillTree, Position } from '../types/sim.ts';
+  simCareerPlayoffRound,
+} from './careerThunks.ts';
+import { exhibitionReducer } from '../exhibition/exhibitionSlice.ts';
+import { validateSeasonState } from '../../sim/seasonValidation.ts';
+import type { RootState } from '../../store/store.ts';
+import type { CoachSkillTree, Position } from '../../types/sim.ts';
 
 const SEASON_COUNT = 20;
 const REGULAR_WEEKS = 12;
@@ -120,7 +121,7 @@ async function runOneSeason(store: CareerStore, seasonIndex: number) {
   await store.dispatch(startPlayoffs());
   let playoffGuard = 0;
   while (!store.getState().season.playoffs?.championTeamId && playoffGuard < 8) {
-    await store.dispatch(simNextPlayoffRound());
+    await store.dispatch(simCareerPlayoffRound());
     playoffGuard += 1;
   }
   const afterPlayoffs = store.getState();

@@ -1,5 +1,7 @@
 export type Position = 'A' | 'M' | 'D' | 'LSM' | 'FO' | 'G';
 
+export const POSITION_ORDER: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
+
 export interface Conference {
   id: string;
   name: string;

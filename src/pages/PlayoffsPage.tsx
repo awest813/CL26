@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { simCareerPlayoffRound } from '../features/coach/careerThunks';
 import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectSeasonCapabilities, resetSeason } from '../features/season/seasonSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName } from '../types/sim';
@@ -54,7 +55,11 @@ function PlayoffsPage() {
   const handleSimRound = async () => {
     setActionError(null);
     try {
-      await dispatch(simNextPlayoffRound()).unwrap();
+      if (hasCareerTeam) {
+        await dispatch(simCareerPlayoffRound()).unwrap();
+      } else {
+        await dispatch(simNextPlayoffRound()).unwrap();
+      }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err));
     }
@@ -160,9 +165,9 @@ function PlayoffsPage() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="text-left text-gray-500 border-b">
-                                <th className="pb-2 w-10">Seed</th>
-                                <th className="pb-2">Team</th>
-                                <th className="pb-2 text-right pr-1">Result</th>
+                                <th scope="col" className="pb-2 w-10">Seed</th>
+                                <th scope="col" className="pb-2">Team</th>
+                                <th scope="col" className="pb-2 text-right pr-1">Result</th>
                             </tr>
                         </thead>
                         <tbody>

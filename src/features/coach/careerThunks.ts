@@ -1,6 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { RootState } from '../../store/store';
-import { simCurrentWeek, selectTeamRecords } from '../season/seasonSlice';
+import { simCurrentWeek, selectTeamRecords, simNextPlayoffRound } from '../season/seasonSlice';
 import {
   advanceCoachWeek,
   advanceRecruitingWeek,
@@ -16,6 +16,7 @@ import {
   initializeRecruitingBoard,
   updateProgramStanding,
   careerSetupFromPrestige,
+  applyPlayoffRoundFatigue,
 } from './coachSlice';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
@@ -378,5 +379,28 @@ export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { sta
     }
 
     return seed;
+  },
+);
+
+export const simCareerPlayoffRound = createAsyncThunk<void, void, { state: RootState }>(
+  'coach/simCareerPlayoffRound',
+  async (_arg, { dispatch, getState }) => {
+    const before = getState();
+    const coach = before.coach;
+    const playoffState = before.season.playoffs;
+
+    let playedThisRound = false;
+    if (coach.selectedTeamId && playoffState) {
+      const roundBefore = playoffState.currentRound;
+      playedThisRound = playoffState.rounds[roundBefore].some(
+        (game) => game.homeTeamId === coach.selectedTeamId || game.awayTeamId === coach.selectedTeamId,
+      );
+    }
+
+    await dispatch(simNextPlayoffRound()).unwrap();
+
+    if (coach.selectedTeamId) {
+      dispatch(applyPlayoffRoundFatigue({ played: playedThisRound }));
+    }
   },
 );

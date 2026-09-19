@@ -24,7 +24,7 @@ const rootReducer = combineReducers({
 const persistConfig = {
   key: 'root',
   storage,
-  version: 1,
+  version: 2,
   migrate: createMigrate(
     {
       1: (state) => {
@@ -38,6 +38,21 @@ const persistConfig = {
             ...persisted,
             coach: { ...coach, onboardingStep: 'PROFILE' },
           };
+        }
+        return state;
+      },
+      2: (state) => {
+        if (!state || typeof state !== 'object') return state;
+        const persisted = state as typeof state & {
+          coach?: { onboardingStep?: string };
+        };
+        const coach = persisted.coach;
+        if (!coach?.onboardingStep) return state;
+        if (coach.onboardingStep === 'TEAM') {
+          return { ...persisted, coach: { ...coach, onboardingStep: 'PROFILE' } };
+        }
+        if (coach.onboardingStep === 'COMPLETE') {
+          return { ...persisted, coach: { ...coach, onboardingStep: 'READY' } };
         }
         return state;
       },

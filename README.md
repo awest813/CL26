@@ -35,7 +35,7 @@ npm run dev        # Vite dev server → http://localhost:5173
 ```
 src/
   sim/        Pure deterministic simulation (no React/Redux imports)
-  features/   Redux slices — leagueSlice, seasonSlice, coachSlice, uiSlice
+  features/   Redux slices — leagueSlice, seasonSlice, coachSlice, exhibitionSlice
   pages/      Route-level UI components
   data/       Static JSON — teams128.json, names.json
   types/      Shared TypeScript domain contracts
@@ -44,7 +44,7 @@ src/
 
 **Persistence rules**
 - Persisted: `season`, `coach`
-- Not persisted: `league` (reloaded from JSON on every launch)
+- Not persisted: `league` (reloaded from JSON on every launch), `exhibition` (sandbox state)
 
 ## In-app pages
 
@@ -60,8 +60,10 @@ src/
 | `/career/recruiting` | Recruiting board |
 | `/career/roster` | Roster viewer |
 | `/season` | Season dashboard |
+| `/schedule` | Redirects to `/season` |
 | `/season/week/:n` | Week game results |
 | `/season/standings` | Conference + overall standings |
 | `/rankings` | Top 25 + Top 12 projection |
 | `/playoffs` | Playoff bracket |
+| `/login` | Offline play notice (no auth required) |
 | `/alpha` | Alpha-stage progress tracker |

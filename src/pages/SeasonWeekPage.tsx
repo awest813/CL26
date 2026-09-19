@@ -243,12 +243,12 @@ function SeasonWeekPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 border-b">
                 <tr>
-                  <th className="p-2 text-right w-1/4">Away</th>
-                  <th className="p-2 text-center w-20">Score</th>
-                  <th className="p-2 text-left w-1/4">Home</th>
-                  <th className="p-2 text-center text-xs">Shots</th>
-                  <th className="p-2 text-center text-xs">TO</th>
-                  <th className="p-2 text-center text-xs">FO%</th>
+                  <th scope="col" className="p-2 text-right w-1/4">Away</th>
+                  <th scope="col" className="p-2 text-center w-20">Score</th>
+                  <th scope="col" className="p-2 text-left w-1/4">Home</th>
+                  <th scope="col" className="p-2 text-center text-xs">Shots</th>
+                  <th scope="col" className="p-2 text-center text-xs">TO</th>
+                  <th scope="col" className="p-2 text-center text-xs">FO%</th>
                 </tr>
               </thead>
               <tbody>
