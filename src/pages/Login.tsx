@@ -9,12 +9,12 @@ function Login() {
         yet.
       </p>
       <p className="text-gray-600 mt-2">
-        Use <strong>Coach office</strong> from the header or home screen to continue your dynasty; no password is
+        Use the header <strong>Continue</strong> button or home screen shortcuts to resume your dynasty; no password is
         required for offline play.
       </p>
       <div className="actionRow flex gap-2 flex-wrap">
         <Link to="/career" className="btn btn-primary">
-          Go to coach office
+          Go to Coach Office
         </Link>
         <Link to="/" className="btn">
           Back to overview

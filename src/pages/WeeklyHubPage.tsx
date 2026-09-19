@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import {
   selectTeamRecords,
@@ -8,21 +8,15 @@ import {
 import {
   setPracticeFocus,
   setRecruitHours,
+  selectIsCareerReady,
   selectUserEffectivePrestige,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
 import { runCareerWeeklyCycle } from '../features/coach/careerThunks';
-import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
+import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, GameResult } from '../types/sim';
-
-const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
-  OFFENSE: 'Offense Install',
-  DEFENSE: 'Defense Install',
-  CONDITIONING: 'Conditioning',
-  DISCIPLINE: 'Discipline',
-};
 
 const PRACTICE_FOCUS_DESCRIPTIONS: Record<PracticeFocus, string> = {
   OFFENSE: 'Boosts attack edge and tempo; defensive ratings dip slightly.',
@@ -33,18 +27,18 @@ const PRACTICE_FOCUS_DESCRIPTIONS: Record<PracticeFocus, string> = {
 
 const MAX_COACH_SKILL_LEVEL = 5;
 
-function fatiguePill(label: string): { bg: string; text: string } {
-  if (label === 'Drained') return { bg: '#fef2f2', text: '#b91c1c' };
-  if (label === 'Worn') return { bg: '#fff7ed', text: '#c2410c' };
-  if (label === 'Managed') return { bg: '#fefce8', text: '#92400e' };
-  return { bg: '#f0fdf4', text: '#15803d' };
+function fatiguePillClass(label: string): string {
+  if (label === 'Drained') return 'fatigue-pill fatigue-pill-drained';
+  if (label === 'Worn') return 'fatigue-pill fatigue-pill-worn';
+  if (label === 'Managed') return 'fatigue-pill fatigue-pill-managed';
+  return 'fatigue-pill fatigue-pill-fresh';
 }
 
-function winProbColor(prob: number): string {
-  if (prob >= 65) return '#16a34a';
-  if (prob >= 50) return '#4ade80';
-  if (prob >= 40) return '#f59e0b';
-  return '#ef4444';
+function winProbClass(prob: number): string {
+  if (prob >= 65) return 'matchup-strong';
+  if (prob >= 50) return 'matchup-favor';
+  if (prob >= 40) return 'matchup-tossup';
+  return 'matchup-underdog';
 }
 
 interface ResultBannerProps {
@@ -66,21 +60,12 @@ function ResultBanner({ result, selectedTeamId, teams }: ResultBannerProps) {
     : result.topPlayersB.slice(0, 2);
 
   return (
-    <div
-      className="card"
-      style={{ borderLeft: `4px solid ${won ? '#16a34a' : '#ef4444'}` }}
-    >
+    <div className={`card border-l-4 ${won ? 'border-win' : 'border-loss'}`}>
       <div className="flex justify-between items-center mb-1">
         <span className="text-xs text-gray-500 uppercase font-semibold">
           Last Game — Week {(result.weekIndex ?? 0) + 1}
         </span>
-        <span
-          className="text-xs font-bold px-2 py-0.5 rounded-full"
-          style={{
-            background: won ? '#dcfce7' : '#fee2e2',
-            color: won ? '#15803d' : '#b91c1c',
-          }}
-        >
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${won ? 'badge-win' : 'badge-loss'}`}>
           {won ? 'WIN' : 'LOSS'}
         </span>
       </div>
@@ -112,6 +97,7 @@ function ResultBanner({ result, selectedTeamId, teams }: ResultBannerProps) {
 
 function WeeklyHubPage() {
   const dispatch = useAppDispatch();
+  const [actionError, setActionError] = useState<string | null>(null);
   const coach = useAppSelector((state) => state.coach);
   const season = useAppSelector((state) => state.season);
   const teams = useAppSelector((state) => state.league.teams);
@@ -119,7 +105,7 @@ function WeeklyHubPage() {
   const userUpcomingGame = useAppSelector(selectUserUpcomingGame);
   const userLastResult = useAppSelector(selectUserLastResult);
   const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
-  const isCoachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
+  const isCoachReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
   const userRecord = records[selectedTeamId] ?? {
@@ -206,7 +192,7 @@ function WeeklyHubPage() {
     [coach.profile?.archetype, coach.programResources, coach.skillTree],
   );
 
-  const { bg: fatigueBg, text: fatigueText } = fatiguePill(gamePlan.fatigueLabel);
+  const fatigueClass = fatiguePillClass(gamePlan.fatigueLabel);
 
   // Projected fatigue after this week — uses the same formula as the actual weekly cycle
   const projectedFatigue = Math.round(
@@ -296,10 +282,7 @@ function WeeklyHubPage() {
                 </div>
                 {winProb !== null && (
                   <div className="text-center">
-                    <div
-                      className="text-2xl font-bold"
-                      style={{ color: winProbColor(winProb) }}
-                    >
+                    <div className={`text-2xl font-bold ${winProbClass(winProb)}`}>
                       {winProb}%
                     </div>
                     <div className="text-xs text-gray-500">Win prob.</div>
@@ -324,10 +307,7 @@ function WeeklyHubPage() {
                   {(() => {
                     const diff = opponentRecord.pointsFor - opponentRecord.pointsAgainst;
                     return (
-                      <div
-                        className="font-semibold"
-                        style={{ color: diff >= 0 ? '#ef4444' : '#16a34a' }}
-                      >
+                      <div className={diff >= 0 ? 'text-danger font-semibold' : 'text-success font-semibold'}>
                         {diff > 0 ? '+' : ''}{diff}
                       </div>
                     );
@@ -375,10 +355,7 @@ function WeeklyHubPage() {
             <div>
               <div className="text-gray-400 uppercase mb-1">Fatigue now</div>
               <div className="flex items-center gap-1.5">
-                <span
-                  className="px-1.5 py-0.5 rounded text-xs font-bold"
-                  style={{ background: fatigueBg, color: fatigueText }}
-                >
+                <span className={fatigueClass}>
                   {gamePlan.fatigueLabel}
                 </span>
                 <span className="text-gray-600">{coach.teamFatigue}%</span>
@@ -426,10 +403,7 @@ function WeeklyHubPage() {
               <h3 className="m-0 text-base font-bold">Active Recruiting Board</h3>
               <div className="text-xs text-gray-500 mt-0.5">
                 {boardRecruits.length} targets · Hours remaining:{' '}
-                <span
-                  className="font-semibold"
-                  style={{ color: hoursRemaining < 0 ? '#dc2626' : '#15803d' }}
-                >
+                <span className={`font-semibold ${hoursRemaining < 0 ? 'text-hours-over' : 'text-hours-ok'}`}>
                   {hoursRemaining}/{WEEKLY_HOURS_CAP}
                 </span>
               </div>
@@ -442,9 +416,9 @@ function WeeklyHubPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-gray-400 border-b">
-                  <th className="text-left pb-1.5 pr-3">Recruit</th>
-                  <th className="text-left pb-1.5 pr-3">Interest</th>
-                  <th className="text-right pb-1.5 w-20">Hours</th>
+                  <th scope="col" className="text-left pb-1.5 pr-3">Recruit</th>
+                  <th scope="col" className="text-left pb-1.5 pr-3">Interest</th>
+                  <th scope="col" className="text-right pb-1.5 w-20">Hours</th>
                 </tr>
               </thead>
               <tbody>
@@ -523,6 +497,11 @@ function WeeklyHubPage() {
 
       {/* ── Advance Week ── */}
       <div className="card">
+        {actionError && (
+          <p className="text-sm text-red-600 mb-3" role="alert">
+            {actionError}
+          </p>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <h3 className="m-0 text-base font-bold">
@@ -544,7 +523,14 @@ function WeeklyHubPage() {
             {canAdvance && (
               <button
                 className="btn btn-primary"
-                onClick={() => dispatch(runCareerWeeklyCycle())}
+                onClick={async () => {
+                  setActionError(null);
+                  try {
+                    await dispatch(runCareerWeeklyCycle()).unwrap();
+                  } catch (err) {
+                    setActionError(err instanceof Error ? err.message : String(err));
+                  }
+                }}
               >
                 ▶ Advance Week {currentWeekDisplay}
               </button>

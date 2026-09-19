@@ -24,28 +24,12 @@ import {
   beginNextCareerSeason,
 } from '../features/coach/careerThunks';
 import { selectTeamRecords } from '../features/season/seasonSlice';
-import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts } from '../sim/coachEffects';
-import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade } from '../sim/recruiting';
+import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
+import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade, PITCH_LABELS } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, RecruitingPitch, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
 import { computeAllSOS, computeRankings } from '../sim/rankings';
 import { careerOffseasonCapabilities } from '../sim/seasonPhase';
-
-const PITCH_LABELS: Record<RecruitingPitch, string> = {
-  PLAYING_TIME: 'Play Time',
-  PROXIMITY: 'Home',
-  ACADEMIC: 'Academics',
-  PRESTIGE: 'Prestige',
-  CHAMPIONSHIP: 'Winning',
-  CAMPUS_LIFE: 'Campus',
-};
-
-const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
-  OFFENSE: 'Offense Install',
-  DEFENSE: 'Defense Install',
-  CONDITIONING: 'Conditioning',
-  DISCIPLINE: 'Discipline',
-};
 
 const ARCHETYPE_BONUSES: Record<string, string[]> = {
   RECRUITER: ['+15% weekly interest gain', 'Expanded recruit reach', 'Faster commitments on key needs'],
@@ -136,6 +120,7 @@ function CoachCareerPage() {
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [jobOfferError, setJobOfferError] = useState<string | null>(null);
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
@@ -289,7 +274,10 @@ function CoachCareerPage() {
   }
 
   function onAdvance() {
-    dispatch(runCareerWeeklyCycle());
+    setActionError(null);
+    void dispatch(runCareerWeeklyCycle())
+      .unwrap()
+      .catch((err) => setActionError(err instanceof Error ? err.message : String(err)));
   }
 
   function onHoursChange(recruitId: string, nextHours: number): void {
@@ -310,13 +298,23 @@ function CoachCareerPage() {
   }
 
   async function onEndSeason() {
-    await dispatch(processSeasonEnd());
+    setActionError(null);
+    try {
+      await dispatch(processSeasonEnd()).unwrap();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   async function onNewSeason() {
-    const nextSeed = await dispatch(beginNextCareerSeason()).unwrap();
-    if (typeof nextSeed === 'number') {
-      setSeedInput(nextSeed);
+    setActionError(null);
+    try {
+      const nextSeed = await dispatch(beginNextCareerSeason()).unwrap();
+      if (typeof nextSeed === 'number') {
+        setSeedInput(nextSeed);
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -348,6 +346,11 @@ function CoachCareerPage() {
 
   return (
     <div className="flex-col gap-4">
+      {actionError && (
+        <div className="card border border-red-200 bg-red-50 text-sm text-red-800" role="alert">
+          {actionError}
+        </div>
+      )}
       {/* ── Career Dashboard ── */}
       <div className="card">
         <div className="flex justify-between items-start mb-3">
@@ -484,11 +487,11 @@ function CoachCareerPage() {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-white">
                   <tr className="text-left text-xs text-gray-400 border-b">
-                    <th className="pb-1 pr-3">Season</th>
-                    <th className="pb-1 pr-3">Record</th>
-                    <th className="pb-1 pr-3">Playoff</th>
-                    <th className="pb-1 pr-3">Recruiting</th>
-                    <th className="pb-1 text-right">Security</th>
+                    <th scope="col" className="pb-1 pr-3">Season</th>
+                    <th scope="col" className="pb-1 pr-3">Record</th>
+                    <th scope="col" className="pb-1 pr-3">Playoff</th>
+                    <th scope="col" className="pb-1 pr-3">Recruiting</th>
+                    <th scope="col" className="pb-1 text-right">Security</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -871,11 +874,11 @@ function CoachCareerPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500 border-b">
-                    <th className="pb-2">Recruit</th>
-                    <th className="pb-2">Competition</th>
-                    <th className="pb-2">Pitch/Grade</th>
-                    <th className="pb-2 w-24">Interest</th>
-                    <th className="pb-2 text-right">Hours</th>
+                    <th scope="col" className="pb-2">Recruit</th>
+                    <th scope="col" className="pb-2">Competition</th>
+                    <th scope="col" className="pb-2">Pitch/Grade</th>
+                    <th scope="col" className="pb-2 w-24">Interest</th>
+                    <th scope="col" className="pb-2 text-right">Hours</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -984,10 +987,10 @@ function CoachCareerPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0">
                 <tr className="text-left text-gray-500">
-                  <th className="p-2">Name</th>
-                  <th className="p-2">Rtg</th>
-                  <th className="p-2">Fit</th>
-                  <th className="p-2 text-right">Action</th>
+                  <th scope="col" className="p-2">Name</th>
+                  <th scope="col" className="p-2">Rtg</th>
+                  <th scope="col" className="p-2">Fit</th>
+                  <th scope="col" className="p-2 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>

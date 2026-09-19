@@ -6,6 +6,7 @@ import {
   removeRecruitFromBoard,
   setRecruitHours,
   setRecruitPitch,
+  selectIsCareerReady,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
@@ -58,7 +59,7 @@ function RecruitingBoardPage() {
 
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState<PositionFilterValue>('ALL');
-  const isCoachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
+  const isCoachReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
   const teamNameById = useMemo(() => new Map(teams.map((t) => [t.id, t.schoolName])), [teams]);
@@ -235,10 +236,7 @@ function RecruitingBoardPage() {
           </div>
           <div>
             <div className="text-xs text-gray-400 uppercase mb-0.5">Hours used</div>
-            <div
-              className="font-bold"
-              style={{ color: hoursRemaining < 0 ? '#dc2626' : '#15803d' }}
-            >
+            <div className={`font-bold ${hoursRemaining < 0 ? 'text-hours-over' : 'text-hours-ok'}`}>
               {totalHours} / {WEEKLY_HOURS_CAP}
             </div>
           </div>
@@ -297,12 +295,12 @@ function RecruitingBoardPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-gray-400 border-b">
-                    <th className="pb-2 pr-2">Recruit</th>
-                    <th className="pb-2 pr-2">Competition</th>
-                    <th className="pb-2 pr-2">Pitch</th>
-                    <th className="pb-2 w-24">Interest</th>
-                    <th className="pb-2 text-right">Hrs</th>
-                    <th className="pb-2"></th>
+                    <th scope="col" className="pb-2 pr-2">Recruit</th>
+                    <th scope="col" className="pb-2 pr-2">Competition</th>
+                    <th scope="col" className="pb-2 pr-2">Pitch</th>
+                    <th scope="col" className="pb-2 w-24">Interest</th>
+                    <th scope="col" className="pb-2 text-right">Hrs</th>
+                    <th scope="col" className="pb-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -348,9 +346,11 @@ function RecruitingBoardPage() {
                       </td>
                       <td className="py-2 pr-2">
                         <select
+                          id={`pitch-${recruit.id}`}
                           value={activePitch ?? ''}
                           onChange={(e) => onPitchChange(recruit.id, e.target.value)}
                           className="text-xs p-1 border rounded w-full mb-1"
+                          aria-label={`Recruiting pitch for ${recruit.name}`}
                         >
                           <option value="">No Pitch</option>
                           {Object.entries(PITCH_LABELS).map(([key, label]) => (
@@ -426,16 +426,21 @@ function RecruitingBoardPage() {
           </div>
 
           <div className="flex gap-2 mb-3">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name…"
-              className="flex-1 p-1.5 text-sm border rounded"
-            />
+            <label className="flex-1 text-sm">
+              Search
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name…"
+                className="block w-full p-1.5 text-sm border rounded mt-0.5"
+              />
+            </label>
+            <label className="text-sm">
+              Position
               <select
                 value={positionFilter}
                 onChange={(e) => setPositionFilter(e.target.value as PositionFilterValue)}
-                className="p-1.5 text-sm border rounded w-20"
+                className="block p-1.5 text-sm border rounded w-20 mt-0.5"
               >
                 {RECRUITING_POSITION_FILTERS.map((position) => (
                   <option key={position} value={position}>
@@ -443,16 +448,17 @@ function RecruitingBoardPage() {
                   </option>
                 ))}
               </select>
+            </label>
             </div>
 
           <div className="overflow-y-auto" style={{ maxHeight: '560px' }}>
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0">
                 <tr className="text-left text-xs text-gray-400">
-                  <th className="p-2">Name</th>
-                  <th className="p-2">Rtg</th>
-                  <th className="p-2">Fit</th>
-                  <th className="p-2 text-right">Action</th>
+                  <th scope="col" className="p-2">Name</th>
+                  <th scope="col" className="p-2">Rtg</th>
+                  <th scope="col" className="p-2">Fit</th>
+                  <th scope="col" className="p-2 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>

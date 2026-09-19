@@ -1,15 +1,8 @@
 import { generateRoster } from './generateRoster';
 import { simulateGame } from './matchEngine';
 import { seedToNumber } from './rng';
+import { DEFAULT_TACTICS } from './tactics';
 import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, RankingRow, TeamGameplayModifiers, Tactics, Team, TeamSimInput } from '../types/sim';
-
-const DEFAULT_TACTICS: Tactics = {
-  tempo: 'normal',
-  rideClear: 'balanced',
-  slideAggression: 'normal',
-  offenseSet: 'balanced',
-  defensePackage: 'man',
-};
 
 function composePlayoffGameSeed(
   baseSeed: number,

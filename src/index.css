@@ -389,6 +389,30 @@ button:focus-visible {
 .rounded-sm { border-radius: 4px; }
 .rounded-lg { border-radius: var(--radius-lg); }
 .border-l-4 { border-left-width: 4px; border-left-style: solid; }
+.border-win { border-left-color: var(--success); }
+.border-loss { border-left-color: var(--danger); }
+.badge-win { background: var(--success-soft); color: var(--success); }
+.badge-loss { background: #fee2e2; color: var(--danger); }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.text-hours-over { color: var(--danger); }
+.text-hours-ok { color: var(--success); }
+.matchup-strong { color: #16a34a; }
+.matchup-favor { color: #4ade80; }
+.matchup-tossup { color: var(--warning-border); }
+.matchup-underdog { color: #ef4444; }
+.fatigue-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.fatigue-pill-fresh { background: #f0fdf4; color: var(--success); }
+.fatigue-pill-managed { background: #fefce8; color: var(--warning-fg); }
+.fatigue-pill-worn { background: #fff7ed; color: #c2410c; }
+.fatigue-pill-drained { background: #fef2f2; color: var(--danger); }
 .bg-gray-100 { background-color: #f3f4f6; }
 .text-green-700 { color: #15803d; }
 .text-yellow-700 { color: #a16207; }

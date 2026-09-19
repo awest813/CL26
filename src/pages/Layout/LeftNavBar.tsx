@@ -29,6 +29,7 @@ const navSections: Array<{ title: string; items: NavItem[] }> = [
     title: 'Season Hub',
     items: [
       { to: '/season', label: 'Season Dashboard', hint: 'Schedule + controls' },
+      { to: '/season/week/0', label: 'Week Results', hint: 'Scores & box scores' },
       { to: '/season/standings', label: 'Standings', hint: 'Conference race' },
       { to: '/rankings', label: 'Top 25 Poll', hint: 'Poll + 12-team field' },
       { to: '/playoffs', label: 'Playoff Bracket', hint: 'Lacrosse championship' },

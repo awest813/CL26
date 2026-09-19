@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '../../store/hooks';
+import { selectIsCareerReady } from '../../features/coach/coachSlice';
 import { selectSeasonSummary, selectTop12Projection, selectTeamRecords, selectUserConferenceStanding } from '../../features/season/seasonSlice';
+import { seasonPhaseRailLabel } from '../../lib/seasonLabels';
 import { useMemo } from 'react';
 
 function ordinalSuffix(n: number): string {
@@ -18,7 +20,7 @@ function standingClassName(place: number): string {
 
 function RightNavBar() {
   const summary = useAppSelector(selectSeasonSummary);
-  const onboardingStep = useAppSelector((state) => state.coach.onboardingStep);
+  const careerReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
   const teams = useAppSelector((state) => state.league.teams);
   const conferences = useAppSelector((state) => state.league.conferences);
@@ -27,7 +29,6 @@ function RightNavBar() {
   const confStanding = useAppSelector(selectUserConferenceStanding);
 
   const seasonStarted = summary.phase !== 'PRE';
-  const careerReady = onboardingStep === 'READY';
 
   const selectedTeam = useMemo(
     () => teams.find((t) => t.id === selectedTeamId) ?? null,
@@ -48,12 +49,7 @@ function RightNavBar() {
     ? top12.find((s) => s.teamId === selectedTeamId)?.rank ?? null
     : null;
 
-  const phaseLabel: Record<string, string> = {
-    PRE: 'Preseason',
-    REGULAR: `Week ${summary.currentWeekIndex + 1} of 12`,
-    PLAYOFF: 'College Lacrosse Playoff',
-    OFFSEASON: 'Offseason',
-  };
+  const phaseLabel = seasonPhaseRailLabel(summary.phase, summary.currentWeekIndex);
 
   const seedLabel =
     summary.phase === 'PLAYOFF' || summary.phase === 'OFFSEASON'
@@ -71,7 +67,7 @@ function RightNavBar() {
       <div className="rightNavSection dynastyPanel">
         <h3 className="m-0">Season Status</h3>
         <p className="m-0 dynastyPanelMuted">
-          {summary.year} · {phaseLabel[summary.phase] ?? summary.phase}
+          {summary.year} · {phaseLabel}
         </p>
       </div>
 
@@ -131,7 +127,7 @@ function RightNavBar() {
           <Link to="/rankings" className="btn dynastyRailBtn">
             Top 25 Poll
           </Link>
-          {seasonStarted && summary.phase !== 'PLAYOFF' && (
+          {seasonStarted && summary.phase === 'OFFSEASON' && (
             <Link to="/playoffs" className="btn dynastyRailBtn">
               Playoff Bracket
             </Link>

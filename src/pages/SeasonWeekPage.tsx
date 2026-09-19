@@ -1,12 +1,10 @@
 import { Fragment, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
 import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
 
-const WIN_COLOR = '#16a34a';
-const LOSS_COLOR = '#ef4444';
 const SCORE_BUTTON_STYLE = { background: 'transparent', border: 0 } as const;
 
 function topPerformerLine(players: PlayerGameStats[]): string {
@@ -54,7 +52,7 @@ function UserGameCard({
   const recap = buildGameRecap(gameResultToSummary(result), awayName, homeName);
 
   return (
-    <section className="card" style={{ borderLeft: `4px solid ${won ? WIN_COLOR : LOSS_COLOR}` }}>
+    <section className={`card border-l-4 ${won ? 'border-win' : 'border-loss'}`}>
       <div className="flex justify-between items-start gap-3">
         <div>
           <div className="text-xs text-gray-500 uppercase font-semibold">Your Game</div>
@@ -67,7 +65,7 @@ function UserGameCard({
           <p className="m-0 mt-2 text-sm text-gray-600">{recap.summary}</p>
           <p className="m-0 mt-1 text-xs text-gray-500">{recap.keyEdge}</p>
         </div>
-        <span className={won ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>{won ? 'WIN' : 'LOSS'}</span>
+        <span className={won ? 'text-success font-bold' : 'text-danger font-bold'}>{won ? 'WIN' : 'LOSS'}</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mt-3 pt-3 border-t">
         <div><span className="text-gray-400 text-xs block">Shots</span>{userStats.shots}–{opponentStats.shots}</div>
@@ -155,6 +153,26 @@ function SeasonWeekPage() {
     )?.result ?? null;
   }, [rows, selectedTeamId]);
 
+  if (totalWeeks === 0) {
+    return (
+      <div className="pageStack">
+        <div className="pageHeader">
+          <h2>Week Results</h2>
+          <p className="pageHeader-sub">Browse scores, team stats, and top performers from each matchup.</p>
+        </div>
+        <div className="card text-center py-8">
+          <h3 className="m-0">No schedule yet</h3>
+          <p className="text-gray-500 mb-4">
+            Begin the season from the Season Dashboard to generate the 12-week schedule and unlock week-by-week results.
+          </p>
+          <Link to="/season" className="btn btn-primary inline-block">
+            Season Dashboard →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pageStack">
       <div className="pageHeader">
@@ -184,19 +202,29 @@ function SeasonWeekPage() {
         </div>
 
         <div className="seasonWeekFilterGroup">
-          <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded">
+          <label className="text-sm">
+            Conference
+            <select
+              value={conferenceFilter}
+              onChange={(e) => setConferenceFilter(e.target.value)}
+              className="p-1 text-sm border rounded ml-1"
+            >
             <option value="ALL">All Conferences</option>
             {conferences.map((conf) => (
               <option key={conf.id} value={conf.id}>
                 {conf.name}
               </option>
             ))}
-          </select>
+            </select>
+          </label>
 
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as 'alpha' | 'score')} className="p-1 text-sm border rounded">
+          <label className="text-sm">
+            Sort
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as 'alpha' | 'score')} className="p-1 text-sm border rounded ml-1">
             <option value="alpha">Sort: Home A-Z</option>
             <option value="score">Sort: High Score</option>
           </select>
+          </label>
         </div>
       </div>
 
@@ -213,12 +241,12 @@ function SeasonWeekPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 border-b">
                 <tr>
-                  <th className="p-2 text-right w-1/4">Away</th>
-                  <th className="p-2 text-center w-20">Score</th>
-                  <th className="p-2 text-left w-1/4">Home</th>
-                  <th className="p-2 text-center text-xs">Shots</th>
-                  <th className="p-2 text-center text-xs">TO</th>
-                  <th className="p-2 text-center text-xs">FO%</th>
+                  <th scope="col" className="p-2 text-right w-1/4">Away</th>
+                  <th scope="col" className="p-2 text-center w-20">Score</th>
+                  <th scope="col" className="p-2 text-left w-1/4">Home</th>
+                  <th scope="col" className="p-2 text-center text-xs">Shots</th>
+                  <th scope="col" className="p-2 text-center text-xs">TO</th>
+                  <th scope="col" className="p-2 text-center text-xs">FO%</th>
                 </tr>
               </thead>
               <tbody>

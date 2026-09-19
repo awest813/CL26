@@ -1,10 +1,10 @@
 import type { Player, Position, Recruit, RecruitingPitch, RecruitMotivation, Team } from '../types/sim.ts';
+import { POSITION_ORDER } from '../types/sim.ts';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng.ts';
 import namesData from '../data/names.json' with { type: 'json' };
 import { LEAGUE_REGIONS } from './leagueDataValidation.ts';
 
 const REGIONS = [...LEAGUE_REGIONS];
-const POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 const PITCHES: RecruitingPitch[] = ['PLAYING_TIME', 'PROXIMITY', 'ACADEMIC', 'PRESTIGE', 'CHAMPIONSHIP', 'CAMPUS_LIFE'];
 export const RECRUITING_POSITION_FILTERS: Array<Position | 'ALL'> = ['ALL', 'A', 'M', 'D', 'LSM', 'FO', 'G'];
 export const PITCH_LABELS: Record<RecruitingPitch, string> = {
@@ -84,7 +84,7 @@ export function generateRecruitPool(seed: number, count = 180): Recruit[] {
     return {
       id: `recruit-${seed}-${index + 1}`,
       name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
-      position: pickOne(rng, POSITIONS),
+      position: pickOne(rng, POSITION_ORDER),
       stars,
       region: pickOne(rng, REGIONS),
       potential,

@@ -2,10 +2,8 @@ import { useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toggleStarter } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { Player, Position } from '../types/sim';
+import { Player, Position, POSITION_ORDER } from '../types/sim';
 import { getRosterDepthSummary } from '../sim/rosterManagement';
-
-const POSITION_ORDER: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 
 const POSITION_LABELS: Record<Position, string> = {
   A: 'Attack',
@@ -283,17 +281,17 @@ function RosterPage() {
               <table className="w-full">
                 <thead>
                   <tr className="text-left text-xs text-gray-400 border-b">
-                    <th className="pb-1.5 pr-2">Role</th>
-                    <th className="pb-1.5 pr-3">Name</th>
-                    <th className="pb-1.5 pr-3">Yr</th>
-                    <th className="pb-1.5 pr-3">Age</th>
-                    <th className="pb-1.5 pr-3">OVR</th>
-                    <th className="pb-1.5 pr-2">SHT</th>
-                    <th className="pb-1.5 pr-2">PAS</th>
-                    <th className="pb-1.5 pr-2">SPD</th>
-                    <th className="pb-1.5 pr-2">DEF</th>
-                    <th className="pb-1.5 pr-2">IQ</th>
-                    <th className="pb-1.5"></th>
+                    <th scope="col" className="pb-1.5 pr-2">Role</th>
+                    <th scope="col" className="pb-1.5 pr-3">Name</th>
+                    <th scope="col" className="pb-1.5 pr-3">Yr</th>
+                    <th scope="col" className="pb-1.5 pr-3">Age</th>
+                    <th scope="col" className="pb-1.5 pr-3">OVR</th>
+                    <th scope="col" className="pb-1.5 pr-2">SHT</th>
+                    <th scope="col" className="pb-1.5 pr-2">PAS</th>
+                    <th scope="col" className="pb-1.5 pr-2">SPD</th>
+                    <th scope="col" className="pb-1.5 pr-2">DEF</th>
+                    <th scope="col" className="pb-1.5 pr-2">IQ</th>
+                    <th scope="col" className="pb-1.5"></th>
                   </tr>
                 </thead>
                 <tbody>

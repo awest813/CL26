@@ -1,16 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '../../store/hooks';
-
-function seasonPhaseLabel(phase: string, currentWeekIndex: number, scheduleLength: number): string {
-  if (phase === 'PRE') return 'Preseason';
-  if (phase === 'REGULAR') {
-    const week = Math.min(currentWeekIndex + 1, Math.max(scheduleLength, 1));
-    return `Week ${week} of ${Math.max(scheduleLength, 12)}`;
-  }
-  if (phase === 'PLAYOFF') return 'Playoffs';
-  if (phase === 'OFFSEASON') return 'Offseason';
-  return phase;
-}
+import { selectIsCareerReady } from '../../features/coach/coachSlice';
+import { seasonPhaseLabel } from '../../lib/seasonLabels';
 
 function continueTarget(phase: string, onboardingReady: boolean): { path: string; label: string } {
   if (!onboardingReady) return { path: '/career/setup', label: 'Start Career' };
@@ -22,13 +13,12 @@ function continueTarget(phase: string, onboardingReady: boolean): { path: string
 }
 
 function Header() {
-  const onboardingStep = useAppSelector((state) => state.coach.onboardingStep);
+  const onboardingReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
   const teams = useAppSelector((state) => state.league.teams);
   const season = useAppSelector((state) => state.season);
 
   const selectedTeam = teams.find((team) => team.id === selectedTeamId) ?? null;
-  const onboardingReady = onboardingStep === 'READY';
   const continueAction = continueTarget(season.phase, onboardingReady);
   const phaseLabel = seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length);
 

@@ -159,11 +159,12 @@ function TeamPage() {
         </div>
         <div className="dataTableWrap">
           <table>
+            <caption className="text-sm text-gray-500 text-left mb-2">Roster depth by position</caption>
             <thead>
               <tr>
-                <th>Position</th>
-                <th>Players</th>
-                <th>Avg OVR</th>
+                <th scope="col">Position</th>
+                <th scope="col">Players</th>
+                <th scope="col">Avg OVR</th>
               </tr>
             </thead>
             <tbody>
@@ -188,14 +189,15 @@ function TeamPage() {
         </div>
         <div className="dataTableWrap">
           <table>
+            <caption className="text-sm text-gray-500 text-left mb-2">Top roster players</caption>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Pos</th>
-                <th>Year</th>
-                <th>Age</th>
-                <th>Skill</th>
-                <th>Overall</th>
+                <th scope="col">Name</th>
+                <th scope="col">Pos</th>
+                <th scope="col">Year</th>
+                <th scope="col">Age</th>
+                <th scope="col">Skill</th>
+                <th scope="col">Overall</th>
               </tr>
             </thead>
             <tbody>

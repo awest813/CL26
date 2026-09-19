@@ -16,13 +16,13 @@ Build a deterministic, web-based college lacrosse head coach simulation with:
    - `leagueSlice`: static league/team data loaded from JSON at startup; **do not persist**.
    - `seasonSlice`: schedule/results/standings/current week/playoffs; **persist**.
    - `coachSlice`: selected user team, tactics, settings; **persist**.
-   - `uiSlice`: optional minimal UI state.
-3. Persistence configuration must whitelist only persisted gameplay/user slices.
+   - `exhibitionSlice`: sandbox exhibition sim state; **do not persist**.
+3. Persistence configuration must whitelist only persisted gameplay/user slices (`season`, `coach`).
 4. Prefer derived views + memoized selectors for standings/rankings over storing redundant state.
 
 ## Current phase focus
-For this phase, scaffold architecture and implement league browsing + generated roster summaries.
-Do **not** implement full sim engine yet.
+Alpha polish: coach career loop, recruiting, playoffs, rankings transparency, and UX consistency.
+Keep simulation logic pure under `src/sim/`; orchestrate cross-slice flows in `src/features/coach/careerThunks.ts`.
 
 ## Cursor Cloud specific instructions
 

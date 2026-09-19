@@ -1,6 +1,6 @@
 import { createSelector, createSlice } from '@reduxjs/toolkit';
 import teamsData from '../../data/teams128.json';
-import { Conference, LeagueData, Team } from '../../types/sim';
+import { Conference, LeagueData, Team, POSITION_ORDER } from '../../types/sim';
 import { RootState } from '../../store/store';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
@@ -15,7 +15,6 @@ const initialState: LeagueState = {
 
 assertValidLeagueData(initialState.conferences, initialState.teams);
 
-const POSITION_ORDER = ['A', 'M', 'D', 'LSM', 'FO', 'G'] as const;
 const YEAR_LABELS = {
   1: 'Fr',
   2: 'So',

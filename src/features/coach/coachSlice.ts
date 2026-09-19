@@ -5,6 +5,7 @@ import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getT
 import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
 import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
+import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
 
@@ -67,7 +68,7 @@ export interface CoachState {
   selectedTeamId: string | null;
   tactics: Tactics;
   profile: CoachProfile | null;
-  onboardingStep: 'PROFILE' | 'TEAM' | 'READY' | 'COMPLETE';
+  onboardingStep: 'PROFILE' | 'READY';
   careerTier: 'REBUILD' | 'STABLE' | 'CONTENDER' | null;
   programExpectations: ProgramExpectations | null;
   recruitPool: Recruit[];
@@ -99,13 +100,7 @@ export interface CoachState {
 
 const initialState: CoachState = {
   selectedTeamId: null,
-  tactics: {
-    tempo: 'normal',
-    rideClear: 'balanced',
-    slideAggression: 'normal',
-    offenseSet: 'balanced',
-    defensePackage: 'man',
-  },
+  tactics: DEFAULT_TACTICS,
   profile: null,
   onboardingStep: 'PROFILE',
   careerTier: null,
@@ -163,7 +158,6 @@ const coachSlice = createSlice({
     },
     setCoachProfile: (state, action: PayloadAction<CoachProfile>) => {
         state.profile = action.payload;
-        state.onboardingStep = 'TEAM';
     },
     completeCareerSetup: (state, action: PayloadAction<{
         teamId: string;
@@ -636,6 +630,14 @@ export const processSigningDay = createAsyncThunk(
             unsignedCommitRecruitIds,
         }));
     }
+);
+
+export const selectIsCareerReady = createSelector(
+    [
+        (state: RootState) => state.coach.onboardingStep,
+        (state: RootState) => state.coach.selectedTeamId,
+    ],
+    (onboardingStep, selectedTeamId) => onboardingStep === 'READY' && Boolean(selectedTeamId),
 );
 
 export const selectUserEffectivePrestige = createSelector(

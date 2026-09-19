@@ -9,6 +9,7 @@ import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
 import { computeAllSOS, computePlayoffProjection, computeRankings } from '../../sim/rankings';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
+import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { seedToNumber } from '../../sim/rng';
 import {
   assertCanInitializePlayoffs,
@@ -20,15 +21,6 @@ import {
   playoffStageFor,
   seasonCapabilities,
 } from '../../sim/seasonPhase';
-import { applyPlayoffRoundFatigue } from '../coach/coachSlice';
-
-const DEFAULT_TACTICS = {
-  tempo: 'normal',
-  rideClear: 'balanced',
-  slideAggression: 'normal',
-  offenseSet: 'balanced',
-  defensePackage: 'man',
-} as const;
 
 function composeSeasonGameSeed(
   seasonSeed: number,
@@ -203,7 +195,7 @@ export const startPlayoffs = createAsyncThunk(
 
 export const simNextPlayoffRound = createAsyncThunk(
     'season/simNextPlayoffRound',
-    async (_, { dispatch, getState }) => {
+    async (_, { getState }) => {
         const state = getState() as RootState;
         assertCanSimulatePlayoffRound(state.season);
 
@@ -253,7 +245,6 @@ export const simNextPlayoffRound = createAsyncThunk(
           };
         }
 
-        const roundBefore = playoffState.currentRound;
         const nextState = simulatePlayoffRound(
           playoffState,
           teams,
@@ -261,15 +252,6 @@ export const simNextPlayoffRound = createAsyncThunk(
           rosterSeed,
           coachPlay,
         );
-
-        // Playoff round fatigue: playing teams take a week of load; byes / eliminated rest.
-        if (coach.selectedTeamId) {
-          const playedThisRound = playoffState.rounds[roundBefore].some(
-            (game) =>
-              game.homeTeamId === coach.selectedTeamId || game.awayTeamId === coach.selectedTeamId,
-          );
-          dispatch(applyPlayoffRoundFatigue({ played: playedThisRound }));
-        }
 
         return nextState;
     }

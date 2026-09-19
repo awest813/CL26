@@ -60,6 +60,14 @@ const FOCUS_LABELS: Record<PracticeFocus, string> = {
   CONDITIONING: 'Conditioning block',
 };
 
+/** UI-facing practice focus labels (shared across Weekly Hub and Coach Office). */
+export const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
+  OFFENSE: 'Offense Install',
+  DEFENSE: 'Defense Install',
+  CONDITIONING: 'Conditioning',
+  DISCIPLINE: 'Discipline',
+};
+
 const ARCHETYPE_BONUSES: Record<CoachArchetype, Partial<TeamGameplayModifiers>> = {
   RECRUITER: {},
   TACTICIAN: {

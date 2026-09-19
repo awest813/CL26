@@ -1,4 +1,4 @@
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 import { runExhibition, setSeed, setTactics, setTeams } from '../features/exhibition/exhibitionSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Tactics } from '../types/sim';
@@ -93,20 +93,45 @@ function ExhibitionPage() {
   const dispatch = useAppDispatch();
   const teams = useAppSelector((state) => state.league.teams);
   const exhibition = useAppSelector((state) => state.exhibition);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const teamAId = exhibition.selectedTeamAId ?? teams[0]?.id ?? '';
   const teamBId = exhibition.selectedTeamBId ?? teams[1]?.id ?? '';
+  const sameTeamSelected = Boolean(teamAId && teamBId && teamAId === teamBId);
 
-  const onSubmit = (event: FormEvent) => {
+  const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (sameTeamSelected) {
+      setValidationError('Choose two different teams for an exhibition matchup.');
+      return;
+    }
+    setValidationError(null);
     dispatch(setTeams({ teamAId, teamBId }));
-    dispatch(runExhibition());
+    try {
+      const result = await dispatch(runExhibition()).unwrap();
+      if (!result) {
+        setValidationError('Could not simulate that matchup. Confirm both teams are selected.');
+      }
+    } catch (err) {
+      setValidationError(err instanceof Error ? err.message : String(err));
+    }
   };
 
   return (
-    <section>
-      <h2>Exhibition Game</h2>
+    <div className="pageStack">
+      <div className="pageHeader">
+        <h2>Exhibition Lab</h2>
+        <p className="pageHeader-sub">
+          Run a single deterministic game with custom tactics and seeds — results do not affect your career save.
+        </p>
+      </div>
+
       <form className="card" onSubmit={onSubmit}>
+        {validationError && (
+          <p className="text-sm text-red-600 mb-3" role="alert">
+            {validationError}
+          </p>
+        )}
         <div className="grid2">
           <label>
             Team A
@@ -137,6 +162,10 @@ function ExhibitionPage() {
           </label>
         </div>
 
+        {sameTeamSelected && (
+          <p className="text-sm text-amber-700 mt-2 mb-0">Select two different teams before simulating.</p>
+        )}
+
         <div className="grid2">
           <TacticsControls
             label="Team A"
@@ -150,7 +179,7 @@ function ExhibitionPage() {
           />
         </div>
 
-        <div className="seedRow">
+        <div className="seedRow flex flex-wrap gap-2 items-end mt-3">
           <label>
             Seed
             <input
@@ -159,10 +188,12 @@ function ExhibitionPage() {
               onChange={(event) => dispatch(setSeed(Number(event.target.value) || 0))}
             />
           </label>
-          <button type="button" onClick={() => dispatch(setSeed(Math.floor(Math.random() * 1000000000)))}>
+          <button type="button" className="btn" onClick={() => dispatch(setSeed(Math.floor(Math.random() * 1000000000)))}>
             Random Seed
           </button>
-          <button type="submit">Sim Game</button>
+          <button type="submit" className="btn btn-primary" disabled={sameTeamSelected}>
+            Sim Game
+          </button>
         </div>
       </form>
 
@@ -175,17 +206,18 @@ function ExhibitionPage() {
 
           <h4>Team Box Score</h4>
           <table>
+            <caption className="text-sm text-gray-500 text-left mb-2">Team totals for this exhibition game</caption>
             <thead>
               <tr>
-                <th>Team</th>
-                <th>Goals</th>
-                <th>Shots</th>
-                <th>Saves</th>
-                <th>Turnovers</th>
-                <th>Caused TO</th>
-                <th>Ground Balls</th>
-                <th>Penalties</th>
-                <th>Faceoff%</th>
+                <th scope="col">Team</th>
+                <th scope="col">Goals</th>
+                <th scope="col">Shots</th>
+                <th scope="col">Saves</th>
+                <th scope="col">Turnovers</th>
+                <th scope="col">Caused TO</th>
+                <th scope="col">Ground Balls</th>
+                <th scope="col">Penalties</th>
+                <th scope="col">Faceoff%</th>
               </tr>
             </thead>
             <tbody>
@@ -245,7 +277,7 @@ function ExhibitionPage() {
           </ul>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }
 

@@ -1,5 +1,6 @@
 import { generateRoster } from './generateRoster';
 import { simulateGame } from './matchEngine';
+import { DEFAULT_TACTICS } from './tactics';
 import { Conference, GameSummary, ScheduledGame, Tactics, Team, TeamRecord } from '../types/sim';
 
 interface SeasonSimInputs {
@@ -8,14 +9,6 @@ interface SeasonSimInputs {
   rosterSeed: string;
   tacticsByTeamId?: Record<string, Tactics>;
 }
-
-const DEFAULT_TACTICS: Tactics = {
-  tempo: 'normal',
-  rideClear: 'balanced',
-  slideAggression: 'normal',
-  offenseSet: 'balanced',
-  defensePackage: 'man',
-};
 
 function blankRecord(): TeamRecord {
   return { wins: 0, losses: 0, confWins: 0, confLosses: 0, pointsFor: 0, pointsAgainst: 0 };

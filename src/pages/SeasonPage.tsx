@@ -10,14 +10,9 @@ import {
   resetSeason,
 } from '../features/season/seasonSlice';
 import { beginFirstSeason } from '../features/coach/careerThunks';
+import { selectIsCareerReady } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-
-const PHASE_LABELS: Record<string, string> = {
-  PRE: 'Preseason',
-  REGULAR: 'Regular Season',
-  PLAYOFF: 'Playoffs',
-  OFFSEASON: 'Offseason',
-};
+import { SEASON_PHASE_LABELS } from '../lib/seasonLabels';
 
 interface NextStepAction {
   label: string;
@@ -30,13 +25,12 @@ function SeasonPage() {
   const [seedInput, setSeedInput] = useState(2026);
   const [conferenceFilter, setConferenceFilter] = useState('ALL');
   const [startError, setStartError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const summary = useAppSelector(selectSeasonSummary);
   const hasSeason = useAppSelector(selectSeasonHasStarted);
   const capabilities = useAppSelector(selectSeasonCapabilities);
   const teams = useAppSelector((state) => state.league.teams);
   const conferences = useAppSelector((state) => state.league.conferences);
-  const coach = useAppSelector((state) => state.coach);
-
   const displayWeek = Math.min(summary.currentWeekIndex, 11);
   const weekSelector = useMemo(() => selectWeekGames(displayWeek), [displayWeek]);
   const thisWeekGames = useAppSelector(weekSelector);
@@ -53,7 +47,7 @@ function SeasonPage() {
   }, [thisWeekGames, conferenceFilter, teamById]);
 
   const hasValidSeed = Number.isFinite(seedInput);
-  const coachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
+  const coachReady = useAppSelector(selectIsCareerReady);
 
   const nextStep = useMemo<NextStepAction>(() => {
     if (!hasSeason) return { label: 'Start this season to unlock the weekly loop.', link: null, cta: null };
@@ -91,13 +85,22 @@ function SeasonPage() {
     }
   };
 
-  const handleSimWeek = () => {
-    dispatch(simCurrentWeek());
+  const handleSimWeek = async () => {
+    setActionError(null);
+    try {
+      await dispatch(simCurrentWeek()).unwrap();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    }
   };
 
-  const handleSimSeason = () => {
-    if (confirm('Simulate the rest of the regular season?')) {
-      dispatch(simSeason());
+  const handleSimSeason = async () => {
+    if (!confirm('Simulate the rest of the regular season?')) return;
+    setActionError(null);
+    try {
+      await dispatch(simSeason()).unwrap();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -186,10 +189,15 @@ function SeasonPage() {
           <div className="pageHeader m-0">
             <h2 className="m-0 text-xl font-bold">Season Dashboard</h2>
             <p className="pageHeader-sub">
-              Week {displayWeek + 1} of 12 &bull; {PHASE_LABELS[summary.phase] ?? summary.phase}
+              Week {displayWeek + 1} of 12 &bull; {SEASON_PHASE_LABELS[summary.phase] ?? summary.phase}
             </p>
           </div>
 
+          {actionError && (
+            <p className="text-sm text-red-600 m-0 mb-2 w-full" role="alert">
+              {actionError}
+            </p>
+          )}
           {summary.phase === 'REGULAR' && (
             <div className="seasonActionGroup">
               {coachReady ? (
@@ -259,7 +267,9 @@ function SeasonPage() {
       <div className="card">
         <div className="seasonHeaderRow border-b pb-2 mb-4">
           <h3 className="m-0 text-lg font-semibold">Week {displayWeek + 1} Matchups</h3>
-          <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded">
+          <label className="text-sm">
+            Conference
+            <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded ml-1">
             <option value="ALL">All Conferences</option>
             {conferences.map((conf) => (
               <option key={conf.id} value={conf.id}>
@@ -267,6 +277,7 @@ function SeasonPage() {
               </option>
             ))}
           </select>
+          </label>
         </div>
 
         <div className="seasonMatchupList">

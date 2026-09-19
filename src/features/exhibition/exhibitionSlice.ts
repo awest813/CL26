@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../../store/store';
 import { Tactics } from '../../types/sim';
+import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { generateRoster } from '../../sim/generateRoster';
 import { GameResult, simulateGame } from '../../sim/matchEngine';
 
@@ -13,19 +14,11 @@ interface ExhibitionState {
   lastResult: GameResult | null;
 }
 
-const defaultTactics: Tactics = {
-  tempo: 'normal',
-  rideClear: 'balanced',
-  slideAggression: 'normal',
-  offenseSet: 'balanced',
-  defensePackage: 'man',
-};
-
 const initialState: ExhibitionState = {
   selectedTeamAId: null,
   selectedTeamBId: null,
-  tacticsA: defaultTactics,
-  tacticsB: defaultTactics,
+  tacticsA: DEFAULT_TACTICS,
+  tacticsB: DEFAULT_TACTICS,
   seed: 2026,
   lastResult: null,
 };
