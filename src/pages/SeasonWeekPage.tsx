@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
@@ -155,6 +155,26 @@ function SeasonWeekPage() {
     )?.result ?? null;
   }, [rows, selectedTeamId]);
 
+  if (totalWeeks === 0) {
+    return (
+      <div className="pageStack">
+        <div className="pageHeader">
+          <h2>Week Results</h2>
+          <p className="pageHeader-sub">Browse scores, team stats, and top performers from each matchup.</p>
+        </div>
+        <div className="card text-center py-8">
+          <h3 className="m-0">No schedule yet</h3>
+          <p className="text-gray-500 mb-4">
+            Begin the season from the Season Dashboard to generate the 12-week schedule and unlock week-by-week results.
+          </p>
+          <Link to="/season" className="btn btn-primary inline-block">
+            Season Dashboard →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pageStack">
       <div className="pageHeader">
@@ -184,19 +204,29 @@ function SeasonWeekPage() {
         </div>
 
         <div className="seasonWeekFilterGroup">
-          <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded">
+          <label className="text-sm">
+            Conference
+            <select
+              value={conferenceFilter}
+              onChange={(e) => setConferenceFilter(e.target.value)}
+              className="p-1 text-sm border rounded ml-1"
+            >
             <option value="ALL">All Conferences</option>
             {conferences.map((conf) => (
               <option key={conf.id} value={conf.id}>
                 {conf.name}
               </option>
             ))}
-          </select>
+            </select>
+          </label>
 
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as 'alpha' | 'score')} className="p-1 text-sm border rounded">
+          <label className="text-sm">
+            Sort
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as 'alpha' | 'score')} className="p-1 text-sm border rounded ml-1">
             <option value="alpha">Sort: Home A-Z</option>
             <option value="score">Sort: High Score</option>
           </select>
+          </label>
         </div>
       </div>
 

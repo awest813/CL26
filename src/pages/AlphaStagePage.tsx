@@ -78,8 +78,8 @@ function AlphaStagePage() {
     },
     {
       item: 'Core loops pass regression tests (schedule, sim, rankings, playoffs).',
-      done: false,
-      detail: 'Test coverage exists, but alpha requires a consolidated regression command and routine run cadence.',
+      done: true,
+      detail: 'Run `npm run test:regression` (requires Bun on PATH) before alpha sign-off.',
       link: '/alpha',
       linkLabel: 'Track Here',
     },

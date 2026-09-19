@@ -6,6 +6,7 @@ import {
   removeRecruitFromBoard,
   setRecruitHours,
   setRecruitPitch,
+  selectIsCareerReady,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
@@ -58,7 +59,7 @@ function RecruitingBoardPage() {
 
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState<PositionFilterValue>('ALL');
-  const isCoachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
+  const isCoachReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
   const teamNameById = useMemo(() => new Map(teams.map((t) => [t.id, t.schoolName])), [teams]);

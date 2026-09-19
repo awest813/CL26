@@ -136,6 +136,7 @@ function CoachCareerPage() {
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [jobOfferError, setJobOfferError] = useState<string | null>(null);
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
@@ -289,7 +290,10 @@ function CoachCareerPage() {
   }
 
   function onAdvance() {
-    dispatch(runCareerWeeklyCycle());
+    setActionError(null);
+    void dispatch(runCareerWeeklyCycle())
+      .unwrap()
+      .catch((err) => setActionError(err instanceof Error ? err.message : String(err)));
   }
 
   function onHoursChange(recruitId: string, nextHours: number): void {
@@ -310,13 +314,23 @@ function CoachCareerPage() {
   }
 
   async function onEndSeason() {
-    await dispatch(processSeasonEnd());
+    setActionError(null);
+    try {
+      await dispatch(processSeasonEnd()).unwrap();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   async function onNewSeason() {
-    const nextSeed = await dispatch(beginNextCareerSeason()).unwrap();
-    if (typeof nextSeed === 'number') {
-      setSeedInput(nextSeed);
+    setActionError(null);
+    try {
+      const nextSeed = await dispatch(beginNextCareerSeason()).unwrap();
+      if (typeof nextSeed === 'number') {
+        setSeedInput(nextSeed);
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -348,6 +362,11 @@ function CoachCareerPage() {
 
   return (
     <div className="flex-col gap-4">
+      {actionError && (
+        <div className="card border border-red-200 bg-red-50 text-sm text-red-800" role="alert">
+          {actionError}
+        </div>
+      )}
       {/* ── Career Dashboard ── */}
       <div className="card">
         <div className="flex justify-between items-start mb-3">

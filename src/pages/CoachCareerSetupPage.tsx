@@ -164,8 +164,10 @@ function CoachCareerSetupPage() {
             {archetypeOptions.map((option) => {
               const isSelected = archetype === option.value;
               return (
-                <div
+                <button
                   key={option.value}
+                  type="button"
+                  aria-pressed={isSelected}
                   onClick={() => setArchetype(option.value)}
                   style={{
                     border: isSelected ? '2px solid #2563eb' : '2px solid #e5e7eb',
@@ -174,6 +176,7 @@ function CoachCareerSetupPage() {
                     cursor: 'pointer',
                     background: isSelected ? '#eff6ff' : '#fff',
                     transition: 'border-color 0.15s, background 0.15s',
+                    textAlign: 'left',
                   }}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -197,7 +200,7 @@ function CoachCareerSetupPage() {
                     ))}
                   </ul>
                   <div className="text-xs text-amber-600">− {option.tradeoff}</div>
-                </div>
+                </button>
               );
             })}
           </div>

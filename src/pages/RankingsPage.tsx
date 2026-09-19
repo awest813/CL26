@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { useAppSelector } from '../store/hooks';
 import { selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary, selectTop16Rankings } from '../features/season/seasonSlice';
 import { selectTeams } from '../features/league/leagueSlice';
 import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
 
-function rankDeltaDisplay(delta: number | null): React.ReactNode {
+function rankDeltaDisplay(delta: number | null): ReactNode {
   if (delta === null) return <span className="text-gray-300 text-xs" aria-label="New to rankings">NEW</span>;
   if (delta > 0) return <span className="text-green-600 text-xs font-semibold" aria-label={`Moved up ${delta} position${delta !== 1 ? 's' : ''}`}>▲{delta}</span>;
   if (delta < 0) return <span className="text-red-500 text-xs font-semibold" aria-label={`Moved down ${Math.abs(delta)} position${Math.abs(delta) !== 1 ? 's' : ''}`}>▼{Math.abs(delta)}</span>;

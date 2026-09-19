@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import {
   selectTeamRecords,
@@ -8,6 +8,7 @@ import {
 import {
   setPracticeFocus,
   setRecruitHours,
+  selectIsCareerReady,
   selectUserEffectivePrestige,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
@@ -112,6 +113,7 @@ function ResultBanner({ result, selectedTeamId, teams }: ResultBannerProps) {
 
 function WeeklyHubPage() {
   const dispatch = useAppDispatch();
+  const [actionError, setActionError] = useState<string | null>(null);
   const coach = useAppSelector((state) => state.coach);
   const season = useAppSelector((state) => state.season);
   const teams = useAppSelector((state) => state.league.teams);
@@ -119,7 +121,7 @@ function WeeklyHubPage() {
   const userUpcomingGame = useAppSelector(selectUserUpcomingGame);
   const userLastResult = useAppSelector(selectUserLastResult);
   const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
-  const isCoachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
+  const isCoachReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
   const userRecord = records[selectedTeamId] ?? {
@@ -523,6 +525,11 @@ function WeeklyHubPage() {
 
       {/* ── Advance Week ── */}
       <div className="card">
+        {actionError && (
+          <p className="text-sm text-red-600 mb-3" role="alert">
+            {actionError}
+          </p>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <h3 className="m-0 text-base font-bold">
@@ -544,7 +551,14 @@ function WeeklyHubPage() {
             {canAdvance && (
               <button
                 className="btn btn-primary"
-                onClick={() => dispatch(runCareerWeeklyCycle())}
+                onClick={async () => {
+                  setActionError(null);
+                  try {
+                    await dispatch(runCareerWeeklyCycle()).unwrap();
+                  } catch (err) {
+                    setActionError(err instanceof Error ? err.message : String(err));
+                  }
+                }}
               >
                 ▶ Advance Week {currentWeekDisplay}
               </button>

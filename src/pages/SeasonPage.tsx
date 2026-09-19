@@ -10,6 +10,7 @@ import {
   resetSeason,
 } from '../features/season/seasonSlice';
 import { beginFirstSeason } from '../features/coach/careerThunks';
+import { selectIsCareerReady } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 const PHASE_LABELS: Record<string, string> = {
@@ -30,13 +31,12 @@ function SeasonPage() {
   const [seedInput, setSeedInput] = useState(2026);
   const [conferenceFilter, setConferenceFilter] = useState('ALL');
   const [startError, setStartError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const summary = useAppSelector(selectSeasonSummary);
   const hasSeason = useAppSelector(selectSeasonHasStarted);
   const capabilities = useAppSelector(selectSeasonCapabilities);
   const teams = useAppSelector((state) => state.league.teams);
   const conferences = useAppSelector((state) => state.league.conferences);
-  const coach = useAppSelector((state) => state.coach);
-
   const displayWeek = Math.min(summary.currentWeekIndex, 11);
   const weekSelector = useMemo(() => selectWeekGames(displayWeek), [displayWeek]);
   const thisWeekGames = useAppSelector(weekSelector);
@@ -53,7 +53,7 @@ function SeasonPage() {
   }, [thisWeekGames, conferenceFilter, teamById]);
 
   const hasValidSeed = Number.isFinite(seedInput);
-  const coachReady = coach.onboardingStep === 'READY' && Boolean(coach.selectedTeamId);
+  const coachReady = useAppSelector(selectIsCareerReady);
 
   const nextStep = useMemo<NextStepAction>(() => {
     if (!hasSeason) return { label: 'Start this season to unlock the weekly loop.', link: null, cta: null };
@@ -91,13 +91,22 @@ function SeasonPage() {
     }
   };
 
-  const handleSimWeek = () => {
-    dispatch(simCurrentWeek());
+  const handleSimWeek = async () => {
+    setActionError(null);
+    try {
+      await dispatch(simCurrentWeek()).unwrap();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    }
   };
 
-  const handleSimSeason = () => {
-    if (confirm('Simulate the rest of the regular season?')) {
-      dispatch(simSeason());
+  const handleSimSeason = async () => {
+    if (!confirm('Simulate the rest of the regular season?')) return;
+    setActionError(null);
+    try {
+      await dispatch(simSeason()).unwrap();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -190,6 +199,11 @@ function SeasonPage() {
             </p>
           </div>
 
+          {actionError && (
+            <p className="text-sm text-red-600 m-0 mb-2 w-full" role="alert">
+              {actionError}
+            </p>
+          )}
           {summary.phase === 'REGULAR' && (
             <div className="seasonActionGroup">
               {coachReady ? (

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { resetCoach } from '../features/coach/coachSlice';
+import { resetCoach, selectIsCareerReady } from '../features/coach/coachSlice';
 import { resetSeason } from '../features/season/seasonSlice';
 import { persistor } from '../store/persistor';
 
@@ -20,8 +20,7 @@ function Home() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const season = useAppSelector(state => state.season);
-  const coach = useAppSelector(state => state.coach);
-  const careerReady = coach.onboardingStep === 'READY';
+  const careerReady = useAppSelector(selectIsCareerReady);
   const { year, phase, currentWeekIndex, seasonSeed } = season;
   const seasonStarted = phase !== 'PRE';
 

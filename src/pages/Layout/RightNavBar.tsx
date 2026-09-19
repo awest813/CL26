@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '../../store/hooks';
+import { selectIsCareerReady } from '../../features/coach/coachSlice';
 import { selectSeasonSummary, selectTop12Projection, selectTeamRecords, selectUserConferenceStanding } from '../../features/season/seasonSlice';
 import { useMemo } from 'react';
 
@@ -18,7 +19,7 @@ function standingClassName(place: number): string {
 
 function RightNavBar() {
   const summary = useAppSelector(selectSeasonSummary);
-  const onboardingStep = useAppSelector((state) => state.coach.onboardingStep);
+  const careerReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
   const teams = useAppSelector((state) => state.league.teams);
   const conferences = useAppSelector((state) => state.league.conferences);
@@ -27,7 +28,6 @@ function RightNavBar() {
   const confStanding = useAppSelector(selectUserConferenceStanding);
 
   const seasonStarted = summary.phase !== 'PRE';
-  const careerReady = onboardingStep === 'READY';
 
   const selectedTeam = useMemo(
     () => teams.find((t) => t.id === selectedTeamId) ?? null,
@@ -131,7 +131,7 @@ function RightNavBar() {
           <Link to="/rankings" className="btn dynastyRailBtn">
             Top 25 Poll
           </Link>
-          {seasonStarted && summary.phase !== 'PLAYOFF' && (
+          {seasonStarted && summary.phase === 'OFFSEASON' && (
             <Link to="/playoffs" className="btn dynastyRailBtn">
               Playoff Bracket
             </Link>

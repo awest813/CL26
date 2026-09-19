@@ -638,6 +638,14 @@ export const processSigningDay = createAsyncThunk(
     }
 );
 
+export const selectIsCareerReady = createSelector(
+    [
+        (state: RootState) => state.coach.onboardingStep,
+        (state: RootState) => state.coach.selectedTeamId,
+    ],
+    (onboardingStep, selectedTeamId) => onboardingStep === 'READY' && Boolean(selectedTeamId),
+);
+
 export const selectUserEffectivePrestige = createSelector(
     [
         (state: RootState) => state.league.teams,

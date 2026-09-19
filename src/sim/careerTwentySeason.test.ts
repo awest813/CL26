@@ -25,7 +25,6 @@ import {
   beginFirstSeason,
   beginNextCareerSeason,
 } from '../features/coach/careerThunks.ts';
-import { uiReducer } from '../features/ui/uiSlice.ts';
 import { exhibitionReducer } from '../features/exhibition/exhibitionSlice.ts';
 import { validateSeasonState } from '../sim/seasonValidation.ts';
 import type { RootState } from '../store/store.ts';
@@ -40,7 +39,6 @@ function createCareerStore() {
       league: leagueReducer,
       season: seasonReducer,
       coach: coachReducer,
-      ui: uiReducer,
       exhibition: exhibitionReducer,
     }),
     middleware: (getDefaultMiddleware) =>
