@@ -11,6 +11,7 @@ import { computeAllSOS, computePlayoffProjection, computeRankings, withProgramPr
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { seedToNumber } from '../../sim/rng';
+import { compareConferenceStanding, compareOverallStanding } from '../../sim/standings';
 import {
   assertCanInitializePlayoffs,
   assertCanSimRegularWeek,
@@ -432,11 +433,10 @@ export const selectConferenceStandings = (conferenceId: string) => createSelecto
         return confTeams.map(team => ({
             team,
             record: records[team.id]
-        })).sort((a, b) => {
-            // Sort by conf wins, then overall wins
-            if (b.record.confWins !== a.record.confWins) return b.record.confWins - a.record.confWins;
-            return b.record.wins - a.record.wins;
-        });
+        })).sort((a, b) => compareConferenceStanding(
+            { record: a.record, name: a.team.schoolName },
+            { record: b.record, name: b.team.schoolName },
+        ));
     }
 );
 
@@ -449,7 +449,10 @@ export const selectOverallStandings = createSelector(
             pointDiff: records[team.id].pointsFor - records[team.id].pointsAgainst
         }));
 
-        return rows.sort((a, b) => b.record.wins - a.record.wins);
+        return rows.sort((a, b) => compareOverallStanding(
+            { record: a.record, name: a.team.schoolName },
+            { record: b.record, name: b.team.schoolName },
+        ));
     }
 );
 

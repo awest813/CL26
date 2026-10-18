@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { selectConferenceStandings, selectOverallStandings } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 
@@ -14,7 +15,10 @@ function SeasonStandingsPage() {
     <div className="pageStack">
       <div className="pageHeader">
         <h2>Standings</h2>
-        <p className="pageHeader-sub">Conference and overall records across all 128 teams.</p>
+        <p className="pageHeader-sub">
+          Conference tables sort by conference record, then point differential, overall record, and school name.
+          Overall tables sort by record, then point differential and school name.
+        </p>
       </div>
 
       <div className="card">
@@ -53,7 +57,8 @@ function SeasonStandingsPage() {
             {conferenceRows.map((row) => (
               <tr key={row.team.id}>
                 <td>
-                  {row.team.schoolName} <span className="text-xs text-gray-500">{row.team.nickname}</span>
+                  <Link to={`/team/${row.team.id}`}>{row.team.schoolName}</Link>{' '}
+                  <span className="text-xs text-gray-500">{row.team.nickname}</span>
                 </td>
                 <td className="font-semibold">
                   {row.record.confWins}-{row.record.confLosses}
@@ -93,7 +98,8 @@ function SeasonStandingsPage() {
               <tr key={row.team.id}>
                 <td className="font-mono text-gray-500">{index + 1}</td>
                 <td>
-                  {row.team.schoolName} <span className="text-xs text-gray-500">{row.team.nickname}</span>
+                  <Link to={`/team/${row.team.id}`}>{row.team.schoolName}</Link>{' '}
+                  <span className="text-xs text-gray-500">{row.team.nickname}</span>
                 </td>
                 <td className="font-semibold">
                   {row.record.wins}-{row.record.losses}

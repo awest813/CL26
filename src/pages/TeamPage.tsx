@@ -1,11 +1,27 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { selectConferenceById, selectTeamWithRosterSummary } from '../features/league/leagueSlice';
+import { buildRosterSummary } from '../sim/rosterSummary';
 import { useAppSelector } from '../store/hooks';
 
 function TeamPage() {
   const { id } = useParams();
-  const teamSummary = useAppSelector((state) => (id ? selectTeamWithRosterSummary(state, id) : null));
+  const generatedSummary = useAppSelector((state) => (id ? selectTeamWithRosterSummary(state, id) : null));
+  const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
+  const prestigeDrift = useAppSelector((state) => state.coach.programPrestigeDrift ?? 0);
+  const managedRoster = useAppSelector((state) => state.coach.managedRoster);
+  const isOwnTeam = Boolean(id && selectedTeamId === id);
+  const ownRoster = isOwnTeam && managedRoster && managedRoster.length > 0 ? managedRoster : null;
+
+  const teamSummary = useMemo(() => {
+    if (!generatedSummary) return null;
+    if (!ownRoster) return generatedSummary;
+    return {
+      ...generatedSummary,
+      rosterSource: 'managed' as const,
+      ...buildRosterSummary(ownRoster),
+    };
+  }, [generatedSummary, ownRoster]);
 
   const conference = useAppSelector((state) => {
     if (!teamSummary) return null;
@@ -41,6 +57,10 @@ function TeamPage() {
           teamSummary.topPlayers.reduce((sum, player) => sum + player.overall, 0) / teamSummary.topPlayers.length,
         )
       : 0;
+  const isManagedRoster = teamSummary.rosterSource === 'managed';
+  const displayedPrestige = isOwnTeam
+    ? Math.max(1, Math.min(100, teamSummary.team.prestige + prestigeDrift))
+    : teamSummary.team.prestige;
 
   return (
     <div className="pageStack">
@@ -58,11 +78,17 @@ function TeamPage() {
             </p>
           </div>
           <div className="teamHeroBadges" aria-label="Program profile">
-            <span className="conferenceMetricChip">Prestige {teamSummary.team.prestige}</span>
+            <span className="conferenceMetricChip">Prestige {displayedPrestige}</span>
             <span className="conferenceMetricChip">Roster overall {teamSummary.rosterOverall}</span>
             <span className="conferenceMetricChip">Players {teamSummary.rosterSize}</span>
           </div>
         </div>
+        {isManagedRoster && (
+          <p className="teamHeroSubhead">
+            Showing your current roster.{' '}
+            <Link to="/career/roster">Open the full roster</Link>
+          </p>
+        )}
       </section>
 
       <div className="grid2 teamSummaryGrid">
@@ -78,9 +104,18 @@ function TeamPage() {
               <strong>{teamSummary.team.region}</strong>
             </div>
             <div className="teamInfoRow">
-              <span className="teamInfoLabel">Generated roster</span>
+              <span className="teamInfoLabel">{isManagedRoster ? 'Current roster' : 'Generated roster'}</span>
               <strong>{teamSummary.rosterOverall} overall</strong>
             </div>
+            {isOwnTeam && prestigeDrift !== 0 && (
+              <div className="teamInfoRow">
+                <span className="teamInfoLabel">Career drift</span>
+                <strong>
+                  {prestigeDrift > 0 ? '+' : ''}
+                  {prestigeDrift} (base {teamSummary.team.prestige})
+                </strong>
+              </div>
+            )}
             <div className="teamInfoRow">
               <span className="teamInfoLabel">Top-player mix</span>
               <strong>{topPlayerPositionMix || 'N/A'}</strong>
@@ -132,7 +167,11 @@ function TeamPage() {
         <div className="seasonHeaderRow">
           <div>
             <h3 className="m-0">Roster Identity</h3>
-            <p className="pageHeader-sub">Unit strengths generated from position groups, experience, and the current season seed.</p>
+            <p className="pageHeader-sub">
+              {isManagedRoster
+                ? 'Unit strengths from your current roster, including development and signed players.'
+                : 'Unit strengths generated from position groups, experience, and the current season seed.'}
+            </p>
           </div>
         </div>
         <div className="rosterSummaryGrid">
@@ -184,7 +223,11 @@ function TeamPage() {
         <div className="seasonHeaderRow">
           <div>
             <h3 className="m-0">Top Players</h3>
-            <p className="pageHeader-sub">Deterministic roster preview generated from the current season seed.</p>
+            <p className="pageHeader-sub">
+              {isManagedRoster
+                ? 'Top players on your current roster.'
+                : 'Deterministic roster preview generated from the current season seed.'}
+            </p>
           </div>
         </div>
         <div className="dataTableWrap">

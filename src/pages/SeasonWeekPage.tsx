@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
@@ -173,6 +173,10 @@ function SeasonWeekPage() {
     );
   }
 
+  if (weekIndex !== String(displayWeek)) {
+    return <Navigate to={`/season/week/${displayWeek}`} replace />;
+  }
+
   return (
     <div className="pageStack">
       <div className="pageHeader">
@@ -183,6 +187,7 @@ function SeasonWeekPage() {
       <div className="card seasonWeekControlCard">
         <div className="seasonWeekNavGroup">
           <button
+            type="button"
             className="btn"
             disabled={displayWeek <= 0}
             onClick={() => navigate(`/season/week/${displayWeek - 1}`)}
@@ -192,6 +197,7 @@ function SeasonWeekPage() {
           </button>
           <p className="seasonWeekNavLabel">Week {displayWeek + 1}</p>
           <button
+            type="button"
             className="btn"
             disabled={displayWeek >= maxWeekIndex}
             onClick={() => navigate(`/season/week/${displayWeek + 1}`)}

@@ -585,6 +585,11 @@ tbody tr:hover {
   background: linear-gradient(180deg, #eff6ff, #f8fbff);
 }
 
+.teamSpotlightCard .teamInfoLabel {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
 .teamSpotlightMeta {
   margin: 0.3rem 0 0;
   color: #475569;

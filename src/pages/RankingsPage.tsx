@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppSelector } from '../store/hooks';
 import { selectRankingTeams, selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary, selectTop16Rankings } from '../features/season/seasonSlice';
 import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
@@ -107,7 +108,8 @@ function RankingsPage() {
                   <td className="font-mono font-bold">{row.rank}</td>
                   <td className="text-center">{rankDeltaDisplay(row.delta)}</td>
                   <td>
-                    {team?.schoolName} <span className="text-xs text-gray-500">({team?.nickname})</span>
+                    {team ? <Link to={`/team/${team.id}`}>{team.schoolName}</Link> : row.teamId}{' '}
+                    <span className="text-xs text-gray-500">({team?.nickname})</span>
                   </td>
                   <td>{row.record}</td>
                   <td className="font-mono">{row.points}</td>
@@ -146,7 +148,8 @@ function RankingsPage() {
                 <tr key={row.teamId}>
                   <td className="font-mono font-bold">#{row.rank}</td>
                   <td>
-                    {team?.schoolName} <span className="text-xs text-gray-500">({team?.nickname})</span>
+                    {team ? <Link to={`/team/${team.id}`}>{team.schoolName}</Link> : row.teamId}{' '}
+                    <span className="text-xs text-gray-500">({team?.nickname})</span>
                   </td>
                   <td>{row.record}</td>
                   <td className="text-xs">
@@ -177,7 +180,7 @@ function RankingsPage() {
                     <tr key={row.teamId} className="border-b last:border-0">
                       <td className="py-1 font-mono text-gray-400 pr-2">#{row.rank}</td>
                       <td className="py-1">
-                        {team?.schoolName}{' '}
+                        {team ? <Link to={`/team/${team.id}`}>{team.schoolName}</Link> : row.teamId}{' '}
                         <span className="text-xs text-gray-400">({team?.nickname})</span>
                       </td>
                       <td className="py-1 text-gray-500">{row.record}</td>
