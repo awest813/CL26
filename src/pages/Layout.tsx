@@ -14,6 +14,7 @@ function Layout() {
 
   useEffect(() => {
     setIsMenuOpen(false);
+    window.scrollTo(0, 0);
   }, [location.pathname]);
 
   useEffect(() => {

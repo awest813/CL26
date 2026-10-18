@@ -521,9 +521,9 @@ caption {
   align-items: center;
   padding: 0.32rem 0.65rem;
   border-radius: 999px;
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border: 1px solid #b7d7c4;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -546,14 +546,12 @@ caption {
   background: linear-gradient(180deg, #fff, #f8fafc);
   color: var(--text);
   text-decoration: none;
-  transition: transform var(--transition-fast, 0.15s ease), box-shadow var(--transition-ui, 0.2s ease),
-    border-color var(--transition-ui, 0.2s ease);
+  transition: box-shadow var(--transition-ui, 0.2s ease), border-color var(--transition-ui, 0.2s ease);
 }
 
 .conferenceTeamCard:hover {
-  transform: translateY(-1px);
-  border-color: #93c5fd;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border-color: var(--accent);
+  box-shadow: 0 8px 18px rgba(16, 32, 24, 0.06);
 }
 
 .conferenceTeamNickname {
@@ -949,6 +947,11 @@ textarea:focus-visible {
   box-shadow: 0 0 0 3px rgba(14, 107, 60, 0.18);
 }
 
+input[type='range'] {
+  accent-color: var(--accent);
+  padding: 0;
+}
+
 .seedRow {
   display: flex;
   gap: 0.75rem;
@@ -1207,7 +1210,7 @@ details[open] > summary::before {
 }
 
 .seasonInlineLink:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -1384,6 +1387,70 @@ details[open] > summary::before {
 
 .noticeCard {
   border-left: 4px solid var(--accent);
+}
+
+.noticeCard-warn {
+  border-left: 4px solid #d97706;
+}
+
+.archetypeOption {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  cursor: pointer;
+  background: #fff;
+  text-align: left;
+  color: var(--text);
+  box-shadow: inset 3px 0 0 transparent;
+}
+
+button.archetypeOption[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.archetypeDot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #d5e0d8;
+  flex-shrink: 0;
+}
+
+.archetypeOption[aria-pressed='true'] .archetypeDot {
+  background: var(--accent);
+}
+
+.officeFollowup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.officeFollowup label,
+.recruitSeed label {
+  margin-bottom: 0;
+}
+
+.officeFollowup label {
+  flex: 1 1 14rem;
+  max-width: 18rem;
+}
+
+.recruitSeed {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.recruitSeed label {
+  width: 5.5rem;
 }
 
 .weekActionBar {

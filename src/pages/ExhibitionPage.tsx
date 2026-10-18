@@ -9,6 +9,33 @@ const slideOptions: Tactics['slideAggression'][] = ['early', 'normal', 'late'];
 const offenseSetOptions: NonNullable<Tactics['offenseSet']>[] = ['balanced', 'motion', 'invert', 'crease'];
 const defensePackageOptions: NonNullable<Tactics['defensePackage']>[] = ['man', 'zone', 'pressure'];
 
+const TEMPO_LABELS: Record<Tactics['tempo'], string> = {
+  slow: 'Slow — limit possessions',
+  normal: 'Balanced',
+  fast: 'Fast — push transition',
+};
+const RIDE_LABELS: Record<Tactics['rideClear'], string> = {
+  conservative: 'Conservative',
+  balanced: 'Balanced',
+  aggressive: 'Aggressive',
+};
+const SLIDE_LABELS: Record<Tactics['slideAggression'], string> = {
+  early: 'Early help',
+  normal: 'Standard',
+  late: 'Late slides — pack in',
+};
+const OFFENSE_LABELS: Record<NonNullable<Tactics['offenseSet']>, string> = {
+  balanced: 'Balanced',
+  motion: 'Motion — off-ball movement',
+  invert: 'Invert — midfield dodges',
+  crease: 'Crease — inside finishing',
+};
+const DEFENSE_LABELS: Record<NonNullable<Tactics['defensePackage']>, string> = {
+  man: 'Man-to-man',
+  zone: 'Zone — protect the slot',
+  pressure: 'Pressure — force pace',
+};
+
 function TacticsControls({
   label,
   value,
@@ -26,7 +53,7 @@ function TacticsControls({
         <select value={value.tempo} onChange={(event) => onChange({ ...value, tempo: event.target.value as Tactics['tempo'] })}>
           {tempoOptions.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {TEMPO_LABELS[option]}
             </option>
           ))}
         </select>
@@ -39,7 +66,7 @@ function TacticsControls({
         >
           {rideOptions.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {RIDE_LABELS[option]}
             </option>
           ))}
         </select>
@@ -52,7 +79,7 @@ function TacticsControls({
         >
           {slideOptions.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {SLIDE_LABELS[option]}
             </option>
           ))}
         </select>
@@ -65,7 +92,7 @@ function TacticsControls({
         >
           {offenseSetOptions.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {OFFENSE_LABELS[option]}
             </option>
           ))}
         </select>
@@ -80,7 +107,7 @@ function TacticsControls({
         >
           {defensePackageOptions.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {DEFENSE_LABELS[option]}
             </option>
           ))}
         </select>

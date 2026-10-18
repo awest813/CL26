@@ -168,27 +168,11 @@ function CoachCareerSetupPage() {
                   key={option.value}
                   type="button"
                   aria-pressed={isSelected}
+                  className="archetypeOption"
                   onClick={() => setArchetype(option.value)}
-                  style={{
-                    border: isSelected ? '2px solid #2563eb' : '2px solid #e5e7eb',
-                    borderRadius: 8,
-                    padding: '12px 14px',
-                    cursor: 'pointer',
-                    background: isSelected ? '#eff6ff' : '#fff',
-                    transition: 'border-color 0.15s, background 0.15s',
-                    textAlign: 'left',
-                  }}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <div
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        background: isSelected ? '#2563eb' : '#d1d5db',
-                        flexShrink: 0,
-                      }}
-                    />
+                    <div className="archetypeDot" />
                     <span className="font-bold text-sm">{option.label}</span>
                   </div>
                   <p className="text-xs text-gray-500 mb-2">{option.summary}</p>

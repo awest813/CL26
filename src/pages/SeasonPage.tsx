@@ -166,7 +166,7 @@ function SeasonPage() {
                 className="p-2 border rounded w-full"
               />
             </label>
-            <button className="btn" onClick={() => setSeedInput(Math.floor(Math.random() * 10000))}>
+            <button type="button" className="btn" onClick={() => setSeedInput(Math.floor(Math.random() * 10000))}>
               Random
             </button>
           </div>
@@ -175,7 +175,7 @@ function SeasonPage() {
           {startError && <p className="text-sm text-red-600 mt-1">{startError}</p>}
 
           <div className="flex justify-end">
-            <button className="btn btn-primary" onClick={handleStartSeason} disabled={!hasValidSeed}>
+            <button type="button" className="btn btn-primary" onClick={handleStartSeason} disabled={!hasValidSeed}>
               Begin Season
             </button>
           </div>
@@ -208,10 +208,10 @@ function SeasonPage() {
                 </Link>
               ) : (
                 <>
-                  <button className="btn btn-primary" onClick={handleSimWeek}>
+                  <button type="button" className="btn btn-primary" onClick={handleSimWeek}>
                     Sim Week {displayWeek + 1}
                   </button>
-                  <button className="btn" onClick={handleSimSeason}>
+                  <button type="button" className="btn" onClick={handleSimSeason}>
                     Sim To End
                   </button>
                 </>
@@ -235,7 +235,7 @@ function SeasonPage() {
                   Open Career Office
                 </Link>
               ) : (
-                <button className="btn btn-primary" onClick={handleNewSeason}>
+                <button type="button" className="btn btn-primary" onClick={handleNewSeason}>
                   Begin New Season
                 </button>
               )}
@@ -251,7 +251,7 @@ function SeasonPage() {
             Full Weekly Schedule
           </Link>
           {capabilities.canResetSeason && (
-            <button onClick={handleReset} className="seasonInlineLink seasonInlineLink-danger ml-auto">
+            <button type="button" onClick={handleReset} className="seasonInlineLink seasonInlineLink-danger ml-auto">
               Reset Season
             </button>
           )}

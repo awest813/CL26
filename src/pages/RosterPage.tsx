@@ -225,7 +225,7 @@ function RosterPage() {
 
       {/* Offseason notes */}
       {season.phase === 'OFFSEASON' && (
-        <div className="card" style={{ borderLeft: '4px solid #f59e0b' }}>
+        <div className="card noticeCard-warn">
           <h3 className="text-base font-bold mb-2">Offseason Roster Notes</h3>
           <div className="flex gap-6 text-sm">
             <div>

@@ -103,22 +103,22 @@ function PlayoffsPage() {
 
         <div className="flex gap-2">
             {canStart && (
-                <button className="btn btn-primary" onClick={handleStartPlayoffs}>
+                <button type="button" className="btn btn-primary" onClick={handleStartPlayoffs}>
                     Initialize Bracket
                 </button>
             )}
             {canSim && (
-                <button className="btn btn-primary" onClick={handleSimRound}>
+                <button type="button" className="btn btn-primary" onClick={handleSimRound}>
                     Simulate {ROUND_LABELS[playoffState!.currentRound]}
                 </button>
             )}
             {isComplete && (
                 hasCareerTeam ? (
-                  <button className="btn btn-primary" onClick={() => navigate('/career')}>
+                  <button type="button" className="btn btn-primary" onClick={() => navigate('/career')}>
                       Open Career Office
                   </button>
                 ) : (
-                  <button className="btn btn-primary" onClick={handleNewSeason}>
+                  <button type="button" className="btn btn-primary" onClick={handleNewSeason}>
                       Begin New Season
                   </button>
                 )
@@ -252,7 +252,7 @@ function PlayoffsPage() {
                                           className={`border rounded p-3 text-sm bg-gray-50 ${involvesUser ? 'playoffUserGame' : ''}`}
                                         >
                                             {/* Away team row */}
-                                            <div className={`flex justify-between items-center mb-1 ${awayWon ? 'font-bold text-black' : awayLost ? 'text-gray-400 line-through-gentle' : 'text-gray-700'} ${game.awayTeamId === userTeamId ? 'text-blue-800' : ''}`}>
+                                            <div className={`flex justify-between items-center mb-1 ${awayWon ? 'font-bold text-black' : awayLost ? 'text-gray-400 line-through-gentle' : 'text-gray-700'}`}>
                                                 <span>
                                                     {awaySeed && <span className="text-xs text-gray-400 mr-1 font-normal">#{awaySeed}</span>}
                                                     {away?.schoolName}
@@ -263,7 +263,7 @@ function PlayoffsPage() {
                                                 </span>
                                             </div>
                                             {/* Home team row */}
-                                            <div className={`flex justify-between items-center ${homeWon ? 'font-bold text-black' : homeLost ? 'text-gray-400 line-through-gentle' : 'text-gray-700'} ${game.homeTeamId === userTeamId ? 'text-blue-800' : ''}`}>
+                                            <div className={`flex justify-between items-center ${homeWon ? 'font-bold text-black' : homeLost ? 'text-gray-400 line-through-gentle' : 'text-gray-700'}`}>
                                                 <span>
                                                     {homeSeed && <span className="text-xs text-gray-400 mr-1 font-normal">#{homeSeed}</span>}
                                                     {home?.schoolName}

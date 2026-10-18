@@ -335,7 +335,7 @@ function RecruitingBoardPage() {
                               key={i}
                               className={`flex justify-between ${
                                 s.name === selectedTeam?.schoolName
-                                  ? 'font-bold text-blue-700'
+                                  ? 'font-bold youMark'
                                   : 'text-gray-500'
                               }`}
                             >
@@ -428,6 +428,7 @@ function RecruitingBoardPage() {
               </div>
             </div>
             <button
+              type="button"
               className="textButton"
               onClick={() => { setSearch(''); setPositionFilter('ALL'); }}
             >
@@ -509,6 +510,7 @@ function RecruitingBoardPage() {
                       <td className="p-2 text-right">
                         {onBoard ? (
                           <button
+                            type="button"
                             className="text-xs text-red-500 hover:underline bg-transparent border-0 cursor-pointer"
                             onClick={() => dispatch(removeRecruitFromBoard(recruit.id))}
                           >
@@ -517,6 +519,7 @@ function RecruitingBoardPage() {
                         ) : (
                           !isCommittedElsewhere && !isCommittedToMe && (
                             <button
+                              type="button"
                               className="chipAdd"
                               onClick={() => onAdd(recruit.id)}
                               disabled={boardSet.size >= 25}

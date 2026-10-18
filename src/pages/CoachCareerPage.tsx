@@ -260,7 +260,7 @@ function CoachCareerPage() {
   }
 
   return (
-    <div className="flex-col gap-4">
+    <div className="pageStack">
       {actionError && (
         <div className="card border border-red-200 bg-red-50 text-sm text-red-800" role="alert">
           {actionError}
@@ -350,41 +350,10 @@ function CoachCareerPage() {
             <div className="text-xs text-gray-500 uppercase mb-2">Archetype: {archetype.charAt(0) + archetype.slice(1).toLowerCase()}</div>
             <ul className="text-xs space-y-1">
               {archetypeBonuses.map((bonus, i) => (
-                <li key={i} className="flex items-center gap-1 text-blue-700">
-                  <span className="text-blue-400">+</span> {bonus}
+                <li key={i} className="flex items-center gap-1 youMark">
+                  <span>+</span> {bonus}
                 </li>
               ))}
-            </ul>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 pt-3 mt-3 border-t text-xs">
-          <div>
-            <div className="text-gray-400 uppercase mb-1">Weekly prep</div>
-            <div className="font-semibold text-gray-700">{coachGamePlan.focusLabel}</div>
-            <div className="text-gray-500 mt-1">
-              Fatigue status: <span className="font-semibold">{coachGamePlan.fatigueLabel}</span>
-            </div>
-          </div>
-          <div>
-            <div className="text-gray-400 uppercase mb-1">Gameplan edge</div>
-            <div className="text-gray-600">
-              Off {coachGamePlan.modifiers.offense >= 0 ? '+' : ''}{coachGamePlan.modifiers.offense.toFixed(1)}
-              {' · '}
-              Def {coachGamePlan.modifiers.defense >= 0 ? '+' : ''}{coachGamePlan.modifiers.defense.toFixed(1)}
-              {' · '}
-              Disc {coachGamePlan.modifiers.discipline >= 0 ? '+' : ''}{coachGamePlan.modifiers.discipline.toFixed(1)}
-            </div>
-            <div className="text-gray-500 mt-1">
-              FO {coachGamePlan.modifiers.faceoff >= 0 ? '+' : ''}{coachGamePlan.modifiers.faceoff.toFixed(1)}
-              {' · '}
-              GB {coachGamePlan.modifiers.groundBallBonus >= 0 ? '+' : ''}{coachGamePlan.modifiers.groundBallBonus.toFixed(1)}
-            </div>
-          </div>
-          <div>
-            <div className="text-gray-400 uppercase mb-1">Expected impact</div>
-            <ul className="m-0 pl-4 text-gray-600 space-y-1">
-              {prepNotes.length > 0 ? prepNotes.map((note) => <li key={note}>{note}</li>) : <li>Balanced week with no major swing factors.</li>}
             </ul>
           </div>
         </div>
@@ -415,178 +384,6 @@ function CoachCareerPage() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* ── Quick Links ── */}
-      <div className="flex gap-3 mt-2 flex-wrap">
-        <Link to="/career/week" className="text-sm hover:underline font-medium">
-          Weekly Hub →
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link to="/career/recruiting" className="text-sm hover:underline font-medium">
-          Recruiting Board →
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link to="/career/roster" className="text-sm hover:underline font-medium">
-          Roster &amp; Depth Chart →
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link to="/season" className="text-sm hover:underline">Season Dashboard</Link>
-      </div>
-
-      <div className="card">
-        <h3 className="text-base font-bold m-0">Gameplan</h3>
-        <p className="text-xs text-gray-500 mt-1 mb-3">
-          Your base scheme for every game. Practice focus still shifts tempo and slides during the weekly cycle.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-          <label className="text-xs font-semibold text-gray-600">
-            Tempo
-            <select
-              value={coach.tactics.tempo}
-              onChange={(e) =>
-                dispatch(setTactics({ ...coach.tactics, tempo: e.target.value as Tactics['tempo'] }))
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="slow">Slow — limit possessions</option>
-              <option value="normal">Balanced</option>
-              <option value="fast">Fast — push transition</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            Ride / clear
-            <select
-              value={coach.tactics.rideClear}
-              onChange={(e) =>
-                dispatch(setTactics({ ...coach.tactics, rideClear: e.target.value as Tactics['rideClear'] }))
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="conservative">Conservative</option>
-              <option value="balanced">Balanced</option>
-              <option value="aggressive">Aggressive</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            Slide timing
-            <select
-              value={coach.tactics.slideAggression}
-              onChange={(e) =>
-                dispatch(
-                  setTactics({ ...coach.tactics, slideAggression: e.target.value as Tactics['slideAggression'] }),
-                )
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="early">Early help</option>
-              <option value="normal">Standard</option>
-              <option value="late">Late slides — pack in</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            Offense set
-            <select
-              value={coach.tactics.offenseSet ?? 'balanced'}
-              onChange={(e) =>
-                dispatch(setTactics({ ...coach.tactics, offenseSet: e.target.value as NonNullable<Tactics['offenseSet']> }))
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="balanced">Balanced</option>
-              <option value="motion">Motion — off-ball movement</option>
-              <option value="invert">Invert — midfield dodges</option>
-              <option value="crease">Crease — inside finishing</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            Defense package
-            <select
-              value={coach.tactics.defensePackage ?? 'man'}
-              onChange={(e) =>
-                dispatch(
-                  setTactics({ ...coach.tactics, defensePackage: e.target.value as NonNullable<Tactics['defensePackage']> }),
-                )
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="man">Man-to-man</option>
-              <option value="zone">Zone — protect the slot</option>
-              <option value="pressure">Pressure — force pace</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h3 className="text-base font-bold m-0">Staff &amp; Program Levers</h3>
-            <p className="text-xs text-gray-500 mt-1 mb-0">
-              Practice focus drives weekly trait growth; staff upgrades and resources shape recruiting, development, and AD pressure.
-            </p>
-          </div>
-          <div className="text-right text-xs text-gray-500">
-            <div>Coach Level {coachLevel}</div>
-            <div>XP {coachXp}/100</div>
-            <div className="font-semibold youMark">Skill points: {coachSkillPoints}</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-          {([
-            ['recruiting', 'Recruiting Tree', 'Boosts weekly recruiting gains plus faceoff/ground-ball edge.'],
-            ['development', 'Development Tree', 'Improves weekly/offseason trait growth and turnover discipline.'],
-            ['operations', 'Operations Tree', 'Improves fatigue control, goalie prep, and penalty avoidance.'],
-          ] as const).map(([key, label, hint]) => (
-            <div key={key} className="border rounded p-2">
-              <div className="text-xs uppercase text-gray-500">{label}</div>
-              <div className="text-lg font-bold">
-                {skillTree[key]}/5
-              </div>
-              <div className="text-xs text-gray-500 mb-2">{hint}</div>
-              <button
-                type="button"
-                className="btn btn-primary text-xs"
-                disabled={coachSkillPoints <= 0 || skillTree[key] >= 5}
-                onClick={() => dispatch(upgradeCoachSkill(key))}
-              >
-                Upgrade (+1)
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className="border rounded p-3 mb-3">
-          <div className="text-xs uppercase text-gray-500 mb-1">Current Skill Effects</div>
-          <ul className="m-0 pl-4 text-sm text-gray-600 space-y-1">
-            {skillImpactNotes.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {([
-            ['nil', 'NIL Budget', programResources.nil, 'Recruiting close rate and leverage'],
-            ['boosters', 'Booster Alignment', programResources.boosters, 'Raises support but can increase AD pressure'],
-            ['facilities', 'Facilities', programResources.facilities, 'Player growth and pressure shielding'],
-          ] as const).map(([key, label, value, hint]) => (
-            <label key={key} className="text-xs font-semibold text-gray-600 border rounded p-2">
-              {label}
-              <div className="text-xs text-gray-500 mt-0.5 mb-1 font-normal">{hint}</div>
-              <input
-                type="range"
-                min={25}
-                max={key === 'nil' ? 90 : 95}
-                value={value}
-                onChange={(e) => onResourceChange(key, Number(e.target.value))}
-                className="w-full"
-              />
-              <div className="text-xs text-gray-700 font-bold">{value}</div>
-            </label>
-          ))}
-        </div>
       </div>
 
       {/* ── Offseason Panel ── */}
@@ -702,82 +499,280 @@ function CoachCareerPage() {
         </div>
       )}
 
-      {/* ── Recruiting Section ── */}
+      <div className="card">
+        <div className="weekActionBar">
+          <div>
+            <h3 className="text-base font-bold m-0">Recruiting</h3>
+            <p className="text-xs text-gray-500 mt-1 mb-0">
+              Period {coach.recruitingWeekIndex + 1} · Seed {coach.recruitingSeed}
+              {' · '}
+              {committedToUserCount} commit{committedToUserCount === 1 ? '' : 's'}
+              {' · '}
+              {coach.scholarshipsAvailable} scholarships left
+              {' · '}
+              <span className={hoursRemaining < 0 ? 'text-red-600 font-bold' : 'font-semibold text-gray-700'}>
+                {hoursRemaining}/{WEEKLY_HOURS_CAP} hours left
+              </span>
+            </p>
+          </div>
+          {coach.recruitPool.length === 0 ? (
+            <div className="recruitSeed">
+              <label className="text-xs font-semibold text-gray-600">
+                Seed
+                <input
+                  type="number"
+                  value={seedInput}
+                  onChange={(e) => setSeedInput(Number(e.target.value))}
+                  className="w-20 p-1 text-sm"
+                  aria-label="Recruiting seed"
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn-primary text-sm"
+                onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams: effectiveRecruitingTeams }))}
+              >
+                Start Recruiting
+              </button>
+            </div>
+          ) : (
+            <Link to="/career/recruiting" className="btn btn-primary text-sm">
+              Open recruiting board
+            </Link>
+          )}
+        </div>
+        <div className="officeFollowup">
+          <label className="text-xs font-semibold text-gray-600">
+            Practice focus
+            <select
+              value={coach.practiceFocus}
+              aria-label="Practice focus"
+              onChange={(event) => dispatch(setPracticeFocus(event.target.value as PracticeFocus))}
+              className="p-1 text-sm"
+            >
+              {Object.entries(PRACTICE_FOCUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <div className="text-xs text-gray-500">
+            <div>Fatigue {coach.teamFatigue}%. The weekly hub uses this same focus.</div>
+            {canAdvanceWeeklyCycle && (
+              <Link to="/career/week" className="block mt-1">
+                Advance week {season.currentWeekIndex + 1} from the weekly hub
+              </Link>
+            )}
+            {season.phase === 'PRE' && coach.recruitPool.length > 0 && (
+              <div className="mt-1">Begin the season to advance hours. You can still build the board now.</div>
+            )}
+            {season.phase === 'PLAYOFF' && (
+              <div className="mt-1">The weekly cycle is locked during the playoffs.</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Quick Links ── */}
+      <div className="flex gap-3 flex-wrap">
+        <Link to="/career/week" className="text-sm hover:underline font-medium">
+          Weekly Hub →
+        </Link>
+        <span className="text-gray-300">|</span>
+        <Link to="/career/recruiting" className="text-sm hover:underline font-medium">
+          Recruiting Board →
+        </Link>
+        <span className="text-gray-300">|</span>
+        <Link to="/career/roster" className="text-sm hover:underline font-medium">
+          Roster &amp; Depth Chart →
+        </Link>
+        <span className="text-gray-300">|</span>
+        <Link to="/season" className="text-sm hover:underline">Season Dashboard</Link>
+      </div>
+
+      <div className="card">
+        <h3 className="text-base font-bold m-0">Gameplan</h3>
+        <p className="text-xs text-gray-500 mt-1 mb-3">
+          Your base scheme for every game. Practice focus still shifts tempo and slides during the weekly cycle.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+          <label className="text-xs font-semibold text-gray-600">
+            Tempo
+            <select
+              value={coach.tactics.tempo}
+              onChange={(e) =>
+                dispatch(setTactics({ ...coach.tactics, tempo: e.target.value as Tactics['tempo'] }))
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="slow">Slow — limit possessions</option>
+              <option value="normal">Balanced</option>
+              <option value="fast">Fast — push transition</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            Ride / clear
+            <select
+              value={coach.tactics.rideClear}
+              onChange={(e) =>
+                dispatch(setTactics({ ...coach.tactics, rideClear: e.target.value as Tactics['rideClear'] }))
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="conservative">Conservative</option>
+              <option value="balanced">Balanced</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            Slide timing
+            <select
+              value={coach.tactics.slideAggression}
+              onChange={(e) =>
+                dispatch(
+                  setTactics({ ...coach.tactics, slideAggression: e.target.value as Tactics['slideAggression'] }),
+                )
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="early">Early help</option>
+              <option value="normal">Standard</option>
+              <option value="late">Late slides — pack in</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            Offense set
+            <select
+              value={coach.tactics.offenseSet ?? 'balanced'}
+              onChange={(e) =>
+                dispatch(setTactics({ ...coach.tactics, offenseSet: e.target.value as NonNullable<Tactics['offenseSet']> }))
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="balanced">Balanced</option>
+              <option value="motion">Motion — off-ball movement</option>
+              <option value="invert">Invert — midfield dodges</option>
+              <option value="crease">Crease — inside finishing</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            Defense package
+            <select
+              value={coach.tactics.defensePackage ?? 'man'}
+              onChange={(e) =>
+                dispatch(
+                  setTactics({ ...coach.tactics, defensePackage: e.target.value as NonNullable<Tactics['defensePackage']> }),
+                )
+              }
+              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
+            >
+              <option value="man">Man-to-man</option>
+              <option value="zone">Zone — protect the slot</option>
+              <option value="pressure">Pressure — force pace</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 pt-3 mt-3 border-t text-xs">
+          <div>
+            <div className="text-gray-400 uppercase mb-1">Weekly prep</div>
+            <div className="font-semibold text-gray-700">{coachGamePlan.focusLabel}</div>
+            <div className="text-gray-500 mt-1">
+              Fatigue status: <span className="font-semibold">{coachGamePlan.fatigueLabel}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-400 uppercase mb-1">Gameplan edge</div>
+            <div className="text-gray-600">
+              Off {coachGamePlan.modifiers.offense >= 0 ? '+' : ''}{coachGamePlan.modifiers.offense.toFixed(1)}
+              {' · '}
+              Def {coachGamePlan.modifiers.defense >= 0 ? '+' : ''}{coachGamePlan.modifiers.defense.toFixed(1)}
+              {' · '}
+              Disc {coachGamePlan.modifiers.discipline >= 0 ? '+' : ''}{coachGamePlan.modifiers.discipline.toFixed(1)}
+            </div>
+            <div className="text-gray-500 mt-1">
+              FO {coachGamePlan.modifiers.faceoff >= 0 ? '+' : ''}{coachGamePlan.modifiers.faceoff.toFixed(1)}
+              {' · '}
+              GB {coachGamePlan.modifiers.groundBallBonus >= 0 ? '+' : ''}{coachGamePlan.modifiers.groundBallBonus.toFixed(1)}
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-400 uppercase mb-1">Expected impact</div>
+            <ul className="m-0 pl-4 text-gray-600 space-y-1">
+              {prepNotes.length > 0 ? prepNotes.map((note) => <li key={note}>{note}</li>) : <li>Balanced week with no major swing factors.</li>}
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
       <div className="card">
         <div className="flex justify-between items-start mb-3">
           <div>
-            <h3 className="text-base font-bold m-0">Recruiting Dashboard</h3>
-            <div className="text-xs text-gray-500 mt-0.5">
-              Recruiting period {coach.recruitingWeekIndex + 1} &bull; Seed {coach.recruitingSeed}
-            </div>
+            <h3 className="text-base font-bold m-0">Staff &amp; Program Levers</h3>
+            <p className="text-xs text-gray-500 mt-1 mb-0">
+              Practice focus drives weekly trait growth; staff upgrades and resources shape recruiting, development, and AD pressure.
+            </p>
           </div>
-          <div className="recruitingToolbar text-sm">
-            <div className="text-right">
-              <div className="text-xs text-gray-500">Commits</div>
-              <div className="font-bold">{committedToUserCount}</div>
-              <div className="text-xs text-gray-400">{coach.scholarshipsAvailable} scholarships left</div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs text-gray-500">Hours Left</div>
-              <div className={`font-bold ${hoursRemaining < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {hoursRemaining} / {WEEKLY_HOURS_CAP}
+          <div className="text-right text-xs text-gray-500">
+            <div>Coach Level {coachLevel}</div>
+            <div>XP {coachXp}/100</div>
+            <div className="font-semibold youMark">Skill points: {coachSkillPoints}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+          {([
+            ['recruiting', 'Recruiting Tree', 'Boosts weekly recruiting gains plus faceoff/ground-ball edge.'],
+            ['development', 'Development Tree', 'Improves weekly/offseason trait growth and turnover discipline.'],
+            ['operations', 'Operations Tree', 'Improves fatigue control, goalie prep, and penalty avoidance.'],
+          ] as const).map(([key, label, hint]) => (
+            <div key={key} className="border rounded p-2">
+              <div className="text-xs uppercase text-gray-500">{label}</div>
+              <div className="text-lg font-bold">
+                {skillTree[key]}/5
               </div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Practice</div>
-              <select
-                value={coach.practiceFocus}
-                aria-label="Practice focus"
-                onChange={(event) => dispatch(setPracticeFocus(event.target.value as PracticeFocus))}
-                className="p-1 text-sm border rounded"
+              <div className="text-xs text-gray-500 mb-2">{hint}</div>
+              <button
+                type="button"
+                className="btn btn-primary text-xs"
+                disabled={coachSkillPoints <= 0 || skillTree[key] >= 5}
+                onClick={() => dispatch(upgradeCoachSkill(key))}
               >
-                {Object.entries(PRACTICE_FOCUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-              <div className="text-xs text-gray-400 mt-0.5">Fatigue: {coach.teamFatigue}%</div>
+                Upgrade (+1)
+              </button>
             </div>
-            <div className="text-right">
-              {coach.recruitPool.length === 0 ? (
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="number"
-                    value={seedInput}
-                    onChange={(e) => setSeedInput(Number(e.target.value))}
-                    className="w-20 p-1 text-sm border rounded"
-                    placeholder="Seed"
-                    aria-label="Recruiting seed"
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-primary text-sm"
-                    onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams: effectiveRecruitingTeams }))}
-                  >
-                    Start Recruiting
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-end gap-1">
-                  <Link to="/career/recruiting" className="btn btn-primary text-sm">
-                    Open recruiting board
-                  </Link>
-                  {canAdvanceWeeklyCycle && (
-                    <Link to="/career/week" className="text-xs">
-                      Advance week {season.currentWeekIndex + 1} from the weekly hub
-                    </Link>
-                  )}
-                  {season.phase === 'PRE' && (
-                    <div className="text-xs text-gray-500">
-                      Begin the season to advance hours. You can still build the board now.
-                    </div>
-                  )}
-                  {season.phase === 'PLAYOFF' && (
-                    <div className="text-xs text-gray-500">The weekly cycle is locked during the playoffs.</div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          ))}
+        </div>
+
+        <div className="border rounded p-3 mb-3">
+          <div className="text-xs uppercase text-gray-500 mb-1">Current Skill Effects</div>
+          <ul className="m-0 pl-4 text-sm text-gray-600 space-y-1">
+            {skillImpactNotes.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {([
+            ['nil', 'NIL Budget', programResources.nil, 'Recruiting close rate and leverage'],
+            ['boosters', 'Booster Alignment', programResources.boosters, 'Raises support but can increase AD pressure'],
+            ['facilities', 'Facilities', programResources.facilities, 'Player growth and pressure shielding'],
+          ] as const).map(([key, label, value, hint]) => (
+            <label key={key} className="text-xs font-semibold text-gray-600 border rounded p-2">
+              {label}
+              <div className="text-xs text-gray-500 mt-0.5 mb-1 font-normal">{hint}</div>
+              <input
+                type="range"
+                min={25}
+                max={key === 'nil' ? 90 : 95}
+                value={value}
+                onChange={(e) => onResourceChange(key, Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="text-xs text-gray-700 font-bold">{value}</div>
+            </label>
+          ))}
         </div>
       </div>
 
