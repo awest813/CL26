@@ -1,5 +1,27 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
-import storage from 'redux-persist/lib/storage';
+import storageEngine from 'redux-persist/es/storage';
+
+type PersistStorage = {
+  getItem: (key: string) => Promise<string | null>;
+  setItem: (key: string, value: string) => Promise<unknown>;
+  removeItem: (key: string) => Promise<unknown>;
+};
+
+/** Vite can wrap the CJS storage engine so getItem/setItem are not own functions. */
+function resolvePersistStorage(candidate: unknown): PersistStorage {
+  if (candidate && typeof (candidate as PersistStorage).getItem === 'function' && typeof (candidate as PersistStorage).setItem === 'function') {
+    return candidate as PersistStorage;
+  }
+  const nested = candidate && typeof candidate === 'object' && 'default' in candidate
+    ? (candidate as { default: unknown }).default
+    : undefined;
+  if (nested && typeof (nested as PersistStorage).getItem === 'function' && typeof (nested as PersistStorage).setItem === 'function') {
+    return nested as PersistStorage;
+  }
+  throw new Error('Persist storage is unavailable.');
+}
+
+const storage = resolvePersistStorage(storageEngine);
 import { createMigrate, persistReducer } from 'redux-persist';
 import {
   FLUSH,
