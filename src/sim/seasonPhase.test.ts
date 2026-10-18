@@ -163,5 +163,13 @@ describe('seasonPhase state machine', () => {
     });
     assert.equal(caps.canFinalizeSeason, false);
     assert.equal(caps.canAdvanceNextYear, true);
+
+    caps = careerOffseasonCapabilities({
+      ...base,
+      seasonHistory: [{ year: 2026 }],
+    });
+    assert.equal(caps.canProcessSigningDay, false);
+    assert.equal(caps.canFinalizeSeason, false);
+    assert.equal(caps.canAdvanceNextYear, true);
   });
 });

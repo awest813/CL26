@@ -7,7 +7,7 @@ import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
-import { computeAllSOS, computePlayoffProjection, computeRankings } from '../../sim/rankings';
+import { computeAllSOS, computePlayoffProjection, computeRankings, withProgramPrestige } from '../../sim/rankings';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { seedToNumber } from '../../sim/rng';
@@ -74,13 +74,18 @@ export const simCurrentWeek = createAsyncThunk(
     const { currentWeekIndex, scheduleByWeek, seasonSeed, gameResults: existingResults } = state.season;
     const coachState = state.coach;
     const teams = selectTeams(state);
+    const rankingTeams = withProgramPrestige(
+      teams,
+      coachState.selectedTeamId,
+      coachState.programPrestigeDrift ?? 0,
+    );
 
     assertCanSimRegularWeek(state.season);
 
     // Snapshot current rankings before this week's results so we can show rank movement.
     const prevRecords = selectTeamRecords(state);
     const prevSos = computeAllSOS(existingResults, prevRecords);
-    const prevRankings = computeRankings(teams, prevRecords, 25, prevSos);
+    const prevRankings = computeRankings(rankingTeams, prevRecords, 25, prevSos);
     const previousRankByTeamId = Object.fromEntries(prevRankings.map((r) => [r.teamId, r.rank]));
 
     const gamesToPlay = scheduleByWeek[currentWeekIndex];
@@ -184,11 +189,16 @@ export const startPlayoffs = createAsyncThunk(
         assertCanInitializePlayoffs(state.season);
 
         const teams = selectTeams(state);
+        const rankingTeams = withProgramPrestige(
+          teams,
+          state.coach.selectedTeamId,
+          state.coach.programPrestigeDrift ?? 0,
+        );
         const records = selectTeamRecords(state);
         const sos = computeAllSOS(state.season.gameResults, records);
 
-        // Compute rankings to get top 12
-        const rankings = computeRankings(teams, records, 25, sos);
+        // Compute rankings to get top 12. Earned prestige drift is included for the coached program.
+        const rankings = computeRankings(rankingTeams, records, 25, sos);
         const seeds = selectPlayoffField(rankings);
 
         return buildPlayoffState(seeds);
@@ -443,13 +453,23 @@ export const selectOverallStandings = createSelector(
     }
 );
 
+/** League teams with the coached program's career prestige drift applied. */
+export const selectRankingTeams = createSelector(
+  [
+    selectTeams,
+    (state: RootState) => state.coach.selectedTeamId,
+    (state: RootState) => state.coach.programPrestigeDrift,
+  ],
+  (teams, teamId, drift) => withProgramPrestige(teams, teamId, drift ?? 0),
+);
+
 export const selectTop25Rankings = createSelector(
-  [selectTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
+  [selectRankingTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
   (teams, records, gameResults) => computeRankings(teams, records, 25, computeAllSOS(gameResults, records)),
 );
 
 export const selectTop12Projection = createSelector(
-  [selectTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
+  [selectRankingTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
   (teams, records, gameResults) => computePlayoffProjection(teams, records, computeAllSOS(gameResults, records)),
 );
 
@@ -468,7 +488,7 @@ export const selectRankTrends = createSelector(
 
 /** Top 16 for rankings page — includes bubble teams (#13–#16). */
 export const selectTop16Rankings = createSelector(
-  [selectTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
+  [selectRankingTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
   (teams, records, gameResults) => computeRankings(teams, records, 16, computeAllSOS(gameResults, records)),
 );
 

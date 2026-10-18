@@ -29,8 +29,8 @@ import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts,
 import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade, isRecruitingPitch, PITCH_LABELS } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
-import { computeAllSOS, computeRankings } from '../sim/rankings';
-import { careerOffseasonCapabilities } from '../sim/seasonPhase';
+import { computeAllSOS, computeRankings, withProgramPrestige } from '../sim/rankings';
+import { careerOffseasonCapabilities, hasSeasonHistoryForYear } from '../sim/seasonPhase';
 
 const ARCHETYPE_BONUSES: Record<string, string[]> = {
   RECRUITER: ['+15% weekly interest gain', 'Expanded recruit reach', 'Faster commitments on key needs'],
@@ -229,9 +229,14 @@ function CoachCareerPage() {
   const pollRank = useMemo(() => {
     if (!coach.selectedTeamId || season.phase === 'PRE') return null;
     const sos = computeAllSOS(gameResults, recordsByTeamId);
-    const table = computeRankings(teams, recordsByTeamId, 128, sos);
+    const table = computeRankings(
+      withProgramPrestige(teams, coach.selectedTeamId, coach.programPrestigeDrift ?? 0),
+      recordsByTeamId,
+      128,
+      sos,
+    );
     return table.find((r) => r.teamId === coach.selectedTeamId)?.rank ?? null;
-  }, [coach.selectedTeamId, season.phase, teams, recordsByTeamId, gameResults]);
+  }, [coach.selectedTeamId, coach.programPrestigeDrift, season.phase, teams, recordsByTeamId, gameResults]);
 
   const coachGamePlan = useMemo(
     () =>
@@ -343,7 +348,7 @@ function CoachCareerPage() {
     season.phase === 'REGULAR' &&
     season.scheduleByWeek.length > 0 &&
     season.currentWeekIndex < season.scheduleByWeek.length;
-  const seasonEndProcessed = isOffseason && offseasonCaps.canAdvanceNextYear;
+  const seasonEndProcessed = isOffseason && hasSeasonHistoryForYear(coach.seasonHistory, season.year);
   const canBeginNextYear = offseasonCaps.canAdvanceNextYear;
   const latestSeasonHistory = coach.seasonHistory.length > 0
     ? coach.seasonHistory[coach.seasonHistory.length - 1]
@@ -770,6 +775,7 @@ function CoachCareerPage() {
           <div className="flex gap-2 flex-wrap">
             {offseasonCaps.canProcessSigningDay && (
               <button
+                type="button"
                 className="btn btn-primary"
                 onClick={() => dispatch(processSigningDay())}
               >
@@ -778,6 +784,7 @@ function CoachCareerPage() {
             )}
             {offseasonCaps.canFinalizeSeason && (
               <button
+                type="button"
                 className="btn btn-primary"
                 onClick={onEndSeason}
               >
@@ -786,6 +793,7 @@ function CoachCareerPage() {
             )}
             {canBeginNextYear && (
               <button
+                type="button"
                 className="btn btn-primary"
                 onClick={onNewSeason}
               >
@@ -903,6 +911,7 @@ function CoachCareerPage() {
                     <th scope="col" className="pb-2">Pitch/Grade</th>
                     <th scope="col" className="pb-2 w-24">Interest</th>
                     <th scope="col" className="pb-2 text-right">Hours</th>
+                    <th scope="col" className="pb-2"><span className="sr-only">Remove</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -911,7 +920,9 @@ function CoachCareerPage() {
                       <td className="py-2">
                         <div className="font-semibold flex items-center gap-1">
                           {recruit.name}
-                          {dealbreakerWarning && <span title="Dealbreaker Warning" className="text-red-500 cursor-help">⚠</span>}
+                          {dealbreakerWarning && (
+                            <span role="img" aria-label="Dealbreaker warning" title="Dealbreaker warning" className="text-red-500 cursor-help">⚠</span>
+                          )}
                           {recruit.committedTeamId === coach.selectedTeamId && (
                             <span className="text-xs text-green-600 font-bold ml-1">✓ Committed</span>
                           )}
@@ -974,6 +985,16 @@ function CoachCareerPage() {
                           className="w-12 p-1 border rounded text-center"
                           aria-label={`Recruiting hours for ${recruit.name}`}
                         />
+                      </td>
+                      <td className="py-2 pl-2">
+                        <button
+                          type="button"
+                          className="text-xs text-red-500 hover:underline bg-transparent border-0 cursor-pointer"
+                          aria-label={`Remove ${recruit.name} from board`}
+                          onClick={() => dispatch(removeRecruitFromBoard(recruit.id))}
+                        >
+                          ×
+                        </button>
                       </td>
                     </tr>
                   ))}

@@ -22,7 +22,7 @@ import type { GameResult } from '../../types/sim';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
-import { computeAllSOS, computeRankings } from '../../sim/rankings';
+import { computeAllSOS, computeRankings, withProgramPrestige } from '../../sim/rankings';
 import { seedToNumber } from '../../sim/rng';
 import {
   canSimRegularWeek,
@@ -168,7 +168,12 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const losses = userRecord.losses;
 
     const sos = computeAllSOS(season.gameResults, records);
-    const rankingsTable = computeRankings(teams, records, 128, sos);
+    const rankingsTable = computeRankings(
+      withProgramPrestige(teams, coach.selectedTeamId, coach.programPrestigeDrift ?? 0),
+      records,
+      128,
+      sos,
+    );
     const userPollRow = rankingsTable.find((r) => r.teamId === coach.selectedTeamId);
     const pollRank = userPollRow?.rank ?? TOTAL_TEAMS;
     const rankTarget = coach.programExpectations.rankTarget;

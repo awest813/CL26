@@ -103,8 +103,10 @@ export function careerOffseasonCapabilities(input: {
   seasonHistory: Array<{ year: number }>;
 }): CareerOffseasonCapabilities {
   const inOffseason = input.phase === 'OFFSEASON' && input.hasSelectedTeam;
-  const signingDone = hasSigningDayResolved(input.signedRecruitsByYear, input.year);
   const finalized = hasSeasonHistoryForYear(input.seasonHistory, input.year);
+  // A recorded season already passed signing day. Keep the handoff available if that
+  // year's class map was cleared (for example after a job change on an older save).
+  const signingDone = hasSigningDayResolved(input.signedRecruitsByYear, input.year) || finalized;
 
   return {
     canProcessSigningDay: Boolean(inOffseason && !signingDone),

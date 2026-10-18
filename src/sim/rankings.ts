@@ -51,6 +51,30 @@ export function computeAllSOS(
   return sosByTeamId;
 }
 
+const MIN_PROGRAM_PRESTIGE = 1;
+const MAX_PROGRAM_PRESTIGE = 100;
+
+/**
+ * Copy of the league list with one program's prestige shifted by career drift.
+ * Rankings and the playoff field use this so earned prestige shows up in the poll.
+ * Returns the same array when there is nothing to apply.
+ */
+export function withProgramPrestige(
+  teams: Team[],
+  teamId: string | null | undefined,
+  drift: number,
+): Team[] {
+  if (!teamId || !Number.isFinite(drift) || drift === 0) return teams;
+  const index = teams.findIndex((team) => team.id === teamId);
+  if (index < 0) return teams;
+  const team = teams[index];
+  const prestige = Math.max(MIN_PROGRAM_PRESTIGE, Math.min(MAX_PROGRAM_PRESTIGE, team.prestige + drift));
+  if (prestige === team.prestige) return teams;
+  const next = teams.slice();
+  next[index] = { ...team, prestige };
+  return next;
+}
+
 export function computeRankingBreakdown(team: Team, record: TeamRecord, sos = 0): RankingScoreBreakdown {
   const overallWinPctPoints = winPct(record.wins, record.losses) * RANKING_WEIGHTS.overallWinPct;
   const conferenceWinPctPoints = winPct(record.confWins, record.confLosses) * RANKING_WEIGHTS.conferenceWinPct;

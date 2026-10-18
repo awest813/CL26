@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useAppSelector } from '../store/hooks';
-import { selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary, selectTop16Rankings } from '../features/season/seasonSlice';
-import { selectTeams } from '../features/league/leagueSlice';
+import { selectRankingTeams, selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary, selectTop16Rankings } from '../features/season/seasonSlice';
 import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
 import { seasonRankingsWeekLabel } from '../lib/seasonLabels';
 
@@ -17,7 +16,8 @@ function RankingsPage() {
   const top25WithTrends = useAppSelector(selectRankTrends);
   const top12 = useAppSelector(selectTop12Projection);
   const top16 = useAppSelector(selectTop16Rankings);
-  const teams = useAppSelector(selectTeams);
+  const teams = useAppSelector(selectRankingTeams);
+  const prestigeDrift = useAppSelector((state) => state.coach.programPrestigeDrift ?? 0);
   const records = useAppSelector(selectTeamRecords);
   const summary = useAppSelector(selectSeasonSummary);
   const gameResults = useAppSelector((state) => state.season.gameResults);
@@ -193,8 +193,8 @@ function RankingsPage() {
       <section className="card" style={{ gridColumn: '1 / -1' }}>
         <h3 className="m-0 text-base">How the poll works</h3>
         <p className="text-sm text-gray-500 mt-2 mb-0">
-          Scores are deterministic — built from season performance plus a baseline program prestige signal.
-          Ties on rounded points break by wins, point differential, prestige, school name, then team id.
+          Scores are deterministic — built from season performance plus program prestige.
+          Your program&apos;s prestige includes career drift. Ties on rounded points break by wins, point differential, prestige, school name, then team id.
         </p>
         <div className="grid2" style={{ marginTop: '0.75rem', gap: '0.5rem' }}>
           {[
@@ -254,6 +254,11 @@ function RankingsPage() {
                   ? ` · Ranked #${userTeamBreakdown.rankRow.rank}`
                   : ' · Unranked'}
               </p>
+              {prestigeDrift !== 0 && (
+                <p className="text-xs text-gray-500 mt-0 mb-2">
+                  Prestige in this score includes career drift of {prestigeDrift > 0 ? '+' : ''}{prestigeDrift}.
+                </p>
+              )}
               <div className="grid2" style={{ gap: '0.5rem' }}>
                 {[
                   ['Overall win %', userTeamBreakdown.breakdown.overallWinPctPoints],

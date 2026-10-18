@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { computeAllSOS, computeRankingBreakdown, computeRankings, RANKING_WEIGHTS } from './rankings';
+import { computeAllSOS, computeRankingBreakdown, computeRankings, RANKING_WEIGHTS, withProgramPrestige } from './rankings';
 import type { GameResult, Team, TeamRecord } from '../types/sim';
 
 function makeTeam(id: string, prestige = 70): Team {
@@ -153,5 +153,25 @@ describe('computeRankings with SOS', () => {
 
     expect(ranked[0].teamId).toBe('b');
     expect(ranked[1].teamId).toBe('a');
+  });
+});
+
+describe('withProgramPrestige', () => {
+  test('shifts only the coached program and can reorder a tied poll', () => {
+    const lower = makeTeam('a', 60);
+    const higher = makeTeam('b', 70);
+    const teams = [lower, higher];
+    const records = {
+      a: makeRecord(5, 1, 50, 40),
+      b: makeRecord(5, 1, 50, 40),
+    };
+
+    expect(computeRankings(teams, records, 2)[0].teamId).toBe('b');
+    expect(withProgramPrestige(teams, 'a', 0)).toBe(teams);
+
+    const adjusted = withProgramPrestige(teams, 'a', 20);
+    expect(adjusted[0].prestige).toBe(80);
+    expect(adjusted[1]).toBe(higher);
+    expect(computeRankings(adjusted, records, 2)[0].teamId).toBe('a');
   });
 });
