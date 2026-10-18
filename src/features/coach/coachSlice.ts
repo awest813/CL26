@@ -316,6 +316,7 @@ const coachSlice = createSlice({
     },
     applyJobOfferAcceptance: (state, action: PayloadAction<{
         teamId: string;
+        seasonYear: number;
         careerTier: NonNullable<CoachState['careerTier']>;
         programExpectations: ProgramExpectations;
     }>) => {
@@ -330,7 +331,13 @@ const coachSlice = createSlice({
         state.activePitchesByRecruitId = {};
         state.recruitingWeekIndex = 0;
         state.scholarshipsAvailable = 12;
-        state.signedRecruitsByYear = {};
+        // Commits belonged to the previous program. Keep the year key so signing
+        // day stays resolved and the next-year handoff can run, but drop this
+        // year's class so those players do not follow the coach. Earlier years stay archived.
+        state.signedRecruitsByYear = {
+            ...state.signedRecruitsByYear,
+            [action.payload.seasonYear]: [],
+        };
         state.managedRoster = null;
         state.starterIds = [];
         state.teamFatigue = 20;
@@ -494,6 +501,7 @@ export const acceptJobOffer = createAsyncThunk(
 
         dispatch(applyJobOfferAcceptance({
             teamId,
+            seasonYear: state.season.year,
             ...careerSetupFromPrestige(team.prestige),
         }));
     },

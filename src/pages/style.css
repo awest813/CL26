@@ -325,6 +325,10 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .dynastyRightRail {
+    order: -1;
+  }
 }
 
 .conferenceCard,

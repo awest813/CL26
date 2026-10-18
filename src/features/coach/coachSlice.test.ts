@@ -1,8 +1,10 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import type { Team } from '../../types/sim.ts';
+import type { GameResult, Team } from '../../types/sim.ts';
+import { computeWeeklyCoachXp, userWonResult } from './careerThunks.ts';
 import {
   addRecruitToBoard,
+  applyJobOfferAcceptance,
   clearRecruitPitch,
   coachReducer,
   initializeRecruitingBoard,
@@ -52,5 +54,57 @@ describe('coach recruiting reducer', () => {
     );
 
     assert.deepStrictEqual(state.activePitchesByRecruitId, {});
+  });
+
+  test('accepting a job keeps signing day resolved and drops only the current class', () => {
+    let state = coachReducer(undefined, { type: '@@INIT' });
+    state = {
+      ...state,
+      signedRecruitsByYear: {
+        2025: [{ recruitId: 'prior', signedAtYear: 2025, stars: 4, position: 'M' }],
+        2026: [{ recruitId: 'current', signedAtYear: 2026, stars: 3, position: 'A' }],
+      },
+    };
+
+    state = coachReducer(
+      state,
+      applyJobOfferAcceptance({
+        teamId: 'team-2',
+        seasonYear: 2026,
+        careerTier: 'STABLE',
+        programExpectations: { winTarget: 7, rankTarget: 35, securityBaseline: 58 },
+      }),
+    );
+
+    assert.strictEqual(state.selectedTeamId, 'team-2');
+    assert.strictEqual(state.managedRoster, null);
+    assert.deepStrictEqual(state.signedRecruitsByYear[2026], []);
+    assert.strictEqual(state.signedRecruitsByYear[2025]?.[0]?.recruitId, 'prior');
+    assert.strictEqual(Object.prototype.hasOwnProperty.call(state.signedRecruitsByYear, 2026), true);
+  });
+});
+
+describe('weekly coach xp', () => {
+  test('winning-week bonus applies only when the user won that game', () => {
+    assert.strictEqual(computeWeeklyCoachXp(false, 0), 8);
+    assert.strictEqual(computeWeeklyCoachXp(true, 0), 11);
+    assert.strictEqual(computeWeeklyCoachXp(true, 2), 13);
+
+    const win = {
+      teamAId: 'us',
+      teamBId: 'them',
+      scoreA: 12,
+      scoreB: 9,
+    } as GameResult;
+    const loss = {
+      teamAId: 'them',
+      teamBId: 'us',
+      scoreA: 11,
+      scoreB: 8,
+    } as GameResult;
+
+    assert.strictEqual(userWonResult(win, 'us'), true);
+    assert.strictEqual(userWonResult(loss, 'us'), false);
+    assert.strictEqual(userWonResult(undefined, 'us'), false);
   });
 });

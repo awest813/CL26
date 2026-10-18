@@ -13,38 +13,54 @@ type NavItem = {
   end?: boolean;
 };
 
-const navSections: Array<{ title: string; items: NavItem[] }> = [
-  {
-    title: 'Coach Central',
-    items: [
-      { to: '/', label: 'Overview', hint: 'Program home', end: true },
-      { to: '/career/week', label: 'Weekly Hub', hint: 'Decisions & matchup' },
-      { to: '/career', label: 'Coach Office', hint: 'Career dashboard' },
-      { to: '/career/recruiting', label: 'Recruiting Board', hint: 'Prospects & targets' },
-      { to: '/career/roster', label: 'Roster', hint: 'Depth chart & players' },
-      { to: '/career/setup', label: 'Career Setup', hint: 'Profile and program' },
-    ],
-  },
-  {
-    title: 'Season Hub',
-    items: [
-      { to: '/season', label: 'Season Dashboard', hint: 'Schedule + controls' },
-      { to: '/season/week/0', label: 'Week Results', hint: 'Scores & box scores' },
-      { to: '/season/standings', label: 'Standings', hint: 'Conference race' },
-      { to: '/rankings', label: 'Top 25 Poll', hint: 'Poll + 12-team field' },
-      { to: '/playoffs', label: 'Playoff Bracket', hint: 'Lacrosse championship' },
-    ],
-  },
-  {
-    title: 'Scouting & League',
-    items: [
-      { to: '/conferences', label: 'Conference Browser', hint: 'All 128 teams' },
-      { to: '/exhibition', label: 'Exhibition Lab', hint: 'Single game sandbox' },
-    ],
-  },
-];
+function latestResultsWeek(phase: string, currentWeekIndex: number, scheduleLength: number): number {
+  if (scheduleLength <= 0) return 0;
+  const lastIndex = scheduleLength - 1;
+  if (phase === 'PRE') return 0;
+  if (phase === 'REGULAR') return currentWeekIndex > 0 ? Math.min(currentWeekIndex - 1, lastIndex) : 0;
+  return lastIndex;
+}
 
 function LeftNavBar({ isMenuOpen, onNavigate }: LeftNavBarProps) {
+  const currentWeekIndex = useAppSelector((state) => state.season.currentWeekIndex);
+  const scheduleLength = useAppSelector((state) => state.season.scheduleByWeek.length);
+  const phase = useAppSelector((state) => state.season.phase);
+  const resultsWeek = latestResultsWeek(phase, currentWeekIndex, scheduleLength);
+
+  const navSections: Array<{ title: string; items: NavItem[] }> = [
+    {
+      title: 'Coach Central',
+      items: [
+        { to: '/', label: 'Overview', hint: 'Program home', end: true },
+        { to: '/career/week', label: 'Weekly Hub', hint: 'Decisions & matchup' },
+        { to: '/career', label: 'Coach Office', hint: 'Career dashboard' },
+        { to: '/career/recruiting', label: 'Recruiting Board', hint: 'Prospects & targets' },
+        { to: '/career/roster', label: 'Roster', hint: 'Depth chart & players' },
+        { to: '/career/setup', label: 'Career Setup', hint: 'Profile and program' },
+      ],
+    },
+    {
+      title: 'Season Hub',
+      items: [
+        { to: '/season', label: 'Season Dashboard', hint: 'Schedule + controls' },
+        {
+          to: `/season/week/${resultsWeek}`,
+          label: 'Week Results',
+          hint: scheduleLength > 0 ? `Week ${resultsWeek + 1} scores` : 'Scores & box scores',
+        },
+        { to: '/season/standings', label: 'Standings', hint: 'Conference race' },
+        { to: '/rankings', label: 'Top 25 Poll', hint: 'Poll + 12-team field' },
+        { to: '/playoffs', label: 'Playoff Bracket', hint: 'Lacrosse championship' },
+      ],
+    },
+    {
+      title: 'Scouting & League',
+      items: [
+        { to: '/conferences', label: 'Conference Browser', hint: 'All 128 teams' },
+        { to: '/exhibition', label: 'Exhibition Lab', hint: 'Single game sandbox' },
+      ],
+    },
+  ];
   const navClassName = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'navLink navLink-active' : 'navLink';
 

@@ -91,6 +91,8 @@ function PlayerRow({
       <td className="py-1.5">
         {(canPromote || canDemote) && (
           <button
+            type="button"
+            aria-label={isStarter ? `Bench ${player.name}` : `Start ${player.name}`}
             className={`text-xs px-2 py-0.5 rounded border cursor-pointer ${
               isStarter
                 ? 'border-gray-300 text-gray-500 hover:bg-gray-100'

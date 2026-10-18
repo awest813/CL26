@@ -205,6 +205,7 @@ function ExhibitionPage() {
           </h3>
 
           <h4>Team Box Score</h4>
+          <div className="dataTableWrap">
           <table>
             <caption className="text-sm text-gray-500 text-left mb-2">Team totals for this exhibition game</caption>
             <thead>
@@ -245,6 +246,7 @@ function ExhibitionPage() {
               </tr>
             </tbody>
           </table>
+          </div>
 
           <div className="grid2">
             <div>

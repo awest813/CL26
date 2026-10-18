@@ -44,6 +44,7 @@ const initialState: SeasonState = {
   seasonSeed: 0,
   playoffs: null,
   previousRankByTeamId: {},
+  lastAppliedWeekSimId: null,
 };
 
 // Async thunk to start a new season — only PRE (year 1) or OFFSEASON (next year).
@@ -167,10 +168,11 @@ export const simSeason = createAsyncThunk(
     const { scheduleByWeek } = state.season;
 
     while (currentWeekIndex < scheduleByWeek.length) {
+      const before = currentWeekIndex;
       await dispatch(simCurrentWeek());
-      // Re-fetch state to check new index
       const newState = getState() as RootState;
       currentWeekIndex = newState.season.currentWeekIndex;
+      if (currentWeekIndex === before) break;
     }
   }
 );
@@ -297,11 +299,20 @@ const seasonSlice = createSlice({
         state.isComplete = false;
         state.playoffs = null;
         state.previousRankByTeamId = {};
+        state.lastAppliedWeekSimId = null;
       })
       .addCase(simCurrentWeek.fulfilled, (state, action) => {
         if (state.phase !== 'REGULAR') return;
+        const results = action.payload.results;
+        if (results.length === 0) return;
+        const weekIndex = results[0]?.weekIndex;
+        if (weekIndex == null || weekIndex !== state.currentWeekIndex) return;
+        if (results.some((game) => game.weekIndex !== weekIndex)) return;
+        if (state.gameResults.some((game) => game.weekIndex === weekIndex)) return;
+
+        state.lastAppliedWeekSimId = action.meta.requestId;
         state.previousRankByTeamId = action.payload.previousRankByTeamId;
-        state.gameResults.push(...action.payload.results);
+        state.gameResults.push(...results);
         state.completedWeeks += 1;
         state.currentWeekIndex += 1;
 

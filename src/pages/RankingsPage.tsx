@@ -7,7 +7,7 @@ import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/
 import { seasonRankingsWeekLabel } from '../lib/seasonLabels';
 
 function rankDeltaDisplay(delta: number | null): ReactNode {
-  if (delta === null) return <span className="text-gray-300 text-xs" aria-label="New to rankings">NEW</span>;
+  if (delta === null) return <span className="text-gray-500 text-xs font-semibold" aria-label="New to rankings">NEW</span>;
   if (delta > 0) return <span className="text-green-600 text-xs font-semibold" aria-label={`Moved up ${delta} position${delta !== 1 ? 's' : ''}`}>▲{delta}</span>;
   if (delta < 0) return <span className="text-red-500 text-xs font-semibold" aria-label={`Moved down ${Math.abs(delta)} position${Math.abs(delta) !== 1 ? 's' : ''}`}>▼{Math.abs(delta)}</span>;
   return <span className="text-gray-400 text-xs" aria-label="No change">–</span>;
@@ -87,7 +87,9 @@ function RankingsPage() {
             : 'Deterministic power ranking based on record, point margin, and strength of schedule.'}
         </p>
 
+        <div className="dataTableWrap">
         <table>
+          <caption className="sr-only">Top 25 poll</caption>
           <thead>
             <tr>
               <th scope="col">Rank</th>
@@ -114,6 +116,7 @@ function RankingsPage() {
             })}
           </tbody>
         </table>
+        </div>
       </section>
 
       <section className="card">
@@ -124,7 +127,9 @@ function RankingsPage() {
             : 'If the season ended today, this would be the projected 12-team field.'}
         </p>
 
+        <div className="dataTableWrap">
         <table>
+          <caption className="sr-only">Top 12 playoff projection</caption>
           <thead>
             <tr>
               <th scope="col">Seed</th>
@@ -152,6 +157,7 @@ function RankingsPage() {
             })}
           </tbody>
         </table>
+        </div>
 
         {!hasGamesPlayed && (
           <p className="text-sm text-gray-500" style={{ marginTop: '0.75rem' }}>

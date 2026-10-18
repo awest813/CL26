@@ -30,8 +30,16 @@ export function seasonPhaseHomeStatus(phase: SeasonPhase, currentWeekIndex: numb
 }
 
 /** Right-rail season status line. */
-export function seasonPhaseRailLabel(phase: SeasonPhase, currentWeekIndex: number): string {
-  if (phase === 'REGULAR') return `Week ${currentWeekIndex + 1} of 12`;
+export function seasonPhaseRailLabel(
+  phase: SeasonPhase,
+  currentWeekIndex: number,
+  scheduleLength = 12,
+): string {
+  if (phase === 'REGULAR') {
+    const total = Math.max(scheduleLength, 1);
+    const week = Math.min(currentWeekIndex + 1, total);
+    return `Week ${week} of ${total}`;
+  }
   if (phase === 'PLAYOFF') return 'College Lacrosse Playoff';
   return SEASON_PHASE_LABELS[phase] ?? phase;
 }

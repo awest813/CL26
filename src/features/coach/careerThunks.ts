@@ -18,6 +18,7 @@ import {
   careerSetupFromPrestige,
   applyPlayoffRoundFatigue,
 } from './coachSlice';
+import type { GameResult } from '../../types/sim';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
@@ -46,6 +47,17 @@ const TARGET_MET_PRESTIGE_DRIFT = 1;
 const MODERATE_MISS_PRESTIGE_DRIFT = -2;
 const SEVERE_MISS_PRESTIGE_DRIFT = -3;
 
+export function userWonResult(result: GameResult | undefined, teamId: string | null | undefined): boolean {
+  if (!result || !teamId) return false;
+  if (result.teamAId === teamId) return result.scoreA > result.scoreB;
+  if (result.teamBId === teamId) return result.scoreB > result.scoreA;
+  return false;
+}
+
+export function computeWeeklyCoachXp(wonThisWeek: boolean, operationsSkill: number): number {
+  return BASE_WEEKLY_XP + (wonThisWeek ? WINNING_WEEK_XP_BONUS : 0) + Math.max(0, operationsSkill);
+}
+
 function computePrestigeDriftDelta(champion: boolean, madePlayoffs: boolean, winDiff: number): number {
   if (champion) return CHAMPION_PRESTIGE_DRIFT;
   if (madePlayoffs) return PLAYOFF_PRESTIGE_DRIFT;
@@ -71,7 +83,17 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
       return 'skipped';
     }
 
-    await dispatch(simCurrentWeek());
+    const simAction = await dispatch(simCurrentWeek());
+    if (!simCurrentWeek.fulfilled.match(simAction)) {
+      return 'skipped';
+    }
+
+    const postSimState = getState();
+    // A duplicate in-flight sim is ignored by the reducer. Only the request that
+    // actually advanced the week should move recruiting and award XP.
+    if (postSimState.season.lastAppliedWeekSimId !== simAction.meta.requestId) {
+      return 'skipped';
+    }
 
     // Recruiting updates are optional; season progression should still work even if
     // the user has no active targets on their board.
@@ -82,13 +104,18 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
     const postWeekState = getState();
     const postWeekCoach = postWeekState.coach;
     const postWeekSeason = postWeekState.season;
-    const userRecord = postWeekCoach.selectedTeamId
-      ? selectTeamRecords(postWeekState)[postWeekCoach.selectedTeamId]
+    const lastWeek = postWeekSeason.currentWeekIndex - 1;
+    const userGame = postWeekCoach.selectedTeamId
+      ? postWeekSeason.gameResults.find(
+          (game) =>
+            game.weekIndex === lastWeek &&
+            (game.teamAId === postWeekCoach.selectedTeamId || game.teamBId === postWeekCoach.selectedTeamId),
+        )
       : undefined;
-    const weeklyXp =
-      BASE_WEEKLY_XP +
-      (userRecord && userRecord.wins + userRecord.losses > 0 && userRecord.wins > userRecord.losses ? WINNING_WEEK_XP_BONUS : 0) +
-      (postWeekCoach.skillTree?.operations ?? 0);
+    const weeklyXp = computeWeeklyCoachXp(
+      userWonResult(userGame, postWeekCoach.selectedTeamId),
+      postWeekCoach.skillTree?.operations ?? 0,
+    );
     dispatch(addCoachXp(weeklyXp));
 
     if (postWeekCoach.selectedTeamId && postWeekCoach.managedRoster) {

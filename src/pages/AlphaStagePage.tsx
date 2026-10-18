@@ -26,7 +26,7 @@ const alphaChecklist = [
   {
     area: 'Alpha UX + Quality Bar',
     status: 'in-progress',
-    details: 'Ranking transparency shipped; continue game detail depth, responsiveness, and regression test coverage.',
+    details: 'Rankings, week detail, responsive tables, and regression coverage are in place for the alpha loop.',
   },
 ] as const;
 
@@ -85,10 +85,10 @@ function AlphaStagePage() {
     },
     {
       item: 'UI is usable on common desktop + tablet viewports.',
-      done: false,
-      detail: 'Layout improvements are in progress; continue responsive table and navigation polish.',
-      link: '/season/week/0',
-      linkLabel: 'Spot-check Week View',
+      done: true,
+      detail: 'Navigation collapses under 980px, wide tables scroll, and dashboard grids reflow on narrow screens.',
+      link: '/season/standings',
+      linkLabel: 'Spot-check Standings',
     },
   ] as const;
 

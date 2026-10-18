@@ -36,6 +36,7 @@ function SeasonStandingsPage() {
           </label>
         </div>
 
+        <div className="dataTableWrap">
         <table>
           <caption className="text-sm text-gray-500 text-left mb-2">Conference standings</caption>
           <thead>
@@ -70,10 +71,12 @@ function SeasonStandingsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="card">
         <h3 className="m-0 mb-2">Overall Standings</h3>
+        <div className="dataTableWrap">
         <table>
           <caption className="text-sm text-gray-500 text-left mb-2">Overall league standings</caption>
           <thead>
@@ -105,6 +108,7 @@ function SeasonStandingsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

@@ -49,7 +49,8 @@ function RightNavBar() {
     ? top12.find((s) => s.teamId === selectedTeamId)?.rank ?? null
     : null;
 
-  const phaseLabel = seasonPhaseRailLabel(summary.phase, summary.currentWeekIndex);
+  const scheduleLength = useAppSelector((state) => state.season.scheduleByWeek.length);
+  const phaseLabel = seasonPhaseRailLabel(summary.phase, summary.currentWeekIndex, scheduleLength);
 
   const seedLabel =
     summary.phase === 'PLAYOFF' || summary.phase === 'OFFSEASON'

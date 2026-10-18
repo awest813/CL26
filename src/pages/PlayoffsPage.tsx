@@ -161,7 +161,7 @@ function PlayoffsPage() {
             {/* Seeding panel */}
             <div className="card">
                 <h3>Tournament Seeds</h3>
-                <div className="overflow-y-auto" style={{ maxHeight: '560px' }}>
+                <div className="overflow-y-auto dataTableWrap" style={{ maxHeight: '560px' }}>
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="text-left text-gray-500 border-b">
@@ -249,7 +249,7 @@ function PlayoffsPage() {
                                     return (
                                         <div
                                           key={game.id}
-                                          className={`border rounded p-3 text-sm bg-gray-50 ${involvesUser ? 'border-blue-400 ring-1 ring-blue-200' : ''}`}
+                                          className={`border rounded p-3 text-sm bg-gray-50 ${involvesUser ? 'border-blue-400 playoffUserGame' : ''}`}
                                         >
                                             {/* Away team row */}
                                             <div className={`flex justify-between items-center mb-1 ${awayWon ? 'font-bold text-black' : awayLost ? 'text-gray-400 line-through-gentle' : 'text-gray-700'} ${game.awayTeamId === userTeamId ? 'text-blue-800' : ''}`}>

@@ -12,7 +12,7 @@ import {
 import { beginFirstSeason } from '../features/coach/careerThunks';
 import { selectIsCareerReady } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { SEASON_PHASE_LABELS } from '../lib/seasonLabels';
+import { seasonPhaseLabel } from '../lib/seasonLabels';
 
 interface NextStepAction {
   label: string;
@@ -31,7 +31,8 @@ function SeasonPage() {
   const capabilities = useAppSelector(selectSeasonCapabilities);
   const teams = useAppSelector((state) => state.league.teams);
   const conferences = useAppSelector((state) => state.league.conferences);
-  const displayWeek = Math.min(summary.currentWeekIndex, 11);
+  const scheduleLength = useAppSelector((state) => state.season.scheduleByWeek.length);
+  const displayWeek = Math.min(summary.currentWeekIndex, Math.max(scheduleLength - 1, 0));
   const weekSelector = useMemo(() => selectWeekGames(displayWeek), [displayWeek]);
   const thisWeekGames = useAppSelector(weekSelector);
 
@@ -189,7 +190,7 @@ function SeasonPage() {
           <div className="pageHeader m-0">
             <h2 className="m-0 text-xl font-bold">Season Dashboard</h2>
             <p className="pageHeader-sub">
-              Week {displayWeek + 1} of 12 &bull; {SEASON_PHASE_LABELS[summary.phase] ?? summary.phase}
+              {summary.year} · {seasonPhaseLabel(summary.phase, summary.currentWeekIndex, scheduleLength)}
             </p>
           </div>
 

@@ -160,7 +160,7 @@ function CoachCareerSetupPage() {
         {/* Archetype cards */}
         <div style={{ marginTop: 12 }}>
           <div className="text-sm font-semibold mb-2">Coaching Archetype</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+          <div className="archetypeGrid">
             {archetypeOptions.map((option) => {
               const isSelected = archetype === option.value;
               return (

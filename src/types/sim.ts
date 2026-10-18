@@ -232,6 +232,8 @@ export interface SeasonState {
   standings?: RankingRow[];
   /** Snapshot of each team's rank from the previous week sim; used for movement indicators. */
   previousRankByTeamId: Record<string, number>;
+  /** Request id of the week sim the reducer actually applied. Duplicate in-flight sims are ignored. */
+  lastAppliedWeekSimId?: string | null;
 }
 
 export interface LeagueData {

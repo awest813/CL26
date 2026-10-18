@@ -17,6 +17,15 @@ function Layout() {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsMenuOpen(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isMenuOpen]);
+
   return (
     <div className={`layout ${isMenuOpen ? 'layout-menuOpen' : ''}`}>
       <a className="skip-link" href="#main-content">

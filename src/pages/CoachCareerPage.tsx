@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import {
   addRecruitToBoard,
   allocateProgramResources,
+  clearRecruitPitch,
   initializeRecruitingBoard,
   removeRecruitFromBoard,
   setRecruitHours,
@@ -25,9 +26,9 @@ import {
 } from '../features/coach/careerThunks';
 import { selectTeamRecords } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
-import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade, PITCH_LABELS } from '../sim/recruiting';
+import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade, isRecruitingPitch, PITCH_LABELS } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { PracticeFocus, RecruitingPitch, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
+import { PracticeFocus, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
 import { computeAllSOS, computeRankings } from '../sim/rankings';
 import { careerOffseasonCapabilities } from '../sim/seasonPhase';
 
@@ -96,9 +97,12 @@ function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: 
 function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
   const color = motivation.importance === 'HIGH' ? '#ef4444' : motivation.importance === 'MEDIUM' ? '#f59e0b' : '#9ca3af';
   const label = PITCH_LABELS[motivation.pitch];
+  const description = `${label}, ${motivation.importance.toLowerCase()} importance`;
   return (
     <span
-      title={`${label} (${motivation.importance})`}
+      role="img"
+      aria-label={description}
+      title={description}
       className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold mr-1 border bg-white cursor-help"
       style={{ color, borderColor: color }}
     >
@@ -121,6 +125,7 @@ function CoachCareerPage() {
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [advancing, setAdvancing] = useState(false);
   const [jobOfferError, setJobOfferError] = useState<string | null>(null);
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
@@ -273,11 +278,26 @@ function CoachCareerPage() {
     }
   }
 
-  function onAdvance() {
+  async function onAdvance() {
+    if (advancing) return;
     setActionError(null);
-    void dispatch(runCareerWeeklyCycle())
-      .unwrap()
-      .catch((err) => setActionError(err instanceof Error ? err.message : String(err)));
+    setAdvancing(true);
+    try {
+      await dispatch(runCareerWeeklyCycle()).unwrap();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAdvancing(false);
+    }
+  }
+
+  function onPitchChange(recruitId: string, nextPitch: string) {
+    if (!nextPitch) {
+      dispatch(clearRecruitPitch(recruitId));
+      return;
+    }
+    if (!isRecruitingPitch(nextPitch)) return;
+    dispatch(setRecruitPitch({ recruitId, pitch: nextPitch }));
   }
 
   function onHoursChange(recruitId: string, nextHours: number): void {
@@ -790,9 +810,11 @@ function CoachCareerPage() {
         <div className="flex justify-between items-start mb-3">
           <div>
             <h3 className="text-base font-bold m-0">Recruiting Dashboard</h3>
-            <div className="text-xs text-gray-500 mt-0.5">Week {coach.recruitingWeekIndex} &bull; Seed {coach.recruitingSeed}</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Recruiting period {coach.recruitingWeekIndex + 1} &bull; Seed {coach.recruitingSeed}
+            </div>
           </div>
-          <div className="flex gap-4 text-sm items-start">
+          <div className="recruitingToolbar text-sm">
             <div className="text-right">
               <div className="text-xs text-gray-500">Commits</div>
               <div className="font-bold">{committedToUserCount}</div>
@@ -808,6 +830,7 @@ function CoachCareerPage() {
               <div className="text-xs text-gray-500 mb-1">Practice</div>
               <select
                 value={coach.practiceFocus}
+                aria-label="Practice focus"
                 onChange={(event) => dispatch(setPracticeFocus(event.target.value as PracticeFocus))}
                 className="p-1 text-sm border rounded"
               >
@@ -826,6 +849,7 @@ function CoachCareerPage() {
                     onChange={(e) => setSeedInput(Number(e.target.value))}
                     className="w-20 p-1 text-sm border rounded"
                     placeholder="Seed"
+                    aria-label="Recruiting seed"
                   />
                   <button
                     className="btn btn-primary text-sm"
@@ -837,8 +861,8 @@ function CoachCareerPage() {
               ) : (
                 <div className="flex flex-col items-end gap-1">
                   {canAdvanceWeeklyCycle ? (
-                    <button className="btn btn-primary" onClick={onAdvance}>
-                      Advance Week {coach.recruitingWeekIndex + 1}
+                    <button type="button" className="btn btn-primary" onClick={onAdvance} disabled={advancing} aria-busy={advancing}>
+                      {advancing ? 'Advancing…' : `Advance Week ${coach.recruitingWeekIndex + 1}`}
                     </button>
                   ) : null}
                   {coach.boardRecruitIds.length === 0 && canAdvanceWeeklyCycle && (
@@ -912,7 +936,8 @@ function CoachCareerPage() {
                       <td className="py-2">
                         <select
                           value={activePitch || ''}
-                          onChange={(e) => dispatch(setRecruitPitch({ recruitId: recruit.id, pitch: e.target.value as RecruitingPitch }))}
+                          aria-label={`Recruiting pitch for ${recruit.name}`}
+                          onChange={(e) => onPitchChange(recruit.id, e.target.value)}
                           className="text-xs p-1 border rounded w-full mb-1"
                         >
                           <option value="">No Pitch</option>
@@ -927,7 +952,14 @@ function CoachCareerPage() {
                         )}
                       </td>
                       <td className="py-2">
-                        <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
+                        <div
+                          className="w-full bg-gray-200 rounded-full h-2 mb-1"
+                          role="progressbar"
+                          aria-valuenow={Math.min(100, interest)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${recruit.name} interest`}
+                        >
                           <div className={`h-2 rounded-full ${interest >= 100 ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${Math.min(100, interest)}%` }} />
                         </div>
                         <div className="text-xs font-bold text-center">{interest}%</div>
@@ -940,6 +972,7 @@ function CoachCareerPage() {
                           value={coach.weeklyHoursByRecruitId[recruit.id] ?? 0}
                           onChange={(event) => onHoursChange(recruit.id, Number(event.target.value) || 0)}
                           className="w-12 p-1 border rounded text-center"
+                          aria-label={`Recruiting hours for ${recruit.name}`}
                         />
                       </td>
                     </tr>
@@ -962,16 +995,21 @@ function CoachCareerPage() {
           </div>
 
           <div className="flex gap-2 mb-4">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="flex-1 p-1 text-sm border rounded"
-            />
+            <label className="flex-1 text-sm">
+              Search
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name…"
+                className="block w-full p-1 text-sm border rounded mt-0.5"
+              />
+            </label>
+            <label className="text-sm">
+              Position
             <select
               value={positionFilter}
               onChange={(e) => setPositionFilter(e.target.value)}
-              className="w-20 p-1 text-sm border rounded"
+              className="block w-20 p-1 text-sm border rounded mt-0.5"
             >
               <option value="ALL">All</option>
               <option value="A">A</option>
@@ -981,6 +1019,7 @@ function CoachCareerPage() {
               <option value="FO">FO</option>
               <option value="G">G</option>
             </select>
+            </label>
           </div>
 
           <div className="overflow-y-auto" style={{ maxHeight: '600px' }}>

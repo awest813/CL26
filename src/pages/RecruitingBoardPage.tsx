@@ -40,9 +40,12 @@ function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
         ? '#f59e0b'
         : '#9ca3af';
   const label = PITCH_LABELS[motivation.pitch as RecruitingPitch] ?? motivation.pitch;
+  const description = `${label}, ${motivation.importance.toLowerCase()} importance`;
   return (
     <span
-      title={`${label} (${motivation.importance})`}
+      role="img"
+      aria-label={description}
+      title={description}
       className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold mr-0.5 border bg-white cursor-help"
       style={{ color, borderColor: color }}
     >
@@ -219,7 +222,7 @@ function RecruitingBoardPage() {
       <div className="pageHeader">
         <h2>Recruiting Board</h2>
         <p className="pageHeader-sub">
-          Week {coach.recruitingWeekIndex} · {season.year} Class ·{' '}
+          Recruiting period {coach.recruitingWeekIndex + 1} · {season.year} Class ·{' '}
           {committedToUserCount} committed · {coach.scholarshipsAvailable} scholarships available
           {committedToUserCount > coach.scholarshipsAvailable
             ? ' · Signing day will keep only the best fits up to your scholarship cap'
@@ -374,7 +377,14 @@ function RecruitingBoardPage() {
                         )}
                       </td>
                       <td className="py-2">
-                        <div className="w-full bg-gray-100 rounded-full h-1.5 mb-0.5">
+                        <div
+                          className="w-full bg-gray-100 rounded-full h-1.5 mb-0.5"
+                          role="progressbar"
+                          aria-valuenow={cappedInterest(interest)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${recruit.name} interest`}
+                        >
                           <div
                             className={`h-1.5 rounded-full ${interest >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
                             style={{ width: `${cappedInterest(interest)}%` }}
@@ -390,11 +400,14 @@ function RecruitingBoardPage() {
                           value={coach.weeklyHoursByRecruitId[recruit.id] ?? 0}
                           onChange={(e) => onHoursChange(recruit.id, Number(e.target.value) || 0)}
                           className="w-12 p-1 border rounded text-center text-sm"
+                          aria-label={`Recruiting hours for ${recruit.name}`}
                         />
                       </td>
                       <td className="py-2 pl-2">
                         <button
+                          type="button"
                           className="text-xs text-red-500 hover:underline bg-transparent border-0 cursor-pointer"
+                          aria-label={`Remove ${recruit.name} from board`}
                           onClick={() => dispatch(removeRecruitFromBoard(recruit.id))}
                         >
                           ×

@@ -98,6 +98,7 @@ function ResultBanner({ result, selectedTeamId, teams }: ResultBannerProps) {
 function WeeklyHubPage() {
   const dispatch = useAppDispatch();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [advancing, setAdvancing] = useState(false);
   const coach = useAppSelector((state) => state.coach);
   const season = useAppSelector((state) => state.season);
   const teams = useAppSelector((state) => state.league.teams);
@@ -307,7 +308,7 @@ function WeeklyHubPage() {
                   {(() => {
                     const diff = opponentRecord.pointsFor - opponentRecord.pointsAgainst;
                     return (
-                      <div className={diff >= 0 ? 'text-danger font-semibold' : 'text-success font-semibold'}>
+                      <div className={diff >= 0 ? 'text-success font-semibold' : 'text-danger font-semibold'}>
                         {diff > 0 ? '+' : ''}{diff}
                       </div>
                     );
@@ -335,6 +336,8 @@ function WeeklyHubPage() {
             {(Object.keys(PRACTICE_FOCUS_LABELS) as PracticeFocus[]).map((focus) => (
               <button
                 key={focus}
+                type="button"
+                aria-pressed={coach.practiceFocus === focus}
                 onClick={() => dispatch(setPracticeFocus(focus))}
                 className={`border rounded p-2 text-left text-xs transition-colors ${
                   coach.practiceFocus === focus
@@ -440,7 +443,15 @@ function WeeklyHubPage() {
                         </div>
                       </td>
                       <td className="py-1.5 pr-3">
-                        <div className="w-full bg-gray-100 rounded-full h-1.5 mb-0.5" style={{ minWidth: '80px' }}>
+                        <div
+                          className="w-full bg-gray-100 rounded-full h-1.5 mb-0.5"
+                          style={{ minWidth: '80px' }}
+                          role="progressbar"
+                          aria-valuenow={Math.min(100, interest)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${recruit.name} interest`}
+                        >
                           <div
                             className={`h-1.5 rounded-full ${interest >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
                             style={{ width: `${Math.min(100, interest)}%` }}
@@ -458,6 +469,7 @@ function WeeklyHubPage() {
                             onHoursChange(recruit.id, Number(e.target.value) || 0)
                           }
                           className="w-12 p-1 border rounded text-center text-sm"
+                          aria-label={`Recruiting hours for ${recruit.name}`}
                         />
                       </td>
                     </tr>
@@ -522,17 +534,24 @@ function WeeklyHubPage() {
           <div className="flex gap-3">
             {canAdvance && (
               <button
+                type="button"
                 className="btn btn-primary"
+                disabled={advancing}
+                aria-busy={advancing}
                 onClick={async () => {
+                  if (advancing) return;
                   setActionError(null);
+                  setAdvancing(true);
                   try {
                     await dispatch(runCareerWeeklyCycle()).unwrap();
                   } catch (err) {
                     setActionError(err instanceof Error ? err.message : String(err));
+                  } finally {
+                    setAdvancing(false);
                   }
                 }}
               >
-                ▶ Advance Week {currentWeekDisplay}
+                {advancing ? 'Advancing…' : `▶ Advance Week ${currentWeekDisplay}`}
               </button>
             )}
             {season.phase === 'PLAYOFF' && (
