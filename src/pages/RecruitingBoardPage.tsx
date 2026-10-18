@@ -378,17 +378,14 @@ function RecruitingBoardPage() {
                       </td>
                       <td className="py-2">
                         <div
-                          className="w-full bg-gray-100 rounded-full h-1.5 mb-0.5"
+                          className={`meter mb-0.5 ${interest >= 100 ? 'meter-full' : ''}`}
                           role="progressbar"
                           aria-valuenow={cappedInterest(interest)}
                           aria-valuemin={0}
                           aria-valuemax={100}
                           aria-label={`${recruit.name} interest`}
                         >
-                          <div
-                            className={`h-1.5 rounded-full ${interest >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                            style={{ width: `${cappedInterest(interest)}%` }}
-                          />
+                          <span style={{ width: `${cappedInterest(interest)}%` }} />
                         </div>
                         <div className="text-xs text-center text-gray-500">{cappedInterest(interest)}%</div>
                       </td>
@@ -431,7 +428,7 @@ function RecruitingBoardPage() {
               </div>
             </div>
             <button
-              className="text-xs text-blue-600 hover:underline bg-transparent border-0 cursor-pointer"
+              className="textButton"
               onClick={() => { setSearch(''); setPositionFilter('ALL'); }}
             >
               Reset Filters
@@ -520,7 +517,7 @@ function RecruitingBoardPage() {
                         ) : (
                           !isCommittedElsewhere && !isCommittedToMe && (
                             <button
-                              className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 cursor-pointer"
+                              className="chipAdd"
                               onClick={() => onAdd(recruit.id)}
                               disabled={boardSet.size >= 25}
                             >

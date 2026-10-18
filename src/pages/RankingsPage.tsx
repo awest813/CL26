@@ -153,7 +153,7 @@ function RankingsPage() {
                   </td>
                   <td>{row.record}</td>
                   <td className="text-xs">
-                    {hasBye && <span className="text-blue-600 font-semibold">Bye</span>}
+                    {hasBye && <span className="youMark">Bye</span>}
                   </td>
                 </tr>
               );

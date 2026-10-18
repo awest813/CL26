@@ -81,7 +81,7 @@ function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: 
         {entry.champion ? (
           <span className="text-yellow-500 font-bold">Champion</span>
         ) : entry.madePlayoffs ? (
-          <span className="text-blue-600">Playoffs</span>
+          <span className="youMark">Playoffs</span>
         ) : (
           <span className="text-gray-400">No Playoffs</span>
         )}
@@ -424,11 +424,8 @@ function CoachCareerPage() {
                 <span className="text-gray-500">Win target: {winTarget}</span>
                 <span className={displayedWins >= winTarget ? 'text-green-600 font-bold' : 'text-amber-600'}>{displayedWins}/{winTarget}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-1.5">
-                <div
-                  className={`h-1.5 rounded-full ${displayedWins >= winTarget ? 'bg-green-500' : 'bg-blue-500'}`}
-                  style={{ width: `${Math.min(100, Math.round((displayedWins / Math.max(1, winTarget)) * 100))}%` }}
-                />
+              <div className={`meter ${displayedWins >= winTarget ? 'meter-full' : ''}`}>
+                <span style={{ width: `${Math.min(100, Math.round((displayedWins / Math.max(1, winTarget)) * 100))}%` }} />
               </div>
             </div>
             <div className="text-xs text-gray-500 mt-1.5">
@@ -532,19 +529,19 @@ function CoachCareerPage() {
 
       {/* ── Quick Links ── */}
       <div className="flex gap-3 mt-2 flex-wrap">
-        <Link to="/career/week" className="text-sm text-blue-600 hover:underline font-medium">
+        <Link to="/career/week" className="text-sm hover:underline font-medium">
           Weekly Hub →
         </Link>
         <span className="text-gray-300">|</span>
-        <Link to="/career/recruiting" className="text-sm text-blue-600 hover:underline font-medium">
+        <Link to="/career/recruiting" className="text-sm hover:underline font-medium">
           Recruiting Board →
         </Link>
         <span className="text-gray-300">|</span>
-        <Link to="/career/roster" className="text-sm text-blue-600 hover:underline font-medium">
+        <Link to="/career/roster" className="text-sm hover:underline font-medium">
           Roster &amp; Depth Chart →
         </Link>
         <span className="text-gray-300">|</span>
-        <Link to="/season" className="text-sm text-blue-600 hover:underline">Season Dashboard</Link>
+        <Link to="/season" className="text-sm hover:underline">Season Dashboard</Link>
       </div>
 
       <div className="card">
@@ -755,7 +752,7 @@ function CoachCareerPage() {
                             {conferenceNameById.get(offerTeam.conferenceId) ?? 'Independent'} · Prestige {offerTeam.prestige}
                           </div>
                         </div>
-                        <span className={offer.tier === 'UPGRADE' ? 'text-green-600 text-xs font-bold' : 'text-blue-600 text-xs font-bold'}>
+                        <span className={offer.tier === 'UPGRADE' ? 'text-green-600 text-xs font-bold' : 'youMark'}>
                           {offer.tier}
                         </span>
                       </div>
@@ -1008,7 +1005,7 @@ function CoachCareerPage() {
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-lg font-bold m-0">Prospect Pool</h3>
             <button
-              className="text-xs text-blue-600 hover:underline bg-transparent border-0 cursor-pointer"
+              className="textButton"
               onClick={() => { setSearch(''); setPositionFilter('ALL'); }}
             >
               Reset Filters
@@ -1081,7 +1078,7 @@ function CoachCareerPage() {
                         ) : (
                           !isCommittedElsewhere && !isCommittedToMe && (
                             <button
-                              className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 cursor-pointer"
+                              className="chipAdd"
                               onClick={() => onAdd(recruit)}
                               disabled={boardSet.size >= 25}
                             >

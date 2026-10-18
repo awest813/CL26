@@ -134,7 +134,7 @@ function PlayoffsPage() {
 
       {/* Made / missed field banner once bracket exists */}
       {playoffState && hasCareerTeam && !isComplete && (
-        <div className={`card text-sm ${userMadeField ? 'border border-blue-200 bg-blue-50' : 'border border-amber-200 bg-amber-50'}`}>
+        <div className={`card text-sm ${userMadeField ? 'fieldBanner' : 'border border-amber-200 bg-amber-50'}`}>
           {userMadeField
             ? `Your program is in as the #${userSeed} seed.`
             : 'Your program missed the 12-team field. You can still watch the bracket play out.'}
@@ -193,19 +193,19 @@ function PlayoffsPage() {
                                 return (
                                     <tr
                                       key={seed.teamId}
-                                      className={`border-b last:border-0 ${isChamp ? 'bg-yellow-50' : ''} ${isUser ? 'bg-blue-50' : ''}`}
+                                      className={`border-b last:border-0 ${isChamp ? 'bg-yellow-50' : ''} ${isUser ? 'youRow' : ''}`}
                                     >
                                         <td className="py-1.5 font-mono font-bold text-center">#{seed.seed}</td>
                                         <td className="py-1.5">
                                             <div className="font-semibold leading-tight">
                                               {team?.schoolName}
-                                              {isUser && <span className="ml-1 text-xs font-normal text-blue-600">(You)</span>}
+                                              {isUser && <span className="youMark ml-1">(You)</span>}
                                             </div>
                                             <div className="text-xs text-gray-500">{team?.nickname}</div>
                                         </td>
                                         <td className="py-1.5 text-right text-xs pr-1">
                                             {isChamp && <span className="text-yellow-700 font-bold">Champ</span>}
-                                            {!isChamp && showBye && <span className="text-blue-600">Bye</span>}
+                                            {!isChamp && showBye && <span className="youMark">Bye</span>}
                                             {!isChamp && lostAGame && <span className="text-gray-400">Out</span>}
                                             {!isChamp && !showBye && isAlive && (
                                               <span className="text-green-700">Alive</span>
@@ -249,14 +249,14 @@ function PlayoffsPage() {
                                     return (
                                         <div
                                           key={game.id}
-                                          className={`border rounded p-3 text-sm bg-gray-50 ${involvesUser ? 'border-blue-400 playoffUserGame' : ''}`}
+                                          className={`border rounded p-3 text-sm bg-gray-50 ${involvesUser ? 'playoffUserGame' : ''}`}
                                         >
                                             {/* Away team row */}
                                             <div className={`flex justify-between items-center mb-1 ${awayWon ? 'font-bold text-black' : awayLost ? 'text-gray-400 line-through-gentle' : 'text-gray-700'} ${game.awayTeamId === userTeamId ? 'text-blue-800' : ''}`}>
                                                 <span>
                                                     {awaySeed && <span className="text-xs text-gray-400 mr-1 font-normal">#{awaySeed}</span>}
                                                     {away?.schoolName}
-                                                    {game.awayTeamId === userTeamId && <span className="ml-1 text-xs font-normal text-blue-600">(You)</span>}
+                                                    {game.awayTeamId === userTeamId && <span className="youMark ml-1">(You)</span>}
                                                 </span>
                                                 <span className="font-mono ml-2">
                                                     {game.result != null ? game.result.awayScore : '—'}
@@ -267,7 +267,7 @@ function PlayoffsPage() {
                                                 <span>
                                                     {homeSeed && <span className="text-xs text-gray-400 mr-1 font-normal">#{homeSeed}</span>}
                                                     {home?.schoolName}
-                                                    {game.homeTeamId === userTeamId && <span className="ml-1 text-xs font-normal text-blue-600">(You)</span>}
+                                                    {game.homeTeamId === userTeamId && <span className="youMark ml-1">(You)</span>}
                                                 </span>
                                                 <span className="font-mono ml-2">
                                                     {game.result != null ? game.result.homeScore : '—'}

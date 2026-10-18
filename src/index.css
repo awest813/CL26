@@ -345,6 +345,7 @@ button:focus-visible {
 .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
 .w-1\/4 { width: 25%; }
 .text-2xl { font-size: 1.5rem; }
+.text-3xl { font-size: 1.875rem; line-height: 1.1; }
 .font-normal { font-weight: 400; }
 .bg-blue-50 { background-color: #eff6ff; }
 .bg-green-50 { background-color: #f0fdf4; }
@@ -503,8 +504,9 @@ button:focus-visible {
 }
 
 .playoffUserGame {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 1px #bfdbfe;
+  border-color: #7dbe96;
+  box-shadow: 0 0 0 1px #cfe8d8;
+  background: #f3faf6;
 }
 
 @media (min-width: 640px) {

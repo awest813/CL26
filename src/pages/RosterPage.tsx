@@ -67,15 +67,9 @@ function PlayerRow({
   const canDemote = isStarter;
 
   return (
-    <tr className={`border-b last:border-0 text-sm ${isStarter ? 'bg-blue-50' : ''}`}>
+    <tr className={`border-b last:border-0 text-sm ${isStarter ? 'youRow' : ''}`}>
       <td className="py-1.5 pr-2">
-        <span
-          className={`inline-block w-16 text-center text-xs font-semibold py-0.5 rounded ${
-            isStarter
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-500'
-          }`}
-        >
+        <span className={`starterBadge ${isStarter ? 'starterBadge-on' : 'starterBadge-off'}`}>
           {isStarter ? 'Starter' : 'Backup'}
         </span>
       </td>
@@ -93,11 +87,7 @@ function PlayerRow({
           <button
             type="button"
             aria-label={isStarter ? `Bench ${player.name}` : `Start ${player.name}`}
-            className={`text-xs px-2 py-0.5 rounded border cursor-pointer ${
-              isStarter
-                ? 'border-gray-300 text-gray-500 hover:bg-gray-100'
-                : 'border-blue-300 text-blue-600 hover:bg-blue-50'
-            }`}
+            className={`lineupAction ${isStarter ? 'lineupAction-bench' : ''}`}
             onClick={() => onToggle(player.id)}
           >
             {isStarter ? 'Bench' : 'Start'}
@@ -338,7 +328,7 @@ function RosterPage() {
       )}
 
       <div className="mt-2">
-        <Link to="/career" className="text-sm text-blue-600 hover:underline">← Back to Coach Office</Link>
+        <Link to="/career" className="text-sm hover:underline">Back to coach office</Link>
       </div>
     </div>
   );

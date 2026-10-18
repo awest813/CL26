@@ -49,6 +49,7 @@ function SeasonPage() {
 
   const hasValidSeed = Number.isFinite(seedInput);
   const coachReady = useAppSelector(selectIsCareerReady);
+  const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
 
   const nextStep = useMemo<NextStepAction>(() => {
     if (!hasSeason) return { label: 'Start this season to unlock the weekly loop.', link: null, cta: null };
@@ -257,7 +258,7 @@ function SeasonPage() {
         </div>
         <div className="mt-3 border-t pt-3 flex items-center justify-between gap-3">
           <div className="text-sm text-gray-600">{nextStep.label}</div>
-          {nextStep.link && nextStep.cta && (
+          {!coachReady && nextStep.link && nextStep.cta && (
             <Link to={nextStep.link} className="btn btn-primary text-sm">
               {nextStep.cta}
             </Link>
@@ -282,11 +283,20 @@ function SeasonPage() {
         </div>
 
         <div className="seasonMatchupList">
-          {filteredGames.slice(0, 10).map(({ game, result }) => {
+          {[...filteredGames]
+            .sort((a, b) => {
+              const aUser = Boolean(selectedTeamId) && (a.game.homeTeamId === selectedTeamId || a.game.awayTeamId === selectedTeamId);
+              const bUser = Boolean(selectedTeamId) && (b.game.homeTeamId === selectedTeamId || b.game.awayTeamId === selectedTeamId);
+              if (aUser === bUser) return 0;
+              return aUser ? -1 : 1;
+            })
+            .slice(0, 10)
+            .map(({ game, result }) => {
             const home = teamById.get(game.homeTeamId);
             const away = teamById.get(game.awayTeamId);
+            const isUserGame = Boolean(selectedTeamId) && (game.homeTeamId === selectedTeamId || game.awayTeamId === selectedTeamId);
             return (
-              <div key={game.id} className="seasonMatchupRow">
+              <div key={game.id} className={`seasonMatchupRow ${isUserGame ? 'seasonMatchupRow-user' : ''}`}>
                 <div className="flex-1 text-right">
                   <span className="font-semibold">{away?.schoolName}</span>
                   <span className="text-xs text-gray-500 ml-1">({away?.nickname})</span>
@@ -306,7 +316,7 @@ function SeasonPage() {
 
           {filteredGames.length > 10 && (
             <div className="seasonMatchupFooter">
-              <Link to={`/season/week/${displayWeek}`} className="text-sm text-blue-600 font-semibold block">
+              <Link to={`/season/week/${displayWeek}`} className="text-sm font-semibold block">
                 View all {filteredGames.length} games for Week {displayWeek + 1} &rarr;
               </Link>
             </div>

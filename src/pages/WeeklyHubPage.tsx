@@ -253,6 +253,74 @@ function WeeklyHubPage() {
         </p>
       </div>
 
+      <div className="card">
+        {actionError && (
+          <p className="text-sm text-red-600 mb-3" role="alert">
+            {actionError}
+          </p>
+        )}
+        <div className="weekActionBar">
+          <div>
+            <h3 className="m-0 text-base font-bold">
+              {canAdvance ? `Advance week ${currentWeekDisplay}` : 'Season locked'}
+            </h3>
+            <p className="text-sm text-gray-500 mt-0.5 mb-0">
+              {canAdvance
+                ? 'Plays every game this week, then updates recruiting and your roster.'
+                : season.phase === 'PLAYOFF'
+                  ? 'Regular season complete. Go to playoffs.'
+                  : season.phase === 'OFFSEASON'
+                    ? 'Head to the coach office to finish the offseason.'
+                    : season.phase === 'PRE'
+                      ? 'Begin the season from the season dashboard to unlock weekly advances.'
+                      : 'Season complete.'}
+            </p>
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            {canAdvance && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={advancing}
+                aria-busy={advancing}
+                onClick={async () => {
+                  if (advancing) return;
+                  setActionError(null);
+                  setAdvancing(true);
+                  try {
+                    await dispatch(runCareerWeeklyCycle()).unwrap();
+                  } catch (err) {
+                    setActionError(err instanceof Error ? err.message : String(err));
+                  } finally {
+                    setAdvancing(false);
+                  }
+                }}
+              >
+                {advancing ? 'Advancing…' : `Advance week ${currentWeekDisplay}`}
+              </button>
+            )}
+            {season.phase === 'PLAYOFF' && (
+              <Link to="/playoffs" className="btn btn-primary">
+                Go to playoffs
+              </Link>
+            )}
+            {season.phase === 'OFFSEASON' && (
+              <Link to="/career" className="btn btn-primary">
+                Coach office
+              </Link>
+            )}
+            {season.phase === 'PRE' && (
+              <Link to="/season" className="btn btn-primary">
+                Begin season
+              </Link>
+            )}
+            <Link to="/season" className="btn text-sm">
+              Season dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* ── Last game result banner ── */}
       {userLastResult && (
         <ResultBanner
@@ -332,25 +400,17 @@ function WeeklyHubPage() {
         {/* ── Practice focus ── */}
         <div className="card">
           <h3 className="m-0 mb-3 text-base font-bold">Practice Focus</h3>
-          <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="choiceGrid mb-3">
             {(Object.keys(PRACTICE_FOCUS_LABELS) as PracticeFocus[]).map((focus) => (
               <button
                 key={focus}
                 type="button"
                 aria-pressed={coach.practiceFocus === focus}
                 onClick={() => dispatch(setPracticeFocus(focus))}
-                className={`border rounded p-2 text-left text-xs transition-colors ${
-                  coach.practiceFocus === focus
-                    ? 'border-blue-500 bg-blue-50 text-blue-800'
-                    : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700'
-                }`}
+                className="choiceChip"
               >
-                <div className="font-semibold mb-0.5">
-                  {PRACTICE_FOCUS_LABELS[focus]}
-                </div>
-                <div className="text-gray-500 font-normal">
-                  {PRACTICE_FOCUS_DESCRIPTIONS[focus]}
-                </div>
+                <span className="font-semibold">{PRACTICE_FOCUS_LABELS[focus]}</span>
+                <span className="choiceChipHelp">{PRACTICE_FOCUS_DESCRIPTIONS[focus]}</span>
               </button>
             ))}
           </div>
@@ -391,8 +451,8 @@ function WeeklyHubPage() {
             ))}
           </ul>
           <div className="mt-3">
-            <Link to="/career" className="text-sm text-blue-600 hover:underline">
-              Upgrade coach skills in Career Office →
+            <Link to="/career" className="text-sm hover:underline">
+              Upgrade coach skills in the coach office
             </Link>
           </div>
         </div>
@@ -411,8 +471,8 @@ function WeeklyHubPage() {
                 </span>
               </div>
             </div>
-            <Link to="/career/recruiting" className="text-sm text-blue-600 hover:underline">
-              Full Board →
+            <Link to="/career/recruiting" className="text-sm hover:underline">
+              Full board
             </Link>
           </div>
           <div className="overflow-x-auto">
@@ -444,18 +504,14 @@ function WeeklyHubPage() {
                       </td>
                       <td className="py-1.5 pr-3">
                         <div
-                          className="w-full bg-gray-100 rounded-full h-1.5 mb-0.5"
-                          style={{ minWidth: '80px' }}
+                          className={`meter mb-0.5 ${interest >= 100 ? 'meter-full' : ''}`}
                           role="progressbar"
                           aria-valuenow={Math.min(100, interest)}
                           aria-valuemin={0}
                           aria-valuemax={100}
                           aria-label={`${recruit.name} interest`}
                         >
-                          <div
-                            className={`h-1.5 rounded-full ${interest >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                            style={{ width: `${Math.min(100, interest)}%` }}
-                          />
+                          <span style={{ width: `${Math.min(100, interest)}%` }} />
                         </div>
                         <span className="text-xs text-gray-500">{interest}%</span>
                       </td>
@@ -479,7 +535,7 @@ function WeeklyHubPage() {
                   <tr>
                     <td colSpan={3} className="py-1.5 text-xs text-gray-400 text-center">
                       +{boardRecruits.length - 8} more on board —{' '}
-                      <Link to="/career/recruiting" className="text-blue-600 hover:underline">
+                      <Link to="/career/recruiting" className="hover:underline">
                         view all
                       </Link>
                     </td>
@@ -507,74 +563,6 @@ function WeeklyHubPage() {
         </div>
       )}
 
-      {/* ── Advance Week ── */}
-      <div className="card">
-        {actionError && (
-          <p className="text-sm text-red-600 mb-3" role="alert">
-            {actionError}
-          </p>
-        )}
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="m-0 text-base font-bold">
-              {canAdvance ? `Advance Week ${currentWeekDisplay}` : 'Season Locked'}
-            </h3>
-            <p className="text-sm text-gray-500 mt-0.5 mb-0">
-              {canAdvance
-                ? 'Simulates all games and processes recruiting this week.'
-                : season.phase === 'PLAYOFF'
-                  ? 'Regular season complete. Go to playoffs.'
-                  : season.phase === 'OFFSEASON'
-                    ? 'Head to Career to finalize the offseason.'
-                    : season.phase === 'PRE'
-                      ? 'Begin the season from the Season Dashboard to unlock weekly advances.'
-                      : 'Season complete.'}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            {canAdvance && (
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={advancing}
-                aria-busy={advancing}
-                onClick={async () => {
-                  if (advancing) return;
-                  setActionError(null);
-                  setAdvancing(true);
-                  try {
-                    await dispatch(runCareerWeeklyCycle()).unwrap();
-                  } catch (err) {
-                    setActionError(err instanceof Error ? err.message : String(err));
-                  } finally {
-                    setAdvancing(false);
-                  }
-                }}
-              >
-                {advancing ? 'Advancing…' : `▶ Advance Week ${currentWeekDisplay}`}
-              </button>
-            )}
-            {season.phase === 'PLAYOFF' && (
-              <Link to="/playoffs" className="btn btn-primary">
-                Go to Playoffs →
-              </Link>
-            )}
-            {season.phase === 'OFFSEASON' && (
-              <Link to="/career" className="btn btn-primary">
-                Career Office →
-              </Link>
-            )}
-            {season.phase === 'PRE' && (
-              <Link to="/season" className="btn btn-primary">
-                Begin Season →
-              </Link>
-            )}
-            <Link to="/season" className="btn text-sm">
-              Season Dashboard
-            </Link>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

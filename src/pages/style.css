@@ -1238,9 +1238,156 @@ details[open] > summary::before {
 }
 
 .seasonMatchupRow:hover {
-  background: #f9fafb;
-  border-color: #dbeafe;
-  transform: translateY(-1px);
+  background: #f4faf6;
+  border-color: #cfe3d6;
+}
+
+.seasonMatchupRow-user {
+  border-color: #b7d7c4;
+  background: var(--accent-soft);
+}
+
+.choiceGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.choiceChip {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  color: var(--text);
+  font-size: 0.78rem;
+  box-shadow: inset 3px 0 0 transparent;
+}
+
+.choiceChipHelp {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.choiceChip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.youRow {
+  background: #eef8f2;
+}
+
+.youMark {
+  color: var(--accent-strong);
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.fieldBanner {
+  border-color: #b7d7c4;
+  background: var(--accent-soft);
+}
+
+.starterBadge {
+  display: inline-block;
+  width: 4.5rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.35rem;
+  border-radius: 999px;
+}
+
+.starterBadge-on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.starterBadge-off {
+  background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+.lineupAction {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid #b7d7c4;
+  background: #fff;
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+
+.lineupAction-bench {
+  border-color: #d5e0d8;
+  color: var(--text-muted);
+}
+
+.chipAdd {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid #b7d7c4;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+
+.chipAdd:hover {
+  background: #d7f0e2;
+}
+
+.chipAdd:disabled {
+  opacity: 0.5;
+}
+
+.meter {
+  height: 0.4rem;
+  background: #e6eee8;
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 5rem;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+}
+
+.meter-full > span {
+  background: var(--success);
+}
+
+.textButton {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--accent-strong);
+  font-size: 0.75rem;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.textButton:hover {
+  text-decoration: underline;
+  background: transparent;
+}
+
+.weekActionBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .seasonMatchupFooter {
@@ -1300,6 +1447,10 @@ details[open] > summary::before {
 }
 
 @media (max-width: 760px) {
+  .choiceGrid {
+    grid-template-columns: 1fr;
+  }
+
   .commandBoard {
     grid-template-columns: 1fr;
   }
