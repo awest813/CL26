@@ -1,13 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
-  addRecruitToBoard,
   allocateProgramResources,
-  clearRecruitPitch,
   initializeRecruitingBoard,
-  removeRecruitFromBoard,
-  setRecruitHours,
-  setRecruitPitch,
   setPracticeFocus,
   setTactics,
   upgradeCoachSkill,
@@ -15,20 +10,17 @@ import {
   declineAllJobOffers,
   selectUserEffectivePrestige,
   WEEKLY_HOURS_CAP,
-  MAX_HOURS_PER_RECRUIT,
   processSigningDay,
 } from '../features/coach/coachSlice';
 import {
-  runCareerWeeklyCycle,
   processSeasonEnd,
   initializeManagedRoster,
   beginNextCareerSeason,
 } from '../features/coach/careerThunks';
 import { selectTeamRecords } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
-import { buildPositionNeedByPosition, estimateRecruitFit, getTeamPitchGrade, isRecruitingPitch, PITCH_LABELS } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { PracticeFocus, RecruitMotivation, SeasonHistoryEntry, Tactics } from '../types/sim';
+import { PracticeFocus, SeasonHistoryEntry, Tactics } from '../types/sim';
 import { computeAllSOS, computeRankings, withProgramPrestige } from '../sim/rankings';
 import { careerOffseasonCapabilities, hasSeasonHistoryForYear } from '../sim/seasonPhase';
 
@@ -94,23 +86,6 @@ function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: 
   );
 }
 
-function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
-  const color = motivation.importance === 'HIGH' ? '#ef4444' : motivation.importance === 'MEDIUM' ? '#f59e0b' : '#9ca3af';
-  const label = PITCH_LABELS[motivation.pitch];
-  const description = `${label}, ${motivation.importance.toLowerCase()} importance`;
-  return (
-    <span
-      role="img"
-      aria-label={description}
-      title={description}
-      className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold mr-1 border bg-white cursor-help"
-      style={{ color, borderColor: color }}
-    >
-      {label.charAt(0)}
-    </span>
-  );
-}
-
 function CoachCareerPage() {
   const dispatch = useAppDispatch();
   const teams = useAppSelector((state) => state.league.teams);
@@ -121,15 +96,11 @@ function CoachCareerPage() {
   const gameResults = useAppSelector((state) => state.season.gameResults);
   const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
 
-  const [search, setSearch] = useState('');
-  const [positionFilter, setPositionFilter] = useState('ALL');
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [advancing, setAdvancing] = useState(false);
   const [jobOfferError, setJobOfferError] = useState<string | null>(null);
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
-  const teamNameById = useMemo(() => new Map(teams.map((team) => [team.id, `${team.schoolName}`])), [teams]);
   const conferenceNameById = useMemo(
     () => new Map(conferences.map((conference) => [conference.id, conference.name])),
     [conferences],
@@ -141,16 +112,6 @@ function CoachCareerPage() {
     );
   }, [coach.selectedTeamId, effectivePrestige, teams]);
 
-  const boardSet = useMemo(() => new Set(coach.boardRecruitIds), [coach.boardRecruitIds]);
-  const positionNeedByPosition = useMemo(() => buildPositionNeedByPosition(coach.managedRoster), [coach.managedRoster]);
-
-  const visibleRecruits = useMemo(() => {
-    return coach.recruitPool
-      .filter((recruit) => (positionFilter === 'ALL' ? true : recruit.position === positionFilter))
-      .filter((recruit) => recruit.name.toLowerCase().includes(search.toLowerCase()))
-      .slice(0, 50);
-  }, [coach.recruitPool, positionFilter, search]);
-
   const boardRecruits = useMemo(() => {
     return coach.boardRecruitIds
       .map((id) => coach.recruitPool.find((recruit) => recruit.id === id))
@@ -159,39 +120,6 @@ function CoachCareerPage() {
 
   const totalHours = boardRecruits.reduce((sum, recruit) => sum + (coach.weeklyHoursByRecruitId[recruit.id] ?? 0), 0);
   const hoursRemaining = WEEKLY_HOURS_CAP - totalHours;
-
-  const boardRows = useMemo(() => {
-    return [...boardRecruits]
-      .map((recruit) => {
-        const fit = selectedTeam ? estimateRecruitFit(recruit, selectedTeam) : 0;
-        const hours = coach.weeklyHoursByRecruitId[recruit.id] ?? 0;
-        const interestMap = recruit.interestByTeamId || {};
-        const interest = selectedTeam ? (interestMap[selectedTeam.id] || 0) : 0;
-        const activePitch = coach.activePitchesByRecruitId[recruit.id];
-        const pitchGrade = selectedTeam && activePitch
-          ? getTeamPitchGrade(selectedTeam, activePitch, recruit, positionNeedByPosition)
-          : '-';
-
-        const topSuitors = Object.entries(interestMap)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
-          .map(([teamId, score]) => {
-            const team = teams.find(t => t.id === teamId);
-            return { name: team?.schoolName || 'Unknown', score };
-          });
-
-        let dealbreakerWarning = false;
-        if (selectedTeam && recruit.dealbreaker) {
-          const dbGrade = getTeamPitchGrade(selectedTeam, recruit.dealbreaker, recruit, positionNeedByPosition);
-          if (dbGrade === 'D' || dbGrade === 'F') {
-            dealbreakerWarning = true;
-          }
-        }
-
-        return { recruit, fit, hours, interest, activePitch, pitchGrade, dealbreakerWarning, topSuitors };
-      })
-      .sort((a, b) => b.interest - a.interest);
-  }, [boardRecruits, coach.weeklyHoursByRecruitId, coach.activePitchesByRecruitId, selectedTeam, teams, positionNeedByPosition]);
 
   const committedToUserCount = coach.recruitPool.filter(
     (recruit) => recruit.committedTeamId && recruit.committedTeamId === coach.selectedTeamId
@@ -274,44 +202,6 @@ function CoachCareerPage() {
   const skillTree = coach.skillTree ?? { recruiting: 0, development: 0, operations: 0 };
   const programResources = coach.programResources ?? { nil: 50, boosters: 50, facilities: 50 };
   const pressureState = adPressureLabel(adPressure);
-
-  function onAdd(recruit: typeof visibleRecruits[0]) {
-    if (selectedTeam) {
-      const fit = estimateRecruitFit(recruit, selectedTeam);
-      const startingInterest = Math.min(40, Math.round(fit * 0.4 + recruit.stars * 2));
-      dispatch(addRecruitToBoard({ recruitId: recruit.id, startingInterest }));
-    }
-  }
-
-  async function onAdvance() {
-    if (advancing) return;
-    setActionError(null);
-    setAdvancing(true);
-    try {
-      await dispatch(runCareerWeeklyCycle()).unwrap();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setAdvancing(false);
-    }
-  }
-
-  function onPitchChange(recruitId: string, nextPitch: string) {
-    if (!nextPitch) {
-      dispatch(clearRecruitPitch(recruitId));
-      return;
-    }
-    if (!isRecruitingPitch(nextPitch)) return;
-    dispatch(setRecruitPitch({ recruitId, pitch: nextPitch }));
-  }
-
-  function onHoursChange(recruitId: string, nextHours: number): void {
-    const current = coach.weeklyHoursByRecruitId[recruitId] ?? 0;
-    const requested = Math.max(0, Math.min(MAX_HOURS_PER_RECRUIT, nextHours));
-    const withoutCurrent = totalHours - current;
-    const allowed = Math.min(MAX_HOURS_PER_RECRUIT, Math.max(0, WEEKLY_HOURS_CAP - withoutCurrent));
-    dispatch(setRecruitHours({ recruitId, hours: Math.min(requested, allowed) }));
-  }
 
   function onResourceChange(resource: 'nil' | 'boosters' | 'facilities', value: number): void {
     dispatch(
@@ -639,7 +529,7 @@ function CoachCareerPage() {
           <div className="text-right text-xs text-gray-500">
             <div>Coach Level {coachLevel}</div>
             <div>XP {coachXp}/100</div>
-            <div className="font-semibold text-blue-700">Skill Points: {coachSkillPoints}</div>
+            <div className="font-semibold youMark">Skill points: {coachSkillPoints}</div>
           </div>
         </div>
 
@@ -656,6 +546,7 @@ function CoachCareerPage() {
               </div>
               <div className="text-xs text-gray-500 mb-2">{hint}</div>
               <button
+                type="button"
                 className="btn btn-primary text-xs"
                 disabled={coachSkillPoints <= 0 || skillTree[key] >= 5}
                 onClick={() => dispatch(upgradeCoachSkill(key))}
@@ -700,7 +591,7 @@ function CoachCareerPage() {
 
       {/* ── Offseason Panel ── */}
       {isOffseason && (
-        <div className="card" style={{ borderLeft: '4px solid #3b82f6' }}>
+        <div className="card noticeCard">
           <h3 className="text-base font-bold mb-1">Offseason</h3>
           <div className="flex gap-6 mb-4">
             <div>
@@ -733,7 +624,7 @@ function CoachCareerPage() {
                   </p>
                   {jobOfferError && <p className="text-xs text-red-600 mt-2 mb-0">{jobOfferError}</p>}
                 </div>
-                <button className="btn text-xs" onClick={() => dispatch(declineAllJobOffers())}>
+                <button type="button" className="btn text-xs" onClick={() => dispatch(declineAllJobOffers())}>
                   Decline All (+3 security)
                 </button>
               </div>
@@ -757,6 +648,7 @@ function CoachCareerPage() {
                         </span>
                       </div>
                       <button
+                        type="button"
                         className="btn btn-primary text-xs mt-3"
                         onClick={() => void onAcceptOffer(offer.teamId)}
                       >
@@ -857,6 +749,7 @@ function CoachCareerPage() {
                     aria-label="Recruiting seed"
                   />
                   <button
+                    type="button"
                     className="btn btn-primary text-sm"
                     onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams: effectiveRecruitingTeams }))}
                   >
@@ -865,22 +758,21 @@ function CoachCareerPage() {
                 </div>
               ) : (
                 <div className="flex flex-col items-end gap-1">
-                  {canAdvanceWeeklyCycle ? (
-                    <button type="button" className="btn btn-primary" onClick={onAdvance} disabled={advancing} aria-busy={advancing}>
-                      {advancing ? 'Advancing…' : `Advance Week ${coach.recruitingWeekIndex + 1}`}
-                    </button>
-                  ) : null}
-                  {coach.boardRecruitIds.length === 0 && canAdvanceWeeklyCycle && (
-                    <div className="text-xs text-amber-700">No active targets: season advances with CPU recruiting only.</div>
+                  <Link to="/career/recruiting" className="btn btn-primary text-sm">
+                    Open recruiting board
+                  </Link>
+                  {canAdvanceWeeklyCycle && (
+                    <Link to="/career/week" className="text-xs">
+                      Advance week {season.currentWeekIndex + 1} from the weekly hub
+                    </Link>
                   )}
                   {season.phase === 'PRE' && (
                     <div className="text-xs text-gray-500">
-                      Preseason: begin the season from the Season Dashboard to open recruiting and the weekly cycle.
-                      You can still build a prospect board now — hours advance once the season starts.
+                      Begin the season to advance hours. You can still build the board now.
                     </div>
                   )}
                   {season.phase === 'PLAYOFF' && (
-                    <div className="text-xs text-gray-500">Weekly cycle is locked during playoffs.</div>
+                    <div className="text-xs text-gray-500">The weekly cycle is locked during the playoffs.</div>
                   )}
                 </div>
               )}
@@ -889,217 +781,6 @@ function CoachCareerPage() {
         </div>
       </div>
 
-      <div className="grid2">
-        <div className="card">
-          <h3 className="text-lg font-bold mb-2">Target List ({boardRows.length}/25)</h3>
-
-          {boardRows.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded">
-              <p>Your board is empty.</p>
-              <p className="text-sm">Add prospects from the pool on the right.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 border-b">
-                    <th scope="col" className="pb-2">Recruit</th>
-                    <th scope="col" className="pb-2">Competition</th>
-                    <th scope="col" className="pb-2">Pitch/Grade</th>
-                    <th scope="col" className="pb-2 w-24">Interest</th>
-                    <th scope="col" className="pb-2 text-right">Hours</th>
-                    <th scope="col" className="pb-2"><span className="sr-only">Remove</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {boardRows.map(({ recruit, interest, activePitch, pitchGrade, dealbreakerWarning, topSuitors }) => (
-                    <tr key={recruit.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-2">
-                        <div className="font-semibold flex items-center gap-1">
-                          {recruit.name}
-                          {dealbreakerWarning && (
-                            <span role="img" aria-label="Dealbreaker warning" title="Dealbreaker warning" className="text-red-500 cursor-help">⚠</span>
-                          )}
-                          {recruit.committedTeamId === coach.selectedTeamId && (
-                            <span className="text-xs text-green-600 font-bold ml-1">✓ Committed</span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {'★'.repeat(recruit.stars)} {recruit.position}
-                          <div className="flex mt-1">
-                            {recruit.motivations?.map((m, i) => <MotivationIcon key={i} motivation={m} />)}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-2">
-                        <div className="text-xs">
-                          {topSuitors.map((s, i) => (
-                            <div key={i} className={`flex justify-between ${s.name === selectedTeam?.schoolName ? 'font-bold text-blue-700' : 'text-gray-600'}`}>
-                              <span className="truncate max-w-[100px]" title={s.name}>{s.name}</span>
-                              <span>{s.score}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-2">
-                        <select
-                          value={activePitch || ''}
-                          aria-label={`Recruiting pitch for ${recruit.name}`}
-                          onChange={(e) => onPitchChange(recruit.id, e.target.value)}
-                          className="text-xs p-1 border rounded w-full mb-1"
-                        >
-                          <option value="">No Pitch</option>
-                          {Object.entries(PITCH_LABELS).map(([key, label]) => (
-                            <option key={key} value={key}>{label}</option>
-                          ))}
-                        </select>
-                        {activePitch && (
-                          <div className={`text-xs font-bold text-center ${pitchGrade.startsWith('A') ? 'text-green-600' : pitchGrade === 'F' ? 'text-red-600' : 'text-gray-600'}`}>
-                            Grade: {pitchGrade}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-2">
-                        <div
-                          className="w-full bg-gray-200 rounded-full h-2 mb-1"
-                          role="progressbar"
-                          aria-valuenow={Math.min(100, interest)}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-label={`${recruit.name} interest`}
-                        >
-                          <div className={`h-2 rounded-full ${interest >= 100 ? 'bg-green-500' : 'bg-blue-600'}`} style={{ width: `${Math.min(100, interest)}%` }} />
-                        </div>
-                        <div className="text-xs font-bold text-center">{interest}%</div>
-                      </td>
-                      <td className="py-2 text-right">
-                        <input
-                          type="number"
-                          min={0}
-                          max={MAX_HOURS_PER_RECRUIT}
-                          value={coach.weeklyHoursByRecruitId[recruit.id] ?? 0}
-                          onChange={(event) => onHoursChange(recruit.id, Number(event.target.value) || 0)}
-                          className="w-12 p-1 border rounded text-center"
-                          aria-label={`Recruiting hours for ${recruit.name}`}
-                        />
-                      </td>
-                      <td className="py-2 pl-2">
-                        <button
-                          type="button"
-                          className="text-xs text-red-500 hover:underline bg-transparent border-0 cursor-pointer"
-                          aria-label={`Remove ${recruit.name} from board`}
-                          onClick={() => dispatch(removeRecruitFromBoard(recruit.id))}
-                        >
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        <div className="card">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-bold m-0">Prospect Pool</h3>
-            <button
-              className="textButton"
-              onClick={() => { setSearch(''); setPositionFilter('ALL'); }}
-            >
-              Reset Filters
-            </button>
-          </div>
-
-          <div className="flex gap-2 mb-4">
-            <label className="flex-1 text-sm">
-              Search
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name…"
-                className="block w-full p-1 text-sm border rounded mt-0.5"
-              />
-            </label>
-            <label className="text-sm">
-              Position
-            <select
-              value={positionFilter}
-              onChange={(e) => setPositionFilter(e.target.value)}
-              className="block w-20 p-1 text-sm border rounded mt-0.5"
-            >
-              <option value="ALL">All</option>
-              <option value="A">A</option>
-              <option value="M">M</option>
-              <option value="D">D</option>
-              <option value="LSM">LSM</option>
-              <option value="FO">FO</option>
-              <option value="G">G</option>
-            </select>
-            </label>
-          </div>
-
-          <div className="overflow-y-auto" style={{ maxHeight: '600px' }}>
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr className="text-left text-gray-500">
-                  <th scope="col" className="p-2">Name</th>
-                  <th scope="col" className="p-2">Rtg</th>
-                  <th scope="col" className="p-2">Fit</th>
-                  <th scope="col" className="p-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRecruits.map((recruit) => {
-                  const isCommittedElsewhere = Boolean(recruit.committedTeamId && recruit.committedTeamId !== coach.selectedTeamId);
-                  const isCommittedToMe = recruit.committedTeamId === coach.selectedTeamId;
-                  const onBoard = boardSet.has(recruit.id);
-                  const fit = selectedTeam ? estimateRecruitFit(recruit, selectedTeam) : '-';
-
-                  return (
-                    <tr key={recruit.id} className={`border-b hover:bg-gray-50 ${isCommittedToMe ? 'bg-green-50' : ''}`}>
-                      <td className="p-2">
-                        <div className="font-semibold">{recruit.name}</div>
-                        <div className="text-xs text-gray-500">{recruit.position} &bull; {recruit.region}</div>
-                        {isCommittedElsewhere && <div className="text-xs text-red-500">Committed: {teamNameById.get(recruit.committedTeamId!) || 'Other'}</div>}
-                        {isCommittedToMe && <div className="text-xs text-green-600 font-bold">Committed!</div>}
-                      </td>
-                      <td className="p-2 text-yellow-500 text-xs">{'★'.repeat(recruit.stars)}</td>
-                      <td className="p-2 font-mono">{fit}</td>
-                      <td className="p-2 text-right">
-                        {onBoard ? (
-                          <button
-                            className="text-xs text-red-600 hover:underline bg-transparent border-0 cursor-pointer"
-                            onClick={() => dispatch(removeRecruitFromBoard(recruit.id))}
-                          >
-                            Remove
-                          </button>
-                        ) : (
-                          !isCommittedElsewhere && !isCommittedToMe && (
-                            <button
-                              className="chipAdd"
-                              onClick={() => onAdd(recruit)}
-                              disabled={boardSet.size >= 25}
-                            >
-                              Add
-                            </button>
-                          )
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {visibleRecruits.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="p-4 text-center text-gray-500">No recruits found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

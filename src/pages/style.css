@@ -1382,6 +1382,10 @@ details[open] > summary::before {
   background: transparent;
 }
 
+.noticeCard {
+  border-left: 4px solid var(--accent);
+}
+
 .weekActionBar {
   display: flex;
   justify-content: space-between;
