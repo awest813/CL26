@@ -8,16 +8,20 @@
 }
 
 .dynastyHeader {
-  background: linear-gradient(145deg, #0f172a, #1e293b);
-  color: #e2e8f0;
-  border: 1px solid #1f2937;
-  border-radius: 14px;
-  padding: 1rem 1.25rem;
+  background: var(--ink, #102018);
+  color: #e7f0ea;
+  border: 1px solid #1c3326;
+  border-radius: 16px;
+  padding: 0.7rem 0.85rem 0.7rem 0.95rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  gap: 0.85rem;
   flex-wrap: wrap;
+  position: sticky;
+  top: 0.35rem;
+  z-index: 40;
+  box-shadow: 0 12px 32px rgba(16, 32, 24, 0.18);
 }
 
 .dynastyBrandLockup {
@@ -26,21 +30,33 @@
   gap: 0.85rem;
 }
 
+.dynastyBrandLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dynastyBrandLink:hover {
+  color: #fff;
+}
+
 .lacrosseLogoMark {
-  width: 48px;
-  height: 48px;
-  border-radius: 15px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
   background:
-    radial-gradient(circle at 72% 26%, rgba(255, 255, 255, 0.95) 0 7%, transparent 8%),
-    linear-gradient(135deg, #1d4ed8, #16a34a);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 10px 28px rgba(22, 163, 74, 0.28);
+    radial-gradient(circle at 72% 22%, rgba(255, 255, 255, 0.9) 0 6%, transparent 7%),
+    linear-gradient(160deg, #1f8a4c, #0b3d24);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   color: #fff;
-  font-weight: 900;
-  letter-spacing: -0.08em;
+  font-weight: 800;
+  letter-spacing: -0.06em;
 }
 
 .lacrosseLogoMark span {
@@ -57,9 +73,10 @@
 }
 
 .dynastyTitle {
-  margin: 0.25rem 0 0;
-  font-size: 1.55rem;
-  color: #f8fafc;
+  margin: 0;
+  font-size: 1.2rem;
+  color: #f7fbf8;
+  line-height: 1.1;
 }
 
 .dynastyHeaderMeta {
@@ -69,15 +86,29 @@
   flex-wrap: wrap;
 }
 
-.dynastyMetaCard {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid #334155;
-  border-radius: 10px;
-  padding: 0.55rem 0.7rem;
-  min-width: 130px;
+.dynastyMetaCard,
+.dynastyProgramChip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.4rem 0.7rem;
+  min-width: 9.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.05rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dynastyProgramChip:hover {
+  border-color: rgba(134, 239, 172, 0.45);
+  color: #fff;
+}
+
+.dynastyProgramChip strong,
+.dynastyMetaCard strong {
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
 }
 
 .dynastyMetaLabel {
@@ -93,13 +124,21 @@
 
 .dynastyActionBtn {
   align-self: center;
-  background: #16a34a;
-  border-color: #15803d;
+  min-height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dynastyHeader .menuToggleButton {
+  display: none;
+  background: transparent;
+  color: #f4faf6;
+  border-color: rgba(255, 255, 255, 0.16);
+  padding: 0.4rem;
 }
 
 .menuBarMobile {
   display: none;
-  margin-bottom: 0.75rem;
 }
 
 .menuToggleButton {
@@ -125,9 +164,10 @@
 
 .layoutBody {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 250px;
+  grid-template-columns: 248px minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
+  margin-top: 1rem;
 }
 
 .childBody {
@@ -144,18 +184,22 @@
 }
 
 .dynastySideNav {
-  background: #111827;
-  border: 1px solid #1f2937;
-  color: #e5e7eb;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
   position: sticky;
-  top: 0.75rem;
+  top: 5.4rem;
+  max-height: calc(100vh - 6.2rem);
+  overflow: auto;
+  box-shadow: var(--shadow-sm);
 }
 
 .dynastyCoachCard {
-  border: 1px solid #334155;
-  border-radius: 10px;
-  background: #0b1220;
-  padding: 0.75rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ink, #102018);
+  color: #f4faf6;
+  padding: 0.8rem 0.85rem;
 }
 
 .dynastyCoachCard h3 {
@@ -164,7 +208,21 @@
 
 .dynastyCoachCard p {
   margin: 0;
-  color: #94a3b8;
+  color: #c5d5cb;
+  font-size: 0.82rem;
+}
+
+.navProfileLink {
+  display: inline-block;
+  margin-top: 0.45rem;
+  color: #b7f0cc;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.navProfileLink:hover {
+  color: #fff;
 }
 
 .dynastyCoachLabel {
@@ -176,32 +234,32 @@
 .navSection {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.15rem;
 }
 
 .dynastyNavSection + .dynastyNavSection {
-  border-top: 1px solid #1f2937;
+  border-top: 1px solid var(--border);
   padding-top: 0.65rem;
 }
 
 .navSectionTitle {
   margin: 0;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #94a3b8;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
   font-weight: 700;
 }
 
 .leftNav .navLink {
-  color: #e2e8f0;
+  color: var(--text);
   text-decoration: none;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 0.45rem 0.55rem;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.42rem 0.7rem;
   display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  align-items: center;
+  box-shadow: inset 3px 0 0 transparent;
 }
 
 .navLinkTitle {
@@ -209,23 +267,22 @@
 }
 
 .navLinkHint {
-  color: #94a3b8;
-  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
 }
 
 .leftNav .navLink:hover {
-  background-color: #1f2937;
-  border-color: #334155;
+  background-color: var(--surface-soft);
 }
 
 .leftNav .navLink-active {
-  background: #1d4ed8;
-  border-color: #2563eb;
-  color: #eff6ff;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .leftNav .navLink-active .navLinkHint {
-  color: #dbeafe;
+  color: #3f6b52;
 }
 
 .dynastyRightRail {
@@ -278,17 +335,6 @@
   border-color: #cbd5e1;
 }
 
-@media (max-width: 1200px) {
-  .layoutBody {
-    grid-template-columns: 250px minmax(0, 1fr);
-  }
-
-  .dynastyRightRail {
-    grid-column: span 2;
-    position: static;
-  }
-}
-
 @media (max-width: 980px) {
   .layout.layout-menuOpen {
     overflow: hidden;
@@ -298,83 +344,85 @@
     grid-template-columns: 1fr;
   }
 
-  .menuBarMobile {
-    display: block;
-    position: sticky;
-    top: 0.5rem;
-    z-index: 20;
+  .dynastyHeader .menuToggleButton {
+    display: inline-flex;
   }
 
   .leftNav {
     display: none;
     position: static;
-    margin-bottom: 0.75rem;
-    border-width: 1px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.35);
+    max-height: none;
+    margin-bottom: 0.25rem;
+    box-shadow: var(--shadow-md);
   }
 
   .leftNav.leftNav-open {
     display: flex;
   }
 
-  .rightNav {
-    position: static;
-  }
-
   .dynastyHeader {
-    flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
   }
 
-  .dynastyRightRail {
-    order: -1;
+  .dynastyHeaderMeta {
+    width: 100%;
+  }
+
+  .dynastyProgramChip,
+  .dynastyMetaCard {
+    flex: 1 1 8rem;
   }
 }
 
 .conferenceCard,
 .card {
-  border: 1px solid var(--border, #cbd5e1);
-  border-radius: var(--radius-md, 12px);
-  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.05rem;
   margin-bottom: 1rem;
   text-align: left;
-  background: var(--bg-elevated, #fff);
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
-  transition: box-shadow var(--transition-ui, 0.2s ease), transform var(--transition-fast, 0.15s ease),
-    border-color var(--transition-ui, 0.2s ease);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
 }
 
-.card:hover {
-  border-color: #bfdbfe;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-  transform: translateY(-1px);
+.pageStack > .card,
+.pageStack > section.card {
+  margin-bottom: 0;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
+  font-variant-numeric: tabular-nums;
 }
 
 th,
 td {
-  border: 1px solid #e5e5e5;
-  padding: 0.35rem 0.5rem;
+  border: 0;
+  border-bottom: 1px solid #e4ece7;
+  padding: 0.55rem 0.65rem;
   text-align: left;
+  vertical-align: middle;
 }
 
 thead th {
-  background: #f1f5f9;
-  font-size: 0.78rem;
+  background: #f4f7f4;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #475569;
-  border-bottom: 2px solid #cbd5e1;
+  letter-spacing: 0.06em;
+  color: #526158;
+  border-bottom: 1px solid #d5e0d8;
 }
 
 tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: #f3faf5;
+}
+
+caption {
+  caption-side: bottom;
+  padding-top: 0.45rem;
 }
 
 .footer {
@@ -641,15 +689,99 @@ tbody tr:hover {
   box-shadow: var(--shadow-md, 0 12px 32px rgba(15, 23, 42, 0.08));
 }
 
+.commandBoard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(16rem, 0.9fr);
+  gap: 1rem 1.5rem;
+  padding: 1.15rem 1.2rem 1.2rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid #d7e4db;
+  background:
+    linear-gradient(180deg, rgba(14, 107, 60, 0.06), transparent 42%),
+    var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+}
+
+.commandBoardCopy {
+  grid-column: 1;
+}
+
+.commandEyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.commandBoard h2 {
+  margin: 0.25rem 0 0;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  line-height: 1.05;
+}
+
+.commandLede {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted);
+}
+
+.commandStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.commandStats div {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.55rem 0.7rem;
+}
+
+.commandStats dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.commandStats dd {
+  margin: 0.1rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.commandActions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.newGameCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: transparent;
+  box-shadow: none;
+}
+
 .home-hero {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-lg, 16px);
   padding: clamp(1.25rem, 4vw, 2rem);
-  border: 1px solid rgba(29, 78, 216, 0.22);
-  background: linear-gradient(125deg, #0f172a 0%, #1e3a5f 42%, #0f172a 100%);
-  color: #e2e8f0;
-  box-shadow: var(--shadow-md, 0 12px 32px rgba(15, 23, 42, 0.12));
+  border: 1px solid #1c3326;
+  background: linear-gradient(145deg, #102018 0%, #1a3a28 55%, #102018 100%);
+  color: #e7f0ea;
+  box-shadow: var(--shadow-md);
 }
 
 .home-hero::after {
@@ -800,11 +932,21 @@ input {
   transition: border-color var(--transition-ui, 0.2s ease), box-shadow var(--transition-fast, 0.15s ease);
 }
 
+select,
+input,
+textarea {
+  font: inherit;
+  color: var(--text);
+  width: 100%;
+  box-sizing: border-box;
+}
+
 select:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible {
   outline: none;
-  border-color: var(--accent, #2563eb);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(14, 107, 60, 0.18);
 }
 
 .seedRow {
@@ -816,27 +958,29 @@ input:focus-visible {
 
 /* Utility Classes Added for Polish */
 .btn {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  padding: 0.5rem 0.95rem;
+  border-radius: 10px;
+  border: 1px solid #c9d5cc;
   cursor: pointer;
   text-decoration: none;
-  display: inline-block;
-  background-color: #f3f4f6;
-  color: #1f2937;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff;
+  color: var(--text);
   font-size: 0.9rem;
   font-family: var(--font-display, system-ui);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
-  transition: transform var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease),
-    opacity var(--transition-fast, 0.15s ease), border-color var(--transition-ui, 0.2s ease),
-    background-color var(--transition-ui, 0.2s ease);
+  line-height: 1.2;
+  transition: background-color var(--transition-ui, 0.2s ease), border-color var(--transition-ui, 0.2s ease),
+    color var(--transition-ui, 0.2s ease);
 }
 
 .btn-primary {
-  background-color: #3b82f6;
+  background-color: var(--accent);
   color: white;
-  border-color: #2563eb;
+  border-color: var(--accent-strong);
 }
 
 .btn-danger {
@@ -850,15 +994,23 @@ input:focus-visible {
   border-color: #f87171;
 }
 
-.btn:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
+.btn:hover:not(.btn-primary):not(.btn-danger) {
+  background-color: var(--accent-soft);
+  border-color: #b7d7c4;
+  color: var(--text);
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #fff;
 }
 
 .btn:focus-visible,
 .leftNav .navLink:focus-visible,
-.link-card:focus-visible {
-  outline: 3px solid #93c5fd;
+.link-card:focus-visible,
+.dynastyProgramChip:focus-visible {
+  outline: 3px solid #8dcfab;
   outline-offset: 2px;
 }
 
@@ -912,20 +1064,21 @@ input:focus-visible {
 }
 
 .link-card {
-  border: 1px solid #e5e7eb;
-  padding: 1rem;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
   text-decoration: none;
   color: inherit;
-  transition: background-color var(--transition-ui, 0.2s ease), box-shadow var(--transition-fast, 0.15s ease),
-    transform var(--transition-fast, 0.15s ease), border-color var(--transition-ui, 0.2s ease);
+  background: #fff;
+  box-shadow: inset 0 0 0 0 var(--accent);
+  transition: border-color var(--transition-ui, 0.2s ease), background-color var(--transition-ui, 0.2s ease);
 }
 
 .link-card:hover {
-  background-color: #f9fafb;
-  border-color: #bfdbfe;
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
-  transform: translateY(-1px);
+  background-color: #f4fbf6;
+  border-color: #9dccb0;
+  color: inherit;
+  transform: none;
 }
 
 .link-card-meta {
@@ -1040,7 +1193,7 @@ details[open] > summary::before {
 .seasonInlineLink {
   border: 0;
   background: transparent;
-  color: #2563eb;
+  color: var(--accent-strong);
   font-size: 0.875rem;
   font-weight: 600;
   padding: 0;
@@ -1147,6 +1300,14 @@ details[open] > summary::before {
 }
 
 @media (max-width: 760px) {
+  .commandBoard {
+    grid-template-columns: 1fr;
+  }
+
+  .commandActions .btn {
+    flex: 1 1 100%;
+  }
+
   .leagueOverviewStats {
     grid-template-columns: 1fr;
   }

@@ -1,5 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAppSelector } from '../../store/hooks';
+import { selectIsCareerReady } from '../../features/coach/coachSlice';
 
 type LeftNavBarProps = {
   isMenuOpen: boolean;
@@ -11,6 +12,7 @@ type NavItem = {
   label: string;
   hint: string;
   end?: boolean;
+  prefix?: string;
 };
 
 function latestResultsWeek(phase: string, currentWeekIndex: number, scheduleLength: number): number {
@@ -22,47 +24,47 @@ function latestResultsWeek(phase: string, currentWeekIndex: number, scheduleLeng
 }
 
 function LeftNavBar({ isMenuOpen, onNavigate }: LeftNavBarProps) {
+  const location = useLocation();
   const currentWeekIndex = useAppSelector((state) => state.season.currentWeekIndex);
   const scheduleLength = useAppSelector((state) => state.season.scheduleByWeek.length);
   const phase = useAppSelector((state) => state.season.phase);
+  const careerReady = useAppSelector(selectIsCareerReady);
   const resultsWeek = latestResultsWeek(phase, currentWeekIndex, scheduleLength);
 
   const navSections: Array<{ title: string; items: NavItem[] }> = [
     {
-      title: 'Coach Central',
+      title: 'Program',
       items: [
-        { to: '/', label: 'Overview', hint: 'Program home', end: true },
-        { to: '/career/week', label: 'Weekly Hub', hint: 'Decisions & matchup' },
-        { to: '/career', label: 'Coach Office', hint: 'Career dashboard' },
-        { to: '/career/recruiting', label: 'Recruiting Board', hint: 'Prospects & targets' },
-        { to: '/career/roster', label: 'Roster', hint: 'Depth chart & players' },
-        { to: '/career/setup', label: 'Career Setup', hint: 'Profile and program' },
+        { to: '/', label: 'Overview', hint: 'Where the save stands', end: true },
+        { to: '/career/week', label: 'Weekly Hub', hint: 'Practice, tactics, sim' },
+        { to: '/career', label: 'Coach Office', hint: 'Job, recruiting, offseason', end: true },
+        { to: '/career/recruiting', label: 'Recruiting', hint: 'Board and pitches' },
+        { to: '/career/roster', label: 'Roster', hint: 'Depth chart' },
       ],
     },
     {
-      title: 'Season Hub',
+      title: 'Season',
       items: [
-        { to: '/season', label: 'Season Dashboard', hint: 'Schedule + controls' },
+        { to: '/season', label: 'Dashboard', hint: 'Schedule and controls', end: true },
         {
           to: `/season/week/${resultsWeek}`,
-          label: 'Week Results',
-          hint: scheduleLength > 0 ? `Week ${resultsWeek + 1} scores` : 'Scores & box scores',
+          label: 'Results',
+          hint: scheduleLength > 0 ? `Week ${resultsWeek + 1}` : 'Scores',
+          prefix: '/season/week',
         },
         { to: '/season/standings', label: 'Standings', hint: 'Conference race' },
-        { to: '/rankings', label: 'Top 25 Poll', hint: 'Poll + 12-team field' },
-        { to: '/playoffs', label: 'Playoff Bracket', hint: 'Lacrosse championship' },
+        { to: '/rankings', label: 'Poll', hint: 'Top 25 and field' },
+        { to: '/playoffs', label: 'Playoffs', hint: '12-team bracket' },
       ],
     },
     {
-      title: 'Scouting & League',
+      title: 'League',
       items: [
-        { to: '/conferences', label: 'Conference Browser', hint: 'All 128 teams' },
-        { to: '/exhibition', label: 'Exhibition Lab', hint: 'Single game sandbox' },
+        { to: '/conferences', label: 'Conferences', hint: '128 programs' },
+        { to: '/exhibition', label: 'Exhibition', hint: 'One-game sandbox' },
       ],
     },
   ];
-  const navClassName = ({ isActive }: { isActive: boolean }) =>
-    isActive ? 'navLink navLink-active' : 'navLink';
 
   const coachProfile = useAppSelector((state) => state.coach.profile);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
@@ -73,8 +75,11 @@ function LeftNavBar({ isMenuOpen, onNavigate }: LeftNavBarProps) {
     <nav className={`leftNav dynastySideNav ${isMenuOpen ? 'leftNav-open' : ''}`} aria-label="Primary">
       <div className="dynastyCoachCard">
         <p className="dynastyCoachLabel">Head Coach</p>
-        <h3>{coachProfile?.name ?? 'Create your coach'}</h3>
+        <h3>{coachProfile?.name ?? 'No coach yet'}</h3>
         <p>{selectedTeam ? `${selectedTeam.schoolName} ${selectedTeam.nickname}` : 'No program selected'}</p>
+        <NavLink to="/career/setup" className="navProfileLink" onClick={onNavigate}>
+          {careerReady ? 'Edit profile' : 'Set up career'}
+        </NavLink>
       </div>
 
       {navSections.map((section) => (
@@ -82,14 +87,17 @@ function LeftNavBar({ isMenuOpen, onNavigate }: LeftNavBarProps) {
           <p className="navSectionTitle">{section.title}</p>
           {section.items.map((item) => (
             <NavLink
-              key={item.to}
+              key={item.label}
               to={item.to}
               end={item.end}
-              className={navClassName}
+              className={({ isActive }) => {
+                const prefixActive = item.prefix ? location.pathname.startsWith(item.prefix) : false;
+                return isActive || prefixActive ? 'navLink navLink-active' : 'navLink';
+              }}
               onClick={onNavigate}
             >
               <span className="navLinkTitle">{item.label}</span>
-              <small className="navLinkHint">{item.hint}</small>
+              <span className="sr-only">{item.hint}</span>
             </NavLink>
           ))}
         </div>

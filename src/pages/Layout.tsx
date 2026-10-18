@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { IconClose, IconMenu, IconWarning } from '../components/UiIcons';
+import { IconWarning } from '../components/UiIcons';
 import Footer from './Layout/Footer';
 import Header from './Layout/Header';
 import LeftNavBar from './Layout/LeftNavBar';
-import RightNavBar from './Layout/RightNavBar';
 import { useSeasonSanityCheck } from '../hooks/useSeasonSanityCheck';
 import './style.css';
 
@@ -31,7 +30,7 @@ function Layout() {
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
-      <Header />
+      <Header menuOpen={isMenuOpen} onToggleMenu={() => setIsMenuOpen((current) => !current)} />
       {!isValid && (
         <div className="statusBanner statusBanner-warning" role="status" aria-live="polite">
           <span className="statusBanner-icon" aria-hidden>
@@ -42,25 +41,6 @@ function Layout() {
           </span>
         </div>
       )}
-      <div className="menuBarMobile">
-        <button
-          type="button"
-          className="menuToggleButton"
-          onClick={() => setIsMenuOpen((current) => !current)}
-          aria-expanded={isMenuOpen}
-          aria-controls="app-primary-menu"
-        >
-          {isMenuOpen ? (
-            <>
-              <IconClose className="menuToggleIcon" /> Close menu
-            </>
-          ) : (
-            <>
-              <IconMenu className="menuToggleIcon" /> Menu
-            </>
-          )}
-        </button>
-      </div>
       <div className="layoutBody">
         <div id="app-primary-menu">
           <LeftNavBar isMenuOpen={isMenuOpen} onNavigate={() => setIsMenuOpen(false)} />
@@ -69,7 +49,6 @@ function Layout() {
           <Outlet />
           <Footer />
         </main>
-        <RightNavBar />
       </div>
     </div>
   );

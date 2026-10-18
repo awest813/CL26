@@ -1,7 +1,7 @@
 #root {
-  max-width: min(1480px, 100%);
+  max-width: min(1280px, 100%);
   margin: 0 auto;
-  padding: clamp(0.75rem, 2vw, 1.25rem);
+  padding: clamp(0.65rem, 1.6vw, 1rem);
   min-height: 100vh;
   box-sizing: border-box;
   text-align: left;

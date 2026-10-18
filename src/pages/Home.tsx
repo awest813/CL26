@@ -1,9 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { resetCoach, selectIsCareerReady } from '../features/coach/coachSlice';
-import { resetSeason } from '../features/season/seasonSlice';
+import { resetSeason, selectTeamRecords, selectTop12Projection, selectUserConferenceStanding } from '../features/season/seasonSlice';
 import { persistor } from '../store/persistor';
-import { seasonPhaseHomeStatus } from '../lib/seasonLabels';
+import { seasonPhaseHomeStatus, seasonPhaseLabel } from '../lib/seasonLabels';
 
 type DashboardAction = {
   label: string;
@@ -11,28 +12,55 @@ type DashboardAction = {
   primary: boolean;
 };
 
+function ordinal(n: number): string {
+  const mod = n % 100;
+  if (mod >= 11 && mod <= 13) return `${n}th`;
+  if (n % 10 === 1) return `${n}st`;
+  if (n % 10 === 2) return `${n}nd`;
+  if (n % 10 === 3) return `${n}rd`;
+  return `${n}th`;
+}
+
 function Home() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const season = useAppSelector(state => state.season);
+  const season = useAppSelector((state) => state.season);
   const careerReady = useAppSelector(selectIsCareerReady);
+  const coach = useAppSelector((state) => state.coach);
+  const teams = useAppSelector((state) => state.league.teams);
+  const conferences = useAppSelector((state) => state.league.conferences);
+  const records = useAppSelector(selectTeamRecords);
+  const top12 = useAppSelector(selectTop12Projection);
+  const confStanding = useAppSelector(selectUserConferenceStanding);
   const { year, phase, currentWeekIndex, seasonSeed } = season;
   const seasonStarted = phase !== 'PRE';
 
+  const selectedTeam = useMemo(
+    () => teams.find((team) => team.id === coach.selectedTeamId) ?? null,
+    [teams, coach.selectedTeamId],
+  );
+  const conferenceName = selectedTeam
+    ? conferences.find((conference) => conference.id === selectedTeam.conferenceId)?.name ?? selectedTeam.conferenceId
+    : null;
+  const record = coach.selectedTeamId ? records[coach.selectedTeamId] : null;
+  const projectedSeed = coach.selectedTeamId
+    ? top12.find((row) => row.teamId === coach.selectedTeamId)?.rank ?? null
+    : null;
   const statusLabel = seasonPhaseHomeStatus(phase, currentWeekIndex);
+  const phaseLabel = seasonPhaseLabel(phase, currentWeekIndex, season.scheduleByWeek.length);
 
   const primaryAction: DashboardAction = (() => {
     if (phase === 'PRE') {
-      if (!careerReady) return { label: 'Career Setup', link: '/career/setup', primary: true };
+      if (!careerReady) return { label: 'Start Career', link: '/career/setup', primary: true };
       return { label: 'Begin Season', link: '/season', primary: true };
     }
     if (phase === 'REGULAR') {
-      if (careerReady) return { label: `Weekly Hub — Week ${currentWeekIndex + 1}`, link: '/career/week', primary: true };
+      if (careerReady) return { label: `Open Week ${currentWeekIndex + 1}`, link: '/career/week', primary: true };
       return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
     }
-    if (phase === 'PLAYOFF') return { label: 'Go to Playoffs', link: '/playoffs', primary: true };
+    if (phase === 'PLAYOFF') return { label: 'Open Playoffs', link: '/playoffs', primary: true };
     if (phase === 'OFFSEASON') {
-      if (careerReady) return { label: 'Finalize Offseason', link: '/career', primary: true };
+      if (careerReady) return { label: 'Run the Offseason', link: '/career', primary: true };
       return { label: 'Review Season', link: '/season', primary: false };
     }
     return { label: 'View Season', link: '/season', primary: false };
@@ -40,7 +68,7 @@ function Home() {
 
   const secondaryAction: DashboardAction = careerReady
     ? { label: 'Coach Office', link: '/career', primary: false }
-    : { label: 'Career Setup', link: '/career/setup', primary: false };
+    : { label: 'How a season works', link: '/season', primary: false };
 
   function handleNewGame() {
     const confirmed = window.confirm(
@@ -52,39 +80,76 @@ function Home() {
     persistor.purge().then(() => {
       navigate('/career/setup');
     }).catch(() => {
-      // Purge failed — state resets still applied in-memory; proceed to setup so
-      // the user can start fresh even if localStorage couldn't be cleared.
       navigate('/career/setup');
     });
   }
 
   return (
     <div className="pageStack">
-      <section className="home-hero" aria-labelledby="home-hero-title">
-        <div className="home-hero-inner">
-          <p className="home-hero-eyebrow">CL26 · 128 fictional programs · deterministic lacrosse</p>
-          <h2 id="home-hero-title" className="home-hero-title">
-            Own the clipboard. Build the dynasty.
-          </h2>
-          <p className="home-hero-lede">
-            Run your fictional program through polls, recruiting swings, and a full postseason bracket—deterministic sim
-            logic, one save in the browser.
-          </p>
-          <div className="home-hero-actions">
+      {careerReady && selectedTeam ? (
+        <section className="commandBoard" aria-labelledby="home-hero-title">
+          <div className="commandBoardCopy">
+            <p className="commandEyebrow">{conferenceName} · {phaseLabel}</p>
+            <h2 id="home-hero-title">{selectedTeam.schoolName} {selectedTeam.nickname}</h2>
+            <p className="commandLede">
+              {coach.profile?.name ?? 'Head coach'} · {year} season · {statusLabel}
+            </p>
+          </div>
+          <dl className="commandStats" aria-label="Program snapshot">
+            <div>
+              <dt>Overall</dt>
+              <dd>{record ? `${record.wins}–${record.losses}` : '0–0'}</dd>
+            </div>
+            <div>
+              <dt>Conference</dt>
+              <dd>{record ? `${record.confWins}–${record.confLosses}` : '0–0'}</dd>
+            </div>
+            <div>
+              <dt>Place</dt>
+              <dd>{confStanding && seasonStarted ? ordinal(confStanding.place) : '—'}</dd>
+            </div>
+            <div>
+              <dt>Field</dt>
+              <dd>{!seasonStarted ? '—' : projectedSeed != null ? `#${projectedSeed}` : 'Out'}</dd>
+            </div>
+          </dl>
+          <div className="commandActions">
             <Link to={primaryAction.link} className={`btn ${primaryAction.primary ? 'btn-primary' : ''}`}>
               {primaryAction.label}
             </Link>
             <Link to={secondaryAction.link} className="btn">
               {secondaryAction.label}
             </Link>
+            <Link to={`/team/${selectedTeam.id}`} className="btn">
+              Program page
+            </Link>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="home-hero" aria-labelledby="home-hero-title">
+          <div className="home-hero-inner">
+            <p className="home-hero-eyebrow">128 programs · 12-game season · 12-team playoff</p>
+            <h2 id="home-hero-title" className="home-hero-title">
+              Take a program. Chase the bracket.
+            </h2>
+            <p className="home-hero-lede">
+              Coach a fictional college lacrosse team through the poll, a recruiting class, and a postseason. The sim is deterministic, and the save stays in this browser.
+            </p>
+            <div className="home-hero-actions">
+              <Link to={primaryAction.link} className={`btn ${primaryAction.primary ? 'btn-primary' : ''}`}>
+                {primaryAction.label}
+              </Link>
+              <Link to="/conferences" className="btn">
+                Browse programs
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="card card-elevated">
-        <h2 className="sectionTitle">Season snapshot</h2>
-        <p className="sectionSubtitle">Where your save stands right now.</p>
-
+        <h2 className="sectionTitle">This save</h2>
+        <p className="sectionSubtitle">Year, phase, and the seed that fixes the league draw.</p>
         <dl className="stat-row" aria-label="Current season status">
           <div className="stat-item">
             <dt className="stat-label">Year</dt>
@@ -101,50 +166,50 @@ function Home() {
         </dl>
       </section>
 
-      <section className="card card-elevated">
-        <h3 className="sectionTitle">Quick Actions</h3>
+      <section className="card">
+        <h3 className="sectionTitle">Around the league</h3>
         <div className="link-grid">
           {careerReady && (
             <Link to="/career/week" className="link-card">
               <strong>Weekly Hub</strong>
-              <div className="link-card-meta">Decisions &amp; matchup prep</div>
+              <div className="link-card-meta">Practice plan, tactics, and this week’s game</div>
             </Link>
           )}
-          <Link to={careerReady ? '/career' : '/career/setup'} className="link-card">
-            <strong>{careerReady ? 'Coach Office' : 'Career Setup'}</strong>
-            <div className="link-card-meta">{careerReady ? 'Manage recruiting &amp; status' : 'Create your coach profile'}</div>
+          <Link to="/season/standings" className="link-card">
+            <strong>Standings</strong>
+            <div className="link-card-meta">Conference race and overall table</div>
+          </Link>
+          <Link to="/rankings" className="link-card">
+            <strong>Top 25</strong>
+            <div className="link-card-meta">Poll, movement, and the projected field</div>
           </Link>
           <Link to="/conferences" className="link-card">
             <strong>Conferences</strong>
-            <div className="link-card-meta">Browse all teams by conference</div>
-          </Link>
-          <Link to="/season/standings" className="link-card">
-            <strong>League Standings</strong>
-            <div className="link-card-meta">Conference and overall records</div>
-          </Link>
-          <Link to="/rankings" className="link-card">
-            <strong>Top 25 Poll</strong>
-            <div className="link-card-meta">Poll movement and playoff projection</div>
+            <div className="link-card-meta">Every program, grouped by league</div>
           </Link>
           {seasonStarted && (
             <Link to="/playoffs" className="link-card">
-              <strong>Playoff Bracket</strong>
-              <div className="link-card-meta">Championship path</div>
+              <strong>Playoffs</strong>
+              <div className="link-card-meta">Seeds, byes, and the championship</div>
             </Link>
           )}
+          <Link to="/exhibition" className="link-card">
+            <strong>Exhibition</strong>
+            <div className="link-card-meta">Sim one game without touching the save</div>
+          </Link>
         </div>
       </section>
 
-      <section className="card">
-        <h3 className="sectionTitle">New Game</h3>
-        <p className="sectionSubtitle">
-          Erase your current save and start fresh with a new coach and program. This cannot be undone.
-        </p>
-        <div style={{ marginTop: '0.75rem' }}>
-          <button type="button" className="btn btn-danger" onClick={handleNewGame}>
-            Reset Save &amp; Start New Game
-          </button>
+      <section className="card newGameCard">
+        <div>
+          <h3 className="sectionTitle">New game</h3>
+          <p className="sectionSubtitle">
+            Erase this save and start with a new coach. Season results, the roster, and the recruiting board all go with it.
+          </p>
         </div>
+        <button type="button" className="btn btn-danger" onClick={handleNewGame}>
+          Reset save
+        </button>
       </section>
     </div>
   );

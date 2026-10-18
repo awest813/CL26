@@ -1,27 +1,29 @@
 /* Tailwind is not configured in this project; lightweight utility classes are defined below. */
 
 :root {
-  --bg: #e8edf5;
-  --bg-elevated: #ffffff;
-  --text: #0f172a;
-  --text-muted: #475569;
-  --border: #c7d2e0;
-  --accent: #1d4ed8;
-  --accent-soft: #dbeafe;
-  --surface-soft: #f1f5f9;
-  --success: #15803d;
-  --success-soft: #dcfce7;
+  --bg: #e7eee8;
+  --bg-elevated: #fffcf8;
+  --text: #142018;
+  --text-muted: #4d5c53;
+  --border: #d5e0d8;
+  --accent: #0e6b3c;
+  --accent-strong: #0a5530;
+  --accent-soft: #e4f5eb;
+  --ink: #102018;
+  --surface-soft: #f3f7f4;
+  --success: #157a3c;
+  --success-soft: #e5f6eb;
   --warning-fg: #92400e;
   --warning-bg: #fef3c7;
   --warning-border: #f59e0b;
-  --danger: #b91c1c;
+  --danger: #b42318;
   --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
   --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 12px 32px rgba(15, 23, 42, 0.08);
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgba(16, 32, 24, 0.05);
+  --shadow-md: 0 16px 40px rgba(16, 32, 24, 0.08);
   --transition-fast: 0.15s ease;
   --transition-ui: 0.2s ease;
 }
@@ -171,13 +173,13 @@ body {
 }
 
 a {
-  font-weight: 500;
-  color: var(--accent);
+  font-weight: 600;
+  color: var(--accent-strong);
   text-decoration: inherit;
 }
 
 a:hover {
-  color: #1e40af;
+  color: var(--accent);
 }
 
 body {
@@ -189,8 +191,9 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  background: radial-gradient(1000px 480px at 12% -8%, rgba(29, 78, 216, 0.14), transparent 52%),
-    radial-gradient(720px 360px at 88% 4%, rgba(22, 163, 74, 0.1), transparent 48%), var(--bg);
+  background:
+    radial-gradient(900px 420px at 0% -10%, rgba(14, 107, 60, 0.08), transparent 55%),
+    var(--bg);
   background-attachment: fixed;
   color: var(--text);
 }
@@ -224,8 +227,6 @@ button {
 
 button:hover {
   border-color: var(--accent);
-  background-color: var(--accent-soft);
-  box-shadow: var(--shadow-sm);
 }
 
 button:disabled {

@@ -551,12 +551,12 @@ export const selectUserConferenceStanding = createSelector(
     if (!userTeam) return null;
     const confTeams = teams.filter((t) => t.conferenceId === userTeam.conferenceId);
     const sorted = confTeams
-      .map((t) => ({ id: t.id, rec: records[t.id] ?? EMPTY_RECORD }))
-      .sort((a, b) => {
-        if (b.rec.confWins !== a.rec.confWins) return b.rec.confWins - a.rec.confWins;
-        return b.rec.wins - a.rec.wins;
-      });
-    const place = sorted.findIndex((t) => t.id === selectedTeamId) + 1;
+      .map((team) => ({ team, record: records[team.id] ?? EMPTY_RECORD }))
+      .sort((a, b) => compareConferenceStanding(
+        { record: a.record, name: a.team.schoolName },
+        { record: b.record, name: b.team.schoolName },
+      ));
+    const place = sorted.findIndex((row) => row.team.id === selectedTeamId) + 1;
     const userRec = records[selectedTeamId] ?? EMPTY_RECORD;
     return { place, total: confTeams.length, confWins: userRec.confWins, confLosses: userRec.confLosses };
   },
