@@ -4,6 +4,7 @@ import { toggleStarter } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position, POSITION_ORDER } from '../types/sim';
 import { getRosterDepthSummary } from '../sim/rosterManagement';
+import { playerYearLabel } from '../sim/rosterSummary';
 
 const POSITION_LABELS: Record<Position, string> = {
   A: 'Attack',
@@ -21,13 +22,6 @@ const STARTER_COUNTS: Record<Position, number> = {
   LSM: 1,
   FO: 1,
   G: 1,
-};
-
-const YEAR_LABELS: Record<number, string> = {
-  1: 'Fr',
-  2: 'So',
-  3: 'Jr',
-  4: 'Sr',
 };
 
 function ratingClass(overall: number): string {
@@ -74,7 +68,7 @@ function PlayerRow({
         </span>
       </td>
       <td className="py-1.5 pr-3 font-medium">{player.name}</td>
-      <td className="py-1.5 pr-3 text-gray-500 text-xs">{YEAR_LABELS[player.year] ?? `Yr${player.year}`}</td>
+      <td className="py-1.5 pr-3 text-gray-500 text-xs">{playerYearLabel(player.year)}</td>
       <td className="py-1.5 pr-3 text-gray-500 text-xs">{player.age}</td>
       <td className={`py-1.5 pr-3 font-bold ${ratingClass(player.overall)}`}>{player.overall}</td>
       <td className="py-1.5 pr-2 text-xs text-gray-500">{player.shooting}</td>
@@ -137,7 +131,7 @@ function RosterPage() {
   const graduatingCount = roster.filter((p) => p.year === 4).length;
   const classBalance = [1, 2, 3, 4].map((year) => ({
     year,
-    label: YEAR_LABELS[year] ?? `Yr${year}`,
+    label: playerYearLabel(year),
     count: roster.filter((player) => player.year === year).length,
   }));
   const offensiveCore = computeAverageOfThreeAttributes(

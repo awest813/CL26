@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { selectConferenceById, selectTeamWithRosterSummary } from '../features/league/leagueSlice';
-import { buildRosterSummary } from '../sim/rosterSummary';
+import { buildRosterSummary, playerYearLabel } from '../sim/rosterSummary';
 import { useAppSelector } from '../store/hooks';
 
 function TeamPage() {
@@ -136,7 +136,7 @@ function TeamPage() {
                 {topPlayer.name} · {topPlayer.position}
               </strong>
               <p className="teamSpotlightMeta">
-                Year {topPlayer.year} · Age {topPlayer.age} · Skill {topPlayer.skill}
+                {playerYearLabel(topPlayer.year)} · Age {topPlayer.age} · Skill {topPlayer.skill}
               </p>
             </div>
           ) : (
@@ -248,7 +248,7 @@ function TeamPage() {
                 <tr key={player.id}>
                   <td>{player.name}</td>
                   <td>{player.position}</td>
-                  <td>{player.year}</td>
+                  <td>{playerYearLabel(player.year)}</td>
                   <td>{player.age}</td>
                   <td>{player.skill}</td>
                   <td>{player.overall}</td>

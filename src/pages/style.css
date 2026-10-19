@@ -554,6 +554,16 @@ caption {
   box-shadow: 0 8px 18px rgba(16, 32, 24, 0.06);
 }
 
+.conferenceBrowserCard-you {
+  border-color: #b7d7c4;
+}
+
+.conferenceTeamCard-you {
+  border-color: #b7d7c4;
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
 .conferenceTeamNickname {
   margin-top: 0.2rem;
   color: #64748b;

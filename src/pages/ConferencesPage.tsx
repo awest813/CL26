@@ -5,8 +5,13 @@ import { useAppSelector } from '../store/hooks';
 
 function ConferencesPage() {
   const conferenceRows = useAppSelector(selectConferenceBrowserRows);
+  const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
   const [regionFilter, setRegionFilter] = useState('all');
   const [searchText, setSearchText] = useState('');
+  const userConferenceId = useMemo(() => {
+    if (!selectedTeamId) return '';
+    return conferenceRows.find((row) => row.teams.some((team) => team.id === selectedTeamId))?.conference.id ?? '';
+  }, [conferenceRows, selectedTeamId]);
 
   const regions = useMemo(
     () => [
@@ -28,11 +33,20 @@ function ConferencesPage() {
     });
   }, [conferenceRows, regionFilter, searchText]);
 
-  const hasNoResults = filteredRows.length === 0;
+  const orderedRows = useMemo(() => {
+    if (!userConferenceId) return filteredRows;
+    return [...filteredRows].sort((a, b) => {
+      if (a.conference.id === userConferenceId) return -1;
+      if (b.conference.id === userConferenceId) return 1;
+      return 0;
+    });
+  }, [filteredRows, userConferenceId]);
+
+  const hasNoResults = orderedRows.length === 0;
   const hasActiveFilters = regionFilter !== 'all' || searchText.trim().length > 0;
   const totalTeamCount = conferenceRows.reduce((sum, row) => sum + row.teamCount, 0);
   const { visibleTeamCount, averageVisibleRosterStrengthValue } = useMemo(() => {
-    const totals = filteredRows.reduce(
+    const totals = orderedRows.reduce(
       (summary, row) => {
         summary.visibleTeamCount += row.teamCount;
         summary.totalVisibleRosterStrength += row.rosterStrength;
@@ -44,9 +58,9 @@ function ConferencesPage() {
     return {
       visibleTeamCount: totals.visibleTeamCount,
       averageVisibleRosterStrengthValue:
-        filteredRows.length > 0 ? Number((totals.totalVisibleRosterStrength / filteredRows.length).toFixed(1)) : 0,
+        orderedRows.length > 0 ? Number((totals.totalVisibleRosterStrength / orderedRows.length).toFixed(1)) : 0,
     };
-  }, [filteredRows]);
+  }, [orderedRows]);
 
   const clearFilters = () => {
     setRegionFilter('all');
@@ -58,13 +72,16 @@ function ConferencesPage() {
       <div className="pageHeader">
         <h2>Conferences</h2>
         <p className="pageHeader-sub">Browse the full 128-team league by conference, region, and generated roster profile.</p>
+        {userConferenceId && orderedRows.some((row) => row.conference.id === userConferenceId) && (
+          <a href="#your-conference" className="text-sm font-semibold">Jump to your conference</a>
+        )}
       </div>
 
       <div className="card card-elevated leagueOverviewCard">
         <div className="leagueOverviewStats" aria-label="League browser summary">
           <div className="leagueOverviewStat">
             <span className="leagueOverviewLabel">Visible conferences</span>
-            <strong>{filteredRows.length}</strong>
+            <strong>{orderedRows.length}</strong>
           </div>
           <div className="leagueOverviewStat">
             <span className="leagueOverviewLabel">Visible teams</span>
@@ -117,14 +134,22 @@ function ConferencesPage() {
         </div>
       ) : null}
 
-      {filteredRows.map(({ conference, teams, rosterStrength, averagePrestige, teamCount }) => {
+      {orderedRows.map(({ conference, teams, rosterStrength, averagePrestige, teamCount }) => {
         const conferenceRegions = Array.from(new Set(teams.map((team) => team.region))).join(' · ');
+        const isYourConference = conference.id === userConferenceId;
 
         return (
-        <section key={conference.id} className="conferenceCard card-elevated conferenceBrowserCard">
+        <section
+          key={conference.id}
+          id={isYourConference ? 'your-conference' : undefined}
+          className={`conferenceCard card-elevated conferenceBrowserCard ${isYourConference ? 'conferenceBrowserCard-you' : ''}`}
+        >
           <div className="conferenceBrowserHeader">
             <div>
-              <h3 className="m-0">{conference.name}</h3>
+              <h3 className="m-0">
+                {conference.name}
+                {isYourConference && <span className="youMark ml-2">Your conference</span>}
+              </h3>
               <p className="conferenceBrowserSubhead">{conferenceRegions}</p>
             </div>
             <div className="conferenceBrowserMetrics" aria-label={`${conference.name} summary`}>
@@ -135,10 +160,15 @@ function ConferencesPage() {
           </div>
 
           <div className="conferenceTeamGrid">
-            {teams.map((team) => (
-              <Link key={team.id} to={`/team/${team.id}`} className="conferenceTeamCard">
+            {teams.map((team) => {
+              const isUser = team.id === selectedTeamId;
+              return (
+              <Link key={team.id} to={`/team/${team.id}`} className={`conferenceTeamCard ${isUser ? 'conferenceTeamCard-you' : ''}`}>
                 <div>
-                  <strong>{team.schoolName}</strong>
+                  <strong>
+                    {team.schoolName}
+                    {isUser && <span className="youMark ml-1">(You)</span>}
+                  </strong>
                   <div className="conferenceTeamNickname">{team.nickname}</div>
                 </div>
                 <div className="conferenceTeamMeta">
@@ -146,7 +176,8 @@ function ConferencesPage() {
                   <span>Prestige {team.prestige}</span>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </section>
         );
