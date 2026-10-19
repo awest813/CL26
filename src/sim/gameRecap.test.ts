@@ -33,13 +33,13 @@ describe('buildGameRecap', () => {
   test('should handle home team winning', () => {
     const game = createGame({ homeScore: 15, awayScore: 10 });
     const recap = buildGameRecap(game, mockAwayName, mockHomeName);
-    assert.strictEqual(recap.summary, 'Home Team beat Away Team by 5 (10-15).');
+    assert.strictEqual(recap.summary, 'Home Team beat Away Team by 5 (15–10).');
   });
 
   test('should handle away team winning', () => {
     const game = createGame({ homeScore: 8, awayScore: 12 });
     const recap = buildGameRecap(game, mockAwayName, mockHomeName);
-    assert.strictEqual(recap.summary, 'Away Team beat Home Team by 4 (12-8).');
+    assert.strictEqual(recap.summary, 'Away Team beat Home Team by 4 (12–8).');
   });
 
   test('should identify faceoff dominance', () => {
@@ -130,6 +130,6 @@ describe('buildGameRecap', () => {
   test('should handle tied scores without inventing a winner margin', () => {
     const game = createGame({ homeScore: 10, awayScore: 10 });
     const recap = buildGameRecap(game, mockAwayName, mockHomeName);
-    assert.strictEqual(recap.summary, 'Home Team and Away Team finished level (10-10).');
+    assert.strictEqual(recap.summary, 'Home Team and Away Team finished level (10–10).');
   });
 });

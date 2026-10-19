@@ -1712,6 +1712,164 @@ button.archetypeOption[aria-pressed='true'] {
   font-weight: 700;
 }
 
+.resultLine + .resultLine,
+.statStrip + .resultLine {
+  margin-top: 0.35rem;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.weightTotal {
+  grid-column: 1 / -1;
+  font-weight: 700;
+}
+
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.statStrip span {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.statStrip strong {
+  display: block;
+  margin-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pollTeam {
+  display: block;
+}
+
+.pollNick {
+  display: block;
+  margin-left: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.pollMeta {
+  margin-left: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pollWeek {
+  margin-left: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.pollExplainer {
+  grid-column: 1 / -1;
+}
+
+.weightList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1.5rem;
+  margin-top: 0.85rem;
+}
+
+.weightRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.weightRow span:last-child,
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.scoreDetails {
+  margin-top: 1rem;
+}
+
+.scoreDetails summary {
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scoreBlock {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.scoreBlockTitle {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.bubbleBlock {
+  margin-top: 1rem;
+}
+
+.bubbleLabel {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.bubbleNote {
+  margin: 0.85rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+button.seasonScoreButton {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0.15rem 0.4rem;
+  min-height: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: inherit;
+}
+
+button.seasonScoreButton:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent-strong);
+}
+
+@media (max-width: 640px) {
+  .weightList {
+    grid-template-columns: 1fr;
+  }
+
+  .statStrip {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .officeJumps {
   display: flex;
   flex-wrap: wrap;

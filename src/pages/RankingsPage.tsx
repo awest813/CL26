@@ -6,11 +6,49 @@ import { selectRankingTeams, selectTeamRecords, selectTop12Projection, selectRan
 import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
 import { seasonRankingsWeekLabel } from '../lib/seasonLabels';
 
+function PollTeam({
+  team,
+  isUser,
+  fallbackId,
+}: {
+  team: { id: string; schoolName: string; nickname: string } | undefined;
+  isUser: boolean;
+  fallbackId: string;
+}) {
+  if (!team) return <>{fallbackId}</>;
+  return (
+    <span className="pollTeam">
+      <Link to={`/team/${team.id}`}>{team.schoolName}</Link>
+      <span className="pollNick">
+        {team.nickname}
+        {isUser && <span className="youMark"> (You)</span>}
+      </span>
+    </span>
+  );
+}
+
 function rankDeltaDisplay(delta: number | null): ReactNode {
   if (delta === null) return <span className="text-gray-500 text-xs font-semibold" aria-label="New to rankings">NEW</span>;
   if (delta > 0) return <span className="text-green-600 text-xs font-semibold" aria-label={`Moved up ${delta} position${delta !== 1 ? 's' : ''}`}>▲{delta}</span>;
   if (delta < 0) return <span className="text-red-500 text-xs font-semibold" aria-label={`Moved down ${Math.abs(delta)} position${Math.abs(delta) !== 1 ? 's' : ''}`}>▼{Math.abs(delta)}</span>;
   return <span className="text-gray-400 text-xs" aria-label="No change">–</span>;
+}
+
+function ScoreLines({ lines, total }: { lines: [string, number][]; total: number }) {
+  return (
+    <div className="weightList">
+      {lines.map(([label, points]) => (
+        <div key={label} className="weightRow">
+          <span>{label}</span>
+          <span>{points.toFixed(1)}</span>
+        </div>
+      ))}
+      <div className="weightRow weightTotal">
+        <span>Total</span>
+        <span>{Math.round(total)}</span>
+      </div>
+    </div>
+  );
 }
 
 function RankingsPage() {
@@ -71,21 +109,21 @@ function RankingsPage() {
   return (
     <div className="pageStack">
       <div className="pageHeader">
-        <h2>Top 25 Poll &amp; Playoff Projection</h2>
+        <h2>Top 25</h2>
         <p className="pageHeader-sub">
           {isPostseason
-            ? `Final ${summary.year} regular-season power rankings.`
-            : 'Deterministic lacrosse poll — updated after each simulated week with transparent score drivers.'}
+            ? `The final ${summary.year} poll and the tournament field.`
+            : 'The poll and the projected 12-team field, updated after each week.'}
         </p>
       </div>
 
       <div className="grid2">
       <section className="card">
-        <h3 className="m-0">Top 25 Poll <span className="text-sm font-normal text-gray-400 ml-1">{weekLabel}</span></h3>
+        <h3 className="m-0">Poll <span className="pollWeek">{weekLabel}</span></h3>
         <p className="text-sm text-gray-500 mt-1 mb-2">
           {isPostseason
-            ? 'Final regular-season power rankings.'
-            : 'Deterministic power ranking based on record, point margin, and strength of schedule.'}
+            ? 'Final regular-season order.'
+            : 'Record, margin, schedule, and program prestige.'}
         </p>
         {selectedTeamId && userTeamBreakdown && !userTeamBreakdown.rankRow && (
           <p className="text-sm text-gray-700 mt-0 mb-2">
@@ -117,12 +155,10 @@ function RankingsPage() {
                   <td className="font-mono font-bold">{row.rank}</td>
                   <td className="text-center">{rankDeltaDisplay(row.delta)}</td>
                   <td>
-                    {team ? <Link to={`/team/${team.id}`}>{team.schoolName}</Link> : row.teamId}{' '}
-                    <span className="text-xs text-gray-500">({team?.nickname})</span>
-                    {isUser && <span className="youMark ml-1">(You)</span>}
+                    <PollTeam team={team} isUser={isUser} fallbackId={row.teamId} />
                   </td>
-                  <td>{row.record}</td>
-                  <td className="font-mono">{row.points}</td>
+                  <td className="tabular">{row.record}</td>
+                  <td className="tabular">{row.points}</td>
                 </tr>
               );
             })}
@@ -132,11 +168,11 @@ function RankingsPage() {
       </section>
 
       <section className="card">
-        <h3 className="m-0">{isPostseason ? 'Tournament Field' : 'Playoff Projection'} <span className="text-sm font-normal text-gray-400 ml-1">Top 12</span></h3>
+        <h3 className="m-0">{isPostseason ? 'Tournament field' : 'Projected field'}</h3>
         <p className="text-sm text-gray-500 mt-1 mb-2">
           {isPostseason
-            ? 'Final seeding used for the College Lacrosse Playoff.'
-            : 'If the season ended today, this would be the projected 12-team field.'}
+            ? 'The 12 seeds for the playoff. The top four have a bye.'
+            : 'The 12-team field if the season ended today. The top four would have a bye.'}
         </p>
 
         <div className="dataTableWrap">
@@ -159,11 +195,9 @@ function RankingsPage() {
                 <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
                   <td className="font-mono font-bold">#{row.rank}</td>
                   <td>
-                    {team ? <Link to={`/team/${team.id}`}>{team.schoolName}</Link> : row.teamId}{' '}
-                    <span className="text-xs text-gray-500">({team?.nickname})</span>
-                    {isUser && <span className="youMark ml-1">(You)</span>}
+                    <PollTeam team={team} isUser={isUser} fallbackId={row.teamId} />
                   </td>
-                  <td>{row.record}</td>
+                  <td className="tabular">{row.record}</td>
                   <td className="text-xs">
                     {hasBye && <span className="youMark">Bye</span>}
                   </td>
@@ -175,29 +209,24 @@ function RankingsPage() {
         </div>
 
         {!hasGamesPlayed && (
-          <p className="text-sm text-gray-500" style={{ marginTop: '0.75rem' }}>
-            No games played yet. Rankings reflect baseline program profile scoring.
-          </p>
+          <p className="bubbleNote">No games yet. This order is the preseason profile.</p>
         )}
 
-        {/* Next 4 Out bubble teams */}
         {bubbleTeams.length > 0 && (
-          <div style={{ marginTop: '1rem' }}>
-            <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Next 4 Out</p>
+          <div className="bubbleBlock">
+            <p className="bubbleLabel">Next 4 out</p>
             <table className="w-full text-sm">
               <tbody>
                 {bubbleTeams.map((row) => {
                   const team = teamById.get(row.teamId);
                   const isUser = row.teamId === selectedTeamId;
                   return (
-                    <tr key={row.teamId} className={`border-b last:border-0 ${isUser ? 'youRow' : ''}`}>
-                      <td className="py-1 font-mono text-gray-400 pr-2">#{row.rank}</td>
+                    <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
+                      <td className="py-1 tabular pr-2">#{row.rank}</td>
                       <td className="py-1">
-                        {team ? <Link to={`/team/${team.id}`}>{team.schoolName}</Link> : row.teamId}{' '}
-                        <span className="text-xs text-gray-400">({team?.nickname})</span>
-                        {isUser && <span className="youMark ml-1">(You)</span>}
+                        <PollTeam team={team} isUser={isUser} fallbackId={row.teamId} />
                       </td>
-                      <td className="py-1 text-gray-500">{row.record}</td>
+                      <td className="py-1 tabular">{row.record}</td>
                     </tr>
                   );
                 })}
@@ -207,13 +236,13 @@ function RankingsPage() {
         )}
       </section>
 
-      <section className="card" style={{ gridColumn: '1 / -1' }}>
-        <h3 className="m-0 text-base">How the poll works</h3>
+      <section className="card pollExplainer">
+        <h3 className="m-0 text-base">How a team is scored</h3>
         <p className="text-sm text-gray-500 mt-2 mb-0">
-          Scores are deterministic — built from season performance plus program prestige.
-          Your program&apos;s prestige includes career drift. Ties on rounded points break by wins, point differential, prestige, school name, then team id.
+          Each line is a season number times its weight. Your program’s prestige includes career drift.
+          Ties on the rounded total break by wins, point differential, prestige, then school name.
         </p>
-        <div className="grid2" style={{ marginTop: '0.75rem', gap: '0.5rem' }}>
+        <div className="weightList">
           {[
             ['Overall win %', RANKING_WEIGHTS.overallWinPct],
             ['Conference win %', RANKING_WEIGHTS.conferenceWinPct],
@@ -222,79 +251,61 @@ function RankingsPage() {
             ['Scoring volume', RANKING_WEIGHTS.scoringVolume],
             ['Strength of schedule', RANKING_WEIGHTS.strengthOfSchedule],
           ].map(([label, weight]) => (
-            <div key={String(label)} className="flex justify-between text-sm border-b py-1">
-              <span className="text-gray-600">{label}</span>
-              <span className="font-mono font-semibold">×{weight}</span>
+            <div key={String(label)} className="weightRow">
+              <span>{label}</span>
+              <span>×{weight}</span>
             </div>
           ))}
         </div>
 
-        <details className="mt-4">
-          <summary className="text-sm font-semibold cursor-pointer text-gray-600">
-            Score breakdowns (expand)
-          </summary>
+        <details className="scoreDetails">
+          <summary>Score breakdown</summary>
 
           {topTeamBreakdown && (
-            <div style={{ marginTop: '1rem' }}>
-              <p className="text-sm font-semibold m-0 mb-1">
-                Current #1 score breakdown — {topTeamBreakdown.team.schoolName} ({topTeamBreakdown.team.nickname})
+            <div className="scoreBlock">
+              <p className="scoreBlockTitle">
+                No. 1 · {topTeamBreakdown.team.schoolName}
+                <span className="pollNick">{topTeamBreakdown.team.nickname}</span>
               </p>
-              <div className="grid2" style={{ gap: '0.5rem' }}>
-                {[
+              <ScoreLines
+                lines={[
                   ['Overall win %', topTeamBreakdown.breakdown.overallWinPctPoints],
                   ['Conference win %', topTeamBreakdown.breakdown.conferenceWinPctPoints],
                   ['Point differential', topTeamBreakdown.breakdown.pointDifferentialPoints],
                   ['Prestige', topTeamBreakdown.breakdown.prestigePoints],
                   ['Scoring volume', topTeamBreakdown.breakdown.scoringVolumePoints],
                   ['Strength of schedule', topTeamBreakdown.breakdown.strengthOfSchedulePoints],
-                ].map(([label, pts]) => (
-                  <div key={String(label)} className="flex justify-between text-sm border-b py-1">
-                    <span className="text-gray-600">{label}</span>
-                    <span className="font-mono font-semibold">{Number(pts).toFixed(1)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-sm py-1 border-t font-bold" style={{ gridColumn: '1/-1' }}>
-                  <span>Total</span>
-                  <span className="font-mono">{Math.round(topTeamBreakdown.breakdown.totalPoints)}</span>
-                </div>
-              </div>
+                ]}
+                total={topTeamBreakdown.breakdown.totalPoints}
+              />
             </div>
           )}
 
-          {/* User team score breakdown */}
           {userTeamBreakdown && (
-            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
-              <p className="text-sm font-semibold m-0 mb-1">
-                Your Program —{' '}
-                {userTeamBreakdown.team.schoolName} ({userTeamBreakdown.team.nickname})
-                {userTeamBreakdown.rankRow
-                  ? ` · Ranked #${userTeamBreakdown.rankRow.rank}`
-                  : ' · Unranked'}
+            <div className="scoreBlock">
+              <p className="scoreBlockTitle">
+                Your program · {userTeamBreakdown.team.schoolName}
+                <span className="pollMeta">
+                  {userTeamBreakdown.rankRow ? `No. ${userTeamBreakdown.rankRow.rank}` : 'Outside the Top 25'}
+                </span>
+                <span className="pollNick">{userTeamBreakdown.team.nickname}</span>
               </p>
               {prestigeDrift !== 0 && (
                 <p className="text-xs text-gray-500 mt-0 mb-2">
                   Prestige in this score includes career drift of {prestigeDrift > 0 ? '+' : ''}{prestigeDrift}.
                 </p>
               )}
-              <div className="grid2" style={{ gap: '0.5rem' }}>
-                {[
+              <ScoreLines
+                lines={[
                   ['Overall win %', userTeamBreakdown.breakdown.overallWinPctPoints],
                   ['Conference win %', userTeamBreakdown.breakdown.conferenceWinPctPoints],
                   ['Point differential', userTeamBreakdown.breakdown.pointDifferentialPoints],
                   ['Prestige', userTeamBreakdown.breakdown.prestigePoints],
                   ['Scoring volume', userTeamBreakdown.breakdown.scoringVolumePoints],
                   ['Strength of schedule', userTeamBreakdown.breakdown.strengthOfSchedulePoints],
-                ].map(([label, pts]) => (
-                  <div key={String(label)} className="flex justify-between text-sm border-b py-1">
-                    <span className="text-gray-600">{label}</span>
-                    <span className="font-mono font-semibold">{Number(pts).toFixed(1)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-sm py-1 border-t font-bold" style={{ gridColumn: '1/-1' }}>
-                  <span>Total</span>
-                  <span className="font-mono">{Math.round(userTeamBreakdown.breakdown.totalPoints)}</span>
-                </div>
-              </div>
+                ]}
+                total={userTeamBreakdown.breakdown.totalPoints}
+              />
             </div>
           )}
         </details>
