@@ -158,7 +158,9 @@ function OffseasonMarket() {
       <div className="marketSection">
         <h4 className="marketHeading">Supplemental draft · pick {pickIndex + 1} of {teams.length}</h4>
         {available.length === 0 ? (
-          <p className="text-sm text-gray-500 m-0">The board is gone before this pick. The high school class already did this work.</p>
+          <p className="text-sm text-gray-500 m-0">
+            The supplemental board is 64 players. This pick is past the end of it, so the open spots stay with walk-ons.
+          </p>
         ) : (
           <ul className="marketList">
             {available.map((prospect) => {
