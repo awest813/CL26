@@ -175,7 +175,7 @@ function planTask(input: WeeklyDeskInput): DeskTask {
     title: 'Game plan',
     detail: `${input.practiceLabel}. ${input.practiceDetail} ${input.schemeLine}.`,
     tone: 'ready',
-    action: 'Set below',
+    action: '',
     href: null,
   };
 }

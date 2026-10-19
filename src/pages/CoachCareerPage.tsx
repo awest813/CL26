@@ -58,10 +58,10 @@ function JobSecurityBar({ value }: { value: number }) {
 }
 
 function adPressureLabel(pressure: number): { label: string; color: string } {
-  if (pressure >= 80) return { label: 'Board Heat: Extreme', color: '#b91c1c' };
-  if (pressure >= 65) return { label: 'Board Heat: High', color: '#dc2626' };
-  if (pressure >= 45) return { label: 'Board Heat: Moderate', color: '#f59e0b' };
-  return { label: 'Board Heat: Manageable', color: '#16a34a' };
+  if (pressure >= 80) return { label: 'Extreme AD pressure', color: '#b91c1c' };
+  if (pressure >= 65) return { label: 'High AD pressure', color: '#dc2626' };
+  if (pressure >= 45) return { label: 'Moderate AD pressure', color: '#f59e0b' };
+  return { label: 'Low AD pressure', color: '#16a34a' };
 }
 
 function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: number }) {
@@ -293,13 +293,13 @@ function CoachCareerPage() {
             <div className="text-xs text-gray-500 uppercase mb-1">Career Record</div>
             <div className="text-lg font-bold">{coach.careerRecord.totalWins}–{coach.careerRecord.totalLosses}</div>
             <div className="text-xs text-gray-500">
-              {coach.careerRecord.playoffAppearances} playoff app{coach.careerRecord.playoffAppearances !== 1 ? 's' : ''}
+              {coach.careerRecord.playoffAppearances} playoff appearance{coach.careerRecord.playoffAppearances === 1 ? '' : 's'}
               {coach.careerRecord.championships > 0 && ` · ${coach.careerRecord.championships} title${coach.careerRecord.championships !== 1 ? 's' : ''}`}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 pt-3 border-t">
+        <div className="officeStats">
           {/* Season Performance */}
           <div>
             <div className="text-xs text-gray-500 uppercase mb-2">{seasonStatusLabel}</div>
@@ -334,7 +334,7 @@ function CoachCareerPage() {
             <div className="text-xs text-gray-500 uppercase mb-2">Job Security</div>
             <JobSecurityBar value={coach.jobSecurity} />
             <div className="text-xs mt-2" style={{ color: pressureState.color }}>
-              {pressureState.label} ({adPressure}%)
+              {pressureState.label} · {adPressure}%
             </div>
             <div className="text-xs text-gray-500 mt-1">
               {coach.jobSecurity < 30
@@ -572,27 +572,17 @@ function CoachCareerPage() {
         </div>
       </div>
 
-      {/* ── Quick Links ── */}
-      <div className="flex gap-3 flex-wrap">
-        <Link to="/career/week" className="text-sm hover:underline font-medium">
-          Weekly Hub →
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link to="/career/recruiting" className="text-sm hover:underline font-medium">
-          Recruiting Board →
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link to="/career/roster" className="text-sm hover:underline font-medium">
-          Roster &amp; Depth Chart →
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link to="/season" className="text-sm hover:underline">Season Dashboard</Link>
-      </div>
+      <nav className="officeJumps" aria-label="Program">
+        <Link to="/career/week">Weekly Hub</Link>
+        <Link to="/career/recruiting">Recruiting</Link>
+        <Link to="/career/roster">Roster</Link>
+        <Link to="/season">Season</Link>
+      </nav>
 
       <div className="card">
-        <h3 className="text-base font-bold m-0">Gameplan</h3>
+        <h3 className="text-base font-bold m-0">Game plan</h3>
         <p className="text-xs text-gray-500 mt-1 mb-3">
-          Your base scheme for every game. Practice focus still shifts tempo and slides during the weekly cycle.
+          The base scheme for every game. The weekly install still shifts tempo and slides.
         </p>
         <div className="tacticGrid">
           <label className="text-xs font-semibold text-gray-600">
@@ -672,33 +662,31 @@ function CoachCareerPage() {
           </label>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 pt-3 mt-3 border-t text-xs">
+        <div className="planReadout">
           <div>
-            <div className="text-gray-400 uppercase mb-1">Weekly prep</div>
-            <div className="font-semibold text-gray-700">{coachGamePlan.focusLabel}</div>
-            <div className="text-gray-500 mt-1">
-              Fatigue status: <span className="font-semibold">{coachGamePlan.fatigueLabel}</span>
-            </div>
+            <div className="planReadoutLabel">This week’s install</div>
+            <div className="planReadoutValue">{coachGamePlan.focusLabel}</div>
+            <div className="planReadoutMeta">Fatigue {coachGamePlan.fatigueLabel}</div>
           </div>
           <div>
-            <div className="text-gray-400 uppercase mb-1">Gameplan edge</div>
-            <div className="text-gray-600">
+            <div className="planReadoutLabel">Game plan edge</div>
+            <div className="planReadoutValue">
               Off {coachGamePlan.modifiers.offense >= 0 ? '+' : ''}{coachGamePlan.modifiers.offense.toFixed(1)}
               {' · '}
               Def {coachGamePlan.modifiers.defense >= 0 ? '+' : ''}{coachGamePlan.modifiers.defense.toFixed(1)}
-              {' · '}
-              Disc {coachGamePlan.modifiers.discipline >= 0 ? '+' : ''}{coachGamePlan.modifiers.discipline.toFixed(1)}
             </div>
-            <div className="text-gray-500 mt-1">
+            <div className="planReadoutMeta">
+              Disc {coachGamePlan.modifiers.discipline >= 0 ? '+' : ''}{coachGamePlan.modifiers.discipline.toFixed(1)}
+              {' · '}
               FO {coachGamePlan.modifiers.faceoff >= 0 ? '+' : ''}{coachGamePlan.modifiers.faceoff.toFixed(1)}
               {' · '}
               GB {coachGamePlan.modifiers.groundBallBonus >= 0 ? '+' : ''}{coachGamePlan.modifiers.groundBallBonus.toFixed(1)}
             </div>
           </div>
           <div>
-            <div className="text-gray-400 uppercase mb-1">Expected impact</div>
-            <ul className="m-0 pl-4 text-gray-600 space-y-1">
-              {prepNotes.length > 0 ? prepNotes.map((note) => <li key={note}>{note}</li>) : <li>Balanced week with no major swing factors.</li>}
+            <div className="planReadoutLabel">What it changes</div>
+            <ul className="planReadoutList">
+              {prepNotes.length > 0 ? prepNotes.map((note) => <li key={note}>{note}</li>) : <li>A balanced week, with no major swing.</li>}
             </ul>
           </div>
         </div>
@@ -726,7 +714,7 @@ function CoachCareerPage() {
             ['development', 'Development Tree', 'Improves weekly/offseason trait growth and turnover discipline.'],
             ['operations', 'Operations Tree', 'Improves fatigue control, goalie prep, and penalty avoidance.'],
           ] as const).map(([key, label, hint]) => (
-            <div key={key} className="border rounded p-2">
+            <div key={key} className="leverCard">
               <div className="text-xs uppercase text-gray-500">{label}</div>
               <div className="text-lg font-bold">
                 {skillTree[key]}/5
@@ -744,7 +732,7 @@ function CoachCareerPage() {
           ))}
         </div>
 
-        <div className="border rounded p-3 mb-3">
+        <div className="leverCard mb-3">
           <div className="text-xs uppercase text-gray-500 mb-1">Current Skill Effects</div>
           <ul className="m-0 pl-4 text-sm text-gray-600 space-y-1">
             {skillImpactNotes.map((line) => (
@@ -759,7 +747,7 @@ function CoachCareerPage() {
             ['boosters', 'Booster Alignment', programResources.boosters, 'Raises support but can increase AD pressure'],
             ['facilities', 'Facilities', programResources.facilities, 'Player growth and pressure shielding'],
           ] as const).map(([key, label, value, hint]) => (
-            <label key={key} className="text-xs font-semibold text-gray-600 border rounded p-2">
+            <label key={key} className="leverCard text-xs font-semibold text-gray-600">
               {label}
               <div className="text-xs text-gray-500 mt-0.5 mb-1 font-normal">{hint}</div>
               <input

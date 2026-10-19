@@ -163,8 +163,8 @@ function Home() {
       )}
 
       <section className="card card-elevated">
-        <h2 className="sectionTitle">This save</h2>
-        <p className="sectionSubtitle">Year, phase, and the seed that fixes the league draw.</p>
+        <h2 className="sectionTitle">Season</h2>
+        <p className="sectionSubtitle">The year, where it stands, and the league seed behind the schedule.</p>
         <dl className="stat-row" aria-label="Current season status">
           <div className="stat-item">
             <dt className="stat-label">Year</dt>

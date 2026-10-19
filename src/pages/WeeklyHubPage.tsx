@@ -35,7 +35,7 @@ function schemeCall(tactics: Tactics): string {
 const PRACTICE_FOCUS_DESCRIPTIONS: Record<PracticeFocus, string> = {
   OFFENSE: 'Boosts attack edge and tempo; defensive ratings dip slightly.',
   DEFENSE: 'Hardens D and goalie; may tighten offensive rhythm.',
-  CONDITIONING: 'Builds faceoff & ground-ball legs; lowest fatigue build.',
+  CONDITIONING: 'Builds faceoff and ground-ball legs. The lightest week on fatigue.',
   DISCIPLINE: 'Cuts turnovers and penalties; no direct scoring edge.',
 };
 
@@ -66,46 +66,53 @@ function ResultBanner({ result, selectedTeamId, teams }: ResultBannerProps) {
   const userScore = isTeamA ? result.scoreA : result.scoreB;
   const oppScore = isTeamA ? result.scoreB : result.scoreA;
   const oppId = isTeamA ? result.teamBId : result.teamAId;
+  const user = teams.find((t) => t.id === selectedTeamId);
   const opp = teams.find((t) => t.id === oppId);
   const won = userScore > oppScore;
 
   const topPerfs = isTeamA
     ? result.topPlayersA.slice(0, 2)
     : result.topPlayersB.slice(0, 2);
+  const ledBy = topPerfs
+    .map((player) => {
+      const parts: string[] = [];
+      if (player.goals > 0) parts.push(`${player.goals}G`);
+      if (player.assists > 0) parts.push(`${player.assists}A`);
+      if (player.saves > 0) parts.push(`${player.saves} SV`);
+      return parts.length > 0 ? `${player.name} ${parts.join(' ')}` : player.name;
+    })
+    .join(' · ');
 
   return (
-    <div className={`card border-l-4 ${won ? 'border-win' : 'border-loss'}`}>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-xs text-gray-500 uppercase font-semibold">
-          Last Game — Week {(result.weekIndex ?? 0) + 1}
-        </span>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${won ? 'badge-win' : 'badge-loss'}`}>
-          {won ? 'WIN' : 'LOSS'}
-        </span>
+    <section className={`card matchupBoard resultBoard ${won ? 'resultBoard-win' : 'resultBoard-loss'}`} aria-label={won ? 'Win' : 'Loss'}>
+      <div className="matchupBoardTop">
+        <h3 className="m-0 text-base font-bold">Week {(result.weekIndex ?? 0) + 1} final</h3>
+        <p className={`matchupKicker ${won ? 'resultKicker-win' : 'resultKicker-loss'}`}>{won ? 'Win' : 'Loss'}</p>
       </div>
-      <div className="flex items-baseline gap-3">
-        <span className="text-3xl font-bold">{userScore}</span>
-        <span className="text-gray-400 text-sm">–</span>
-        <span className="text-xl text-gray-600">{oppScore}</span>
-        <span className="text-sm text-gray-500 ml-2">
-          vs {opp?.schoolName ?? 'Opponent'}
-        </span>
-      </div>
-      {topPerfs.length > 0 && (
-        <div className="text-xs text-gray-500 mt-1.5">
-          Top performers:{' '}
-          {topPerfs
-            .map((p) => {
-              const parts: string[] = [];
-              if (p.goals > 0) parts.push(`${p.goals}g`);
-              if (p.assists > 0) parts.push(`${p.assists}a`);
-              if (p.saves > 0) parts.push(`${p.saves}sv`);
-              return `${p.name}${parts.length ? ` (${parts.join(' ')})` : ''}`;
-            })
-            .join(' · ')}
+      <div className="matchupSides">
+        <div className="matchupSide">
+          <span className="matchupSchool">{user?.schoolName ?? 'Your program'}</span>
+          {user?.nickname && <span className="matchupNick">{user.nickname}</span>}
         </div>
+        <div className="matchupProb">
+          <span className={`matchupProbValue ${won ? 'matchup-strong' : 'matchup-underdog'}`}>{userScore}–{oppScore}</span>
+          <span className="matchupProbLabel">Final</span>
+        </div>
+        <div className="matchupSide matchupSide-away">
+          {opp ? (
+            <Link to={`/team/${opp.id}`} className="matchupSchool">{opp.schoolName}</Link>
+          ) : (
+            <span className="matchupSchool">Opponent</span>
+          )}
+          {opp?.nickname && <span className="matchupNick">{opp.nickname}</span>}
+        </div>
+      </div>
+      {ledBy && (
+        <p className="resultLine">
+          Led by <strong>{ledBy}</strong>
+        </p>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -390,9 +397,9 @@ function WeeklyHubPage() {
               </div>
               {task.href ? (
                 <Link to={task.href} className="deskAction">{task.action}</Link>
-              ) : (
+              ) : task.action ? (
                 <span className="deskAction">{task.action}</span>
-              )}
+              ) : null}
             </li>
           ))}
         </ul>
@@ -407,77 +414,69 @@ function WeeklyHubPage() {
         />
       )}
 
-      <div className="grid2">
-        {/* ── Upcoming opponent ── */}
-        <div className="card">
-          <h3 className="m-0 mb-3 text-base font-bold">
-            {isRegularSeason ? `Week ${currentWeekDisplay} Matchup` : 'No Upcoming Game'}
-          </h3>
-          {opponent && opponentRecord ? (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="font-bold text-lg">
-                    {isHome ? 'vs' : '@'}{' '}
-                    <Link to={`/team/${opponent.id}`}>{opponent.schoolName}</Link>
+      {opponent && opponentRecord && selectedTeam ? (
+        <section className="card matchupBoard" aria-labelledby="matchup-title">
+          <div className="matchupBoardTop">
+            <h3 id="matchup-title" className="m-0 text-base font-bold">Week {currentWeekDisplay}</h3>
+            <p className="matchupKicker">
+              {isHome ? 'Home' : 'Away'}
+              {userUpcomingGame?.conferenceGame ? ' · Conference' : ' · Non-conference'}
+            </p>
+          </div>
+          <div className="matchupSides">
+            <div className="matchupSide">
+              <Link to={`/team/${selectedTeam.id}`} className="matchupSchool">{selectedTeam.schoolName}</Link>
+              <span className="matchupNick">{selectedTeam.nickname}</span>
+              <span className="matchupRecord">{userRecord.wins}–{userRecord.losses}</span>
+            </div>
+            <div className="matchupProb">
+              {winProb !== null && (
+                <>
+                  <span className={`matchupProbValue ${winProbClass(winProb)}`}>{winProb}%</span>
+                  <span className="matchupProbLabel">Win chance</span>
+                  <div
+                    className="meter meter-lg"
+                    role="progressbar"
+                    aria-valuenow={winProb}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label="Win chance"
+                  >
+                    <span style={{ width: `${winProb}%` }} />
                   </div>
-                  <div className="text-sm text-gray-500">{opponent.nickname}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    Prestige {opponent.prestige} · {isHome ? 'Home' : 'Away'}
-                    {userUpcomingGame?.conferenceGame && ' · Conference'}
-                  </div>
-                </div>
-                {winProb !== null && (
-                  <div className="text-center">
-                    <div className={`text-2xl font-bold ${winProbClass(winProb)}`}>
-                      {winProb}%
-                    </div>
-                    <div className="text-xs text-gray-500">Win prob.</div>
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-6 text-sm border-t pt-3">
-                <div>
-                  <div className="text-xs text-gray-400 uppercase mb-0.5">Overall</div>
-                  <div className="font-semibold">
-                    {opponentRecord.wins}–{opponentRecord.losses}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400 uppercase mb-0.5">Conference</div>
-                  <div className="font-semibold">
-                    {opponentRecord.confWins}–{opponentRecord.confLosses}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400 uppercase mb-0.5">Scoring Diff</div>
+                </>
+              )}
+            </div>
+            <div className="matchupSide matchupSide-away">
+              <Link to={`/team/${opponent.id}`} className="matchupSchool">{opponent.schoolName}</Link>
+              <span className="matchupNick">{opponent.nickname}</span>
+              <span className="matchupRecord">
+                {opponentRecord.wins}–{opponentRecord.losses}
+                <span className="matchupDiff">
                   {(() => {
                     const diff = opponentRecord.pointsFor - opponentRecord.pointsAgainst;
-                    return (
-                      <div className={diff >= 0 ? 'text-success font-semibold' : 'text-danger font-semibold'}>
-                        {diff > 0 ? '+' : ''}{diff}
-                      </div>
-                    );
+                    return `${diff > 0 ? '+' : ''}${diff}`;
                   })()}
-                </div>
-              </div>
+                </span>
+              </span>
             </div>
-          ) : (
-            <p className="text-sm text-gray-500">
-              {season.phase === 'PRE'
-                ? 'Season has not started yet.'
-                : season.phase === 'PLAYOFF'
-                  ? 'Regular season complete — playoffs are underway.'
-                  : season.phase === 'OFFSEASON'
-                    ? 'Season complete. Start the next season from the Career page.'
-                    : 'No game scheduled this week.'}
-            </p>
-          )}
-        </div>
+          </div>
+        </section>
+      ) : season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON' ? (
+        <section className="card">
+          <h3 className="m-0 text-base font-bold">No weekly matchup</h3>
+          <p className="text-sm text-gray-500 mt-1 mb-0">
+            {season.phase === 'PLAYOFF'
+              ? 'The regular season is over. The bracket is on the playoff page.'
+              : 'This year is closed. The next matchup arrives when the new season starts.'}
+          </p>
+        </section>
+      ) : null}
 
-        {/* ── Practice focus ── */}
-        <div className="card">
-          <h3 className="m-0 mb-3 text-base font-bold">Practice Focus</h3>
+      <div className="grid2">
+        <div className="card" id="week-practice">
+          <h3 className="m-0 mb-1 text-base font-bold">Install</h3>
+          <p className="text-xs text-gray-500 mt-0 mb-3">The practice block on this week’s game plan.</p>
           <div className="choiceGrid mb-3">
             {(Object.keys(PRACTICE_FOCUS_LABELS) as PracticeFocus[]).map((focus) => (
               <button
@@ -492,26 +491,26 @@ function WeeklyHubPage() {
               </button>
             ))}
           </div>
-          <div className="border-t pt-3 grid grid-cols-2 gap-3 text-xs">
+          <div className="planReadout planReadout-pair">
             <div>
-              <div className="text-gray-400 uppercase mb-1">Fatigue now</div>
-              <div className="flex items-center gap-1.5">
-                <span className={fatigueClass}>
-                  {gamePlan.fatigueLabel}
-                </span>
-                <span className="text-gray-600">{coach.teamFatigue}%</span>
-                <span className="text-gray-400">→</span>
-                <span className="font-semibold text-gray-700">{projectedFatigue}%</span>
+              <div className="planReadoutLabel">Fatigue now</div>
+              <div className="planReadoutValue">
+                <span className={fatigueClass}>{gamePlan.fatigueLabel}</span>
+                {' '}
+                {coach.teamFatigue}%
+                <span className="planReadoutMeta"> → {projectedFatigue}%</span>
               </div>
             </div>
             <div>
-              <div className="text-gray-400 uppercase mb-1">Gameplan edge</div>
-              <div className="text-gray-600">
+              <div className="planReadoutLabel">Game plan edge</div>
+              <div className="planReadoutValue">
                 Off {gamePlan.modifiers.offense >= 0 ? '+' : ''}
                 {gamePlan.modifiers.offense.toFixed(1)} · Def{' '}
                 {gamePlan.modifiers.defense >= 0 ? '+' : ''}
-                {gamePlan.modifiers.defense.toFixed(1)} · Disc{' '}
-                {gamePlan.modifiers.discipline >= 0 ? '+' : ''}
+                {gamePlan.modifiers.defense.toFixed(1)}
+              </div>
+              <div className="planReadoutMeta">
+                Disc {gamePlan.modifiers.discipline >= 0 ? '+' : ''}
                 {gamePlan.modifiers.discipline.toFixed(1)}
               </div>
             </div>

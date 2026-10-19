@@ -56,9 +56,9 @@ function SeasonPage() {
     if (summary.phase === 'REGULAR') {
       if (coachReady) {
         return {
-          label: 'Use Weekly Hub to advance season + recruiting together.',
+          label: 'Your game is pinned at the top of the slate. Play the week from the hub.',
           link: '/career/week',
-          cta: 'Open Weekly Hub →',
+          cta: 'Open Weekly Hub',
         };
       }
       return {
@@ -267,18 +267,21 @@ function SeasonPage() {
       </div>
 
       <div className="card">
-        <div className="seasonHeaderRow border-b pb-2 mb-4">
-          <h3 className="m-0 text-lg font-semibold">Week {displayWeek + 1} Matchups</h3>
-          <label className="text-sm">
-            Conference
-            <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded ml-1">
-            <option value="ALL">All Conferences</option>
-            {conferences.map((conf) => (
-              <option key={conf.id} value={conf.id}>
-                {conf.name}
-              </option>
-            ))}
-          </select>
+        <div className="seasonHeaderRow">
+          <div>
+            <h3 className="m-0 text-lg font-semibold">Week {displayWeek + 1}</h3>
+            <p className="pageHeader-sub">Visitor on the left. Home on the right.</p>
+          </div>
+          <label className="seasonFilter">
+            <span>Conference</span>
+            <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)}>
+              <option value="ALL">All conferences</option>
+              {conferences.map((conf) => (
+                <option key={conf.id} value={conf.id}>
+                  {conf.name}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 
@@ -297,18 +300,22 @@ function SeasonPage() {
             const isUserGame = Boolean(selectedTeamId) && (game.homeTeamId === selectedTeamId || game.awayTeamId === selectedTeamId);
             return (
               <div key={game.id} className={`seasonMatchupRow ${isUserGame ? 'seasonMatchupRow-user' : ''}`}>
-                <div className="flex-1 text-right">
-                  {away ? <Link to={`/team/${away.id}`} className="font-semibold">{away.schoolName}</Link> : <span className="font-semibold">Away</span>}
-                  <span className="text-xs text-gray-500 ml-1">({away?.nickname})</span>
-                  {game.awayTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
+                <div className="seasonSide">
+                  {away ? <Link to={`/team/${away.id}`} className="seasonSchool">{away.schoolName}</Link> : <span className="seasonSchool">Away</span>}
+                  <span className="seasonNick">
+                    {away?.nickname}
+                    {game.awayTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                  </span>
                 </div>
-                <div className="mx-4 font-mono font-bold text-lg min-w-[60px] text-center">
-                  {result ? <span>{result.scoreB} - {result.scoreA}</span> : <span className="text-gray-400 text-sm">vs</span>}
+                <div className={result ? 'seasonScore' : 'seasonScore seasonScore-pending'}>
+                  {result ? `${result.scoreB}–${result.scoreA}` : 'vs'}
                 </div>
-                <div className="flex-1 text-left">
-                  {home ? <Link to={`/team/${home.id}`} className="font-semibold">{home.schoolName}</Link> : <span className="font-semibold">Home</span>}
-                  <span className="text-xs text-gray-500 ml-1">({home?.nickname})</span>
-                  {game.homeTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
+                <div className="seasonSide seasonSide-home">
+                  {home ? <Link to={`/team/${home.id}`} className="seasonSchool">{home.schoolName}</Link> : <span className="seasonSchool">Home</span>}
+                  <span className="seasonNick">
+                    {home?.nickname}
+                    {game.homeTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                  </span>
                 </div>
               </div>
             );
