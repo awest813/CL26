@@ -91,6 +91,8 @@ export interface CoachState {
   programResources: ProgramResources;
   programPrestigeDrift: number;
   pendingJobOffers: JobOffer[];
+  portalClaimIds: string[];
+  draftClaimId: string | null;
   seasonHistory: SeasonHistoryEntry[];
   careerRecord: CareerRecord;
   // Roster management
@@ -133,6 +135,8 @@ const initialState: CoachState = {
   },
   programPrestigeDrift: 0,
   pendingJobOffers: [],
+  portalClaimIds: [],
+  draftClaimId: null,
   seasonHistory: [],
   careerRecord: {
     totalWins: 0,
@@ -340,6 +344,8 @@ const coachSlice = createSlice({
         };
         state.managedRoster = null;
         state.starterIds = [];
+        state.portalClaimIds = [];
+        state.draftClaimId = null;
         state.teamFatigue = 20;
         const defaults = CAREER_TIER_DEFAULTS[action.payload.careerTier];
         state.programResources = defaults.resources;
@@ -427,6 +433,35 @@ const coachSlice = createSlice({
             state.starterIds.push(playerId);
         }
     },
+    togglePortalClaim: (state, action: PayloadAction<string>) => {
+        if (!Array.isArray(state.portalClaimIds)) state.portalClaimIds = [];
+        const id = action.payload;
+        if (state.portalClaimIds.includes(id)) {
+            state.portalClaimIds = state.portalClaimIds.filter((claim) => claim !== id);
+            return;
+        }
+        const draftUsed = state.draftClaimId ? 1 : 0;
+        const room = Math.max(0, state.scholarshipsAvailable - draftUsed);
+        if (state.portalClaimIds.length >= 3 || state.portalClaimIds.length >= room) return;
+        state.portalClaimIds.push(id);
+    },
+    setDraftClaim: (state, action: PayloadAction<string | null>) => {
+        if (!Array.isArray(state.portalClaimIds)) state.portalClaimIds = [];
+        const next = action.payload;
+        if (next && next === state.draftClaimId) {
+            state.draftClaimId = null;
+            return;
+        }
+        if (next) {
+            const room = Math.max(0, state.scholarshipsAvailable - state.portalClaimIds.length);
+            if (room <= 0 && state.draftClaimId == null) return;
+        }
+        state.draftClaimId = next;
+    },
+    clearOffseasonMarket: (state) => {
+        state.portalClaimIds = [];
+        state.draftClaimId = null;
+    },
     resetCoach: () => initialState,
   },
 });
@@ -462,6 +497,9 @@ export const {
     setManagedRoster,
     setStarterIds,
     toggleStarter,
+    togglePortalClaim,
+    setDraftClaim,
+    clearOffseasonMarket,
     resetCoach,
 } = coachSlice.actions;
 

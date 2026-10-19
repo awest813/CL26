@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import type { Player, Position, SignedRecruit, Team } from '../types/sim.ts';
-import { applyRosterTurnover, applyWeeklyTraitGrowth, developPlayers } from './rosterManagement.ts';
+import { applyRosterTurnover, applyWeeklyTraitGrowth, developPlayers, previewOffseasonDepartures } from './rosterManagement.ts';
 import { makeRng } from './rng.ts';
 
 const basePlayer = (id: string): Player => ({
@@ -156,5 +156,32 @@ describe('roster management progression systems', () => {
     assert.ok(count('D') >= 3);
     assert.ok(count('LSM') >= 1);
     assert.ok(count('FO') >= 1);
+  });
+
+  test('portal additions do not change who leaves', () => {
+    const team: Team = {
+      id: 't-portal',
+      schoolName: 'Test',
+      nickname: 'Tests',
+      conferenceId: 'c1',
+      region: 'East',
+      prestige: 55,
+    };
+    const roster = [
+      { ...basePlayer('senior'), year: 4 as const, position: 'A' as const },
+      { ...basePlayer('junior'), year: 3 as const, position: 'M' as const },
+      { ...basePlayer('sophomore'), year: 2 as const, position: 'D' as const },
+      { ...basePlayer('freshman'), year: 1 as const, position: 'G' as const },
+    ];
+    const addition = { ...basePlayer('portal-1'), name: 'Portal Player', position: 'A' as const, overall: 90 };
+    const plain = applyRosterTurnover(roster, [], team, 3030);
+    const withAdd = applyRosterTurnover(roster, [], team, 3030, undefined, [addition]);
+    const left = previewOffseasonDepartures(roster, team, 3030).map((departure) => departure.player.id);
+    assert.ok(left.includes('senior'));
+    for (const id of left) {
+      assert.ok(!plain.some((player) => player.id === id));
+      assert.ok(!withAdd.some((player) => player.id === id));
+    }
+    assert.ok(withAdd.some((player) => player.id === 'portal-1'));
   });
 });

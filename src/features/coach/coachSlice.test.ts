@@ -8,7 +8,9 @@ import {
   clearRecruitPitch,
   coachReducer,
   initializeRecruitingBoard,
+  setDraftClaim,
   setRecruitPitch,
+  togglePortalClaim,
 } from './coachSlice.ts';
 
 const mockTeams: Team[] = [
@@ -64,6 +66,8 @@ describe('coach recruiting reducer', () => {
         2025: [{ recruitId: 'prior', signedAtYear: 2025, stars: 4, position: 'M' }],
         2026: [{ recruitId: 'current', signedAtYear: 2026, stars: 3, position: 'A' }],
       },
+      portalClaimIds: ['portal-1'],
+      draftClaimId: 'draft-1',
     };
 
     state = coachReducer(
@@ -81,6 +85,27 @@ describe('coach recruiting reducer', () => {
     assert.deepStrictEqual(state.signedRecruitsByYear[2026], []);
     assert.strictEqual(state.signedRecruitsByYear[2025]?.[0]?.recruitId, 'prior');
     assert.strictEqual(Object.prototype.hasOwnProperty.call(state.signedRecruitsByYear, 2026), true);
+    assert.deepStrictEqual(state.portalClaimIds, []);
+    assert.strictEqual(state.draftClaimId, null);
+  });
+});
+
+describe('offseason market claims', () => {
+  test('portal claims leave room for one draft pick', () => {
+    let state = coachReducer(undefined, { type: '@@INIT' });
+    state = { ...state, scholarshipsAvailable: 2 };
+    state = coachReducer(state, togglePortalClaim('a'));
+    state = coachReducer(state, togglePortalClaim('b'));
+    state = coachReducer(state, togglePortalClaim('c'));
+    assert.deepStrictEqual(state.portalClaimIds, ['a', 'b']);
+    state = coachReducer(state, setDraftClaim('pick'));
+    assert.strictEqual(state.draftClaimId, null);
+    state = coachReducer(state, togglePortalClaim('b'));
+    state = coachReducer(state, setDraftClaim('pick'));
+    assert.deepStrictEqual(state.portalClaimIds, ['a']);
+    assert.strictEqual(state.draftClaimId, 'pick');
+    state = coachReducer(state, togglePortalClaim('b'));
+    assert.deepStrictEqual(state.portalClaimIds, ['a']);
   });
 });
 

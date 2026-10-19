@@ -218,12 +218,54 @@ const POSITION_MINIMUMS: Record<Position, number> = {
  * 4. Add incoming signed recruits as freshmen
  * 5. Fill any remaining open spots with generated walk-ons
  */
+export interface RosterDeparture {
+  player: Player;
+  reason: 'graduate' | 'transfer';
+}
+
+function transferChanceForYear(year: Player['year']): number {
+  if (year === 1) return 0.08;
+  if (year === 2) return 0.06;
+  if (year === 3) return 0.04;
+  return 0;
+}
+
+function splitDepartures(developed: Player[], rng: () => number): { returners: Player[]; departures: RosterDeparture[] } {
+  const returners: Player[] = [];
+  const departures: RosterDeparture[] = [];
+  for (const player of developed) {
+    if (player.year === 4) {
+      departures.push({ player, reason: 'graduate' });
+      continue;
+    }
+    if (rng() < transferChanceForYear(player.year)) {
+      departures.push({ player, reason: 'transfer' });
+      continue;
+    }
+    returners.push(player);
+  }
+  return { returners, departures };
+}
+
+/** Who leaves before the next season. Same rolls as roster turnover. */
+export function previewOffseasonDepartures(
+  currentRoster: Player[],
+  team: Team,
+  newSeed: number,
+  options?: CoachDevelopmentInputs,
+): RosterDeparture[] {
+  const rng = makeRng(seedToNumber(`${newSeed}:${team.id}:turnover`));
+  const developed = developPlayers(currentRoster, rng, options);
+  return splitDepartures(developed, rng).departures;
+}
+
 export function applyRosterTurnover(
   currentRoster: Player[],
   signedRecruits: SignedRecruit[],
   team: Team,
   newSeed: number,
   options?: CoachDevelopmentInputs,
+  additions: Player[] = [],
 ): Player[] {
   const rng = makeRng(seedToNumber(`${newSeed}:${team.id}:turnover`));
 
@@ -236,16 +278,8 @@ export function applyRosterTurnover(
     boostersLevel: options?.boostersLevel,
   });
 
-  // Step 2: Separate leavers from returners
-  //   - Seniors (year 4) always graduate
-  //   - ~10% chance each year-1,2,3 player transfers out
-  const returners: Player[] = [];
-  for (const player of developed) {
-    if (player.year === 4) continue; // graduate
-    const transferChance = player.year === 1 ? 0.08 : player.year === 2 ? 0.06 : 0.04;
-    if (rng() < transferChance) continue; // transfer portal
-    returners.push(player);
-  }
+  // Step 2: Seniors graduate. Underclassmen can enter the portal.
+  const { returners } = splitDepartures(developed, rng);
 
   // Step 3: Age returning players
   const agedReturners: Player[] = returners.map((player) => ({
@@ -262,7 +296,7 @@ export function applyRosterTurnover(
   // Step 5: Fill remaining spots with generated walk-ons up to 24 players.
   // A large signing class can already be over the target. Make room before adding
   // a missing position, or slice() drops the only new goalie.
-  const combined = [...agedReturners, ...incomingFreshmen];
+  const combined = [...agedReturners, ...incomingFreshmen, ...additions];
   const requiredPositions: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
   const missingPositions = requiredPositions.filter((pos) => !combined.some((player) => player.position === pos));
   trimRosterForRequiredAdds(combined, ROSTER_TARGET_SIZE, missingPositions.length);

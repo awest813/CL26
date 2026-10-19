@@ -62,6 +62,16 @@ export function adGoalCopy(input: Pick<WeeklyDeskInput, 'wins' | 'winTarget' | '
 }
 
 function recruitingTask(input: WeeklyDeskInput): DeskTask {
+  if (input.phase === 'OFFSEASON') {
+    return {
+      id: 'recruiting',
+      title: 'Recruiting',
+      detail: 'The high school class is closed. The portal, the draft, and the coach pool are on the office.',
+      tone: 'open',
+      action: 'Office',
+      href: '/career',
+    };
+  }
   if (input.phase === 'PLAYOFF') {
     return {
       id: 'recruiting',

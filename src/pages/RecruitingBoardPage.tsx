@@ -201,16 +201,23 @@ function RecruitingBoardPage() {
   }
 
   if (coach.recruitPool.length === 0) {
+    const classClosed = season.phase === 'OFFSEASON';
     return (
       <div className="pageStack">
         <div className="pageHeader">
           <h2>Recruiting Board</h2>
-          <p className="pageHeader-sub">Start recruiting to manage your prospect pool.</p>
+          <p className="pageHeader-sub">
+            {classClosed
+              ? 'The high school class is closed. The portal and the draft are on the office.'
+              : 'Start recruiting to manage your prospect pool.'}
+          </p>
         </div>
         <div className="card text-center py-10">
-          <p className="text-gray-500 mb-4">No recruit pool loaded yet.</p>
+          <p className="text-gray-500 mb-4">
+            {classClosed ? 'The high school class is closed.' : 'No recruit pool loaded yet.'}
+          </p>
           <Link to="/career" className="btn btn-primary">
-            Go to Coach Office to start recruiting →
+            {classClosed ? 'Open the portal and the draft' : 'Go to Coach Office to start recruiting →'}
           </Link>
         </div>
       </div>

@@ -17,11 +17,20 @@ import {
   updateProgramStanding,
   careerSetupFromPrestige,
   applyPlayoffRoundFatigue,
+  clearOffseasonMarket,
 } from './coachSlice';
 import type { GameResult } from '../../types/sim';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
+import {
+  buildDraftBoard,
+  buildPortalBoard,
+  draftPickIndex,
+  entrantToPlayer,
+  prospectToPlayer,
+  prospectsAvailableAtPick,
+} from '../../sim/offseasonMarket';
 import { computeAllSOS, computeRankings, withProgramPrestige } from '../../sim/rankings';
 import { seedToNumber } from '../../sim/rng';
 import {
@@ -327,6 +336,20 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
 
     // Only apply this offseason's signing class; prior years stay archived in history and are not re-applied.
     const signedRecruits = coach.signedRecruitsByYear[state.season.year] ?? [];
+    const room = Math.max(0, coach.scholarshipsAvailable ?? 0);
+    const portalClaims = new Set(coach.portalClaimIds ?? []);
+    const portalPlayers = buildPortalBoard(teams, team.id, newSeed, state.season.year)
+      .filter((entrant) => portalClaims.has(entrant.id))
+      .slice(0, Math.min(3, room))
+      .map(entrantToPlayer);
+    const draftRoom = Math.max(0, room - portalPlayers.length);
+    const draftBoard = buildDraftBoard(newSeed, state.season.year);
+    const pickIndex = draftPickIndex(team.id, teams, selectTeamRecords(state));
+    const available = new Set(prospectsAvailableAtPick(draftBoard, pickIndex).map((prospect) => prospect.id));
+    const draftProspect = draftRoom > 0
+      ? draftBoard.find((prospect) => prospect.id === coach.draftClaimId && available.has(prospect.id))
+      : undefined;
+    const additions = draftProspect ? [...portalPlayers, prospectToPlayer(draftProspect)] : portalPlayers;
 
     const newRoster = applyRosterTurnover(currentRoster, signedRecruits, team, newSeed, {
       coachArchetype: coach.profile?.archetype,
@@ -334,7 +357,8 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
       operationsSkill: coach.skillTree?.operations ?? 0,
       facilitiesLevel: coach.programResources?.facilities ?? 50,
       boostersLevel: coach.programResources?.boosters ?? 50,
-    });
+    }, additions);
+    dispatch(clearOffseasonMarket());
     const newStarters = buildDefaultStarters(newRoster);
     dispatch(setManagedRoster(newRoster));
     dispatch(setStarterIds(newStarters));

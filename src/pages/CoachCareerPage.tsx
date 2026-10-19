@@ -6,17 +6,15 @@ import {
   setPracticeFocus,
   setTactics,
   upgradeCoachSkill,
-  acceptJobOffer,
-  declineAllJobOffers,
   selectUserEffectivePrestige,
   WEEKLY_HOURS_CAP,
   processSigningDay,
 } from '../features/coach/coachSlice';
 import {
   processSeasonEnd,
-  initializeManagedRoster,
   beginNextCareerSeason,
 } from '../features/coach/careerThunks';
+import OffseasonMarket from './OffseasonMarket';
 import { selectTeamRecords } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -89,7 +87,6 @@ function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: 
 function CoachCareerPage() {
   const dispatch = useAppDispatch();
   const teams = useAppSelector((state) => state.league.teams);
-  const conferences = useAppSelector((state) => state.league.conferences);
   const coach = useAppSelector((state) => state.coach);
   const season = useAppSelector((state) => state.season);
   const recordsByTeamId = useAppSelector(selectTeamRecords);
@@ -98,13 +95,8 @@ function CoachCareerPage() {
 
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [jobOfferError, setJobOfferError] = useState<string | null>(null);
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
-  const conferenceNameById = useMemo(
-    () => new Map(conferences.map((conference) => [conference.id, conference.name])),
-    [conferences],
-  );
   const effectiveRecruitingTeams = useMemo(() => {
     if (!coach.selectedTeamId || effectivePrestige === null) return teams;
     return teams.map((team) =>
@@ -247,17 +239,6 @@ function CoachCareerPage() {
   const displayedWins = recordedSeason?.wins ?? userRecord.wins;
   const displayedLosses = recordedSeason?.losses ?? userRecord.losses;
   const seasonStatusLabel = recordedSeason ? 'Final Season Record' : 'Season Performance';
-
-  async function onAcceptOffer(teamId: string) {
-    setJobOfferError(null);
-    try {
-      await dispatch(acceptJobOffer(teamId)).unwrap();
-      await dispatch(initializeManagedRoster()).unwrap();
-    } catch (error) {
-      console.error('Failed to accept coach job offer.', error);
-      setJobOfferError('The coaching move did not complete. Reload the page and try again.');
-    }
-  }
 
   return (
     <div className="pageStack">
@@ -411,53 +392,6 @@ function CoachCareerPage() {
             </div>
           </div>
 
-          {coach.pendingJobOffers.length > 0 && (
-            <div className="mb-4 p-3 rounded border bg-white">
-              <div className="flex justify-between items-start gap-3 mb-3">
-                <div>
-                  <h4 className="m-0 text-sm font-bold">Career Opportunity</h4>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-0">
-                    Strong results have created interest from other programs. Accepting resets your roster and recruiting board.
-                  </p>
-                  {jobOfferError && <p className="text-xs text-red-600 mt-2 mb-0">{jobOfferError}</p>}
-                </div>
-                <button type="button" className="btn text-xs" onClick={() => dispatch(declineAllJobOffers())}>
-                  Decline All (+3 security)
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {coach.pendingJobOffers.map((offer) => {
-                  const offerTeam = teams.find((team) => team.id === offer.teamId);
-                  if (!offerTeam) return null;
-                  return (
-                    <div key={offer.teamId} className="border rounded p-3">
-                      <div className="flex justify-between gap-2">
-                        <div>
-                          <div className="font-semibold">
-                            {offerTeam.schoolName} {offerTeam.nickname}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {conferenceNameById.get(offerTeam.conferenceId) ?? 'Independent'} · Prestige {offerTeam.prestige}
-                          </div>
-                        </div>
-                        <span className={offer.tier === 'UPGRADE' ? 'text-green-600 text-xs font-bold' : 'youMark'}>
-                          {offer.tier}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn btn-primary text-xs mt-3"
-                        onClick={() => void onAcceptOffer(offer.teamId)}
-                      >
-                        Accept Offer
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div className="flex gap-2 flex-wrap">
             {offseasonCaps.canProcessSigningDay && (
               <button
@@ -499,6 +433,8 @@ function CoachCareerPage() {
         </div>
       )}
 
+      {isOffseason && <OffseasonMarket />}
+
       <div className="card">
         <div className="weekActionBar">
           <div>
@@ -516,25 +452,29 @@ function CoachCareerPage() {
             </p>
           </div>
           {coach.recruitPool.length === 0 ? (
-            <div className="recruitSeed">
-              <label className="text-xs font-semibold text-gray-600">
-                Seed
-                <input
-                  type="number"
-                  value={seedInput}
-                  onChange={(e) => setSeedInput(Number(e.target.value))}
-                  className="w-20 p-1 text-sm"
-                  aria-label="Recruiting seed"
-                />
-              </label>
-              <button
-                type="button"
-                className="btn btn-primary text-sm"
-                onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams: effectiveRecruitingTeams }))}
-              >
-                Start Recruiting
-              </button>
-            </div>
+            isOffseason ? (
+              <p className="text-xs text-gray-500 m-0">The high school class is closed. Use the roster market for the portal and the draft.</p>
+            ) : (
+              <div className="recruitSeed">
+                <label className="text-xs font-semibold text-gray-600">
+                  Seed
+                  <input
+                    type="number"
+                    value={seedInput}
+                    onChange={(e) => setSeedInput(Number(e.target.value))}
+                    className="w-20 p-1 text-sm"
+                    aria-label="Recruiting seed"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-primary text-sm"
+                  onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams: effectiveRecruitingTeams }))}
+                >
+                  Start Recruiting
+                </button>
+              </div>
+            )
           ) : (
             <Link to="/career/recruiting" className="btn btn-primary text-sm">
               Open recruiting board

@@ -70,6 +70,13 @@ describe('weekly desk', () => {
     assert.equal(recruiting?.action, 'Add targets');
   });
 
+  test('the offseason points recruiting at the portal and the draft', () => {
+    const tasks = buildWeeklyDesk(desk({ phase: 'OFFSEASON', recruitPoolCount: 0 }));
+    const recruiting = tasks.find((task) => task.id === 'recruiting');
+    assert.match(recruiting?.detail ?? '', /portal/);
+    assert.equal(recruiting?.href, '/career');
+  });
+
   test('playoff weeks lock the install and hold the board', () => {
     const tasks = buildWeeklyDesk(desk({ phase: 'PLAYOFF' }));
     assert.match(tasks.find((task) => task.id === 'plan')?.detail ?? '', /next regular season/);
