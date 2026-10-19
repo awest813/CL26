@@ -2,7 +2,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { resetCoach, selectIsCareerReady } from '../features/coach/coachSlice';
-import { resetSeason, selectTeamRecords, selectTop12Projection, selectUserConferenceStanding } from '../features/season/seasonSlice';
+import { resetSeason, selectRankTrends, selectTeamRecords, selectTop12Projection, selectUserConferenceStanding } from '../features/season/seasonSlice';
+import { adGoalCopy } from '../sim/weeklyDesk';
 import { persistor } from '../store/persistor';
 import { seasonPhaseHomeStatus, seasonPhaseLabel } from '../lib/seasonLabels';
 
@@ -31,6 +32,7 @@ function Home() {
   const conferences = useAppSelector((state) => state.league.conferences);
   const records = useAppSelector(selectTeamRecords);
   const top12 = useAppSelector(selectTop12Projection);
+  const top25 = useAppSelector(selectRankTrends);
   const confStanding = useAppSelector(selectUserConferenceStanding);
   const { year, phase, currentWeekIndex, seasonSeed } = season;
   const seasonStarted = phase !== 'PRE';
@@ -45,6 +47,18 @@ function Home() {
   const record = coach.selectedTeamId ? records[coach.selectedTeamId] : null;
   const projectedSeed = coach.selectedTeamId
     ? top12.find((row) => row.teamId === coach.selectedTeamId)?.rank ?? null
+    : null;
+  const pollRank = seasonStarted && coach.selectedTeamId
+    ? top25.find((row) => row.teamId === coach.selectedTeamId)?.rank ?? null
+    : null;
+  const adGoal = coach.programExpectations
+    ? adGoalCopy({
+        wins: record?.wins ?? 0,
+        winTarget: coach.programExpectations.winTarget,
+        pollRank,
+        pollKnown: seasonStarted,
+        rankTarget: coach.programExpectations.rankTarget,
+      })
     : null;
   const statusLabel = seasonPhaseHomeStatus(phase, currentWeekIndex);
   const phaseLabel = seasonPhaseLabel(phase, currentWeekIndex, season.scheduleByWeek.length);
@@ -94,6 +108,7 @@ function Home() {
             <p className="commandLede">
               {coach.profile?.name ?? 'Head coach'} · {year} season · {statusLabel}
             </p>
+            {adGoal && <p className="commandGoals">AD goal: {adGoal.detail}</p>}
           </div>
           <dl className="commandStats" aria-label="Program snapshot">
             <div>
@@ -172,7 +187,7 @@ function Home() {
           {careerReady && (
             <Link to="/career/week" className="link-card">
               <strong>Weekly Hub</strong>
-              <div className="link-card-meta">Practice plan, tactics, and this week’s game</div>
+              <div className="link-card-meta">Game plan, recruiting hours, and this week’s game</div>
             </Link>
           )}
           <Link to="/season/standings" className="link-card">

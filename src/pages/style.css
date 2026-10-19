@@ -734,6 +734,13 @@ caption {
   color: var(--text-muted);
 }
 
+.commandGoals {
+  margin: 0.55rem 0 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
 .commandStats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1487,6 +1494,69 @@ button.archetypeOption[aria-pressed='true'] {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.deskList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.deskItem {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.deskItem-ready { box-shadow: inset 3px 0 0 var(--accent); }
+.deskItem-open { box-shadow: inset 3px 0 0 #d97706; }
+.deskItem-watch { box-shadow: inset 3px 0 0 #b91c1c; }
+
+.deskStatus {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.deskItem-ready .deskStatus { color: var(--accent-strong); }
+.deskItem-open .deskStatus { color: #b45309; }
+.deskItem-watch .deskStatus { color: #b91c1c; }
+
+.deskTitle {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.deskDetail {
+  margin: 0.15rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.deskAction {
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .deskItem {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+
+  .deskAction {
+    grid-column: 2;
+  }
 }
 
 .seasonMatchupFooter {

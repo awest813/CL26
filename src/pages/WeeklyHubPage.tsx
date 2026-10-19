@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import {
+  selectRankTrends,
   selectTeamRecords,
   selectUserUpcomingGame,
   selectUserLastResult,
@@ -15,8 +16,21 @@ import {
 } from '../features/coach/coachSlice';
 import { runCareerWeeklyCycle } from '../features/coach/careerThunks';
 import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
+import { buildPositionNeedByPosition } from '../sim/recruiting';
+import { buildWeeklyDesk } from '../sim/weeklyDesk';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { PracticeFocus, GameResult } from '../types/sim';
+import { PracticeFocus, GameResult, Tactics } from '../types/sim';
+
+function schemeCall(tactics: Tactics): string {
+  const tempo = tactics.tempo === 'fast' ? 'Fast tempo' : tactics.tempo === 'slow' ? 'Slow tempo' : 'Balanced tempo';
+  const defense =
+    tactics.defensePackage === 'zone'
+      ? 'Zone defense'
+      : tactics.defensePackage === 'pressure'
+        ? 'Pressure defense'
+        : 'Man defense';
+  return `${tempo} · ${defense}`;
+}
 
 const PRACTICE_FOCUS_DESCRIPTIONS: Record<PracticeFocus, string> = {
   OFFENSE: 'Boosts attack edge and tempo; defensive ratings dip slightly.',
@@ -231,6 +245,42 @@ function WeeklyHubPage() {
     dispatch(setRecruitHours({ recruitId, hours: Math.min(requested, allowed) }));
   }
 
+  const top25 = useAppSelector(selectRankTrends);
+  const pollRank = season.phase === 'PRE' ? null : top25.find((row) => row.teamId === selectedTeamId)?.rank ?? null;
+  const weeklyDesk = useMemo(
+    () =>
+      buildWeeklyDesk({
+        phase: season.phase,
+        practiceLabel: PRACTICE_FOCUS_LABELS[coach.practiceFocus],
+        practiceDetail: PRACTICE_FOCUS_DESCRIPTIONS[coach.practiceFocus],
+        schemeLine: schemeCall(coach.tactics),
+        recruitPoolCount: coach.recruitPool.length,
+        boardCount: boardRecruits.length,
+        hoursAssigned: totalHours,
+        hoursCap: WEEKLY_HOURS_CAP,
+        hasRoster: (coach.managedRoster?.length ?? 0) > 0,
+        positionNeeds: buildPositionNeedByPosition(coach.managedRoster),
+        wins: userRecord.wins,
+        winTarget: coach.programExpectations?.winTarget ?? 0,
+        pollRank,
+        pollKnown: season.phase !== 'PRE',
+        rankTarget: coach.programExpectations?.rankTarget ?? 99,
+      }),
+    [
+      boardRecruits.length,
+      coach.managedRoster,
+      coach.practiceFocus,
+      coach.programExpectations?.rankTarget,
+      coach.programExpectations?.winTarget,
+      coach.recruitPool.length,
+      coach.tactics,
+      pollRank,
+      season.phase,
+      totalHours,
+      userRecord.wins,
+    ],
+  );
+
   const isRegularSeason = season.phase === 'REGULAR';
   const canAdvance =
     isRegularSeason &&
@@ -320,6 +370,33 @@ function WeeklyHubPage() {
           </div>
         </div>
       </div>
+
+      <section className="card" aria-labelledby="weekly-desk-title">
+        <h3 id="weekly-desk-title" className="m-0 text-base font-bold">This week</h3>
+        <p className="text-sm text-gray-500 mt-1 mb-3">
+          {season.phase === 'PLAYOFF'
+            ? 'The regular-season desk is closed. The bracket is the job now.'
+            : season.phase === 'OFFSEASON'
+              ? 'Close the class and the AD review before next year.'
+              : 'Set the game plan and the board, then play the week.'}
+        </p>
+        <ul className="deskList">
+          {weeklyDesk.map((task) => (
+            <li key={task.id} className={`deskItem deskItem-${task.tone}`}>
+              <span className="deskStatus">{task.tone === 'ready' ? 'Ready' : task.tone === 'watch' ? 'Watch' : 'Open'}</span>
+              <div>
+                <div className="deskTitle">{task.title}</div>
+                <p className="deskDetail">{task.detail}</p>
+              </div>
+              {task.href ? (
+                <Link to={task.href} className="deskAction">{task.action}</Link>
+              ) : (
+                <span className="deskAction">{task.action}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {/* ── Last game result banner ── */}
       {userLastResult && (
