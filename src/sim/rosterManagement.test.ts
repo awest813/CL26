@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import type { Player } from '../types/sim.ts';
-import { applyWeeklyTraitGrowth, developPlayers } from './rosterManagement.ts';
+import type { Player, Position, SignedRecruit, Team } from '../types/sim.ts';
+import { applyRosterTurnover, applyWeeklyTraitGrowth, developPlayers } from './rosterManagement.ts';
 import { makeRng } from './rng.ts';
 
 const basePlayer = (id: string): Player => ({
@@ -98,5 +98,63 @@ describe('roster management progression systems', () => {
     });
     assert.ok(grown.every((player) => player.overall <= 94));
     assert.ok(grown.every((player) => player.shooting <= 93));
+  });
+
+  test('a full signing class still keeps a walk-on at a graduated position', () => {
+    const team: Team = {
+      id: 't-goalie',
+      schoolName: 'Test',
+      nickname: 'Tests',
+      conferenceId: 'c1',
+      region: 'East',
+      prestige: 70,
+    };
+    const roster: Player[] = [
+      ...Array.from({ length: 16 }, (_, index) => ({
+        ...basePlayer(`return-a-${index}`),
+        position: 'A' as Position,
+        year: 2 as const,
+        overall: 60 + (index % 5),
+      })),
+      ...Array.from({ length: 3 }, (_, index) => ({
+        ...basePlayer(`return-d-${index}`),
+        position: 'D' as Position,
+        year: 2 as const,
+        overall: 64,
+      })),
+      { ...basePlayer('return-lsm'), position: 'LSM' as Position, year: 2 as const },
+      { ...basePlayer('return-fo'), position: 'FO' as Position, year: 2 as const },
+      ...Array.from({ length: 2 }, (_, index) => ({
+        ...basePlayer(`senior-m-${index}`),
+        position: 'M' as Position,
+        year: 4 as const,
+      })),
+      {
+        ...basePlayer('only-goalie'),
+        position: 'G' as Position,
+        year: 4 as const,
+        overall: 80,
+      },
+    ];
+    const signed: SignedRecruit[] = Array.from({ length: 12 }, (_, index) => ({
+      recruitId: `sig-${index}`,
+      signedAtYear: 2026,
+      stars: 3,
+      position: 'A' as Position,
+      potential: 70,
+    }));
+
+    const next = applyRosterTurnover(roster, signed, team, 2027);
+    const ids = new Set(next.map((player) => player.id));
+    const count = (position: Position) => next.filter((player) => player.position === position).length;
+    assert.ok(next.length <= 24, `roster grew to ${next.length}`);
+    assert.ok(next.length >= 12, `roster shrank to ${next.length}`);
+    assert.strictEqual(ids.size, next.length, 'roster has duplicate player ids');
+    assert.ok(count('G') >= 1, 'graduated goalie was not replaced');
+    assert.ok(count('M') >= 3, `midfield depth ${count('M')} cannot field a line`);
+    assert.ok(count('A') >= 3);
+    assert.ok(count('D') >= 3);
+    assert.ok(count('LSM') >= 1);
+    assert.ok(count('FO') >= 1);
   });
 });
