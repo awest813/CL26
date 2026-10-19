@@ -298,15 +298,17 @@ function SeasonPage() {
             return (
               <div key={game.id} className={`seasonMatchupRow ${isUserGame ? 'seasonMatchupRow-user' : ''}`}>
                 <div className="flex-1 text-right">
-                  <span className="font-semibold">{away?.schoolName}</span>
+                  {away ? <Link to={`/team/${away.id}`} className="font-semibold">{away.schoolName}</Link> : <span className="font-semibold">Away</span>}
                   <span className="text-xs text-gray-500 ml-1">({away?.nickname})</span>
+                  {game.awayTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
                 </div>
                 <div className="mx-4 font-mono font-bold text-lg min-w-[60px] text-center">
                   {result ? <span>{result.scoreB} - {result.scoreA}</span> : <span className="text-gray-400 text-sm">vs</span>}
                 </div>
                 <div className="flex-1 text-left">
-                  <span className="font-semibold">{home?.schoolName}</span>
+                  {home ? <Link to={`/team/${home.id}`} className="font-semibold">{home.schoolName}</Link> : <span className="font-semibold">Home</span>}
                   <span className="text-xs text-gray-500 ml-1">({home?.nickname})</span>
+                  {game.homeTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
                 </div>
               </div>
             );

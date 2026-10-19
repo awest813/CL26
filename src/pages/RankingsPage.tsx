@@ -87,6 +87,14 @@ function RankingsPage() {
             ? 'Final regular-season power rankings.'
             : 'Deterministic power ranking based on record, point margin, and strength of schedule.'}
         </p>
+        {selectedTeamId && userTeamBreakdown && !userTeamBreakdown.rankRow && (
+          <p className="text-sm text-gray-700 mt-0 mb-2">
+            <span className="youMark">Your program</span> is outside the Top 25
+            {summary.phase === 'PRE'
+              ? ' on the preseason profile.'
+              : ` with a poll score of ${Math.round(userTeamBreakdown.breakdown.totalPoints)}.`}
+          </p>
+        )}
 
         <div className="dataTableWrap">
         <table>
@@ -103,13 +111,15 @@ function RankingsPage() {
           <tbody>
             {top25WithTrends.map((row) => {
               const team = teamById.get(row.teamId);
+              const isUser = row.teamId === selectedTeamId;
               return (
-                <tr key={row.teamId}>
+                <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
                   <td className="font-mono font-bold">{row.rank}</td>
                   <td className="text-center">{rankDeltaDisplay(row.delta)}</td>
                   <td>
                     {team ? <Link to={`/team/${team.id}`}>{team.schoolName}</Link> : row.teamId}{' '}
                     <span className="text-xs text-gray-500">({team?.nickname})</span>
+                    {isUser && <span className="youMark ml-1">(You)</span>}
                   </td>
                   <td>{row.record}</td>
                   <td className="font-mono">{row.points}</td>
@@ -144,12 +154,14 @@ function RankingsPage() {
             {top12.map((row) => {
               const team = teamById.get(row.teamId);
               const hasBye = row.rank <= 4;
+              const isUser = row.teamId === selectedTeamId;
               return (
-                <tr key={row.teamId}>
+                <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
                   <td className="font-mono font-bold">#{row.rank}</td>
                   <td>
                     {team ? <Link to={`/team/${team.id}`}>{team.schoolName}</Link> : row.teamId}{' '}
                     <span className="text-xs text-gray-500">({team?.nickname})</span>
+                    {isUser && <span className="youMark ml-1">(You)</span>}
                   </td>
                   <td>{row.record}</td>
                   <td className="text-xs">
@@ -176,12 +188,14 @@ function RankingsPage() {
               <tbody>
                 {bubbleTeams.map((row) => {
                   const team = teamById.get(row.teamId);
+                  const isUser = row.teamId === selectedTeamId;
                   return (
-                    <tr key={row.teamId} className="border-b last:border-0">
+                    <tr key={row.teamId} className={`border-b last:border-0 ${isUser ? 'youRow' : ''}`}>
                       <td className="py-1 font-mono text-gray-400 pr-2">#{row.rank}</td>
                       <td className="py-1">
                         {team ? <Link to={`/team/${team.id}`}>{team.schoolName}</Link> : row.teamId}{' '}
                         <span className="text-xs text-gray-400">({team?.nickname})</span>
+                        {isUser && <span className="youMark ml-1">(You)</span>}
                       </td>
                       <td className="py-1 text-gray-500">{row.record}</td>
                     </tr>

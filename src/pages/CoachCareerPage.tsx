@@ -594,7 +594,7 @@ function CoachCareerPage() {
         <p className="text-xs text-gray-500 mt-1 mb-3">
           Your base scheme for every game. Practice focus still shifts tempo and slides during the weekly cycle.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+        <div className="tacticGrid">
           <label className="text-xs font-semibold text-gray-600">
             Tempo
             <select

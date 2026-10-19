@@ -133,18 +133,19 @@ function SeasonWeekPage() {
       });
 
       return games.sort((a, b) => {
+          const aUser = Boolean(selectedTeamId) && (a.game.homeTeamId === selectedTeamId || a.game.awayTeamId === selectedTeamId);
+          const bUser = Boolean(selectedTeamId) && (b.game.homeTeamId === selectedTeamId || b.game.awayTeamId === selectedTeamId);
+          if (aUser !== bUser) return aUser ? -1 : 1;
           if (sortBy === 'score') {
-             // Total score sort (descending)
              const aScore = (a.result?.scoreA ?? 0) + (a.result?.scoreB ?? 0);
              const bScore = (b.result?.scoreA ?? 0) + (b.result?.scoreB ?? 0);
              return bScore - aScore;
           }
-          // Alpha sort by Home Team Name
           const aName = teamById.get(a.game.homeTeamId)?.schoolName ?? '';
           const bName = teamById.get(b.game.homeTeamId)?.schoolName ?? '';
           return aName.localeCompare(bName);
       });
-  }, [rows, conferenceFilter, sortBy, teamById]);
+  }, [rows, conferenceFilter, sortBy, teamById, selectedTeamId]);
 
   const userGameResult = useMemo(() => {
     if (!selectedTeamId) return null;
@@ -268,9 +269,11 @@ function SeasonWeekPage() {
 
                   return (
                     <Fragment key={game.id}>
-                      <tr className="seasonWeekGameRow">
+                      <tr className={`seasonWeekGameRow ${selectedTeamId && (game.homeTeamId === selectedTeamId || game.awayTeamId === selectedTeamId) ? 'youRow' : ''}`}>
                         <td className={`p-2 text-right ${awayScore > homeScore ? 'font-bold' : ''}`}>
-                            {away?.schoolName} <span className="text-xs text-gray-500 font-normal">({away?.nickname})</span>
+                            {away ? <Link to={`/team/${away.id}`}>{away.schoolName}</Link> : 'Away'}{' '}
+                            <span className="text-xs text-gray-500 font-normal">({away?.nickname})</span>
+                            {game.awayTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
                         </td>
                         <td className="p-2 text-center font-mono font-bold bg-gray-50">
                             <button
@@ -286,7 +289,9 @@ function SeasonWeekPage() {
                             </button>
                         </td>
                         <td className={`p-2 text-left ${homeScore > awayScore ? 'font-bold' : ''}`}>
-                            {home?.schoolName} <span className="text-xs text-gray-500 font-normal">({home?.nickname})</span>
+                            {home ? <Link to={`/team/${home.id}`}>{home.schoolName}</Link> : 'Home'}{' '}
+                            <span className="text-xs text-gray-500 font-normal">({home?.nickname})</span>
+                            {game.homeTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
                         </td>
                         <td className="p-2 text-center text-xs text-gray-600">
                             {isFinal ? `${result.statsB.shots} - ${result.statsA.shots}` : '-'}

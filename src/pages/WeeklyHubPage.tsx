@@ -341,7 +341,8 @@ function WeeklyHubPage() {
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <div className="font-bold text-lg">
-                    {isHome ? 'vs' : '@'} {opponent.schoolName}
+                    {isHome ? 'vs' : '@'}{' '}
+                    <Link to={`/team/${opponent.id}`}>{opponent.schoolName}</Link>
                   </div>
                   <div className="text-sm text-gray-500">{opponent.nickname}</div>
                   <div className="text-xs text-gray-400 mt-0.5">
