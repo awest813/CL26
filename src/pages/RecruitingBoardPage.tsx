@@ -208,7 +208,7 @@ function RecruitingBoardPage() {
           <h2>Recruiting Board</h2>
           <p className="pageHeader-sub">
             {classClosed
-              ? 'The high school class is closed. The portal and the draft are on the office.'
+              ? 'The high school class is closed. The portal and the pro draft are on the office.'
               : 'Start recruiting to manage your prospect pool.'}
           </p>
         </div>
@@ -217,7 +217,7 @@ function RecruitingBoardPage() {
             {classClosed ? 'The high school class is closed.' : 'No recruit pool loaded yet.'}
           </p>
           <Link to="/career" className="btn btn-primary">
-            {classClosed ? 'Open the portal and the draft' : 'Go to Coach Office to start recruiting →'}
+            {classClosed ? 'Open the portal and the pro draft' : 'Go to Coach Office to start recruiting →'}
           </Link>
         </div>
       </div>

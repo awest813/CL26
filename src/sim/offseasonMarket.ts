@@ -1,9 +1,22 @@
-import type { Player, Position, Team, TeamRecord } from '../types/sim';
+import type { Player, Position, Team } from '../types/sim';
 import namesData from '../data/names.json' with { type: 'json' };
+import { generateRoster } from './generateRoster';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 
 export const PORTAL_CLAIM_CAP = 3;
-export const DRAFT_BOARD_SIZE = 64;
+export const PRO_DRAFT_ROUNDS = 4;
+export const EARLY_ENTRY_OVERALL = 80;
+
+export const PRO_CLUBS = [
+  { id: 'bay-lights', name: 'Bay Lights' },
+  { id: 'red-canyon', name: 'Red Canyon' },
+  { id: 'iron-pines', name: 'Iron Pines' },
+  { id: 'metro-crown', name: 'Metro Crown' },
+  { id: 'glass-city', name: 'Glass City' },
+  { id: 'north-current', name: 'North Current' },
+  { id: 'cedar-range', name: 'Cedar Range' },
+  { id: 'tide-forge', name: 'Tide Forge' },
+] as const;
 
 const POSITIONS: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
 const ARCHETYPES = ['RECRUITER', 'TACTICIAN', 'DEVELOPER'] as const;
@@ -21,12 +34,28 @@ export interface PortalEntrant {
   originName: string;
 }
 
-export interface DraftProspect {
-  id: string;
-  name: string;
+export interface ProDraftPick {
+  pick: number;
+  round: number;
+  clubId: string;
+  clubName: string;
+  playerId: string;
+  playerName: string;
   position: Position;
-  stars: number;
-  potential: number;
+  year: 1 | 2 | 3 | 4;
+  overall: number;
+  collegeId: string;
+  collegeName: string;
+  early: boolean;
+}
+
+export interface ProDraftInput {
+  teams: Team[];
+  rosterSeed: string;
+  seasonSeed: number;
+  year: number;
+  userTeamId: string | null;
+  userRoster: Player[] | null;
 }
 
 export interface StaffCoach {
@@ -74,52 +103,70 @@ export function buildPortalBoard(teams: Team[], userTeamId: string, seed: number
   return board.sort((a, b) => b.overall - a.overall || a.name.localeCompare(b.name));
 }
 
-export function buildDraftBoard(seed: number, year: number): DraftProspect[] {
-  const rng = makeRng(seedToNumber(`${seed}:${year}:draft`));
-  return Array.from({ length: DRAFT_BOARD_SIZE }, (_, index) => {
-    const starsRoll = randInt(rng, 1, 100);
-    const stars = starsRoll > 97 ? 5 : starsRoll > 82 ? 4 : starsRoll > 48 ? 3 : 2;
+function shuffleClubs(seed: number, year: number): Array<(typeof PRO_CLUBS)[number]> {
+  const rng = makeRng(seedToNumber(`${seed}:${year}:pro-draft`));
+  const clubs = [...PRO_CLUBS];
+  for (let index = clubs.length - 1; index > 0; index -= 1) {
+    const swap = randInt(rng, 0, index);
+    const current = clubs[index];
+    clubs[index] = clubs[swap];
+    clubs[swap] = current;
+  }
+  return clubs;
+}
+
+function rosterForDraft(team: Team, input: ProDraftInput): Player[] {
+  if (team.id === input.userTeamId && input.userRoster && input.userRoster.length > 0) {
+    return input.userRoster;
+  }
+  return generateRoster(team, input.rosterSeed);
+}
+
+/** Seniors are always eligible. A junior at 80 or better can turn pro. */
+export function isProDraftEligible(player: Player): boolean {
+  if (player.year === 4) return true;
+  return player.year === 3 && player.overall >= EARLY_ENTRY_OVERALL;
+}
+
+/**
+ * Premier Circuit college draft. Eight clubs, four rounds.
+ * The best eligible players go first. Club order is a yearly lottery.
+ */
+export function buildProDraft(input: ProDraftInput): ProDraftPick[] {
+  const pool = input.teams.flatMap((team) =>
+    rosterForDraft(team, input)
+      .filter(isProDraftEligible)
+      .map((player) => ({
+        playerId: player.id,
+        playerName: player.name,
+        position: player.position,
+        year: player.year,
+        overall: player.overall,
+        collegeId: team.id,
+        collegeName: team.schoolName,
+      })),
+  );
+  pool.sort((a, b) => b.overall - a.overall || a.playerName.localeCompare(b.playerName) || a.playerId.localeCompare(b.playerId));
+
+  const clubs = shuffleClubs(input.seasonSeed, input.year);
+  const picks = Math.min(pool.length, PRO_CLUBS.length * PRO_DRAFT_ROUNDS);
+  return pool.slice(0, picks).map((player, index) => {
+    const club = clubs[index % clubs.length];
     return {
-      id: `draft-${seed}-${year}-${index + 1}`,
-      name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
-      position: pickOne(rng, POSITIONS),
-      stars,
-      potential: clampRating(58 + stars * 7 + randInt(rng, -5, 6)),
+      pick: index + 1,
+      round: Math.floor(index / clubs.length) + 1,
+      clubId: club.id,
+      clubName: club.name,
+      playerId: player.playerId,
+      playerName: player.playerName,
+      position: player.position,
+      year: player.year,
+      overall: player.overall,
+      collegeId: player.collegeId,
+      collegeName: player.collegeName,
+      early: player.year < 4,
     };
   });
-}
-
-export function draftValue(prospect: DraftProspect): number {
-  return prospect.stars * 100 + prospect.potential;
-}
-
-export function orderDraftBoard(board: DraftProspect[]): DraftProspect[] {
-  return [...board].sort((a, b) => draftValue(b) - draftValue(a) || a.id.localeCompare(b.id));
-}
-
-/** Zero-based slot. Fewer wins pick earlier. */
-export function draftPickIndex(
-  teamId: string,
-  teams: Team[],
-  records: Record<string, Pick<TeamRecord, 'wins' | 'losses' | 'pointsFor' | 'pointsAgainst'> | undefined>,
-): number {
-  const ranked = [...teams].sort((a, b) => {
-    const aRecord = records[a.id];
-    const bRecord = records[b.id];
-    const aWins = aRecord?.wins ?? 0;
-    const bWins = bRecord?.wins ?? 0;
-    if (aWins !== bWins) return aWins - bWins;
-    const aDiff = (aRecord?.pointsFor ?? 0) - (aRecord?.pointsAgainst ?? 0);
-    const bDiff = (bRecord?.pointsFor ?? 0) - (bRecord?.pointsAgainst ?? 0);
-    if (aDiff !== bDiff) return aDiff - bDiff;
-    return a.schoolName.localeCompare(b.schoolName);
-  });
-  const index = ranked.findIndex((team) => team.id === teamId);
-  return index < 0 ? ranked.length - 1 : index;
-}
-
-export function prospectsAvailableAtPick(board: DraftProspect[], pickIndex: number): DraftProspect[] {
-  return orderDraftBoard(board).slice(Math.max(0, pickIndex));
 }
 
 export function buildCoachPool(teams: Team[], seed: number, year: number, userTeamId: string): StaffCoach[] {
@@ -170,7 +217,3 @@ export function entrantToPlayer(entrant: PortalEntrant): Player {
   return playerFromRatings(entrant.id, entrant.name, entrant.position, entrant.year, entrant.age, entrant.overall);
 }
 
-export function prospectToPlayer(prospect: DraftProspect): Player {
-  const overall = clampRating(37 + prospect.stars * 8 + (prospect.potential - 70) * 0.15);
-  return playerFromRatings(prospect.id, prospect.name, prospect.position, 1, 18, overall);
-}

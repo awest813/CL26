@@ -70,10 +70,11 @@ describe('weekly desk', () => {
     assert.equal(recruiting?.action, 'Add targets');
   });
 
-  test('the offseason points recruiting at the portal and the draft', () => {
+  test('the offseason points recruiting at the portal and the pro draft', () => {
     const tasks = buildWeeklyDesk(desk({ phase: 'OFFSEASON', recruitPoolCount: 0 }));
     const recruiting = tasks.find((task) => task.id === 'recruiting');
     assert.match(recruiting?.detail ?? '', /portal/);
+    assert.match(recruiting?.detail ?? '', /pro draft/);
     assert.equal(recruiting?.href, '/career');
   });
 

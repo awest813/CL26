@@ -266,6 +266,7 @@ export function applyRosterTurnover(
   newSeed: number,
   options?: CoachDevelopmentInputs,
   additions: Player[] = [],
+  earlyProIds: readonly string[] = [],
 ): Player[] {
   const rng = makeRng(seedToNumber(`${newSeed}:${team.id}:turnover`));
 
@@ -279,10 +280,13 @@ export function applyRosterTurnover(
   });
 
   // Step 2: Seniors graduate. Underclassmen can enter the portal.
+  // A drafted junior turns pro after those rolls, so an empty list does not change the stream.
   const { returners } = splitDepartures(developed, rng);
+  const turningPro = new Set(earlyProIds);
+  const staying = returners.filter((player) => !turningPro.has(player.id));
 
   // Step 3: Age returning players
-  const agedReturners: Player[] = returners.map((player) => ({
+  const agedReturners: Player[] = staying.map((player) => ({
     ...player,
     year: (player.year + 1) as 1 | 2 | 3 | 4,
     age: player.age + 1,

@@ -440,23 +440,9 @@ const coachSlice = createSlice({
             state.portalClaimIds = state.portalClaimIds.filter((claim) => claim !== id);
             return;
         }
-        const draftUsed = state.draftClaimId ? 1 : 0;
-        const room = Math.max(0, state.scholarshipsAvailable - draftUsed);
+        const room = Math.max(0, state.scholarshipsAvailable);
         if (state.portalClaimIds.length >= 3 || state.portalClaimIds.length >= room) return;
         state.portalClaimIds.push(id);
-    },
-    setDraftClaim: (state, action: PayloadAction<string | null>) => {
-        if (!Array.isArray(state.portalClaimIds)) state.portalClaimIds = [];
-        const next = action.payload;
-        if (next && next === state.draftClaimId) {
-            state.draftClaimId = null;
-            return;
-        }
-        if (next) {
-            const room = Math.max(0, state.scholarshipsAvailable - state.portalClaimIds.length);
-            if (room <= 0 && state.draftClaimId == null) return;
-        }
-        state.draftClaimId = next;
     },
     clearOffseasonMarket: (state) => {
         state.portalClaimIds = [];
@@ -498,7 +484,6 @@ export const {
     setStarterIds,
     toggleStarter,
     togglePortalClaim,
-    setDraftClaim,
     clearOffseasonMarket,
     resetCoach,
 } = coachSlice.actions;

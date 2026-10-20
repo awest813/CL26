@@ -184,4 +184,32 @@ describe('roster management progression systems', () => {
     }
     assert.ok(withAdd.some((player) => player.id === 'portal-1'));
   });
+
+  test('a drafted junior turns pro without changing the other departures', () => {
+    const team: Team = {
+      id: 't-pro',
+      schoolName: 'Test',
+      nickname: 'Tests',
+      conferenceId: 'c1',
+      region: 'East',
+      prestige: 55,
+    };
+    const roster = [
+      { ...basePlayer('senior'), year: 4 as const, position: 'A' as const },
+      { ...basePlayer('junior'), year: 3 as const, position: 'M' as const, overall: 88 },
+      { ...basePlayer('sophomore'), year: 2 as const, position: 'D' as const },
+      { ...basePlayer('freshman'), year: 1 as const, position: 'G' as const },
+    ];
+    const plain = applyRosterTurnover(roster, [], team, 4040);
+    const withPro = applyRosterTurnover(roster, [], team, 4040, undefined, [], ['junior']);
+    const left = previewOffseasonDepartures(roster, team, 4040).map((departure) => departure.player.id);
+    for (const id of left) {
+      assert.ok(!plain.some((player) => player.id === id));
+      assert.ok(!withPro.some((player) => player.id === id));
+    }
+    assert.ok(!withPro.some((player) => player.id === 'junior'));
+    if (!left.includes('junior')) {
+      assert.ok(plain.some((player) => player.id === 'junior'));
+    }
+  });
 });

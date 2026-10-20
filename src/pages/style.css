@@ -2006,6 +2006,20 @@ button.seasonScoreButton:hover:not(:disabled) {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
+.draftSlot {
+  flex: 0 0 1.8rem;
+  color: var(--text-muted);
+}
+
+.draftClub {
+  flex: 0 0 7.25rem;
+  text-align: right;
+}
+
+.draftClub strong {
+  display: block;
+}
+
 @media (max-width: 760px) {
   .officeStats,
   .planReadout,

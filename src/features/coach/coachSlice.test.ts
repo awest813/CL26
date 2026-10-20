@@ -8,7 +8,6 @@ import {
   clearRecruitPitch,
   coachReducer,
   initializeRecruitingBoard,
-  setDraftClaim,
   setRecruitPitch,
   togglePortalClaim,
 } from './coachSlice.ts';
@@ -91,21 +90,13 @@ describe('coach recruiting reducer', () => {
 });
 
 describe('offseason market claims', () => {
-  test('portal claims leave room for one draft pick', () => {
+  test('portal claims stop at three and at the scholarships left', () => {
     let state = coachReducer(undefined, { type: '@@INIT' });
     state = { ...state, scholarshipsAvailable: 2 };
     state = coachReducer(state, togglePortalClaim('a'));
     state = coachReducer(state, togglePortalClaim('b'));
     state = coachReducer(state, togglePortalClaim('c'));
     assert.deepStrictEqual(state.portalClaimIds, ['a', 'b']);
-    state = coachReducer(state, setDraftClaim('pick'));
-    assert.strictEqual(state.draftClaimId, null);
-    state = coachReducer(state, togglePortalClaim('b'));
-    state = coachReducer(state, setDraftClaim('pick'));
-    assert.deepStrictEqual(state.portalClaimIds, ['a']);
-    assert.strictEqual(state.draftClaimId, 'pick');
-    state = coachReducer(state, togglePortalClaim('b'));
-    assert.deepStrictEqual(state.portalClaimIds, ['a']);
   });
 });
 

@@ -453,7 +453,7 @@ function CoachCareerPage() {
           </div>
           {coach.recruitPool.length === 0 ? (
             isOffseason ? (
-              <p className="text-xs text-gray-500 m-0">The high school class is closed. Use the roster market for the portal and the draft.</p>
+              <p className="text-xs text-gray-500 m-0">The high school class is closed. Use the roster market for the portal and the pro draft.</p>
             ) : (
               <div className="recruitSeed">
                 <label className="text-xs font-semibold text-gray-600">

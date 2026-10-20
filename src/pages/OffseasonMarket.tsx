@@ -1,14 +1,12 @@
 import { useMemo, useState } from 'react';
-import { acceptJobOffer, declineAllJobOffers, setDraftClaim, togglePortalClaim } from '../features/coach/coachSlice';
+import { acceptJobOffer, declineAllJobOffers, togglePortalClaim } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
-import { selectTeamRecords } from '../features/season/seasonSlice';
+import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import {
   PORTAL_CLAIM_CAP,
   buildCoachPool,
-  buildDraftBoard,
   buildPortalBoard,
-  draftPickIndex,
-  prospectsAvailableAtPick,
+  buildProDraft,
   type StaffCoach,
 } from '../sim/offseasonMarket';
 import { previewOffseasonDepartures } from '../sim/rosterManagement';
@@ -28,10 +26,8 @@ function OffseasonMarket() {
   const teams = useAppSelector((state) => state.league.teams);
   const conferences = useAppSelector((state) => state.league.conferences);
   const season = useAppSelector((state) => state.season);
-  const records = useAppSelector(selectTeamRecords);
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
   const claims = coach.portalClaimIds ?? [];
-  const draftClaimId = coach.draftClaimId ?? null;
   const scholarships = coach.scholarshipsAvailable ?? 0;
   const nextSeed = (season.seasonSeed ?? 0) + 1;
 
@@ -50,12 +46,19 @@ function OffseasonMarket() {
     () => (selectedTeam ? buildPortalBoard(teams, selectedTeam.id, nextSeed, season.year) : []),
     [nextSeed, season.year, selectedTeam, teams],
   );
-  const draftBoard = useMemo(() => buildDraftBoard(nextSeed, season.year), [nextSeed, season.year]);
-  const pickIndex = selectedTeam ? draftPickIndex(selectedTeam.id, teams, records) : 0;
-  const available = useMemo(
-    () => prospectsAvailableAtPick(draftBoard, pickIndex).slice(0, 6),
-    [draftBoard, pickIndex],
+  const proDraft = useMemo(
+    () => buildProDraft({
+      teams,
+      rosterSeed: leagueSeasonRosterSeed(season.seasonSeed ?? 0),
+      seasonSeed: season.seasonSeed ?? 0,
+      year: season.year,
+      userTeamId: selectedTeam?.id ?? null,
+      userRoster: coach.managedRoster,
+    }),
+    [coach.managedRoster, season.seasonSeed, season.year, selectedTeam?.id, teams],
   );
+  const yourPicks = selectedTeam ? proDraft.filter((pick) => pick.collegeId === selectedTeam.id) : [];
+  const yourPickById = new Map(yourPicks.map((pick) => [pick.playerId, pick]));
   const coaches = useMemo(
     () => (selectedTeam ? buildCoachPool(teams, season.seasonSeed, season.year, selectedTeam.id) : []),
     [season.seasonSeed, season.year, selectedTeam, teams],
@@ -67,11 +70,12 @@ function OffseasonMarket() {
     .sort((a, b) => Number(offerIds.has(b.teamId)) - Number(offerIds.has(a.teamId)) || b.skill - a.skill);
   const transfers = departures.filter((departure) => departure.reason === 'transfer');
   const graduates = departures.filter((departure) => departure.reason === 'graduate');
-  const seatsUsed = claims.length + (draftClaimId ? 1 : 0);
-  const seatsThatFit = Math.min(seatsUsed, scholarships);
-  const portalRoom = Math.max(0, scholarships - (draftClaimId ? 1 : 0));
-  const canAddPortal = claims.length < PORTAL_CLAIM_CAP && claims.length < portalRoom;
-  const canSelectDraft = scholarships - claims.length > 0 || draftClaimId != null;
+  const seatsThatFit = Math.min(claims.length, scholarships);
+  const canAddPortal = claims.length < PORTAL_CLAIM_CAP && claims.length < scholarships;
+  const earlyPros = (coach.managedRoster ?? []).filter((player) => {
+    const pick = yourPickById.get(player.id);
+    return Boolean(pick?.early) && !departures.some((departure) => departure.player.id === player.id);
+  });
 
   async function onAcceptOffer(teamId: string) {
     setOfferError(null);
@@ -90,10 +94,10 @@ function OffseasonMarket() {
     <section className="card" aria-labelledby="offseason-market-title">
       <h3 id="offseason-market-title" className="m-0 text-base font-bold">Roster market</h3>
       <p className="text-xs text-gray-500 mt-1 mb-3">
-        Scholarships left: {scholarships}. Portal claims and the draft pick share that number.
+        Scholarships left: {scholarships}. You can claim up to {PORTAL_CLAIM_CAP} portal players.
         {' '}
-        {seatsThatFit} of {seatsUsed} reserved
-        {seatsUsed > scholarships ? '. Extra claims are dropped when the next season begins.' : '.'}
+        {seatsThatFit} of {claims.length} reserved
+        {claims.length > scholarships ? '. Extra claims are dropped when the next season begins.' : '.'}
       </p>
 
       <div className="marketGrid">
@@ -103,24 +107,48 @@ function OffseasonMarket() {
             <p className="text-sm text-gray-500 m-0">Nobody is scheduled to leave.</p>
           ) : (
             <ul className="marketList">
-              {graduates.map((departure) => (
-                <li key={departure.player.id} className="marketRow">
-                  <span>
-                    <strong>{departure.player.name}</strong>
-                    <span className="pollNick">{playerYearLabel(departure.player.year)} · {departure.player.position} · Graduate</span>
-                  </span>
-                  <span className="tabular">{departure.player.overall}</span>
-                </li>
-              ))}
-              {transfers.map((departure) => (
-                <li key={departure.player.id} className="marketRow">
-                  <span>
-                    <strong>{departure.player.name}</strong>
-                    <span className="pollNick">{playerYearLabel(departure.player.year)} · {departure.player.position} · Portal</span>
-                  </span>
-                  <span className="tabular">{departure.player.overall}</span>
-                </li>
-              ))}
+              {graduates.map((departure) => {
+                const pick = yourPickById.get(departure.player.id);
+                return (
+                  <li key={departure.player.id} className={`marketRow ${pick ? 'marketRow-claimed' : ''}`}>
+                    <span>
+                      <strong>{departure.player.name}</strong>
+                      <span className="pollNick">
+                        {playerYearLabel(departure.player.year)} · {departure.player.position} · {pick ? `Rd ${pick.round} · ${pick.clubName}` : 'Undrafted'}
+                      </span>
+                    </span>
+                    <span className="tabular">{departure.player.overall}</span>
+                  </li>
+                );
+              })}
+              {earlyPros.map((player) => {
+                const pick = yourPickById.get(player.id);
+                return (
+                  <li key={player.id} className="marketRow marketRow-claimed">
+                    <span>
+                      <strong>{player.name}</strong>
+                      <span className="pollNick">
+                        {playerYearLabel(player.year)} · {player.position} · Rd {pick?.round} · {pick?.clubName}
+                      </span>
+                    </span>
+                    <span className="tabular">{player.overall}</span>
+                  </li>
+                );
+              })}
+              {transfers.map((departure) => {
+                const pick = yourPickById.get(departure.player.id);
+                return (
+                  <li key={departure.player.id} className={`marketRow ${pick ? 'marketRow-claimed' : ''}`}>
+                    <span>
+                      <strong>{departure.player.name}</strong>
+                      <span className="pollNick">
+                        {playerYearLabel(departure.player.year)} · {departure.player.position} · {pick ? `Rd ${pick.round} · ${pick.clubName}` : 'Portal'}
+                      </span>
+                    </span>
+                    <span className="tabular">{departure.player.overall}</span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -156,36 +184,37 @@ function OffseasonMarket() {
       </div>
 
       <div className="marketSection">
-        <h4 className="marketHeading">Supplemental draft · pick {pickIndex + 1} of {teams.length}</h4>
-        {available.length === 0 ? (
-          <p className="text-sm text-gray-500 m-0">
-            The supplemental board is 64 players. This pick is past the end of it, so the open spots stay with walk-ons.
-          </p>
-        ) : (
-          <ul className="marketList">
-            {available.map((prospect) => {
-              const claimed = draftClaimId === prospect.id;
-              return (
-                <li key={prospect.id} className={`marketRow ${claimed ? 'marketRow-claimed' : ''}`}>
-                  <span>
-                    <strong>{prospect.name}</strong>
-                    <span className="pollNick">{prospect.position} · {prospect.stars}★ · potential {prospect.potential}</span>
+        <h4 className="marketHeading">Pro draft</h4>
+        <p className="text-xs text-gray-500 mt-0 mb-2">
+          Eight Premier Circuit clubs draft college players. Seniors are eligible. A junior at 80 or better can turn pro and does not return.
+        </p>
+        <p className="text-sm mt-0 mb-2">
+          {yourPicks.length === 0
+            ? 'Nobody from your program was selected.'
+            : `Your program: ${yourPicks.map((pick) => `${pick.playerName} (Rd ${pick.round}, ${pick.clubName})`).join('; ')}.`}
+        </p>
+        <ul className="marketList">
+          {proDraft.map((pick) => {
+            const yours = pick.collegeId === selectedTeam.id;
+            return (
+              <li key={`${pick.pick}-${pick.playerId}`} className={`marketRow ${yours ? 'marketRow-claimed' : ''}`}>
+                <span className="draftSlot tabular">{pick.pick}</span>
+                <span>
+                  <strong>{pick.playerName}</strong>
+                  <span className="pollNick">
+                    {playerYearLabel(pick.year)} · {pick.position} · {pick.overall} · {pick.collegeName}
+                    {pick.early ? ' · Early entry' : ''}
+                    {yours ? ' · Your player' : ''}
                   </span>
-                  <button
-                    type="button"
-                    className="btn text-xs"
-                    aria-pressed={claimed}
-                    aria-label={claimed ? `Pass on ${prospect.name}` : `Select ${prospect.name}`}
-                    disabled={!claimed && !canSelectDraft}
-                    onClick={() => dispatch(setDraftClaim(prospect.id))}
-                  >
-                    {claimed ? 'Pass' : 'Select'}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                </span>
+                <span className="draftClub">
+                  <strong>{pick.clubName}</strong>
+                  <span className="pollNick">Round {pick.round}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       <div className="marketSection">
