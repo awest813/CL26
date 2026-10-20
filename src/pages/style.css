@@ -8,7 +8,9 @@
 }
 
 .dynastyHeader {
-  background: var(--ink, #102018);
+  background:
+    linear-gradient(#d6f25c, #d6f25c) bottom / 100% 3px no-repeat,
+    var(--ink, #102018);
   color: #e7f0ea;
   border: 1px solid #1c3326;
   border-radius: 16px;
@@ -43,6 +45,7 @@
 }
 
 .lacrosseLogoMark {
+  position: relative;
   width: 42px;
   height: 42px;
   border-radius: 12px;
@@ -60,7 +63,21 @@
 }
 
 .lacrosseLogoMark span {
+  position: relative;
+  z-index: 1;
   transform: translateX(-1px);
+}
+
+.lacrosseLogoMark::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: url('/graphics/ball-light.svg') center / contain no-repeat;
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 .dynastyEyebrow {
@@ -284,8 +301,28 @@
 }
 
 .exhibitionFinalScore {
+  position: relative;
+  min-width: 4.5rem;
+  text-align: center;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
+}
+
+.exhibitionFinalScore::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3.2rem;
+  height: 3.2rem;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(14, 107, 60, 0.16);
+  border-radius: 50%;
+  background:
+    linear-gradient(rgba(14, 107, 60, 0.16), rgba(14, 107, 60, 0.16)) center / 1px 70% no-repeat,
+    linear-gradient(rgba(14, 107, 60, 0.16), rgba(14, 107, 60, 0.16)) center / 70% 1px no-repeat;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .motivationMark {
@@ -396,11 +433,30 @@
 }
 
 .dynastyCoachCard {
+  position: relative;
+  overflow: hidden;
   border: 0;
   border-radius: 12px;
   background: var(--ink, #102018);
   color: #f4faf6;
   padding: 0.8rem 0.85rem;
+}
+
+.dynastyCoachCard::after {
+  content: '';
+  position: absolute;
+  right: -1.1rem;
+  bottom: -1.6rem;
+  width: 5.5rem;
+  height: 7rem;
+  background: url('/graphics/stick-light.svg') center / contain no-repeat;
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.dynastyCoachCard > * {
+  position: relative;
+  z-index: 1;
 }
 
 .dynastyCoachCard h3 {
@@ -786,7 +842,26 @@ caption {
 }
 
 .teamHeroCard {
+  position: relative;
+  overflow: hidden;
   gap: 0.9rem;
+}
+
+.teamHeroCard::before {
+  content: '';
+  position: absolute;
+  right: -1.5rem;
+  top: -2rem;
+  width: 8.5rem;
+  height: 8.5rem;
+  background: url('/graphics/ball.svg') center / contain no-repeat;
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.teamHeroCard > * {
+  position: relative;
+  z-index: 1;
 }
 
 .teamHeroBackLink {
@@ -1364,12 +1439,32 @@ details[open] > summary::before {
 
 /* Champion banner — used in PlayoffsPage */
 .champion-banner {
+  position: relative;
+  overflow: hidden;
   border: 2px solid #ca8a04;
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
   padding: 1.25rem;
   text-align: center;
   box-shadow: 0 4px 16px rgba(202, 138, 4, 0.2);
+}
+
+.champion-banner::before {
+  content: '';
+  position: absolute;
+  left: -1.2rem;
+  bottom: -1.6rem;
+  width: 6.5rem;
+  height: 6.5rem;
+  background: url('/graphics/ball.svg') center / contain no-repeat;
+  opacity: 0.16;
+  filter: sepia(0.6);
+  pointer-events: none;
+}
+
+.champion-banner > * {
+  position: relative;
+  z-index: 1;
 }
 
 .champion-banner-label {
@@ -1510,11 +1605,28 @@ details[open] > summary::before {
 }
 
 .seasonScore {
+  position: relative;
   text-align: center;
   font-family: var(--font-display);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
+}
+
+.seasonScore::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.4rem;
+  height: 2.4rem;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(14, 107, 60, 0.16);
+  border-radius: 50%;
+  background:
+    linear-gradient(rgba(14, 107, 60, 0.16), rgba(14, 107, 60, 0.16)) center / 1px 70% no-repeat,
+    linear-gradient(rgba(14, 107, 60, 0.16), rgba(14, 107, 60, 0.16)) center / 70% 1px no-repeat;
+  pointer-events: none;
 }
 
 .seasonScore-pending {
@@ -1879,7 +1991,29 @@ button.archetypeOption[aria-pressed='true'] {
 }
 
 .matchupProb {
+  position: relative;
   text-align: center;
+}
+
+.matchupProb::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0.15rem;
+  width: 4.6rem;
+  height: 4.6rem;
+  transform: translateX(-50%);
+  border: 1px solid rgba(14, 107, 60, 0.18);
+  border-radius: 50%;
+  background:
+    linear-gradient(rgba(14, 107, 60, 0.2), rgba(14, 107, 60, 0.2)) center / 1px 100% no-repeat,
+    linear-gradient(rgba(14, 107, 60, 0.2), rgba(14, 107, 60, 0.2)) center / 100% 1px no-repeat;
+  pointer-events: none;
+}
+
+.matchupProb > * {
+  position: relative;
+  z-index: 1;
 }
 
 .matchupProbValue {
@@ -2246,6 +2380,11 @@ button.seasonScoreButton:hover:not(:disabled) {
   .matchupSide-away,
   .matchupProb {
     text-align: left;
+  }
+
+  .matchupProb::before {
+    left: 0;
+    transform: none;
   }
 
   .matchupSide-away .matchupIdentity {
