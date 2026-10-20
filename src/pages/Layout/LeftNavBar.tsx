@@ -63,6 +63,7 @@ function LeftNavBar({ isMenuOpen, onNavigate }: LeftNavBarProps) {
       items: [
         { to: '/conferences', label: 'Conferences', hint: '128 programs' },
         { to: '/exhibition', label: 'Exhibition', hint: 'One-game sandbox' },
+        { to: '/settings', label: 'Settings', hint: 'Confirmations and this save' },
       ],
     },
   ];

@@ -2,10 +2,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
 import TeamLogo from '../components/TeamLogo';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { resetCoach, selectIsCareerReady } from '../features/coach/coachSlice';
-import { resetSeason, selectRankTrends, selectTeamRecords, selectTop12Projection, selectUserConferenceStanding } from '../features/season/seasonSlice';
+import { selectIsCareerReady } from '../features/coach/coachSlice';
+import { selectRankTrends, selectTeamRecords, selectTop12Projection, selectUserConferenceStanding } from '../features/season/seasonSlice';
 import { adGoalCopy } from '../sim/weeklyDesk';
-import { persistor } from '../store/persistor';
+import { eraseSave } from '../features/settings/eraseSave';
 import { seasonPhaseHomeStatus, seasonPhaseLabel } from '../lib/seasonLabels';
 
 type DashboardAction = {
@@ -93,9 +93,7 @@ function Home() {
       'Start a new game? This will permanently erase your current save — all season progress, coach career data, and recruits will be lost.',
     );
     if (!confirmed) return;
-    dispatch(resetCoach());
-    dispatch(resetSeason({ force: true }));
-    persistor.purge().then(() => {
+    eraseSave(dispatch).then(() => {
       navigate('/career/setup');
     }).catch(() => {
       navigate('/career/setup');

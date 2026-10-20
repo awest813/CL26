@@ -17,6 +17,7 @@ import AlphaStagePage from './pages/AlphaStagePage';
 import RosterPage from './pages/RosterPage';
 import WeeklyHubPage from './pages/WeeklyHubPage';
 import RecruitingBoardPage from './pages/RecruitingBoardPage';
+import SettingsPage from './pages/SettingsPage';
 import './App.css';
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
         { path: 'season/week/:weekIndex', element: <SeasonWeekPage /> },
         { path: 'playoffs', element: <PlayoffsPage /> },
         { path: 'alpha', element: <AlphaStagePage /> },
+        { path: 'settings', element: <SettingsPage /> },
         { path: '*', element: <Navigate to="/" replace /> },
       ],
     },

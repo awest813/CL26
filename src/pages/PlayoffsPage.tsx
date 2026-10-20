@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import { simCareerPlayoffRound } from '../features/coach/careerThunks';
 import { PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
+import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectSeasonCapabilities, resetSeason } from '../features/season/seasonSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName } from '../types/sim';
@@ -27,6 +28,7 @@ function PlayoffsPage() {
   const teams = useAppSelector((state) => state.league.teams);
   const coach = useAppSelector((state) => state.coach);
   const [actionError, setActionError] = useState<string | null>(null);
+  const confirmPlay = useAppSelector((state) => state.settings.confirmPlay);
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const champion = playoffState?.championTeamId ? teamById.get(playoffState.championTeamId) : undefined;
   const seedByTeamId = new Map((playoffState?.seeds ?? []).map((seed) => [seed.teamId, seed.seed]));
@@ -58,6 +60,10 @@ function PlayoffsPage() {
   };
 
   const handleSimRound = async () => {
+    if (confirmPlay) {
+      const label = playoffSpot.currentGame ? `Play ${roundShort}` : `Sim ${roundShort}`;
+      if (!window.confirm(confirmPlayCopy('round', label))) return;
+    }
     setActionError(null);
     try {
       if (hasCareerTeam) {

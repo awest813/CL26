@@ -100,6 +100,13 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
           <strong>{season.year}</strong>
           <small>{phaseLabel}</small>
         </div>
+        <Link
+          to="/settings"
+          className="btn dynastySettingsBtn"
+          aria-current={pathname === '/settings' ? 'page' : undefined}
+        >
+          Settings
+        </Link>
         {!onContinuePage && (
           <Link to={continueAction.path} className="btn btn-primary dynastyActionBtn">
             {continueAction.label}

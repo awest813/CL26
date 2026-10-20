@@ -12,6 +12,7 @@ import {
 } from '../features/season/seasonSlice';
 import { beginFirstSeason } from '../features/coach/careerThunks';
 import { selectIsCareerReady } from '../features/coach/coachSlice';
+import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { seasonPhaseLabel } from '../lib/seasonLabels';
 
@@ -50,6 +51,7 @@ function SeasonPage() {
 
   const hasValidSeed = Number.isFinite(seedInput);
   const coachReady = useAppSelector(selectIsCareerReady);
+  const confirmPlay = useAppSelector((state) => state.settings.confirmPlay);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
 
   const nextStep = useMemo<NextStepAction>(() => {
@@ -94,6 +96,7 @@ function SeasonPage() {
   };
 
   const handleSimWeek = async () => {
+    if (confirmPlay && !window.confirm(confirmPlayCopy('week', `week ${displayWeek + 1}`))) return;
     setActionError(null);
     try {
       await dispatch(simCurrentWeek()).unwrap();

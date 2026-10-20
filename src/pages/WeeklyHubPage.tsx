@@ -19,6 +19,7 @@ import {
 } from '../features/coach/coachSlice';
 import { beginNextCareerSeason, processSeasonEnd, runCareerWeeklyCycle, simCareerPlayoffRound } from '../features/coach/careerThunks';
 import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
+import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
 import { buildPositionNeedByPosition } from '../sim/recruiting';
 import { careerOffseasonCapabilities } from '../sim/seasonPhase';
@@ -153,6 +154,8 @@ function WeeklyHubPage() {
   const userLastResult = useAppSelector(selectUserLastResult);
   const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
   const isCoachReady = useAppSelector(selectIsCareerReady);
+  const confirmPlay = useAppSelector((state) => state.settings.confirmPlay);
+  const showWinChance = useAppSelector((state) => state.settings.showWinChance);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
   const userRecord = records[selectedTeamId] ?? {
@@ -374,6 +377,11 @@ function WeeklyHubPage() {
 
   async function runLoopStep() {
     if (advancing || !loopStep.button || loopStep.action === 'begin-season') return;
+    if (confirmPlay && (loopStep.action === 'play-week' || loopStep.action === 'play-round')) {
+      const label = loopStep.action === 'play-week' ? `week ${currentWeekDisplay}` : (loopStep.button ?? 'This round');
+      const kind = loopStep.action === 'play-week' ? 'week' : 'round';
+      if (!window.confirm(confirmPlayCopy(kind, label))) return;
+    }
     setActionError(null);
     setAdvancing(true);
     try {
@@ -467,7 +475,7 @@ function WeeklyHubPage() {
               </div>
             </div>
             <div className="matchupProb">
-              {winProb !== null && (
+              {winProb !== null && showWinChance ? (
                 <>
                   <span className={`matchupProbValue ${winProbClass(winProb)}`}>{winProb}%</span>
                   <span className="matchupProbLabel">Win chance</span>
@@ -482,6 +490,8 @@ function WeeklyHubPage() {
                     <span style={{ width: `${winProb}%` }} />
                   </div>
                 </>
+              ) : (
+                <span className="matchupProbLabel">vs</span>
               )}
             </div>
             <div className="matchupSide matchupSide-away">
