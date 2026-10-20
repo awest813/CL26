@@ -9,6 +9,8 @@ A deterministic, web-based college lacrosse head-coaching simulation. Build a pr
 - **Fully deterministic** — same seed always produces the same schedule, rosters, and results
 - **Client-side only** — all state lives in `localStorage` via redux-persist; no server, no account required
 
+The project site is [https://awest813.github.io/CL26/](https://awest813.github.io/CL26/). It publishes from `master` after GitHub Pages is set to **GitHub Actions**. See [Deploy](#deploy).
+
 See [ROADMAP.md](./ROADMAP.md) for milestone status and what's coming next.
 
 ## Quick start
@@ -23,7 +25,8 @@ npm run dev        # Vite dev server → http://localhost:5173
 | Command | What it does |
 |---------|-------------|
 | `npm run dev` | Start Vite development server |
-| `npm run build` | Type-check + production bundle |
+| `npm run build` | Type-check + production bundle at `/` |
+| `npm run build:pages` | Same bundle for GitHub Pages at `/CL26/` |
 | `npm run lint` | ESLint over all TS/TSX files |
 | `npm run preview` | Serve the production build locally |
 | `npm run test:regression` | Regression tests (requires `bun` on PATH) |
@@ -43,7 +46,7 @@ src/
 ```
 
 **Persistence rules**
-- Persisted: `season`, `coach`
+- Persisted: `season`, `coach`, `settings`
 - Not persisted: `league` (reloaded from JSON on every launch), `exhibition` (sandbox state)
 
 ## In-app pages
@@ -65,5 +68,19 @@ src/
 | `/season/standings` | Conference + overall standings |
 | `/rankings` | Top 25 + Top 12 projection |
 | `/playoffs` | Playoff bracket |
-| `/login` | Offline play notice (no auth required) |
+| `/settings` | Confirmations, the matchup estimate, and reset |
+| `/login` | Redirects home |
 | `/alpha` | Alpha-stage progress tracker |
+
+## Deploy
+
+GitHub Pages serves this app at `/CL26/`. `npm run build:pages` sets that base, and copies `index.html` to `404.html` so a refreshed route such as `/CL26/career` still loads the app. `.nojekyll` is included so Pages does not drop files.
+
+[`.github/workflows/pages.yml`](./.github/workflows/pages.yml) runs on every push to `master`, and it can also be started by hand. Before the first run, open the repo **Settings → Pages** and set **Source** to **GitHub Actions**. The workflow cannot turn that setting on by itself.
+
+Local check of the Pages bundle:
+
+```bash
+npm run build:pages
+VITE_PAGES_BASE=/CL26/ npx vite preview
+```

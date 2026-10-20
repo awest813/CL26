@@ -19,6 +19,11 @@ import RecruitingBoardPage from './pages/RecruitingBoardPage';
 import SettingsPage from './pages/SettingsPage';
 import './App.css';
 
+function routerBasename(): string | undefined {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '')
+  return base === '' ? undefined : base
+}
+
 function App() {
   const router = createBrowserRouter([
     {
@@ -46,7 +51,7 @@ function App() {
         { path: '*', element: <Navigate to="/" replace /> },
       ],
     },
-  ]);
+  ], { basename: routerBasename() });
 
   return (
     <ErrorBoundary>
