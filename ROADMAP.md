@@ -30,8 +30,9 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 - [x] Recruiting week progression — interest accumulation, commitment triggers
 - [x] Offseason signing day flow + roster turnover overlay
 - [x] Coach practice/fatigue modifiers wired into weekly sim inputs
-- [x] Redux persistence for `season` and `coach` slices; `league` reloads from JSON
+- [x] Redux persistence for `season`, `coach`, and `settings`; `league` reloads from JSON
 - [x] Regression test suite covering schedule, season validation, and playoff logic
+- [x] Transfer portal, Premier Circuit pro draft, and coach pool
 
 ### In Progress / Needs Polish
 - [x] Rankings criteria exposed in UI (methodology + score breakdowns on Rankings page)
@@ -40,11 +41,10 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 - [ ] Responsive layout — tables are compact but not fully mobile-friendly
 
 ### Not Yet Started
-- [ ] Transfer portal and graduate-transfer rules
 - [ ] News feed and weekly storyline flavor
 - [ ] Rivalry game tagging and trophy events
 - [ ] Accessibility pass (keyboard navigation, semantic HTML, contrast audit)
-- [ ] Settings panel (sim speed, display density)
+- [ ] Sim speed, display density, and theme (confirmations and the matchup estimate are on the settings page)
 
 ---
 
@@ -53,7 +53,7 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 An **alpha-ready** build means a user can complete a full deterministic year loop, understand outcomes clearly, and save/restore a coach career with stable persistence.
 
 - [x] Rankings methodology documented and visible in Rankings page
-- [ ] Playoff bracket flow is fully validated end-to-end via regression tests
+- [x] Playoff bracket flow is fully validated end-to-end via regression tests
 - [x] Week/game detail pages provide enough depth to understand individual results
 - [x] Career loop can complete two seasons (Year 1 offseason → Year 2 preseason)
 - [ ] UI is usable on common desktop and tablet viewports
@@ -147,10 +147,10 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 ### M9 — Coach Effects (Practice / Fatigue / Injuries) ✅
 - [x] Practice focus presets (offense / defense / conditioning / discipline)
 - [x] Fatigue and recovery status tracked per week
-- [x] Lightweight injury risk and availability impact
+- [x] Lightweight weekly injury scratches for the coached team, with the lineup still able to field
 - [x] Coach modifiers passed into `simulateGame` inputs (match engine stays pure)
 
-**Key files:** `src/sim/coachEffects.ts`, `src/sim/seasonSim.ts`, `src/pages/WeeklyHubPage.tsx`
+**Key files:** `src/sim/coachEffects.ts`, `src/sim/injuries.ts`, `src/sim/seasonSim.ts`, `src/pages/WeeklyHubPage.tsx`
 
 ---
 
@@ -159,6 +159,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Program prestige drift (recruiting pull, fan pressure, resource band)
 - [x] Multi-year career record tracking with history view
 - [x] Job-offer flow after strong seasons
+- [x] Job security under 20 ends the job and opens a landing seat
 
 **Key files:** `src/features/coach/coachSlice.ts`, `src/features/coach/careerThunks.ts`, `src/pages/CoachCareerPage.tsx`, `src/pages/SeasonWeekPage.tsx`
 
@@ -173,10 +174,11 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 
 ---
 
-### M12 — Polish + Accessibility (Not Started)
+### M12 — Polish + Accessibility (Partial)
 - [ ] Accessibility pass (keyboard nav, ARIA, contrast)
 - [ ] Mobile / tablet responsive tables
-- [ ] Settings panel (sim speed, display density, theme toggle)
+- [x] Settings page for play confirmations and the matchup estimate
+- [ ] Sim speed, display density, and theme toggle
 - [ ] Performance audit for 128-team workflows (virtualized long lists if needed)
 
 ---
@@ -194,7 +196,7 @@ src/store/      Store configuration and redux-persist setup
 ```
 
 ### Persistence rules
-- **Persist:** `season`, `coach`
+- **Persist:** `season`, `coach`, `settings`
 - **Do not persist:** `league` — reloaded from JSON at startup
 
 ### Key data shapes

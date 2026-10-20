@@ -57,8 +57,8 @@ function SettingsPage() {
               onChange={(event) => dispatch(setShowWinChance(event.target.checked))}
             />
             <span>
-              <span className="settingTitle">Show the win chance</span>
-              <span className="settingDetail">The hub estimate sits on the matchup. The sim result is the final score.</span>
+              <span className="settingTitle">Show the matchup estimate</span>
+              <span className="settingDetail">An estimate sits on the hub matchup and uses both rosters. The sim result is the final score.</span>
             </span>
           </label>
         </div>

@@ -9,6 +9,7 @@ import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
 import { computeAllSOS, computePlayoffProjection, computeRankings, withProgramPrestige } from '../../sim/rankings';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
+import { rosterForAvailability, weeklyScratches } from '../../sim/injuries';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { seedToNumber } from '../../sim/rng';
 import { compareConferenceStanding, compareOverallStanding } from '../../sim/standings';
@@ -121,12 +122,29 @@ export const simCurrentWeek = createAsyncThunk(
         })
       : null;
     const coachTeamTactics = coachGamePlan?.tactics ?? DEFAULT_TACTICS;
+    const userAvailability =
+      coachState.selectedTeamId && coachState.managedRoster && coachState.managedRoster.length > 0
+        ? rosterForAvailability(
+            coachState.managedRoster,
+            coachState.starterIds,
+            weeklyScratches(
+              coachState.managedRoster,
+              seasonSeed,
+              `w${currentWeekIndex}`,
+              coachState.selectedTeamId,
+            ),
+          )
+        : null;
 
     gamesToPlay.forEach(game => {
       const homeTeam = getTeam(game.homeTeamId);
       const awayTeam = getTeam(game.awayTeamId);
-      const homeRoster = getRoster(game.homeTeamId);
-      const awayRoster = getRoster(game.awayTeamId);
+      const homeRoster = game.homeTeamId === coachState.selectedTeamId && userAvailability
+        ? userAvailability.roster
+        : getRoster(game.homeTeamId);
+      const awayRoster = game.awayTeamId === coachState.selectedTeamId && userAvailability
+        ? userAvailability.roster
+        : getRoster(game.awayTeamId);
 
       const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
       const awayTactics = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
@@ -139,18 +157,22 @@ export const simCurrentWeek = createAsyncThunk(
         game.awayTeamId,
       );
 
-      const homeInput =
-        game.homeTeamId === coachState.selectedTeamId && coachState.starterIds.length > 0
-          ? { team: homeTeam, roster: homeRoster, starterIds: coachState.starterIds, gameplan: coachGamePlan?.modifiers }
-          : game.homeTeamId === coachState.selectedTeamId
-            ? { team: homeTeam, roster: homeRoster, gameplan: coachGamePlan?.modifiers }
-            : { team: homeTeam, roster: homeRoster };
-      const awayInput =
-        game.awayTeamId === coachState.selectedTeamId && coachState.starterIds.length > 0
-          ? { team: awayTeam, roster: awayRoster, starterIds: coachState.starterIds, gameplan: coachGamePlan?.modifiers }
-          : game.awayTeamId === coachState.selectedTeamId
-            ? { team: awayTeam, roster: awayRoster, gameplan: coachGamePlan?.modifiers }
-            : { team: awayTeam, roster: awayRoster };
+      const homeStarterIds = game.homeTeamId === coachState.selectedTeamId && userAvailability
+        ? userAvailability.starterIds
+        : [];
+      const awayStarterIds = game.awayTeamId === coachState.selectedTeamId && userAvailability
+        ? userAvailability.starterIds
+        : [];
+      const homeInput = game.homeTeamId === coachState.selectedTeamId
+        ? homeStarterIds.length > 0
+          ? { team: homeTeam, roster: homeRoster, starterIds: homeStarterIds, gameplan: coachGamePlan?.modifiers }
+          : { team: homeTeam, roster: homeRoster, gameplan: coachGamePlan?.modifiers }
+        : { team: homeTeam, roster: homeRoster };
+      const awayInput = game.awayTeamId === coachState.selectedTeamId
+        ? awayStarterIds.length > 0
+          ? { team: awayTeam, roster: awayRoster, starterIds: awayStarterIds, gameplan: coachGamePlan?.modifiers }
+          : { team: awayTeam, roster: awayRoster, gameplan: coachGamePlan?.modifiers }
+        : { team: awayTeam, roster: awayRoster };
 
       const result = simulateGame(homeInput, awayInput, homeTactics, awayTactics, gameSeed);
 
@@ -249,10 +271,17 @@ export const simNextPlayoffRound = createAsyncThunk(
               : coachTeam
                 ? generateRoster(coachTeam, rosterSeed)
                 : [];
+          const available = roster.length > 0
+            ? rosterForAvailability(
+                roster,
+                coach.starterIds,
+                weeklyScratches(roster, state.season.seasonSeed, playoffState.currentRound, coach.selectedTeamId),
+              )
+            : { roster, starterIds: coach.starterIds };
           coachPlay = {
             teamId: coach.selectedTeamId,
-            roster,
-            starterIds: coach.starterIds,
+            roster: available.roster,
+            starterIds: available.starterIds,
             tactics: coachGamePlan?.tactics ?? DEFAULT_TACTICS,
             modifiers: coachGamePlan?.modifiers,
           };

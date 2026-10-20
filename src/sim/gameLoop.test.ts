@@ -126,4 +126,17 @@ describe('next loop step', () => {
     assert.equal(nextLoopStep({ ...base, phase: 'OFFSEASON', canPlayWeek: false, canRecordSeason: true }).action, 'record-season');
     assert.equal(nextLoopStep({ ...base, phase: 'OFFSEASON', canPlayWeek: false, canBeginNextYear: true }).action, 'begin-next-year');
   });
+
+  test('a firing sends the hub to a landing job', () => {
+    const step = nextLoopStep({
+      ...base,
+      phase: 'OFFSEASON',
+      canPlayWeek: false,
+      canBeginNextYear: true,
+      fired: true,
+    });
+    assert.equal(step.action, 'take-job');
+    assert.match(step.title, /AD let you go/);
+    assert.equal(step.button, 'Take a job');
+  });
 });

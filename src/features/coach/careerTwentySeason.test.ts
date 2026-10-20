@@ -17,6 +17,7 @@ import {
   careerSetupFromPrestige,
   upgradeCoachSkill,
   declineAllJobOffers,
+  acceptJobOffer,
   processSigningDay,
 } from './coachSlice.ts';
 import {
@@ -168,7 +169,12 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
     );
   }
 
-  if (afterFinalize.coach.pendingJobOffers.length > 0) {
+  if ((afterFinalize.coach.employment ?? 'ACTIVE') === 'FIRED') {
+    const landing = afterFinalize.coach.pendingJobOffers[0];
+    assert.ok(landing, `${seasonLabel} a firing includes a landing job`);
+    await store.dispatch(acceptJobOffer(landing.teamId));
+    assert.strictEqual(store.getState().coach.employment, 'ACTIVE');
+  } else if (afterFinalize.coach.pendingJobOffers.length > 0) {
     store.dispatch(declineAllJobOffers());
   }
 
@@ -265,15 +271,19 @@ async function runDynasty(seasonCount: number) {
   assert.ok(finalState.coach.careerRecord.championships <= finalState.coach.careerRecord.playoffAppearances);
   assert.ok(finalState.coach.careerRecord.playoffAppearances <= seasonCount);
 
-  // Successful rebuilds should eventually face tougher expectations.
-  assert.ok(
-    finalState.coach.careerTier === 'STABLE' || finalState.coach.careerTier === 'CONTENDER',
-    `expected elevated tier after dynasty, got ${finalState.coach.careerTier}`,
-  );
-  assert.ok(
-    (finalState.coach.programExpectations?.winTarget ?? 0) >= 7,
-    'win target should rise with program standing',
-  );
+  if (finalState.coach.selectedTeamId === team.id) {
+    assert.ok(
+      finalState.coach.careerTier === 'STABLE' || finalState.coach.careerTier === 'CONTENDER',
+      `expected elevated tier after dynasty, got ${finalState.coach.careerTier}`,
+    );
+    assert.ok(
+      (finalState.coach.programExpectations?.winTarget ?? 0) >= 7,
+      'win target should rise with program standing',
+    );
+  } else {
+    assert.strictEqual(finalState.coach.employment ?? 'ACTIVE', 'ACTIVE');
+    assert.ok(finalState.coach.programExpectations, 'a landing job still has expectations');
+  }
 
   const historyYears = finalState.coach.seasonHistory.map((entry) => entry.year).sort((a, b) => a - b);
   assert.deepStrictEqual(

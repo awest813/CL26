@@ -229,12 +229,15 @@ function OffseasonMarket() {
       <div className="marketSection">
         <div className="weekActionBar">
           <h4 className="marketHeading m-0">Coach pool</h4>
-          {coach.pendingJobOffers.length > 0 && (
+          {coach.pendingJobOffers.length > 0 && (coach.employment ?? 'ACTIVE') !== 'FIRED' && (
             <button type="button" className="btn text-xs" onClick={() => dispatch(declineAllJobOffers())}>
               Decline offers (+3 security)
             </button>
           )}
         </div>
+        {(coach.employment ?? 'ACTIVE') === 'FIRED' && (
+          <p className="text-sm text-red-600 mt-2 mb-0">The AD let you go. One of these seats is the next job.</p>
+        )}
         {offerError && <p className="text-xs text-red-600 mt-2 mb-0">{offerError}</p>}
         {marketCoaches.length === 0 ? (
           <p className="text-sm text-gray-500 mt-2 mb-0">No program is searching. Your seat is the job.</p>
@@ -258,7 +261,7 @@ function OffseasonMarket() {
                   </span>
                   {offer ? (
                     <button type="button" className="btn btn-primary text-xs" onClick={() => void onAcceptOffer(staff.teamId)}>
-                      {offer.tier === 'UPGRADE' ? 'Take upgrade' : 'Take job'}
+                      {offer.tier === 'UPGRADE' ? 'Take upgrade' : offer.tier === 'STEP_DOWN' ? 'Take the job' : 'Take job'}
                     </button>
                   ) : (
                     <span className="text-xs text-gray-500">Open search</span>

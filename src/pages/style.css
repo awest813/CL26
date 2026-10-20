@@ -1819,6 +1819,13 @@ details[open] > summary::before {
   color: var(--text-muted);
 }
 
+.starterBadge-out {
+  width: auto;
+  margin-left: 0.35rem;
+  background: #f8e4e4;
+  color: #8a2b2b;
+}
+
 .lineupAction {
   font-size: 0.75rem;
   padding: 0.15rem 0.45rem;

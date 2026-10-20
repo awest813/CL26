@@ -19,6 +19,10 @@ import {
 } from '../features/coach/coachSlice';
 import { beginNextCareerSeason, processSeasonEnd, runCareerWeeklyCycle, simCareerPlayoffRound } from '../features/coach/careerThunks';
 import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
+import { generateRoster } from '../sim/generateRoster';
+import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
+import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
+import { estimateWinChance } from '../sim/winEstimate';
 import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
 import { buildPositionNeedByPosition } from '../sim/recruiting';
@@ -213,26 +217,32 @@ function WeeklyHubPage() {
       }
     : null;
 
-  // Win probability blends prestige, roster quality, home edge, fatigue, and practice mods.
+  const weekKey = availabilityWeekKey(
+    season.phase,
+    season.currentWeekIndex,
+    season.playoffs?.currentRound ?? null,
+  );
+  const scratches = useMemo(() => {
+    if (!weekKey || !selectedTeamId || !coach.managedRoster?.length) return [];
+    return weeklyScratches(coach.managedRoster, season.seasonSeed, weekKey, selectedTeamId);
+  }, [coach.managedRoster, season.seasonSeed, selectedTeamId, weekKey]);
+
+  // Estimate blends both rosters, practice, fatigue, and home field. It does not play the game.
   const winProb = useMemo(() => {
     if (!selectedTeam || !featuredOpponent) return null;
-    const roster = coach.managedRoster ?? [];
-    const rosterEdge =
-      roster.length > 0
-        ? roster.reduce((sum, player) => sum + player.overall, 0) / roster.length - 72
-        : 0;
-    const modEdge =
-      (gamePlan.modifiers.offense ?? 0) +
-      (gamePlan.modifiers.defense ?? 0) +
-      (gamePlan.modifiers.faceoff ?? 0) * 0.5;
-    const fatiguePenalty = coach.teamFatigue * 0.08;
-    const homeEdge = featuredIsHome ? 3 : -1;
-    const userStrength = Math.max(
-      20,
-      (effectivePrestige ?? selectedTeam.prestige) + rosterEdge + modEdge + homeEdge - fatiguePenalty,
-    );
-    const oppStrength = Math.max(20, featuredOpponent.prestige);
-    return Math.round((userStrength / (userStrength + oppStrength)) * 100);
+    const scratchIds = new Set(scratches.map((scratch) => scratch.playerId));
+    const userRoster = (coach.managedRoster ?? []).filter((player) => !scratchIds.has(player.id));
+    return estimateWinChance({
+      userPrestige: effectivePrestige ?? selectedTeam.prestige,
+      userRoster,
+      opponentPrestige: featuredOpponent.prestige,
+      opponentRoster: generateRoster(featuredOpponent, leagueSeasonRosterSeed(season.seasonSeed)),
+      offense: gamePlan.modifiers.offense ?? 0,
+      defense: gamePlan.modifiers.defense ?? 0,
+      faceoff: gamePlan.modifiers.faceoff ?? 0,
+      fatigue: coach.teamFatigue,
+      isHome: featuredIsHome,
+    });
   }, [
     coach.managedRoster,
     coach.teamFatigue,
@@ -242,6 +252,8 @@ function WeeklyHubPage() {
     gamePlan.modifiers.offense,
     featuredIsHome,
     featuredOpponent,
+    scratches,
+    season.seasonSeed,
     selectedTeam,
   ]);
 
@@ -359,6 +371,7 @@ function WeeklyHubPage() {
     canSign: offseasonCaps.canProcessSigningDay,
     canRecordSeason: offseasonCaps.canFinalizeSeason,
     canBeginNextYear: offseasonCaps.canAdvanceNextYear,
+    fired: (coach.employment ?? 'ACTIVE') === 'FIRED',
   });
   const showPrep = season.phase === 'REGULAR' || season.phase === 'PRE';
   const pageTitle = season.phase === 'PLAYOFF'
@@ -478,14 +491,14 @@ function WeeklyHubPage() {
               {winProb !== null && showWinChance ? (
                 <>
                   <span className={`matchupProbValue ${winProbClass(winProb)}`}>{winProb}%</span>
-                  <span className="matchupProbLabel">Win chance</span>
+                  <span className="matchupProbLabel">Estimate</span>
                   <div
                     className="meter meter-lg"
                     role="progressbar"
                     aria-valuenow={winProb}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-label="Win chance"
+                    aria-label="Win estimate"
                   >
                     <span style={{ width: `${winProb}%` }} />
                   </div>
@@ -512,9 +525,16 @@ function WeeklyHubPage() {
             </div>
           </div>
         )}
+        {scratches.length > 0 && (
+          <p className="text-sm text-red-600 mt-3 mb-0">
+            Out this week: {scratches.map((scratch) => `${scratch.name} (${scratch.position})`).join(', ')}
+          </p>
+        )}
         <div className="loopActions">
           {loopStep.action === 'begin-season' ? (
             <Link to="/season" className="btn btn-primary">Begin season</Link>
+          ) : loopStep.action === 'take-job' ? (
+            <Link to="/career" className="btn btn-primary">Take a job</Link>
           ) : loopStep.button ? (
             <button
               type="button"
@@ -540,8 +560,10 @@ function WeeklyHubPage() {
         <p className="text-sm text-gray-500 mt-1 mb-3">
           {season.phase === 'PLAYOFF'
             ? 'The bracket is the job. The install comes back next regular season.'
-            : season.phase === 'OFFSEASON'
-              ? 'Signing day and the season record are the next clicks. The portal can wait.'
+              : season.phase === 'OFFSEASON'
+              ? (coach.employment ?? 'ACTIVE') === 'FIRED'
+                ? 'The AD let you go. Take a landing job on the office before the next year.'
+                : 'Signing day and the season record are the next clicks. The portal can wait.'
               : 'Set the install and the board, then play the week.'}
         </p>
         <ul className="deskList">

@@ -55,6 +55,7 @@ export type LoopAction =
   | 'play-round'
   | 'signing-day'
   | 'record-season'
+  | 'take-job'
   | 'begin-next-year';
 
 export interface LoopStep {
@@ -78,6 +79,7 @@ export function nextLoopStep(input: {
   canSign: boolean;
   canRecordSeason: boolean;
   canBeginNextYear: boolean;
+  fired?: boolean;
 }): LoopStep {
   if (input.phase === 'PRE') {
     return {
@@ -136,6 +138,15 @@ export function nextLoopStep(input: {
       title: 'Record the year',
       detail: 'Write the record, job security, and the AD review into the career.',
       button: 'Record the season',
+    };
+  }
+
+  if (input.phase === 'OFFSEASON' && input.fired && input.canBeginNextYear) {
+    return {
+      action: 'take-job',
+      title: 'The AD let you go',
+      detail: 'A landing job is on the office. The next year starts after you take it.',
+      button: 'Take a job',
     };
   }
 

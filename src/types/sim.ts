@@ -262,6 +262,6 @@ export interface CareerRecord {
 
 export interface JobOffer {
   teamId: string;
-  tier: 'UPGRADE' | 'LATERAL';
+  tier: 'UPGRADE' | 'LATERAL' | 'STEP_DOWN';
   presentedAtYear: number;
 }

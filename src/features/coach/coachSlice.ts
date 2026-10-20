@@ -1,4 +1,5 @@
 import { createSelector, createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import type { Employment } from '../../sim/jobOffers';
 import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
@@ -91,6 +92,8 @@ export interface CoachState {
   programResources: ProgramResources;
   programPrestigeDrift: number;
   pendingJobOffers: JobOffer[];
+  /** Missing on saves from before firings existed. Treat undefined as ACTIVE. */
+  employment: Employment;
   portalClaimIds: string[];
   draftClaimId: string | null;
   seasonHistory: SeasonHistoryEntry[];
@@ -135,6 +138,7 @@ const initialState: CoachState = {
   },
   programPrestigeDrift: 0,
   pendingJobOffers: [],
+  employment: 'ACTIVE',
   portalClaimIds: [],
   draftClaimId: null,
   seasonHistory: [],
@@ -180,6 +184,7 @@ const coachSlice = createSlice({
         state.adPressure = defaults.adPressure;
         state.programPrestigeDrift = 0;
         state.pendingJobOffers = [];
+        state.employment = 'ACTIVE';
     },
     initializeRecruitingBoard: (state, action: PayloadAction<{ seed: number; teams: Team[] }>) => {
         state.recruitingSeed = action.payload.seed;
@@ -314,7 +319,11 @@ const coachSlice = createSlice({
     setPendingJobOffers: (state, action: PayloadAction<JobOffer[]>) => {
         state.pendingJobOffers = action.payload;
     },
+    setEmployment: (state, action: PayloadAction<Employment>) => {
+        state.employment = action.payload;
+    },
     declineAllJobOffers: (state) => {
+        if (state.employment === 'FIRED') return;
         state.pendingJobOffers = [];
         state.jobSecurity = Math.max(0, Math.min(100, state.jobSecurity + JOB_SECURITY_DECLINE_BONUS));
     },
@@ -329,6 +338,7 @@ const coachSlice = createSlice({
         state.programExpectations = action.payload.programExpectations;
         state.programPrestigeDrift = 0;
         state.pendingJobOffers = [];
+        state.employment = 'ACTIVE';
         state.recruitPool = [];
         state.boardRecruitIds = [];
         state.weeklyHoursByRecruitId = {};
@@ -472,6 +482,7 @@ export const {
     setAdPressure,
     applyPrestigeDrift,
     setPendingJobOffers,
+    setEmployment,
     declineAllJobOffers,
     applyJobOfferAcceptance,
     applyRecruitingUpdates,

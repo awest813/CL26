@@ -7,6 +7,7 @@ import {
   applyJobOfferAcceptance,
   clearRecruitPitch,
   coachReducer,
+  declineAllJobOffers,
   initializeRecruitingBoard,
   setRecruitPitch,
   togglePortalClaim,
@@ -67,6 +68,8 @@ describe('coach recruiting reducer', () => {
       },
       portalClaimIds: ['portal-1'],
       draftClaimId: 'draft-1',
+      employment: 'FIRED',
+      pendingJobOffers: [{ teamId: 'team-2', tier: 'STEP_DOWN', presentedAtYear: 2026 }],
     };
 
     state = coachReducer(
@@ -86,6 +89,21 @@ describe('coach recruiting reducer', () => {
     assert.strictEqual(Object.prototype.hasOwnProperty.call(state.signedRecruitsByYear, 2026), true);
     assert.deepStrictEqual(state.portalClaimIds, []);
     assert.strictEqual(state.draftClaimId, null);
+    assert.strictEqual(state.employment, 'ACTIVE');
+    assert.deepStrictEqual(state.pendingJobOffers, []);
+  });
+
+  test('a firing keeps the landing offer when decline is clicked', () => {
+    let state = coachReducer(undefined, { type: '@@INIT' });
+    state = {
+      ...state,
+      employment: 'FIRED',
+      jobSecurity: 12,
+      pendingJobOffers: [{ teamId: 'team-2', tier: 'STEP_DOWN', presentedAtYear: 2026 }],
+    };
+    state = coachReducer(state, declineAllJobOffers());
+    assert.equal(state.pendingJobOffers.length, 1);
+    assert.equal(state.jobSecurity, 12);
   });
 });
 

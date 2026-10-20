@@ -232,7 +232,8 @@ function CoachCareerPage() {
     season.scheduleByWeek.length > 0 &&
     season.currentWeekIndex < season.scheduleByWeek.length;
   const seasonEndProcessed = isOffseason && hasSeasonHistoryForYear(coach.seasonHistory, season.year);
-  const canBeginNextYear = offseasonCaps.canAdvanceNextYear;
+  const fired = (coach.employment ?? 'ACTIVE') === 'FIRED';
+  const canBeginNextYear = offseasonCaps.canAdvanceNextYear && !fired;
   const latestSeasonHistory = coach.seasonHistory.length > 0
     ? coach.seasonHistory[coach.seasonHistory.length - 1]
     : null;
@@ -322,7 +323,9 @@ function CoachCareerPage() {
               {pressureState.label} · {adPressure}%
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              {coach.jobSecurity < 30
+              {(coach.employment ?? 'ACTIVE') === 'FIRED'
+                ? 'The AD let you go. A landing job is in the coach pool.'
+                : coach.jobSecurity < 30
                 ? 'Meeting expectations is critical this season.'
                 : coach.jobSecurity >= 75
                   ? 'You have strong administrative support.'
@@ -426,7 +429,9 @@ function CoachCareerPage() {
             )}
             {signingDayResolved && (
               <div className="text-xs text-gray-500 self-center">
-                {!seasonEndProcessed
+                {fired
+                  ? 'The AD let you go. Take a landing job in the coach pool. The next year waits on that.'
+                  : !seasonEndProcessed
                   ? signedClassThisYear.length === 0
                     ? 'No signees this year — finalize to update career record and continue.'
                     : 'Finalize to update career record and job security.'
