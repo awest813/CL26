@@ -174,6 +174,15 @@ function defenseBoostFromTactics(tactics: Tactics): number {
   return boost;
 }
 
+/** How far a scheme moves offense, defense, and ground balls, on the same scale as the gameplan modifiers. */
+export function tacticRatingShift(tactics: Tactics): { offense: number; defense: number; groundBalls: number } {
+  return {
+    offense: offenseBoostFromTactics(tactics),
+    defense: defenseBoostFromTactics(tactics),
+    groundBalls: groundBallBonusFromTactics(tactics),
+  };
+}
+
 function shotQualityModifierFromTactics(tactics: Tactics): number {
   if (tactics.offenseSet === 'motion') return 0.016;
   if (tactics.offenseSet === 'invert') return 0.01;

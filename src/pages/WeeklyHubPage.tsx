@@ -20,38 +20,35 @@ import {
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
 import { beginNextCareerSeason, processSeasonEnd, runCareerWeeklyCycle, simCareerPlayoffRound, simCareerToBracket } from '../features/coach/careerThunks';
-import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
+import {
+  advanceFatigue,
+  buildCoachGamePlan,
+  gameDayTacticChanges,
+  summarizeCoachSkillImpacts,
+  PRACTICE_FOCUS_DETAILS,
+  PRACTICE_FOCUS_LABELS,
+} from '../sim/coachEffects';
+import { GameDayEdge, GameDayScheme, InstallPicker } from '../components/GamePlan';
 import { generateRoster } from '../sim/generateRoster';
 import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import { estimateWinChance } from '../sim/winEstimate';
+import { tacticRatingShift } from '../sim/matchEngine';
 import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
 import { buildPositionNeedByPosition } from '../sim/recruiting';
 import { careerOffseasonCapabilities } from '../sim/seasonPhase';
 import { buildWeeklyDesk } from '../sim/weeklyDesk';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { PracticeFocus, GameResult, Tactics } from '../types/sim';
+import { GameResult, Tactics } from '../types/sim';
+import { tacticShortLabel, tacticValue } from '../lib/tacticLabels';
 import PageHeader from '../components/PageHeader';
 import { seasonPhaseLabel } from '../lib/seasonLabels';
 
+/** The two calls that shape a game most, as the desk's game-plan row reads them. */
 function schemeCall(tactics: Tactics): string {
-  const tempo = tactics.tempo === 'fast' ? 'Fast tempo' : tactics.tempo === 'slow' ? 'Slow tempo' : 'Balanced tempo';
-  const defense =
-    tactics.defensePackage === 'zone'
-      ? 'Zone defense'
-      : tactics.defensePackage === 'pressure'
-        ? 'Pressure defense'
-        : 'Man defense';
-  return `${tempo} · ${defense}`;
+  return `${tacticShortLabel('tempo', tacticValue(tactics, 'tempo'))} · ${tacticShortLabel('defensePackage', tacticValue(tactics, 'defensePackage'))}`;
 }
-
-const PRACTICE_FOCUS_DESCRIPTIONS: Record<PracticeFocus, string> = {
-  OFFENSE: 'Boosts attack edge and tempo; defensive ratings dip slightly.',
-  DEFENSE: 'Hardens D and goalie; may tighten offensive rhythm.',
-  CONDITIONING: 'Builds faceoff and ground-ball legs. The lightest week on fatigue.',
-  DISCIPLINE: 'Cuts turnovers and penalties; no direct scoring edge.',
-};
 
 const MAX_COACH_SKILL_LEVEL = 5;
 
@@ -209,6 +206,15 @@ function WeeklyHubPage() {
       }),
     [coach.practiceFocus, coach.profile, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
+  const gameDayChanges = useMemo(
+    () =>
+      gameDayTacticChanges({
+        baseTactics: coach.tactics,
+        practiceFocus: coach.practiceFocus,
+        fatigue: coach.teamFatigue,
+      }),
+    [coach.practiceFocus, coach.tactics, coach.teamFatigue],
+  );
 
   const playoffSpot = userPlayoffSpot(season.playoffs ?? null, selectedTeamId || null);
   const playoffRoundLabel = season.playoffs ? PLAYOFF_ROUND_LABELS[season.playoffs.currentRound] : null;
@@ -243,19 +249,20 @@ function WeeklyHubPage() {
     return weeklyScratches(coach.managedRoster, season.seasonSeed, weekKey, selectedTeamId);
   }, [coach.managedRoster, season.seasonSeed, selectedTeamId, weekKey]);
 
-  // Estimate blends both rosters, practice, fatigue, and home field. It does not play the game.
+  // Estimate blends both rosters, the install and scheme, fatigue, and home field. It does not play the game.
   const winProb = useMemo(() => {
     if (!selectedTeam || !featuredOpponent) return null;
     const scratchIds = new Set(scratches.map((scratch) => scratch.playerId));
     const userRoster = (coach.managedRoster ?? []).filter((player) => !scratchIds.has(player.id));
+    const schemeShift = tacticRatingShift(gamePlan.tactics);
     return estimateWinChance({
       userPrestige: effectivePrestige ?? selectedTeam.prestige,
       userRoster,
       opponentPrestige: featuredOpponent.prestige,
       opponentRoster: generateRoster(featuredOpponent, leagueSeasonRosterSeed(season.seasonSeed)),
-      offense: gamePlan.modifiers.offense ?? 0,
-      defense: gamePlan.modifiers.defense ?? 0,
-      faceoff: gamePlan.modifiers.faceoff ?? 0,
+      offense: gamePlan.modifiers.offense + schemeShift.offense,
+      defense: gamePlan.modifiers.defense + schemeShift.defense,
+      faceoff: gamePlan.modifiers.faceoff,
       fatigue: coach.teamFatigue,
       isHome: featuredIsHome,
     });
@@ -266,6 +273,7 @@ function WeeklyHubPage() {
     gamePlan.modifiers.defense,
     gamePlan.modifiers.faceoff,
     gamePlan.modifiers.offense,
+    gamePlan.tactics,
     featuredIsHome,
     featuredOpponent,
     scratches,
@@ -329,8 +337,8 @@ function WeeklyHubPage() {
       buildWeeklyDesk({
         phase: season.phase,
         practiceLabel: PRACTICE_FOCUS_LABELS[coach.practiceFocus],
-        practiceDetail: PRACTICE_FOCUS_DESCRIPTIONS[coach.practiceFocus],
-        schemeLine: schemeCall(coach.tactics),
+        practiceDetail: PRACTICE_FOCUS_DETAILS[coach.practiceFocus],
+        schemeLine: schemeCall(gamePlan.tactics),
         recruitPoolCount: coach.recruitPool.length,
         boardCount: openBoardCount,
         hoursAssigned: totalHours,
@@ -352,7 +360,7 @@ function WeeklyHubPage() {
       coach.programExpectations?.rankTarget,
       coach.programExpectations?.winTarget,
       coach.recruitPool.length,
-      coach.tactics,
+      gamePlan.tactics,
       pollRank,
       season.phase,
       totalHours,
@@ -634,48 +642,38 @@ function WeeklyHubPage() {
 
       <div className={showPrep ? 'grid2' : undefined}>
         {showPrep && (
-        <div className="card" id="week-practice">
-          <h3 className="m-0 mb-1 text-base font-bold">Install</h3>
-          <p className="text-xs text-gray-500 mt-0 mb-3">The practice block on this week’s game plan.</p>
-          <div className="choiceGrid mb-3">
-            {(Object.keys(PRACTICE_FOCUS_LABELS) as PracticeFocus[]).map((focus) => (
-              <button
-                key={focus}
-                type="button"
-                aria-pressed={coach.practiceFocus === focus}
-                onClick={() => dispatch(setPracticeFocus(focus))}
-                className="choiceChip"
-              >
-                <span className="font-semibold">{PRACTICE_FOCUS_LABELS[focus]}</span>
-                <span className="choiceChipHelp">{PRACTICE_FOCUS_DESCRIPTIONS[focus]}</span>
-              </button>
-            ))}
-          </div>
-          <div className="planReadout planReadout-pair">
+        <section className="card" id="week-practice" aria-labelledby="week-practice-title">
+          <h3 id="week-practice-title" className="m-0 mb-1 text-base font-bold">Install</h3>
+          <p className="text-xs text-gray-500 mt-0 mb-3">
+            The practice block for this week. It can override a base-scheme call for the game.
+          </p>
+          <InstallPicker
+            value={coach.practiceFocus}
+            onChange={(focus) => dispatch(setPracticeFocus(focus))}
+            archetype={coach.profile?.archetype}
+            operationsSkill={coach.skillTree?.operations}
+          />
+          <div className="planReadout planReadout-pair mt-3">
             <div>
-              <div className="planReadoutLabel">Fatigue now</div>
+              <div className="planReadoutLabel">Fatigue</div>
               <div className="planReadoutValue">
                 <span className={fatigueClass}>{gamePlan.fatigueLabel}</span>
                 {' '}
-                {coach.teamFatigue}%
+                {Math.round(coach.teamFatigue)}%
                 <span className="planReadoutMeta"> → {projectedFatigue}%</span>
               </div>
             </div>
             <div>
-              <div className="planReadoutLabel">Game plan edge</div>
-              <div className="planReadoutValue">
-                Off {gamePlan.modifiers.offense >= 0 ? '+' : ''}
-                {gamePlan.modifiers.offense.toFixed(1)} · Def{' '}
-                {gamePlan.modifiers.defense >= 0 ? '+' : ''}
-                {gamePlan.modifiers.defense.toFixed(1)}
-              </div>
-              <div className="planReadoutMeta">
-                Disc {gamePlan.modifiers.discipline >= 0 ? '+' : ''}
-                {gamePlan.modifiers.discipline.toFixed(1)}
-              </div>
+              <div className="planReadoutLabel">Game-day edge</div>
+              <GameDayEdge plan={gamePlan} />
             </div>
           </div>
-        </div>
+          <div className="planReadoutLabel mt-3">Game day</div>
+          <GameDayScheme plan={gamePlan} changes={gameDayChanges} />
+          <Link to="/career#game-plan" className="text-sm hover:underline inline-block mt-3">
+            Change the base scheme in the Coach Office
+          </Link>
+        </section>
         )}
 
         <div className="card">

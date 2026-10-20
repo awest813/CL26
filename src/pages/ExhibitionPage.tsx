@@ -4,116 +4,23 @@ import { runExhibition, setSeed, setTactics, setTeams } from '../features/exhibi
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Tactics } from '../types/sim';
 import PageHeader from '../components/PageHeader';
-
-const tempoOptions: Tactics['tempo'][] = ['slow', 'normal', 'fast'];
-const rideOptions: Tactics['rideClear'][] = ['conservative', 'balanced', 'aggressive'];
-const slideOptions: Tactics['slideAggression'][] = ['early', 'normal', 'late'];
-const offenseSetOptions: NonNullable<Tactics['offenseSet']>[] = ['balanced', 'motion', 'invert', 'crease'];
-const defensePackageOptions: NonNullable<Tactics['defensePackage']>[] = ['man', 'zone', 'pressure'];
-
-const TEMPO_LABELS: Record<Tactics['tempo'], string> = {
-  slow: 'Slow — limit possessions',
-  normal: 'Balanced',
-  fast: 'Fast — push transition',
-};
-const RIDE_LABELS: Record<Tactics['rideClear'], string> = {
-  conservative: 'Conservative',
-  balanced: 'Balanced',
-  aggressive: 'Aggressive',
-};
-const SLIDE_LABELS: Record<Tactics['slideAggression'], string> = {
-  early: 'Early help',
-  normal: 'Standard',
-  late: 'Late slides — pack in',
-};
-const OFFENSE_LABELS: Record<NonNullable<Tactics['offenseSet']>, string> = {
-  balanced: 'Balanced',
-  motion: 'Motion — off-ball movement',
-  invert: 'Invert — midfield dodges',
-  crease: 'Crease — inside finishing',
-};
-const DEFENSE_LABELS: Record<NonNullable<Tactics['defensePackage']>, string> = {
-  man: 'Man-to-man',
-  zone: 'Zone — protect the slot',
-  pressure: 'Pressure — force pace',
-};
+import { TacticSelects } from '../components/GamePlan';
 
 function TacticsControls({
   label,
+  idPrefix,
   value,
   onChange,
 }: {
   label: string;
+  idPrefix: string;
   value: Tactics;
   onChange: (next: Tactics) => void;
 }) {
   return (
     <div className="card">
       <h4>{label} tactics</h4>
-      <label>
-        Tempo
-        <select value={value.tempo} onChange={(event) => onChange({ ...value, tempo: event.target.value as Tactics['tempo'] })}>
-          {tempoOptions.map((option) => (
-            <option key={option} value={option}>
-              {TEMPO_LABELS[option]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Ride / clear
-        <select
-          value={value.rideClear}
-          onChange={(event) => onChange({ ...value, rideClear: event.target.value as Tactics['rideClear'] })}
-        >
-          {rideOptions.map((option) => (
-            <option key={option} value={option}>
-              {RIDE_LABELS[option]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Slide timing
-        <select
-          value={value.slideAggression}
-          onChange={(event) => onChange({ ...value, slideAggression: event.target.value as Tactics['slideAggression'] })}
-        >
-          {slideOptions.map((option) => (
-            <option key={option} value={option}>
-              {SLIDE_LABELS[option]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Offense set
-        <select
-          value={value.offenseSet ?? 'balanced'}
-          onChange={(event) => onChange({ ...value, offenseSet: event.target.value as NonNullable<Tactics['offenseSet']> })}
-        >
-          {offenseSetOptions.map((option) => (
-            <option key={option} value={option}>
-              {OFFENSE_LABELS[option]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Defense package
-        <select
-          value={value.defensePackage ?? 'man'}
-          onChange={(event) =>
-            onChange({ ...value, defensePackage: event.target.value as NonNullable<Tactics['defensePackage']> })
-          }
-        >
-          {defensePackageOptions.map((option) => (
-            <option key={option} value={option}>
-              {DEFENSE_LABELS[option]}
-            </option>
-          ))}
-        </select>
-      </label>
+      <TacticSelects idPrefix={idPrefix} tactics={value} onChange={onChange} />
     </div>
   );
 }
@@ -218,11 +125,13 @@ function ExhibitionPage() {
         <div className="grid2">
           <TacticsControls
             label="Team A"
+            idPrefix="exhibition-a"
             value={exhibition.tacticsA}
             onChange={(next) => dispatch(setTactics({ team: 'A', tactics: next }))}
           />
           <TacticsControls
             label="Team B"
+            idPrefix="exhibition-b"
             value={exhibition.tacticsB}
             onChange={(next) => dispatch(setTactics({ team: 'B', tactics: next }))}
           />

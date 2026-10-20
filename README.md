@@ -58,8 +58,8 @@ src/
 | `/team/:id` | Team detail + roster summary |
 | `/exhibition` | Seeded exhibition game |
 | `/career/setup` | Create coach + choose program |
-| `/career` | Career hub |
-| `/career/week` | Weekly hub (play a week or sim to the bracket, recruiting hours, practice focus) |
+| `/career` | Coach Office (job, recruiting class, base scheme and install, staff) |
+| `/career/week` | Weekly hub (play a week or sim to the bracket, recruiting hours, the week's install) |
 | `/career/recruiting` | Recruiting board (targets, hours, pitches, staff plan) |
 | `/career/roster` | Roster viewer |
 | `/season` | Season dashboard |

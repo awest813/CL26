@@ -17,10 +17,18 @@ import {
 import TeamLogo from '../components/TeamLogo';
 import OffseasonMarket from './OffseasonMarket';
 import { selectTeamRecords } from '../features/season/seasonSlice';
-import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
+import {
+  advanceFatigue,
+  buildCoachGamePlan,
+  FATIGUE_SLOWDOWN_THRESHOLD,
+  gameDayTacticChanges,
+  summarizeCoachGamePlan,
+  summarizeCoachSkillImpacts,
+} from '../sim/coachEffects';
+import { GameDayEdge, GameDayScheme, InstallPicker, TacticSelects } from '../components/GamePlan';
 import { recruitingPeriodLabel } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { PracticeFocus, SeasonHistoryEntry, Tactics } from '../types/sim';
+import { SeasonHistoryEntry } from '../types/sim';
 import { computeAllSOS, computeRankings, withProgramPrestige } from '../sim/rankings';
 import { careerOffseasonCapabilities, hasSeasonHistoryForYear } from '../sim/seasonPhase';
 import PageHeader from '../components/PageHeader';
@@ -174,6 +182,18 @@ function CoachCareerPage() {
     [coach.practiceFocus, coach.profile?.archetype, coach.profile?.skill, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
   const prepNotes = useMemo(() => summarizeCoachGamePlan(coachGamePlan), [coachGamePlan]);
+  const gameDayChanges = useMemo(
+    () =>
+      gameDayTacticChanges({
+        baseTactics: coach.tactics,
+        practiceFocus: coach.practiceFocus,
+        fatigue: coach.teamFatigue,
+      }),
+    [coach.practiceFocus, coach.tactics, coach.teamFatigue],
+  );
+  const projectedFatigue = Math.round(
+    advanceFatigue(coach.teamFatigue, coach.practiceFocus, coach.profile?.archetype, coach.skillTree?.operations),
+  );
   const skillImpactNotes = useMemo(
     () =>
       summarizeCoachSkillImpacts({
@@ -498,23 +518,9 @@ function CoachCareerPage() {
           )}
         </div>
         <div className="officeFollowup">
-          <label className="text-xs font-semibold text-gray-600">
-            Practice focus
-            <select
-              value={coach.practiceFocus}
-              aria-label="Practice focus"
-              onChange={(event) => dispatch(setPracticeFocus(event.target.value as PracticeFocus))}
-              className="p-1 text-sm"
-            >
-              {Object.entries(PRACTICE_FOCUS_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </select>
-          </label>
           <div className="text-xs text-gray-500">
-            <div>Fatigue {coach.teamFatigue}%. The Weekly Hub uses this same focus.</div>
             {canAdvanceWeeklyCycle && (
-              <Link to="/career/week" className="block mt-1">
+              <Link to="/career/week" className="block">
                 Advance week {season.currentWeekIndex + 1} from the Weekly Hub
               </Link>
             )}
@@ -535,108 +541,38 @@ function CoachCareerPage() {
         </div>
       </div>
 
-      <div className="card">
-        <h3 className="text-base font-bold m-0">Game plan</h3>
-        <p className="text-xs text-gray-500 mt-1 mb-3">
-          The base scheme for every game. The weekly install still shifts tempo and slides.
+      <section className="card" id="game-plan" aria-labelledby="game-plan-title">
+        <h3 id="game-plan-title" className="text-base font-bold m-0">Game plan</h3>
+        <p className="text-xs text-gray-500 mt-1 mb-0">
+          The base scheme carries into every game. The week&apos;s install can override a call, and a tired team
+          slows down at {FATIGUE_SLOWDOWN_THRESHOLD}% fatigue.
         </p>
-        <div className="tacticGrid">
-          <label className="text-xs font-semibold text-gray-600">
-            Tempo
-            <select
-              value={coach.tactics.tempo}
-              onChange={(e) =>
-                dispatch(setTactics({ ...coach.tactics, tempo: e.target.value as Tactics['tempo'] }))
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="slow">Slow — limit possessions</option>
-              <option value="normal">Balanced</option>
-              <option value="fast">Fast — push transition</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            Ride / clear
-            <select
-              value={coach.tactics.rideClear}
-              onChange={(e) =>
-                dispatch(setTactics({ ...coach.tactics, rideClear: e.target.value as Tactics['rideClear'] }))
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="conservative">Conservative</option>
-              <option value="balanced">Balanced</option>
-              <option value="aggressive">Aggressive</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            Slide timing
-            <select
-              value={coach.tactics.slideAggression}
-              onChange={(e) =>
-                dispatch(
-                  setTactics({ ...coach.tactics, slideAggression: e.target.value as Tactics['slideAggression'] }),
-                )
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="early">Early help</option>
-              <option value="normal">Standard</option>
-              <option value="late">Late slides — pack in</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            Offense set
-            <select
-              value={coach.tactics.offenseSet ?? 'balanced'}
-              onChange={(e) =>
-                dispatch(setTactics({ ...coach.tactics, offenseSet: e.target.value as NonNullable<Tactics['offenseSet']> }))
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="balanced">Balanced</option>
-              <option value="motion">Motion — off-ball movement</option>
-              <option value="invert">Invert — midfield dodges</option>
-              <option value="crease">Crease — inside finishing</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            Defense package
-            <select
-              value={coach.tactics.defensePackage ?? 'man'}
-              onChange={(e) =>
-                dispatch(
-                  setTactics({ ...coach.tactics, defensePackage: e.target.value as NonNullable<Tactics['defensePackage']> }),
-                )
-              }
-              className="p-1.5 text-sm border rounded w-full mt-1 font-normal"
-            >
-              <option value="man">Man-to-man</option>
-              <option value="zone">Zone — protect the slot</option>
-              <option value="pressure">Pressure — force pace</option>
-            </select>
-          </label>
-        </div>
+
+        <h4 className="planSubhead">Base scheme</h4>
+        <TacticSelects
+          idPrefix="office-tactic"
+          tactics={coach.tactics}
+          onChange={(next) => dispatch(setTactics(next))}
+        />
+
+        <h4 className="planSubhead">This week&apos;s install</h4>
+        <InstallPicker
+          value={coach.practiceFocus}
+          onChange={(focus) => dispatch(setPracticeFocus(focus))}
+          archetype={coach.profile.archetype}
+          operationsSkill={coach.skillTree?.operations}
+        />
 
         <div className="planReadout">
           <div>
-            <div className="planReadoutLabel">This week’s install</div>
-            <div className="planReadoutValue">{coachGamePlan.focusLabel}</div>
-            <div className="planReadoutMeta">Fatigue {coachGamePlan.fatigueLabel}</div>
+            <div className="planReadoutLabel">Game day</div>
+            <GameDayScheme plan={coachGamePlan} changes={gameDayChanges} />
           </div>
           <div>
-            <div className="planReadoutLabel">Game plan edge</div>
-            <div className="planReadoutValue">
-              Off {coachGamePlan.modifiers.offense >= 0 ? '+' : ''}{coachGamePlan.modifiers.offense.toFixed(1)}
-              {' · '}
-              Def {coachGamePlan.modifiers.defense >= 0 ? '+' : ''}{coachGamePlan.modifiers.defense.toFixed(1)}
-            </div>
+            <div className="planReadoutLabel">Game-day edge</div>
+            <GameDayEdge plan={coachGamePlan} />
             <div className="planReadoutMeta">
-              Disc {coachGamePlan.modifiers.discipline >= 0 ? '+' : ''}{coachGamePlan.modifiers.discipline.toFixed(1)}
-              {' · '}
-              FO {coachGamePlan.modifiers.faceoff >= 0 ? '+' : ''}{coachGamePlan.modifiers.faceoff.toFixed(1)}
-              {' · '}
-              GB {coachGamePlan.modifiers.groundBallBonus >= 0 ? '+' : ''}{coachGamePlan.modifiers.groundBallBonus.toFixed(1)}
+              Fatigue {Math.round(coach.teamFatigue)}% ({coachGamePlan.fatigueLabel.toLowerCase()}), {projectedFatigue}% after this week.
             </div>
           </div>
           <div>
@@ -646,15 +582,14 @@ function CoachCareerPage() {
             </ul>
           </div>
         </div>
-
-      </div>
+      </section>
 
       <div className="card">
         <div className="cardHeadRow mb-3">
           <div>
             <h3 className="text-base font-bold m-0">Staff and program levers</h3>
             <p className="text-xs text-gray-500 mt-1 mb-0">
-              Practice focus drives weekly trait growth; staff upgrades and resources shape recruiting, development, and AD pressure.
+              The week&apos;s install picks which traits grow. Staff upgrades and resources shape recruiting, development, and AD pressure.
             </p>
           </div>
           <div className="text-right text-xs text-gray-500">

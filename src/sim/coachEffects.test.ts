@@ -1,6 +1,14 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import { applyCoachWeekSettings, advanceFatigue, playoffRoundFatigue, buildCoachGamePlan, summarizeCoachGamePlan } from './coachEffects.ts';
+import {
+  applyCoachWeekSettings,
+  advanceFatigue,
+  playoffRoundFatigue,
+  buildCoachGamePlan,
+  gameDayTacticChanges,
+  summarizeCoachGamePlan,
+  weeklyFatigueChange,
+} from './coachEffects.ts';
 
 const base = {
   tempo: 'normal' as const,
@@ -18,6 +26,37 @@ describe('coach effects', () => {
   test('high fatigue forces slow tempo', () => {
     const next = applyCoachWeekSettings({ baseTactics: base, practiceFocus: 'OFFENSE', fatigue: 70 });
     assert.strictEqual(next.tempo, 'slow');
+  });
+
+  test('conditioning keeps a slow tempo the coach chose', () => {
+    const next = applyCoachWeekSettings({ baseTactics: { ...base, tempo: 'slow' }, practiceFocus: 'CONDITIONING', fatigue: 20 });
+    assert.strictEqual(next.tempo, 'slow');
+  });
+
+  test('game-day changes name the install as the cause of its own calls', () => {
+    const changes = gameDayTacticChanges({ baseTactics: base, practiceFocus: 'OFFENSE', fatigue: 20 });
+    assert.deepStrictEqual(changes, [
+      { key: 'tempo', from: 'normal', to: 'fast', cause: 'install' },
+      { key: 'slideAggression', from: 'normal', to: 'late', cause: 'install' },
+    ]);
+  });
+
+  test('game-day changes blame fatigue when it overrides the install', () => {
+    const changes = gameDayTacticChanges({ baseTactics: base, practiceFocus: 'OFFENSE', fatigue: 70 });
+    assert.deepStrictEqual(changes, [
+      { key: 'tempo', from: 'normal', to: 'slow', cause: 'fatigue' },
+      { key: 'slideAggression', from: 'normal', to: 'late', cause: 'install' },
+    ]);
+  });
+
+  test('a conditioning week with a fresh team changes no calls', () => {
+    assert.deepStrictEqual(gameDayTacticChanges({ baseTactics: base, practiceFocus: 'CONDITIONING', fatigue: 20 }), []);
+  });
+
+  test('weekly fatigue change matches one week of advanceFatigue', () => {
+    assert.strictEqual(weeklyFatigueChange('OFFENSE'), advanceFatigue(50, 'OFFENSE') - 50);
+    assert.ok(weeklyFatigueChange('CONDITIONING') < 0);
+    assert.ok(weeklyFatigueChange('DEFENSE', 'TACTICIAN') < weeklyFatigueChange('DEFENSE', 'RECRUITER'));
   });
 
   test('conditioning focus builds less fatigue than defense focus', () => {

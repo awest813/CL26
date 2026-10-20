@@ -157,6 +157,14 @@ function applyTargetedTraitGrowth(player: Player, rng: () => number, targets: Pl
   return { ...player, ...updates, overall, skill };
 }
 
+/** The traits a week of each install grows on the roster. */
+export const INSTALL_GROWTH_TRAITS: Record<PracticeFocus, PlayerTrait[]> = {
+  OFFENSE: ['shooting', 'passing', 'IQ'],
+  DEFENSE: ['defense', 'discipline', 'IQ'],
+  CONDITIONING: ['speed', 'stamina'],
+  DISCIPLINE: ['discipline', 'IQ', 'stamina'],
+};
+
 export function applyWeeklyTraitGrowth(
   roster: Player[],
   weekSeed: number,
@@ -179,13 +187,7 @@ export function applyWeeklyTraitGrowth(
     ),
   );
 
-  const focusTraits: Record<PracticeFocus, PlayerTrait[]> = {
-    OFFENSE: ['shooting', 'passing', 'IQ'],
-    DEFENSE: ['defense', 'discipline', 'IQ'],
-    CONDITIONING: ['speed', 'stamina'],
-    DISCIPLINE: ['discipline', 'IQ', 'stamina'],
-  };
-  const chosenTraits = focusTraits[practiceFocus];
+  const chosenTraits = INSTALL_GROWTH_TRAITS[practiceFocus];
 
   const mutable = [...roster];
   for (let i = 0; i < growthSlots; i += 1) {

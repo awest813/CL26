@@ -53,19 +53,20 @@ const FOCUS_MODIFIERS: Record<PracticeFocus, TeamGameplayModifiers> = {
   },
 };
 
-const FOCUS_LABELS: Record<PracticeFocus, string> = {
+/** The week's install, as the Weekly Hub and the Coach Office name it. */
+export const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
   OFFENSE: 'Offense install',
   DEFENSE: 'Defense install',
-  DISCIPLINE: 'Discipline emphasis',
-  CONDITIONING: 'Conditioning block',
-};
-
-/** UI-facing practice focus labels (shared across Weekly Hub and Coach Office). */
-export const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
-  OFFENSE: 'Offense Install',
-  DEFENSE: 'Defense Install',
   CONDITIONING: 'Conditioning',
   DISCIPLINE: 'Discipline',
+};
+
+/** What each install does, in the terms FOCUS_MODIFIERS and applyCoachWeekSettings use. */
+export const PRACTICE_FOCUS_DETAILS: Record<PracticeFocus, string> = {
+  OFFENSE: 'Attack edge and cleaner shots. Plays fast with late slides; defense dips a little.',
+  DEFENSE: 'Defense and goalie edge. Slides early and rides hard; offense dips a little.',
+  CONDITIONING: 'Faceoffs, ground balls, and a little defense. Recovers legs and halves the fatigue drag.',
+  DISCIPLINE: 'Fewer turnovers and flags. Clears conservatively; no direct scoring edge.',
 };
 
 const ARCHETYPE_BONUSES: Record<CoachArchetype, Partial<TeamGameplayModifiers>> = {
@@ -155,36 +156,58 @@ function blankGameplayModifiers(): TeamGameplayModifiers {
   };
 }
 
+/** The install's scheme calls. They replace the base scheme for the week. */
+const INSTALL_TACTICS: Record<PracticeFocus, Partial<Tactics>> = {
+  OFFENSE: { tempo: 'fast', slideAggression: 'late' },
+  DEFENSE: { slideAggression: 'early', rideClear: 'aggressive' },
+  DISCIPLINE: { rideClear: 'conservative' },
+  CONDITIONING: {},
+};
+
+/** At or above this fatigue the team slows down and stops riding hard, whatever the plan says. */
+export const FATIGUE_SLOWDOWN_THRESHOLD = 65;
+
+export type TacticChangeCause = 'install' | 'fatigue';
+
+export interface TacticChange {
+  key: 'tempo' | 'rideClear' | 'slideAggression';
+  from: string;
+  to: string;
+  cause: TacticChangeCause;
+}
+
+function installTactics(settings: CoachWeekSettings): Tactics {
+  return { ...settings.baseTactics, ...INSTALL_TACTICS[settings.practiceFocus] };
+}
+
+function fatigueTactics(tactics: Tactics, fatigue: number): Tactics {
+  if (clamp(fatigue, 0, 100) < FATIGUE_SLOWDOWN_THRESHOLD) return tactics;
+  return {
+    ...tactics,
+    tempo: 'slow',
+    rideClear: tactics.rideClear === 'aggressive' ? 'balanced' : tactics.rideClear,
+  };
+}
+
+/** The scheme the team plays on game day: the base scheme, then the install, then fatigue. */
 export function applyCoachWeekSettings(settings: CoachWeekSettings): Tactics {
-  const next: Tactics = { ...settings.baseTactics };
+  return fatigueTactics(installTactics(settings), settings.fatigue);
+}
 
-  if (settings.practiceFocus === 'OFFENSE') {
-    next.tempo = 'fast';
-    next.slideAggression = 'late';
-  }
-
-  if (settings.practiceFocus === 'DEFENSE') {
-    next.slideAggression = 'early';
-    next.rideClear = 'aggressive';
-  }
-
-  if (settings.practiceFocus === 'DISCIPLINE') {
-    next.rideClear = 'conservative';
-  }
-
-  const fatigue = clamp(settings.fatigue, 0, 100);
-  if (fatigue >= 65) {
-    next.tempo = 'slow';
-    if (next.rideClear === 'aggressive') {
-      next.rideClear = 'balanced';
-    }
-  }
-
-  if (settings.practiceFocus === 'CONDITIONING' && fatigue <= 40 && next.tempo === 'slow') {
-    next.tempo = 'normal';
-  }
-
-  return next;
+/** Every base-scheme call the install or fatigue overrides this week, and which one did it. */
+export function gameDayTacticChanges(settings: CoachWeekSettings): TacticChange[] {
+  const base = settings.baseTactics;
+  const installed = installTactics(settings);
+  const gameDay = fatigueTactics(installed, settings.fatigue);
+  const keys: TacticChange['key'][] = ['tempo', 'rideClear', 'slideAggression'];
+  return keys
+    .filter((key) => gameDay[key] !== base[key])
+    .map((key) => ({
+      key,
+      from: base[key],
+      to: gameDay[key],
+      cause: gameDay[key] === installed[key] ? 'install' : 'fatigue',
+    }));
 }
 
 function fatigueLabelFor(value: number): CoachGamePlan['fatigueLabel'] {
@@ -195,7 +218,7 @@ function fatigueLabelFor(value: number): CoachGamePlan['fatigueLabel'] {
 }
 
 function focusLabelFor(focus: PracticeFocus): string {
-  return FOCUS_LABELS[focus];
+  return PRACTICE_FOCUS_LABELS[focus];
 }
 
 export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
@@ -349,6 +372,16 @@ export function advanceFatigue(
   const archetypeReduction = archetype === 'TACTICIAN' ? 0.8 : 1.0;
   const operationsReduction = clamp(1 - operationsSkill * 0.03, 0.82, 1);
   return clamp(bounded + rawDelta * archetypeReduction * operationsReduction, 0, 100);
+}
+
+/** Net fatigue one week of this install adds (or, if negative, removes), before the 0–100 bounds. */
+export function weeklyFatigueChange(
+  focus: PracticeFocus,
+  archetype: CoachArchetype = DEFAULT_COACH_ARCHETYPE,
+  operationsSkill = 0,
+): number {
+  const midpoint = 50;
+  return Math.round((advanceFatigue(midpoint, focus, archetype, operationsSkill) - midpoint) * 10) / 10;
 }
 
 /** Between playoff rounds: playing teams take a week of load; resting/bye teams recover. */

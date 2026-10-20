@@ -1512,20 +1512,37 @@ abbr[title] {
 
 .tacticGrid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
   gap: 0.75rem;
 }
 
-@media (min-width: 720px) {
-  .tacticGrid {
-    grid-template-columns: 1fr 1fr;
-  }
+.tacticField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  min-width: 0;
 }
 
-@media (min-width: 1200px) {
-  .tacticGrid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
+.tacticFieldLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.tacticField select {
+  width: 100%;
+}
+
+.tacticHint {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+/* Inside a pressed chip the growth line takes the chip's green. */
+.choiceChip[aria-pressed='true'] .choiceChipGrowth {
+  color: inherit;
 }
 
 .playoffLayoutGrid {
@@ -2109,6 +2126,142 @@ details[open] > summary::before {
   background: var(--accent-soft);
   color: var(--accent-strong);
   box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* The install chips: name and weekly fatigue on one line, what it does under them. */
+.installPicker {
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+.installPicker .choiceChip {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.choiceChipHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.choiceChipGrowth {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.installLoad {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.installLoad-up {
+  color: var(--warning-fg);
+}
+
+.installLoad-down {
+  color: var(--success);
+}
+
+.planSubhead {
+  margin: 1.1rem 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* The game-day calls, with the ones the install or fatigue changed tinted and tagged. */
+.schemeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schemeCall {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.schemeCall-install {
+  border-color: #9dccb0;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.schemeCall-fatigue {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
+.schemeCallCause {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* Six small figures: offense, defense, goalie, faceoffs, ground balls, discipline. */
+.edgeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0.4rem 0 0;
+}
+
+.edgeCell {
+  padding: 0.3rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  text-align: center;
+}
+
+.edgeCell dt {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.edgeCell dt abbr {
+  text-decoration: none;
+  cursor: help;
+}
+
+.edgeCell dd {
+  margin: 0.1rem 0 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.edgeCell-up dd {
+  color: var(--success);
+}
+
+.edgeCell-down dd {
+  color: var(--danger);
 }
 
 .youRow {
