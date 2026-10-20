@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import {
   selectSeasonCapabilities,
   selectSeasonHasStarted,
@@ -142,14 +143,14 @@ function SeasonPage() {
           </div>
         )}
 
-        <div className="card max-w-lg mx-auto w-full">
+        <div className="card max-w-lg mx-auto">
           <p className="m-0 mb-4 text-sm text-gray-600">
             The season seed controls schedule generation and the entire CPU league roster draw. Those rosters stay
             fixed for this year and refresh when you start a later season with a new seed.
             {coachReady && ' Your managed roster and recruiting board will sync to this seed when you begin.'}
           </p>
 
-          <div className="flex gap-4 items-end mb-4">
+          <div className="flex flex-wrap gap-4 items-end mb-4">
             <label className="flex-1">
               <span className="text-sm font-semibold">Season Seed</span>
               <input
@@ -301,21 +302,31 @@ function SeasonPage() {
             return (
               <div key={game.id} className={`seasonMatchupRow ${isUserGame ? 'seasonMatchupRow-user' : ''}`}>
                 <div className="seasonSide">
-                  {away ? <Link to={`/team/${away.id}`} className="seasonSchool">{away.schoolName}</Link> : <span className="seasonSchool">Away</span>}
-                  <span className="seasonNick">
-                    {away?.nickname}
-                    {game.awayTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
-                  </span>
+                  <div className="seasonIdentity seasonIdentity-away">
+                    {away && <TeamLogo team={away} size="sm" />}
+                    <div>
+                      {away ? <Link to={`/team/${away.id}`} className="seasonSchool">{away.schoolName}</Link> : <span className="seasonSchool">Away</span>}
+                      <span className="seasonNick">
+                        {away?.nickname}
+                        {game.awayTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 <div className={result ? 'seasonScore' : 'seasonScore seasonScore-pending'}>
                   {result ? `${result.scoreB}–${result.scoreA}` : 'vs'}
                 </div>
                 <div className="seasonSide seasonSide-home">
-                  {home ? <Link to={`/team/${home.id}`} className="seasonSchool">{home.schoolName}</Link> : <span className="seasonSchool">Home</span>}
-                  <span className="seasonNick">
-                    {home?.nickname}
-                    {game.homeTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
-                  </span>
+                  <div className="seasonIdentity">
+                    {home && <TeamLogo team={home} size="sm" />}
+                    <div>
+                      {home ? <Link to={`/team/${home.id}`} className="seasonSchool">{home.schoolName}</Link> : <span className="seasonSchool">Home</span>}
+                      <span className="seasonNick">
+                        {home?.nickname}
+                        {game.homeTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             );

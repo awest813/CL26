@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { selectConferenceStandings, selectOverallStandings } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 
@@ -37,7 +38,7 @@ function SeasonStandingsPage() {
       </div>
 
       <div className="card">
-        <div className="flex justify-between items-center mb-2">
+        <div className="standingsToolbar">
           <h3 className="m-0">Conference Standings</h3>
           <label className="text-sm">
             Conference
@@ -81,9 +82,14 @@ function SeasonStandingsPage() {
               return (
               <tr key={row.team.id} className={isUser ? 'youRow' : undefined}>
                 <td>
-                  <Link to={`/team/${row.team.id}`}>{row.team.schoolName}</Link>{' '}
-                  <span className="text-xs text-gray-500">{row.team.nickname}</span>
-                  {isUser && <span className="youMark ml-1">(You)</span>}
+                  <span className="standingsTeam">
+                    <TeamLogo team={row.team} size="sm" />
+                    <span>
+                      <Link to={`/team/${row.team.id}`}>{row.team.schoolName}</Link>{' '}
+                      <span className="text-xs text-gray-500">{row.team.nickname}</span>
+                      {isUser && <span className="youMark ml-1">(You)</span>}
+                    </span>
+                  </span>
                 </td>
                 <td className="font-semibold">
                   {row.record.confWins}-{row.record.confLosses}
@@ -131,9 +137,14 @@ function SeasonStandingsPage() {
               <tr key={row.team.id} className={isUser ? 'youRow' : undefined}>
                 <td className="font-mono text-gray-500">{index + 1}</td>
                 <td>
-                  <Link to={`/team/${row.team.id}`}>{row.team.schoolName}</Link>{' '}
-                  <span className="text-xs text-gray-500">{row.team.nickname}</span>
-                  {isUser && <span className="youMark ml-1">(You)</span>}
+                  <span className="standingsTeam">
+                    <TeamLogo team={row.team} size="sm" />
+                    <span>
+                      <Link to={`/team/${row.team.id}`}>{row.team.schoolName}</Link>{' '}
+                      <span className="text-xs text-gray-500">{row.team.nickname}</span>
+                      {isUser && <span className="youMark ml-1">(You)</span>}
+                    </span>
+                  </span>
                 </td>
                 <td className="font-semibold">
                   {row.record.wins}-{row.record.losses}

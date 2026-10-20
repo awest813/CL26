@@ -46,7 +46,7 @@ function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
       role="img"
       aria-label={description}
       title={description}
-      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold mr-0.5 border bg-white cursor-help"
+      className="motivationMark"
       style={{ color, borderColor: color }}
     >
       {label.charAt(0)}

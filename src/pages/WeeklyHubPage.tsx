@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import {
   selectRankTrends,
   selectTeamRecords,
@@ -91,20 +92,30 @@ function ResultBanner({ result, selectedTeamId, teams }: ResultBannerProps) {
       </div>
       <div className="matchupSides">
         <div className="matchupSide">
-          <span className="matchupSchool">{user?.schoolName ?? 'Your program'}</span>
-          {user?.nickname && <span className="matchupNick">{user.nickname}</span>}
+          <div className="matchupIdentity">
+            {user && <TeamLogo team={user} />}
+            <div>
+              <span className="matchupSchool">{user?.schoolName ?? 'Your program'}</span>
+              {user?.nickname && <span className="matchupNick">{user.nickname}</span>}
+            </div>
+          </div>
         </div>
         <div className="matchupProb">
           <span className={`matchupProbValue ${won ? 'matchup-strong' : 'matchup-underdog'}`}>{userScore}–{oppScore}</span>
           <span className="matchupProbLabel">Final</span>
         </div>
         <div className="matchupSide matchupSide-away">
-          {opp ? (
-            <Link to={`/team/${opp.id}`} className="matchupSchool">{opp.schoolName}</Link>
-          ) : (
-            <span className="matchupSchool">Opponent</span>
-          )}
-          {opp?.nickname && <span className="matchupNick">{opp.nickname}</span>}
+          <div className="matchupIdentity">
+            {opp && <TeamLogo team={opp} />}
+            <div>
+              {opp ? (
+                <Link to={`/team/${opp.id}`} className="matchupSchool">{opp.schoolName}</Link>
+              ) : (
+                <span className="matchupSchool">Opponent</span>
+              )}
+              {opp?.nickname && <span className="matchupNick">{opp.nickname}</span>}
+            </div>
+          </div>
         </div>
       </div>
       {ledBy && (
@@ -425,9 +436,14 @@ function WeeklyHubPage() {
           </div>
           <div className="matchupSides">
             <div className="matchupSide">
-              <Link to={`/team/${selectedTeam.id}`} className="matchupSchool">{selectedTeam.schoolName}</Link>
-              <span className="matchupNick">{selectedTeam.nickname}</span>
-              <span className="matchupRecord">{userRecord.wins}–{userRecord.losses}</span>
+              <div className="matchupIdentity">
+                <TeamLogo team={selectedTeam} />
+                <div>
+                  <Link to={`/team/${selectedTeam.id}`} className="matchupSchool">{selectedTeam.schoolName}</Link>
+                  <span className="matchupNick">{selectedTeam.nickname}</span>
+                  <span className="matchupRecord">{userRecord.wins}–{userRecord.losses}</span>
+                </div>
+              </div>
             </div>
             <div className="matchupProb">
               {winProb !== null && (
@@ -448,6 +464,9 @@ function WeeklyHubPage() {
               )}
             </div>
             <div className="matchupSide matchupSide-away">
+              <div className="matchupIdentity">
+                <TeamLogo team={opponent} />
+                <div>
               <Link to={`/team/${opponent.id}`} className="matchupSchool">{opponent.schoolName}</Link>
               <span className="matchupNick">{opponent.nickname}</span>
               <span className="matchupRecord">
@@ -459,6 +478,8 @@ function WeeklyHubPage() {
                   })()}
                 </span>
               </span>
+                </div>
+              </div>
             </div>
           </div>
         </section>

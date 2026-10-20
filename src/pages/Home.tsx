@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
+import TeamLogo from '../components/TeamLogo';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { resetCoach, selectIsCareerReady } from '../features/coach/coachSlice';
 import { resetSeason, selectRankTrends, selectTeamRecords, selectTop12Projection, selectUserConferenceStanding } from '../features/season/seasonSlice';
@@ -104,7 +105,10 @@ function Home() {
         <section className="commandBoard" aria-labelledby="home-hero-title">
           <div className="commandBoardCopy">
             <p className="commandEyebrow">{conferenceName} · {phaseLabel}</p>
-            <h2 id="home-hero-title">{selectedTeam.schoolName} {selectedTeam.nickname}</h2>
+            <div className="programLockup">
+              <TeamLogo team={selectedTeam} size="lg" />
+              <h2 id="home-hero-title">{selectedTeam.schoolName} {selectedTeam.nickname}</h2>
+            </div>
             <p className="commandLede">
               {coach.profile?.name ?? 'Head coach'} · {year} season · {statusLabel}
             </p>

@@ -66,8 +66,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(29, 78, 216, 0.25), transparent),
-    linear-gradient(165deg, #0b1220 0%, #0f172a 45%, #111827 100%);
+  background: #102018;
   color: #e2e8f0;
   font-family: var(--font-body);
 }
@@ -83,8 +82,17 @@
   height: 56px;
   margin: 0 auto 1.25rem;
   border-radius: 14px;
-  background: linear-gradient(160deg, #1f8a4c, #0b3d24);
-  box-shadow: 0 8px 28px rgba(22, 163, 74, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  display: grid;
+  place-items: center;
+  color: #f4fff4;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  font-size: 1.15rem;
+  background:
+    linear-gradient(#d6f25c, #d6f25c) bottom / 100% 7px no-repeat,
+    linear-gradient(160deg, #1f8a4c, #0b3d24);
+  box-shadow: 0 8px 28px rgba(14, 107, 60, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.12);
   animation: splash-pulse 1.4s ease-in-out infinite;
 }
 

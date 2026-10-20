@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import TeamLogo from '../../components/TeamLogo';
 import { IconClose, IconMenu } from '../../components/UiIcons';
 import { useAppSelector } from '../../store/hooks';
 import { selectIsCareerReady } from '../../features/coach/coachSlice';
@@ -78,9 +79,12 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
       <div className="dynastyHeaderMeta">
         {selectedTeam ? (
           <Link to={`/team/${selectedTeam.id}`} className="dynastyProgramChip">
-            <span className="dynastyMetaLabel">Program</span>
-            <strong>{selectedTeam.schoolName}</strong>
-            <small>{recordLine}</small>
+            <TeamLogo team={selectedTeam} size="sm" />
+            <span className="dynastyProgramText">
+              <span className="dynastyMetaLabel">Program</span>
+              <strong>{selectedTeam.schoolName}</strong>
+              <small>{recordLine}</small>
+            </span>
           </Link>
         ) : (
           <div className="dynastyProgramChip">

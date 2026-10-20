@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { useAppSelector } from '../store/hooks';
 import { selectRankingTeams, selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary, selectTop16Rankings } from '../features/season/seasonSlice';
 import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
@@ -17,11 +18,14 @@ function PollTeam({
 }) {
   if (!team) return <>{fallbackId}</>;
   return (
-    <span className="pollTeam">
-      <Link to={`/team/${team.id}`}>{team.schoolName}</Link>
-      <span className="pollNick">
-        {team.nickname}
-        {isUser && <span className="youMark"> (You)</span>}
+    <span className="pollIdentity">
+      <TeamLogo team={team} size="sm" />
+      <span className="pollTeam">
+        <Link to={`/team/${team.id}`}>{team.schoolName}</Link>
+        <span className="pollNick">
+          {team.nickname}
+          {isUser && <span className="youMark"> (You)</span>}
+        </span>
       </span>
     </span>
   );
@@ -215,6 +219,7 @@ function RankingsPage() {
         {bubbleTeams.length > 0 && (
           <div className="bubbleBlock">
             <p className="bubbleLabel">Next 4 out</p>
+            <div className="dataTableWrap">
             <table className="w-full text-sm">
               <tbody>
                 {bubbleTeams.map((row) => {
@@ -232,6 +237,7 @@ function RankingsPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </section>
@@ -263,9 +269,12 @@ function RankingsPage() {
 
           {topTeamBreakdown && (
             <div className="scoreBlock">
-              <p className="scoreBlockTitle">
-                No. 1 · {topTeamBreakdown.team.schoolName}
-                <span className="pollNick">{topTeamBreakdown.team.nickname}</span>
+              <p className="scoreBlockTitle programLockup">
+                <TeamLogo team={topTeamBreakdown.team} size="sm" />
+                <span>
+                  No. 1 · {topTeamBreakdown.team.schoolName}
+                  <span className="pollNick">{topTeamBreakdown.team.nickname}</span>
+                </span>
               </p>
               <ScoreLines
                 lines={[
@@ -283,12 +292,15 @@ function RankingsPage() {
 
           {userTeamBreakdown && (
             <div className="scoreBlock">
-              <p className="scoreBlockTitle">
-                Your program · {userTeamBreakdown.team.schoolName}
-                <span className="pollMeta">
-                  {userTeamBreakdown.rankRow ? `No. ${userTeamBreakdown.rankRow.rank}` : 'Outside the Top 25'}
+              <p className="scoreBlockTitle programLockup">
+                <TeamLogo team={userTeamBreakdown.team} size="sm" />
+                <span>
+                  Your program · {userTeamBreakdown.team.schoolName}
+                  <span className="pollMeta">
+                    {userTeamBreakdown.rankRow ? `No. ${userTeamBreakdown.rankRow.rank}` : 'Outside the Top 25'}
+                  </span>
+                  <span className="pollNick">{userTeamBreakdown.team.nickname}</span>
                 </span>
-                <span className="pollNick">{userTeamBreakdown.team.nickname}</span>
               </p>
               {prestigeDrift !== 0 && (
                 <p className="text-xs text-gray-500 mt-0 mb-2">

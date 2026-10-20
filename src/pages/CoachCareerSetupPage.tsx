@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { careerSetupFromPrestige, completeCareerSetup, setCoachProfile } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -209,8 +210,11 @@ function CoachCareerSetupPage() {
 
         {team && teamExpectations && (
           <div className="setupSummary" style={{ marginTop: 8 }}>
-            <p>
-              <strong>{team.schoolName} {team.nickname}</strong> &bull; Prestige {team.prestige} &bull; {team.region}
+            <p className="programLockup">
+              <TeamLogo team={team} />
+              <span>
+                <strong>{team.schoolName} {team.nickname}</strong> &bull; Prestige {team.prestige} &bull; {team.region}
+              </span>
             </p>
             <p className="mutedText">Tier: <strong>{teamExpectations.careerTier}</strong></p>
             <p className="mutedText">

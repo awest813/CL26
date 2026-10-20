@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import TeamLogo from '../components/TeamLogo';
 import { acceptJobOffer, declineAllJobOffers, togglePortalClaim } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
@@ -158,12 +159,16 @@ function OffseasonMarket() {
           <ul className="marketList">
             {portal.slice(0, 8).map((entrant) => {
               const claimed = claims.includes(entrant.id);
+              const origin = teams.find((team) => team.schoolName === entrant.originName);
               return (
                 <li key={entrant.id} className={`marketRow ${claimed ? 'marketRow-claimed' : ''}`}>
-                  <span>
-                    <strong>{entrant.name}</strong>
-                    <span className="pollNick">
-                      {playerYearLabel(entrant.year)} · {entrant.position} · {entrant.overall} · {entrant.originName}
+                  <span className="programLockup">
+                    {origin && <TeamLogo team={origin} size="sm" />}
+                    <span>
+                      <strong>{entrant.name}</strong>
+                      <span className="pollNick">
+                        {playerYearLabel(entrant.year)} · {entrant.position} · {entrant.overall} · {entrant.originName}
+                      </span>
                     </span>
                   </span>
                   <button
@@ -196,15 +201,19 @@ function OffseasonMarket() {
         <ul className="marketList">
           {proDraft.map((pick) => {
             const yours = pick.collegeId === selectedTeam.id;
+            const college = teams.find((team) => team.id === pick.collegeId);
             return (
               <li key={`${pick.pick}-${pick.playerId}`} className={`marketRow ${yours ? 'marketRow-claimed' : ''}`}>
                 <span className="draftSlot tabular">{pick.pick}</span>
-                <span>
-                  <strong>{pick.playerName}</strong>
-                  <span className="pollNick">
-                    {playerYearLabel(pick.year)} · {pick.position} · {pick.overall} · {pick.collegeName}
-                    {pick.early ? ' · Early entry' : ''}
-                    {yours ? ' · Your player' : ''}
+                <span className="programLockup">
+                  {college && <TeamLogo team={college} size="sm" />}
+                  <span>
+                    <strong>{pick.playerName}</strong>
+                    <span className="pollNick">
+                      {playerYearLabel(pick.year)} · {pick.position} · {pick.overall} · {pick.collegeName}
+                      {pick.early ? ' · Early entry' : ''}
+                      {yours ? ' · Your player' : ''}
+                    </span>
                   </span>
                 </span>
                 <span className="draftClub">
@@ -236,12 +245,15 @@ function OffseasonMarket() {
               const offer = coach.pendingJobOffers.find((item) => item.teamId === staff.teamId);
               return (
                 <li key={staff.id} className="marketRow">
-                  <span>
-                    <strong>{staff.name}</strong>
-                    <span className="pollNick">
-                      {ARCHETYPE_LABEL[staff.archetype]} · age {staff.age} · skill {staff.skill}
-                      {school ? ` · ${school.schoolName}` : ''}
-                      {school ? ` · ${conferenceName.get(school.conferenceId) ?? 'Independent'}` : ''}
+                  <span className="programLockup">
+                    {school && <TeamLogo team={school} size="sm" />}
+                    <span>
+                      <strong>{staff.name}</strong>
+                      <span className="pollNick">
+                        {ARCHETYPE_LABEL[staff.archetype]} · age {staff.age} · skill {staff.skill}
+                        {school ? ` · ${school.schoolName}` : ''}
+                        {school ? ` · ${conferenceName.get(school.conferenceId) ?? 'Independent'}` : ''}
+                      </span>
                     </span>
                   </span>
                   {offer ? (

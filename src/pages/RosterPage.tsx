@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { toggleStarter } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position, POSITION_ORDER } from '../types/sim';
@@ -173,8 +174,11 @@ function RosterPage() {
             <h2 className="m-0 text-xl">
               Roster Management
             </h2>
-            <div className="text-sm text-gray-500 mt-0.5">
-              {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {season.year} Season &bull; {roster.length} players
+            <div className="text-sm text-gray-500 mt-0.5 programLockup">
+              {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
+              <span>
+                {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {season.year} Season &bull; {roster.length} players
+              </span>
             </div>
             <p className="text-xs text-gray-600 mt-2 mb-0 max-w-2xl">
               Starters drive in-game ratings and who gets scoring chances. Bench players still contribute, but at a lower weight—set your depth chart before big weeks and the postseason.

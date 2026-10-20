@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link, Navigate, useParams, useNavigate } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
@@ -59,20 +60,30 @@ function UserGameCard({
       </div>
       <div className="matchupSides">
         <div className="matchupSide">
-          <span className="matchupSchool">{user?.schoolName ?? 'Your program'}</span>
-          {user?.nickname && <span className="matchupNick">{user.nickname}</span>}
+          <div className="matchupIdentity">
+            {user && <TeamLogo team={user} />}
+            <div>
+              <span className="matchupSchool">{user?.schoolName ?? 'Your program'}</span>
+              {user?.nickname && <span className="matchupNick">{user.nickname}</span>}
+            </div>
+          </div>
         </div>
         <div className="matchupProb">
           <span className={`matchupProbValue ${won ? 'matchup-strong' : 'matchup-underdog'}`}>{userScore}–{oppScore}</span>
           <span className="matchupProbLabel">Final</span>
         </div>
         <div className="matchupSide matchupSide-away">
-          {opponent ? (
-            <Link to={`/team/${opponent.id}`} className="matchupSchool">{opponent.schoolName}</Link>
-          ) : (
-            <span className="matchupSchool">Opponent</span>
-          )}
-          {opponent?.nickname && <span className="matchupNick">{opponent.nickname}</span>}
+          <div className="matchupIdentity">
+            {opponent && <TeamLogo team={opponent} />}
+            <div>
+              {opponent ? (
+                <Link to={`/team/${opponent.id}`} className="matchupSchool">{opponent.schoolName}</Link>
+              ) : (
+                <span className="matchupSchool">Opponent</span>
+              )}
+              {opponent?.nickname && <span className="matchupNick">{opponent.nickname}</span>}
+            </div>
+          </div>
         </div>
       </div>
       <div className="statStrip">
@@ -263,12 +274,17 @@ function SeasonWeekPage() {
                   return (
                     <Fragment key={game.id}>
                       <tr className={`seasonWeekGameRow ${selectedTeamId && (game.homeTeamId === selectedTeamId || game.awayTeamId === selectedTeamId) ? 'youRow' : ''}`}>
-                        <td className={`p-2 text-right ${awayScore > homeScore ? 'font-bold' : ''}`}>
-                            {away ? <Link to={`/team/${away.id}`}>{away.schoolName}</Link> : 'Away'}
-                            <span className="pollNick">
-                              {away?.nickname}
-                              {game.awayTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
-                            </span>
+                        <td className={`p-2 ${awayScore > homeScore ? 'font-bold' : ''}`}>
+                            <div className="seasonIdentity seasonIdentity-away">
+                              {away && <TeamLogo team={away} size="sm" />}
+                              <div>
+                                {away ? <Link to={`/team/${away.id}`}>{away.schoolName}</Link> : 'Away'}
+                                <span className="pollNick">
+                                  {away?.nickname}
+                                  {game.awayTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                                </span>
+                              </div>
+                            </div>
                         </td>
                         <td className="p-2 text-center">
                             <button
@@ -282,12 +298,17 @@ function SeasonWeekPage() {
                               {isFinal ? `${awayScore}–${homeScore}` : 'vs'}
                             </button>
                         </td>
-                        <td className={`p-2 text-left ${homeScore > awayScore ? 'font-bold' : ''}`}>
-                            {home ? <Link to={`/team/${home.id}`}>{home.schoolName}</Link> : 'Home'}
-                            <span className="pollNick">
-                              {home?.nickname}
-                              {game.homeTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
-                            </span>
+                        <td className={`p-2 ${homeScore > awayScore ? 'font-bold' : ''}`}>
+                            <div className="seasonIdentity">
+                              {home && <TeamLogo team={home} size="sm" />}
+                              <div>
+                                {home ? <Link to={`/team/${home.id}`}>{home.schoolName}</Link> : 'Home'}
+                                <span className="pollNick">
+                                  {home?.nickname}
+                                  {game.homeTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                                </span>
+                              </div>
+                            </div>
                         </td>
                         <td className="p-2 text-center text-xs text-gray-600 tabular">
                             {isFinal ? `${result.statsB.shots}–${result.statsA.shots}` : '–'}

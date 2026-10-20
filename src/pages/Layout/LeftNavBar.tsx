@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
+import TeamLogo from '../../components/TeamLogo';
 import { useAppSelector } from '../../store/hooks';
 import { selectIsCareerReady } from '../../features/coach/coachSlice';
 
@@ -76,7 +77,10 @@ function LeftNavBar({ isMenuOpen, onNavigate }: LeftNavBarProps) {
       <div className="dynastyCoachCard">
         <p className="dynastyCoachLabel">Head Coach</p>
         <h3>{coachProfile?.name ?? 'No coach yet'}</h3>
-        <p>{selectedTeam ? `${selectedTeam.schoolName} ${selectedTeam.nickname}` : 'No program selected'}</p>
+        <p className="programLockup">
+          {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
+          <span>{selectedTeam ? `${selectedTeam.schoolName} ${selectedTeam.nickname}` : 'No program selected'}</span>
+        </p>
         <NavLink to="/career/setup" className="navProfileLink" onClick={onNavigate}>
           {careerReady ? 'Edit profile' : 'Set up career'}
         </NavLink>

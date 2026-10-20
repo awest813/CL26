@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { simCareerPlayoffRound } from '../features/coach/careerThunks';
 import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectSeasonCapabilities, resetSeason } from '../features/season/seasonSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -26,6 +27,7 @@ function PlayoffsPage() {
   const coach = useAppSelector((state) => state.coach);
   const [actionError, setActionError] = useState<string | null>(null);
   const teamById = new Map(teams.map((team) => [team.id, team]));
+  const champion = playoffState?.championTeamId ? teamById.get(playoffState.championTeamId) : undefined;
   const seedByTeamId = new Map((playoffState?.seeds ?? []).map((seed) => [seed.teamId, seed.seed]));
 
   const canStart = capabilities.canStartPlayoffs;
@@ -147,8 +149,9 @@ function PlayoffsPage() {
               <p className="champion-banner-label">
                   {summary.year} National Champion
               </p>
-              <p className="champion-banner-name">
-                  {teamById.get(playoffState.championTeamId)?.schoolName} {teamById.get(playoffState.championTeamId)?.nickname}
+              <p className="champion-banner-name championLockup">
+                {champion && <TeamLogo team={champion} size="lg" />}
+                <span>{champion ? `${champion.schoolName} ${champion.nickname}` : 'Champion'}</span>
               </p>
               {coach.selectedTeamId === playoffState.championTeamId && (
                   <p className="champion-banner-you">Your team won the championship!</p>
@@ -197,11 +200,18 @@ function PlayoffsPage() {
                                     >
                                         <td className="py-1.5 font-mono font-bold text-center">#{seed.seed}</td>
                                         <td className="py-1.5">
-                                            <div className="font-semibold leading-tight">
-                                              {team?.schoolName}
-                                              {isUser && <span className="youMark ml-1">(You)</span>}
-                                            </div>
-                                            <div className="text-xs text-gray-500">{team?.nickname}</div>
+                                            {team ? (
+                                              <span className="standingsTeam">
+                                                <TeamLogo team={team} size="sm" />
+                                                <span>
+                                                  <div className="font-semibold leading-tight">
+                                                    {team.schoolName}
+                                                    {isUser && <span className="youMark ml-1">(You)</span>}
+                                                  </div>
+                                                  <div className="text-xs text-gray-500">{team.nickname}</div>
+                                                </span>
+                                              </span>
+                                            ) : seed.teamId}
                                         </td>
                                         <td className="py-1.5 text-right text-xs pr-1">
                                             {isChamp && <span className="text-yellow-700 font-bold">Champ</span>}
@@ -252,22 +262,28 @@ function PlayoffsPage() {
                                           className={`border rounded p-3 text-sm bg-gray-50 ${involvesUser ? 'playoffUserGame' : ''}`}
                                         >
                                             {/* Away team row */}
-                                            <div className={`flex justify-between items-center mb-1 ${awayWon ? 'font-bold text-black' : awayLost ? 'text-gray-400 line-through-gentle' : 'text-gray-700'}`}>
-                                                <span>
-                                                    {awaySeed && <span className="text-xs text-gray-400 mr-1 font-normal">#{awaySeed}</span>}
-                                                    {away?.schoolName}
-                                                    {game.awayTeamId === userTeamId && <span className="youMark ml-1">(You)</span>}
+                                            <div className={`flex justify-between items-center mb-1 ${awayWon ? 'font-bold text-black' : awayLost ? 'playoffSide-out text-gray-400' : 'text-gray-700'}`}>
+                                                <span className="playoffSide">
+                                                    {awaySeed && <span className="text-xs text-gray-400 font-normal">#{awaySeed}</span>}
+                                                    {away && <TeamLogo team={away} size="sm" />}
+                                                    <span className="playoffName">
+                                                      {away?.schoolName}
+                                                      {game.awayTeamId === userTeamId && <span className="youMark ml-1">(You)</span>}
+                                                    </span>
                                                 </span>
                                                 <span className="font-mono ml-2">
                                                     {game.result != null ? game.result.awayScore : '—'}
                                                 </span>
                                             </div>
                                             {/* Home team row */}
-                                            <div className={`flex justify-between items-center ${homeWon ? 'font-bold text-black' : homeLost ? 'text-gray-400 line-through-gentle' : 'text-gray-700'}`}>
-                                                <span>
-                                                    {homeSeed && <span className="text-xs text-gray-400 mr-1 font-normal">#{homeSeed}</span>}
-                                                    {home?.schoolName}
-                                                    {game.homeTeamId === userTeamId && <span className="youMark ml-1">(You)</span>}
+                                            <div className={`flex justify-between items-center ${homeWon ? 'font-bold text-black' : homeLost ? 'playoffSide-out text-gray-400' : 'text-gray-700'}`}>
+                                                <span className="playoffSide">
+                                                    {homeSeed && <span className="text-xs text-gray-400 font-normal">#{homeSeed}</span>}
+                                                    {home && <TeamLogo team={home} size="sm" />}
+                                                    <span className="playoffName">
+                                                      {home?.schoolName}
+                                                      {game.homeTeamId === userTeamId && <span className="youMark ml-1">(You)</span>}
+                                                    </span>
                                                 </span>
                                                 <span className="font-mono ml-2">
                                                     {game.result != null ? game.result.homeScore : '—'}

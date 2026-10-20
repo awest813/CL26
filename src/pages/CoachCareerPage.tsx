@@ -14,6 +14,7 @@ import {
   processSeasonEnd,
   beginNextCareerSeason,
 } from '../features/coach/careerThunks';
+import TeamLogo from '../components/TeamLogo';
 import OffseasonMarket from './OffseasonMarket';
 import { selectTeamRecords } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
@@ -255,8 +256,11 @@ function CoachCareerPage() {
               Coach {coach.profile.name}
               <span className="ml-2 text-sm font-normal text-gray-500">Year {careerYear}</span>
             </h2>
-            <div className="text-gray-500 text-sm mt-0.5">
-              {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {coach.careerTier} Program &bull; Skill {coach.profile.skill} &bull; Age {coach.profile.age}
+            <div className="text-gray-500 text-sm mt-0.5 programLockup">
+              {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
+              <span>
+                {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {coach.careerTier} Program &bull; Skill {coach.profile.skill} &bull; Age {coach.profile.age}
+              </span>
             </div>
             {selectedTeam && effectivePrestige != null && (
               <div className="text-xs text-gray-500 mt-1">
