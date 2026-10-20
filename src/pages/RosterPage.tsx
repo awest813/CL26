@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { toggleStarter } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position, POSITION_ORDER } from '../types/sim';
+import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
 import { getRosterDepthSummary } from '../sim/rosterManagement';
 import { playerYearLabel } from '../sim/rosterSummary';
 
@@ -47,12 +49,14 @@ function StarDisplay({ count }: { count: number }) {
 function PlayerRow({
   player,
   isStarter,
+  isOut,
   starterCountForPos,
   currentStartersForPos,
   onToggle,
 }: {
   player: Player;
   isStarter: boolean;
+  isOut: boolean;
   starterCountForPos: number;
   currentStartersForPos: number;
   onToggle: (id: string) => void;
@@ -66,6 +70,7 @@ function PlayerRow({
         <span className={`starterBadge ${isStarter ? 'starterBadge-on' : 'starterBadge-off'}`}>
           {isStarter ? 'Starter' : 'Backup'}
         </span>
+        {isOut && <span className="starterBadge starterBadge-out">Out</span>}
       </td>
       <td className="py-1.5 pr-3 font-medium">{player.name}</td>
       <td className="py-1.5 pr-3 text-gray-500 text-xs">{playerYearLabel(player.year)}</td>
@@ -106,6 +111,12 @@ function RosterPage() {
     () => getRosterDepthSummary(roster, coach.starterIds),
     [roster, coach.starterIds],
   );
+  const scratches = useMemo(() => {
+    const weekKey = availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? null);
+    if (!weekKey || !coach.selectedTeamId || roster.length === 0) return [];
+    return weeklyScratches(roster, season.seasonSeed, weekKey, coach.selectedTeamId);
+  }, [coach.selectedTeamId, roster, season.currentWeekIndex, season.phase, season.playoffs?.currentRound, season.seasonSeed]);
+  const scratchIds = useMemo(() => new Set(scratches.map((scratch) => scratch.playerId)), [scratches]);
 
   const byPosition = useMemo(() => {
     const map: Record<Position, Player[]> = { A: [], M: [], D: [], LSM: [], FO: [], G: [] };
@@ -165,7 +176,7 @@ function RosterPage() {
   }
 
   return (
-    <div className="flex-col gap-4">
+    <div className="pageStack">
       {/* Header */}
       <div className="card">
         <div className="flex justify-between items-start mb-3">
@@ -173,12 +184,20 @@ function RosterPage() {
             <h2 className="m-0 text-xl">
               Roster Management
             </h2>
-            <div className="text-sm text-gray-500 mt-0.5">
-              {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {season.year} Season &bull; {roster.length} players
+            <div className="text-sm text-gray-500 mt-0.5 programLockup">
+              {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
+              <span>
+                {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {season.year} Season &bull; {roster.length} players
+              </span>
             </div>
             <p className="text-xs text-gray-600 mt-2 mb-0 max-w-2xl">
               Starters drive in-game ratings and who gets scoring chances. Bench players still contribute, but at a lower weight—set your depth chart before big weeks and the postseason.
             </p>
+            {scratches.length > 0 && (
+              <p className="text-sm text-red-600 mt-2 mb-0">
+                Out this week: {scratches.map((scratch) => `${scratch.name} (${scratch.position})`).join(', ')}. They sit this game. The rest of the roster stays.
+              </p>
+            )}
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-400 uppercase mb-1">Roster OVR</div>
@@ -286,6 +305,7 @@ function RosterPage() {
                       key={player.id}
                       player={player}
                       isStarter={starterSet.has(player.id)}
+                      isOut={scratchIds.has(player.id)}
                       starterCountForPos={starterTarget}
                       currentStartersForPos={currentStarters}
                       onToggle={onToggle}

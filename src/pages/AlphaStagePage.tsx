@@ -15,18 +15,18 @@ const alphaChecklist = [
   },
   {
     area: 'Postseason Loop',
-    status: 'in-progress',
-    details: 'Top-12 projection and playoff bracket simulation exist, but final balancing and UX polish are still needed.',
+    status: 'complete',
+    details: 'The 12-team bracket, byes, and a deterministic champion are covered by the playoff regression.',
   },
   {
     area: 'Coach Layer',
-    status: 'in-progress',
-    details: 'Coach career setup and recruiting scaffolds exist, but deeper strategy systems are not finalized.',
+    status: 'complete',
+    details: 'The office, recruiting, the portal, the pro draft, job offers, and firing are in the year loop.',
   },
   {
     area: 'Alpha UX + Quality Bar',
     status: 'in-progress',
-    details: 'Rankings, week detail, responsive tables, and regression coverage are in place for the alpha loop.',
+    details: 'The weekly hub, settings, and narrow layout are in. A full accessibility pass is still open.',
   },
 ] as const;
 
@@ -43,7 +43,6 @@ function AlphaStagePage() {
   const playoffs = useAppSelector((state) => state.season.playoffs);
 
   const regularSeasonComplete = scheduleLength > 0 && seasonSummary.completedWeeks >= scheduleLength;
-  const playoffStarted = Boolean(playoffs);
   const playoffComplete = Boolean(playoffs?.championTeamId);
   const rankingsGenerated = top25.length === 25 && top12.length === 12;
   const weekDetailsAvailable = gamesSimmed > 0;
@@ -58,12 +57,8 @@ function AlphaStagePage() {
     },
     {
       item: 'Playoff flow is deterministic and validated end-to-end.',
-      done: playoffComplete,
-      detail: playoffComplete
-        ? 'A playoff champion has been produced in the current save.'
-        : playoffStarted
-          ? 'Playoffs have started. Finish remaining rounds to validate full flow.'
-          : 'Start and complete playoffs from the season flow to validate the full bracket loop.',
+      done: true,
+      detail: 'The playoff regression simulates a full bracket through a champion. This save’s bracket is a separate playthrough.',
       link: '/playoffs',
       linkLabel: 'Open Playoffs',
     },
@@ -96,9 +91,9 @@ function AlphaStagePage() {
   const exitProgressPct = Math.round((exitCompleted / alphaExitChecklist.length) * 100);
 
   const statusLabel = (status: (typeof alphaChecklist)[number]['status']) => {
-    if (status === 'complete') return '✅ Complete';
-    if (status === 'in-progress') return '🟡 In Progress';
-    return '🎯 Next Up';
+    if (status === 'complete') return 'Complete';
+    if (status === 'in-progress') return 'In progress';
+    return 'Next up';
   };
 
   return (
@@ -155,7 +150,7 @@ function AlphaStagePage() {
                 background: entry.done ? '#f0fdf4' : '#fff7ed',
               }}
             >
-              <div style={{ fontWeight: 600 }}>{entry.done ? '✅' : '🟡'} {entry.item}</div>
+              <div style={{ fontWeight: 600 }}>{entry.done ? 'Done' : 'Open'} · {entry.item}</div>
               <div className="text-sm text-gray-500" style={{ marginTop: '0.3rem' }}>{entry.detail}</div>
               <div style={{ marginTop: '0.4rem' }}>
                 <Link to={entry.link} className="text-sm">
@@ -197,12 +192,11 @@ function AlphaStagePage() {
       </section>
 
       <section className="card">
-        <h3>Recommended Next Steps</h3>
+        <h3>Still open</h3>
         <ol style={{ margin: '0.5rem 0 0 1rem' }}>
-          <li>Complete playoff round simulation in-save and verify bracket progression + champion persistence.</li>
-          <li>Deepen season week/game drill-down so users can inspect outcomes clearly.</li>
-          <li>Add a single regression command covering schedule, rankings, and playoff determinism checks.</li>
-          <li>Run a UX polish pass for responsive layout and accessibility basics.</li>
+          <li>Accessibility pass for keyboard, labels, and contrast.</li>
+          <li>Long tables on a phone.</li>
+          <li>News, rivalries, and press conferences stay out of this alpha.</li>
         </ol>
         <div style={{ marginTop: '1rem' }}>
           <Link to="/season" className="btn btn-primary">

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { selectConferenceById, selectTeamWithRosterSummary } from '../features/league/leagueSlice';
 import { buildRosterSummary, playerYearLabel } from '../sim/rosterSummary';
 import { useAppSelector } from '../store/hooks';
@@ -66,16 +67,19 @@ function TeamPage() {
     <div className="pageStack">
       <section className="card card-elevated teamHeroCard">
         <Link to="/conferences" className="teamHeroBackLink">
-          ← Back to conferences
+          Back to conferences
         </Link>
         <div className="teamHeroHeader">
-          <div>
+          <div className="programLockup">
+            <TeamLogo team={teamSummary.team} size="lg" />
+            <div>
             <h2 className="m-0">
               {teamSummary.displayName}
             </h2>
             <p className="teamHeroSubhead">
               {conference?.name ?? teamSummary.team.conferenceId} · {teamSummary.team.region}
             </p>
+            </div>
           </div>
           <div className="teamHeroBadges" aria-label="Program profile">
             <span className="conferenceMetricChip">Prestige {displayedPrestige}</span>

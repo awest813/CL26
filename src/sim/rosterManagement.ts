@@ -200,6 +200,15 @@ export function applyWeeklyTraitGrowth(
 }
 
 const POSITION_FILL_ORDER: Position[] = ['A', 'A', 'A', 'M', 'M', 'M', 'M', 'D', 'D', 'D', 'LSM', 'FO', 'G', 'A', 'M', 'D', 'M', 'D', 'A', 'M', 'D', 'LSM', 'M', 'D', 'A'];
+const ROSTER_TARGET_SIZE = 24;
+const POSITION_MINIMUMS: Record<Position, number> = {
+  A: 3,
+  M: 3,
+  D: 3,
+  LSM: 1,
+  FO: 1,
+  G: 1,
+};
 
 /**
  * Apply full roster turnover for the offseason:
@@ -209,12 +218,55 @@ const POSITION_FILL_ORDER: Position[] = ['A', 'A', 'A', 'M', 'M', 'M', 'M', 'D',
  * 4. Add incoming signed recruits as freshmen
  * 5. Fill any remaining open spots with generated walk-ons
  */
+export interface RosterDeparture {
+  player: Player;
+  reason: 'graduate' | 'transfer';
+}
+
+function transferChanceForYear(year: Player['year']): number {
+  if (year === 1) return 0.08;
+  if (year === 2) return 0.06;
+  if (year === 3) return 0.04;
+  return 0;
+}
+
+function splitDepartures(developed: Player[], rng: () => number): { returners: Player[]; departures: RosterDeparture[] } {
+  const returners: Player[] = [];
+  const departures: RosterDeparture[] = [];
+  for (const player of developed) {
+    if (player.year === 4) {
+      departures.push({ player, reason: 'graduate' });
+      continue;
+    }
+    if (rng() < transferChanceForYear(player.year)) {
+      departures.push({ player, reason: 'transfer' });
+      continue;
+    }
+    returners.push(player);
+  }
+  return { returners, departures };
+}
+
+/** Who leaves before the next season. Same rolls as roster turnover. */
+export function previewOffseasonDepartures(
+  currentRoster: Player[],
+  team: Team,
+  newSeed: number,
+  options?: CoachDevelopmentInputs,
+): RosterDeparture[] {
+  const rng = makeRng(seedToNumber(`${newSeed}:${team.id}:turnover`));
+  const developed = developPlayers(currentRoster, rng, options);
+  return splitDepartures(developed, rng).departures;
+}
+
 export function applyRosterTurnover(
   currentRoster: Player[],
   signedRecruits: SignedRecruit[],
   team: Team,
   newSeed: number,
   options?: CoachDevelopmentInputs,
+  additions: Player[] = [],
+  earlyProIds: readonly string[] = [],
 ): Player[] {
   const rng = makeRng(seedToNumber(`${newSeed}:${team.id}:turnover`));
 
@@ -227,19 +279,14 @@ export function applyRosterTurnover(
     boostersLevel: options?.boostersLevel,
   });
 
-  // Step 2: Separate leavers from returners
-  //   - Seniors (year 4) always graduate
-  //   - ~10% chance each year-1,2,3 player transfers out
-  const returners: Player[] = [];
-  for (const player of developed) {
-    if (player.year === 4) continue; // graduate
-    const transferChance = player.year === 1 ? 0.08 : player.year === 2 ? 0.06 : 0.04;
-    if (rng() < transferChance) continue; // transfer portal
-    returners.push(player);
-  }
+  // Step 2: Seniors graduate. Underclassmen can enter the portal.
+  // A drafted junior turns pro after those rolls, so an empty list does not change the stream.
+  const { returners } = splitDepartures(developed, rng);
+  const turningPro = new Set(earlyProIds);
+  const staying = returners.filter((player) => !turningPro.has(player.id));
 
   // Step 3: Age returning players
-  const agedReturners: Player[] = returners.map((player) => ({
+  const agedReturners: Player[] = staying.map((player) => ({
     ...player,
     year: (player.year + 1) as 1 | 2 | 3 | 4,
     age: player.age + 1,
@@ -250,48 +297,23 @@ export function applyRosterTurnover(
     convertRecruitToPlayer(sr, team, rng),
   );
 
-  // Step 5: Fill remaining spots with generated walk-ons up to 24 players
-  const combined = [...agedReturners, ...incomingFreshmen];
-  const TARGET_SIZE = 24;
-  const positionsCovered = new Set(combined.map((p) => p.position));
-  const baseline = 45 + team.prestige * 0.4;
-
-  // First ensure every required position is covered
+  // Step 5: Fill remaining spots with generated walk-ons up to 24 players.
+  // A large signing class can already be over the target. Make room before adding
+  // a missing position, or slice() drops the only new goalie.
+  const combined = [...agedReturners, ...incomingFreshmen, ...additions];
   const requiredPositions: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
-  const missingPositions = requiredPositions.filter((pos) => !positionsCovered.has(pos));
+  const missingPositions = requiredPositions.filter((pos) => !combined.some((player) => player.position === pos));
+  trimRosterForRequiredAdds(combined, ROSTER_TARGET_SIZE, missingPositions.length);
 
-  for (const pos of missingPositions) {
-    const variance = randInt(rng, -10, 8);
-    const overall = clamp(Math.round(baseline + variance - 5)); // walk-ons are below average
-    const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
-    combined.push({
-      id: `${team.id}-walkon-${pos}-${newSeed}-${combined.length}`,
-      name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
-      position: pos,
-      year: 1,
-      age: 18,
-      skill,
-      shooting: clamp(Math.round(baseline + variance + (pos === 'A' ? 6 : 0))),
-      passing: clamp(Math.round(baseline + randInt(rng, -8, 6))),
-      speed: clamp(Math.round(baseline + randInt(rng, -7, 7))),
-      defense: clamp(Math.round(baseline + randInt(rng, -9, 8) + (pos === 'D' || pos === 'LSM' ? 8 : 0))),
-      IQ: clamp(Math.round(baseline + randInt(rng, -5, 7))),
-      stamina: clamp(Math.round(baseline + randInt(rng, -6, 6))),
-      discipline: clamp(Math.round(baseline + randInt(rng, -5, 7))),
-      overall,
-    });
-  }
-
-  // Fill to target size
-  let fillIndex = 0;
-  while (combined.length < TARGET_SIZE && fillIndex < POSITION_FILL_ORDER.length) {
-    const pos = POSITION_FILL_ORDER[fillIndex];
-    fillIndex++;
+  const baseline = 45 + team.prestige * 0.4;
+  let walkOnSerial = 0;
+  const addWalkOn = (pos: Position, tag: string, overallPenalty: number) => {
+    walkOnSerial += 1;
     const variance = randInt(rng, -12, 8);
-    const overall = clamp(Math.round(baseline + variance - 8));
+    const overall = clamp(Math.round(baseline + variance - overallPenalty));
     const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
     combined.push({
-      id: `${team.id}-fill-${pos}-${newSeed}-${combined.length}`,
+      id: `${team.id}-${tag}-${pos}-${newSeed}-${walkOnSerial}`,
       name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
       position: pos,
       year: 1,
@@ -306,9 +328,81 @@ export function applyRosterTurnover(
       discipline: clamp(Math.round(baseline + randInt(rng, -5, 7))),
       overall,
     });
+  };
+
+  for (const pos of missingPositions) addWalkOn(pos, 'walkon', 5);
+
+  let fillIndex = 0;
+  while (combined.length < ROSTER_TARGET_SIZE && fillIndex < POSITION_FILL_ORDER.length) {
+    const pos = POSITION_FILL_ORDER[fillIndex];
+    fillIndex += 1;
+    addWalkOn(pos, 'fill', 8);
   }
 
-  return combined.slice(0, TARGET_SIZE);
+  // A full class can still leave one position short of a starting unit. Swap surplus depth.
+  for (const [pos, minimum] of Object.entries(POSITION_MINIMUMS) as [Position, number][]) {
+    while (combined.filter((player) => player.position === pos).length < minimum) {
+      if (combined.length < ROSTER_TARGET_SIZE) {
+        addWalkOn(pos, 'walkon', 5);
+        continue;
+      }
+      const donor = lowestSurplusIndex(combined);
+      if (donor < 0) break;
+      combined.splice(donor, 1);
+      addWalkOn(pos, 'walkon', 5);
+    }
+  }
+
+  trimRosterForRequiredAdds(combined, ROSTER_TARGET_SIZE, 0);
+  return combined;
+}
+
+function positionCounts(roster: Player[]): Map<Position, number> {
+  const counts = new Map<Position, number>();
+  for (const player of roster) counts.set(player.position, (counts.get(player.position) ?? 0) + 1);
+  return counts;
+}
+
+/** Lowest-rated player at a position that is above its starting minimum. */
+function lowestSurplusIndex(roster: Player[]): number {
+  const counts = positionCounts(roster);
+  let removal = -1;
+  let lowestOverall = Infinity;
+  for (let index = 0; index < roster.length; index += 1) {
+    const player = roster[index];
+    const count = counts.get(player.position) ?? 0;
+    if (count <= POSITION_MINIMUMS[player.position]) continue;
+    if (player.overall < lowestOverall) {
+      removal = index;
+      lowestOverall = player.overall;
+    }
+  }
+  return removal;
+}
+
+/** Drop the lowest-rated depth player until `incomingRequired` new spots fit. */
+function trimRosterForRequiredAdds(roster: Player[], target: number, incomingRequired: number) {
+  const required = new Set<Position>(['A', 'M', 'D', 'LSM', 'FO', 'G']);
+  while (roster.length + incomingRequired > target && roster.length > 0) {
+    const counts = positionCounts(roster);
+
+    let removal = -1;
+    let deepest = 1;
+    let lowestOverall = Infinity;
+    for (let index = 0; index < roster.length; index += 1) {
+      const player = roster[index];
+      const count = counts.get(player.position) ?? 0;
+      if (count <= POSITION_MINIMUMS[player.position]) continue;
+      if (required.has(player.position) && count <= 1) continue;
+      if (count > deepest || (count === deepest && player.overall < lowestOverall)) {
+        removal = index;
+        deepest = count;
+        lowestOverall = player.overall;
+      }
+    }
+    if (removal < 0) break;
+    roster.splice(removal, 1);
+  }
 }
 
 /** Summarize roster depth by position */

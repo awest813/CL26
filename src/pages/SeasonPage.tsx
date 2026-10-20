@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import {
   selectSeasonCapabilities,
   selectSeasonHasStarted,
@@ -11,6 +12,7 @@ import {
 } from '../features/season/seasonSlice';
 import { beginFirstSeason } from '../features/coach/careerThunks';
 import { selectIsCareerReady } from '../features/coach/coachSlice';
+import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { seasonPhaseLabel } from '../lib/seasonLabels';
 
@@ -49,6 +51,7 @@ function SeasonPage() {
 
   const hasValidSeed = Number.isFinite(seedInput);
   const coachReady = useAppSelector(selectIsCareerReady);
+  const confirmPlay = useAppSelector((state) => state.settings.confirmPlay);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
 
   const nextStep = useMemo<NextStepAction>(() => {
@@ -56,21 +59,26 @@ function SeasonPage() {
     if (summary.phase === 'REGULAR') {
       if (coachReady) {
         return {
-          label: 'Use Weekly Hub to advance season + recruiting together.',
+          label: 'Your game is pinned at the top of the slate. Play the week from the hub.',
           link: '/career/week',
-          cta: 'Open Weekly Hub →',
+          cta: 'Open Weekly Hub',
         };
       }
       return {
         label: 'Sim from this page, or create a coach to run the full weekly loop.',
         link: '/career/setup',
-        cta: 'Set Up Coach →',
+        cta: 'Set up coach',
       };
     }
-    if (summary.phase === 'PLAYOFF') return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open Playoffs →' };
+    if (summary.phase === 'PLAYOFF') {
+      if (coachReady) {
+        return { label: 'The next round is on the weekly hub. The full bracket stays on the playoff page.', link: '/career/week', cta: 'Continue on the hub' };
+      }
+      return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open playoffs' };
+    }
     if (summary.phase === 'OFFSEASON') {
       if (coachReady) {
-        return { label: 'Finalize offseason actions, then begin the next year.', link: '/career', cta: 'Open Career Office →' };
+        return { label: 'Signing day, the season record, and next year continue on the hub.', link: '/career/week', cta: 'Continue on the hub' };
       }
       return { label: 'Season is complete. Begin a fresh season when ready.', link: null, cta: null };
     }
@@ -88,6 +96,7 @@ function SeasonPage() {
   };
 
   const handleSimWeek = async () => {
+    if (confirmPlay && !window.confirm(confirmPlayCopy('week', `week ${displayWeek + 1}`))) return;
     setActionError(null);
     try {
       await dispatch(simCurrentWeek()).unwrap();
@@ -142,14 +151,14 @@ function SeasonPage() {
           </div>
         )}
 
-        <div className="card max-w-lg mx-auto w-full">
+        <div className="card max-w-lg mx-auto">
           <p className="m-0 mb-4 text-sm text-gray-600">
             The season seed controls schedule generation and the entire CPU league roster draw. Those rosters stay
             fixed for this year and refresh when you start a later season with a new seed.
             {coachReady && ' Your managed roster and recruiting board will sync to this seed when you begin.'}
           </p>
 
-          <div className="flex gap-4 items-end mb-4">
+          <div className="flex flex-wrap gap-4 items-end mb-4">
             <label className="flex-1">
               <span className="text-sm font-semibold">Season Seed</span>
               <input
@@ -220,8 +229,13 @@ function SeasonPage() {
           )}
           {summary.phase === 'PLAYOFF' && (
             <div className="seasonActionGroup">
-              <Link to="/playoffs" className="btn btn-primary">
-                Go to Playoffs
+              {coachReady ? (
+                <Link to="/career/week" className="btn btn-primary">
+                  Continue on the hub
+                </Link>
+              ) : null}
+              <Link to="/playoffs" className={coachReady ? 'btn' : 'btn btn-primary'}>
+                {coachReady ? 'Full bracket' : 'Go to Playoffs'}
               </Link>
             </div>
           )}
@@ -231,8 +245,8 @@ function SeasonPage() {
                 View Playoff Results
               </Link>
               {coachReady ? (
-                <Link to="/career" className="btn btn-primary">
-                  Open Career Office
+                <Link to="/career/week" className="btn btn-primary">
+                  Continue on the hub
                 </Link>
               ) : (
                 <button type="button" className="btn btn-primary" onClick={handleNewSeason}>
@@ -256,29 +270,34 @@ function SeasonPage() {
             </button>
           )}
         </div>
-        <div className="mt-3 border-t pt-3 flex items-center justify-between gap-3">
-          <div className="text-sm text-gray-600">{nextStep.label}</div>
-          {!coachReady && nextStep.link && nextStep.cta && (
-            <Link to={nextStep.link} className="btn btn-primary text-sm">
-              {nextStep.cta}
-            </Link>
-          )}
-        </div>
+        {!coachReady && (
+          <div className="mt-3 border-t pt-3 flex items-center justify-between gap-3">
+            <div className="text-sm text-gray-600">{nextStep.label}</div>
+            {nextStep.link && nextStep.cta && (
+              <Link to={nextStep.link} className="btn btn-primary text-sm">
+                {nextStep.cta}
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="card">
-        <div className="seasonHeaderRow border-b pb-2 mb-4">
-          <h3 className="m-0 text-lg font-semibold">Week {displayWeek + 1} Matchups</h3>
-          <label className="text-sm">
-            Conference
-            <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)} className="p-1 text-sm border rounded ml-1">
-            <option value="ALL">All Conferences</option>
-            {conferences.map((conf) => (
-              <option key={conf.id} value={conf.id}>
-                {conf.name}
-              </option>
-            ))}
-          </select>
+        <div className="seasonHeaderRow">
+          <div>
+            <h3 className="m-0 text-lg font-semibold">Week {displayWeek + 1}</h3>
+            <p className="pageHeader-sub">Visitor on the left. Home on the right.</p>
+          </div>
+          <label className="seasonFilter">
+            <span>Conference</span>
+            <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)}>
+              <option value="ALL">All conferences</option>
+              {conferences.map((conf) => (
+                <option key={conf.id} value={conf.id}>
+                  {conf.name}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 
@@ -297,18 +316,32 @@ function SeasonPage() {
             const isUserGame = Boolean(selectedTeamId) && (game.homeTeamId === selectedTeamId || game.awayTeamId === selectedTeamId);
             return (
               <div key={game.id} className={`seasonMatchupRow ${isUserGame ? 'seasonMatchupRow-user' : ''}`}>
-                <div className="flex-1 text-right">
-                  {away ? <Link to={`/team/${away.id}`} className="font-semibold">{away.schoolName}</Link> : <span className="font-semibold">Away</span>}
-                  <span className="text-xs text-gray-500 ml-1">({away?.nickname})</span>
-                  {game.awayTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
+                <div className="seasonSide">
+                  <div className="seasonIdentity seasonIdentity-away">
+                    {away && <TeamLogo team={away} size="sm" />}
+                    <div>
+                      {away ? <Link to={`/team/${away.id}`} className="seasonSchool">{away.schoolName}</Link> : <span className="seasonSchool">Away</span>}
+                      <span className="seasonNick">
+                        {away?.nickname}
+                        {game.awayTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="mx-4 font-mono font-bold text-lg min-w-[60px] text-center">
-                  {result ? <span>{result.scoreB} - {result.scoreA}</span> : <span className="text-gray-400 text-sm">vs</span>}
+                <div className={result ? 'seasonScore' : 'seasonScore seasonScore-pending'}>
+                  {result ? `${result.scoreB}–${result.scoreA}` : 'vs'}
                 </div>
-                <div className="flex-1 text-left">
-                  {home ? <Link to={`/team/${home.id}`} className="font-semibold">{home.schoolName}</Link> : <span className="font-semibold">Home</span>}
-                  <span className="text-xs text-gray-500 ml-1">({home?.nickname})</span>
-                  {game.homeTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
+                <div className="seasonSide seasonSide-home">
+                  <div className="seasonIdentity">
+                    {home && <TeamLogo team={home} size="sm" />}
+                    <div>
+                      {home ? <Link to={`/team/${home.id}`} className="seasonSchool">{home.schoolName}</Link> : <span className="seasonSchool">Home</span>}
+                      <span className="seasonNick">
+                        {home?.nickname}
+                        {game.homeTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             );

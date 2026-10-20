@@ -46,7 +46,7 @@ function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
       role="img"
       aria-label={description}
       title={description}
-      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold mr-0.5 border bg-white cursor-help"
+      className="motivationMark"
       style={{ color, borderColor: color }}
     >
       {label.charAt(0)}
@@ -201,16 +201,23 @@ function RecruitingBoardPage() {
   }
 
   if (coach.recruitPool.length === 0) {
+    const classClosed = season.phase === 'OFFSEASON';
     return (
       <div className="pageStack">
         <div className="pageHeader">
           <h2>Recruiting Board</h2>
-          <p className="pageHeader-sub">Start recruiting to manage your prospect pool.</p>
+          <p className="pageHeader-sub">
+            {classClosed
+              ? 'The high school class is closed. The portal and the pro draft are on the office.'
+              : 'Start recruiting to manage your prospect pool.'}
+          </p>
         </div>
         <div className="card text-center py-10">
-          <p className="text-gray-500 mb-4">No recruit pool loaded yet.</p>
+          <p className="text-gray-500 mb-4">
+            {classClosed ? 'The high school class is closed.' : 'No recruit pool loaded yet.'}
+          </p>
           <Link to="/career" className="btn btn-primary">
-            Go to Coach Office to start recruiting →
+            {classClosed ? 'Open the portal and the pro draft' : 'Start the class in the coach office'}
           </Link>
         </div>
       </div>
@@ -247,7 +254,6 @@ function RecruitingBoardPage() {
             <div className="text-xs text-gray-400 uppercase mb-0.5">Committed</div>
             <div className={`font-bold ${committedToUserCount > coach.scholarshipsAvailable ? 'text-amber-600' : ''}`}>
               {committedToUserCount}
-              {committedToUserCount > coach.scholarshipsAvailable ? ' ⚠' : ''}
             </div>
           </div>
           <div>
@@ -256,7 +262,7 @@ function RecruitingBoardPage() {
           </div>
           <div className="ml-auto self-center">
             <Link to="/career/week" className="btn text-sm">
-              ← Weekly Hub
+              Weekly hub
             </Link>
           </div>
         </div>
@@ -267,12 +273,7 @@ function RecruitingBoardPage() {
             {Object.entries(positionNeedByPosition).map(([pos, need]) => (
               <span
                 key={pos}
-                className="text-xs px-2 py-0.5 rounded-full border font-semibold"
-                style={{
-                  borderColor: need > 0 ? '#f59e0b' : '#d1d5db',
-                  color: need > 0 ? '#92400e' : '#6b7280',
-                  background: need > 0 ? '#fef3c7' : '#f9fafb',
-                }}
+                className={need > 0 ? 'needChip needChip-short' : 'needChip'}
               >
                 {pos}: {need > 0 ? `need ${need}` : 'full'}
               </span>

@@ -13,17 +13,24 @@ import {
   setStarterIds,
   applyPrestigeDrift,
   setPendingJobOffers,
+  setEmployment,
   initializeRecruitingBoard,
   updateProgramStanding,
   careerSetupFromPrestige,
   applyPlayoffRoundFatigue,
+  clearOffseasonMarket,
 } from './coachSlice';
 import type { GameResult } from '../../types/sim';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, buildDefaultStarters } from '../../sim/rosterManagement';
+import {
+  buildPortalBoard,
+  buildProDraft,
+  entrantToPlayer,
+} from '../../sim/offseasonMarket';
 import { computeAllSOS, computeRankings, withProgramPrestige } from '../../sim/rankings';
-import { seedToNumber } from '../../sim/rng';
+import { buildSeasonJobMarket } from '../../sim/jobOffers';
 import {
   canSimRegularWeek,
   careerOffseasonCapabilities,
@@ -65,10 +72,6 @@ function computePrestigeDriftDelta(champion: boolean, madePlayoffs: boolean, win
   if (winDiff <= -4) return SEVERE_MISS_PRESTIGE_DRIFT;
   if (winDiff <= -2) return MODERATE_MISS_PRESTIGE_DRIFT;
   return 0;
-}
-
-function getOfferTier(teamPrestige: number, effectivePrestige: number): 'UPGRADE' | 'LATERAL' {
-  return teamPrestige > effectivePrestige ? 'UPGRADE' : 'LATERAL';
 }
 
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
@@ -257,28 +260,17 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const standing = careerSetupFromPrestige(currentEffectivePrestige);
     dispatch(updateProgramStanding(standing));
 
-    if (newJobSecurity >= 68 || champion) {
-      const candidateOffers = teams
-        .filter((team) => team.id !== coach.selectedTeamId && team.prestige >= currentEffectivePrestige)
-        .map((team) => ({
-          team,
-          sortKey: seedToNumber(`${season.seasonSeed}:${season.year}:${coach.selectedTeamId}:${team.id}`),
-        }))
-        .sort((a, b) => {
-          const prestigeComparison = b.team.prestige - a.team.prestige;
-          if (prestigeComparison !== 0) return prestigeComparison;
-          return a.sortKey - b.sortKey;
-        })
-        .slice(0, champion ? 2 : 1)
-        .map(({ team }) => ({
-          teamId: team.id,
-          tier: getOfferTier(team.prestige, currentEffectivePrestige),
-          presentedAtYear: season.year,
-        }));
-      dispatch(setPendingJobOffers(candidateOffers));
-    } else {
-      dispatch(setPendingJobOffers([]));
-    }
+    const market = buildSeasonJobMarket({
+      teams,
+      userTeamId: coach.selectedTeamId,
+      seasonSeed: season.seasonSeed,
+      year: season.year,
+      jobSecurity: newJobSecurity,
+      champion,
+      effectivePrestige: currentEffectivePrestige,
+    });
+    dispatch(setPendingJobOffers(market.offers));
+    dispatch(setEmployment(market.employment));
     dispatch(resetRecruitingForNewSeason());
   },
 );
@@ -327,6 +319,22 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
 
     // Only apply this offseason's signing class; prior years stay archived in history and are not re-applied.
     const signedRecruits = coach.signedRecruitsByYear[state.season.year] ?? [];
+    const room = Math.max(0, coach.scholarshipsAvailable ?? 0);
+    const portalClaims = new Set(coach.portalClaimIds ?? []);
+    const portalPlayers = buildPortalBoard(teams, team.id, newSeed, state.season.year)
+      .filter((entrant) => portalClaims.has(entrant.id))
+      .slice(0, Math.min(3, room))
+      .map(entrantToPlayer);
+    const earlyProIds = buildProDraft({
+      teams,
+      rosterSeed,
+      seasonSeed: state.season.seasonSeed,
+      year: state.season.year,
+      userTeamId: team.id,
+      userRoster: currentRoster,
+    })
+      .filter((pick) => pick.early && pick.collegeId === team.id)
+      .map((pick) => pick.playerId);
 
     const newRoster = applyRosterTurnover(currentRoster, signedRecruits, team, newSeed, {
       coachArchetype: coach.profile?.archetype,
@@ -334,7 +342,8 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
       operationsSkill: coach.skillTree?.operations ?? 0,
       facilitiesLevel: coach.programResources?.facilities ?? 50,
       boostersLevel: coach.programResources?.boosters ?? 50,
-    });
+    }, portalPlayers, earlyProIds);
+    dispatch(clearOffseasonMarket());
     const newStarters = buildDefaultStarters(newRoster);
     dispatch(setManagedRoster(newRoster));
     dispatch(setStarterIds(newStarters));
@@ -353,6 +362,7 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
 
     if (season.phase !== 'OFFSEASON') return null;
     if (!coach.selectedTeamId) return null;
+    if ((coach.employment ?? 'ACTIVE') === 'FIRED') return null;
 
     const ceremony = careerOffseasonCapabilities({
       phase: season.phase,

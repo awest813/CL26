@@ -35,12 +35,14 @@ import { leagueReducer } from '../features/league/leagueSlice';
 import { seasonReducer } from '../features/season/seasonSlice';
 import { coachReducer } from '../features/coach/coachSlice';
 import { exhibitionReducer } from '../features/exhibition/exhibitionSlice';
+import { settingsReducer } from '../features/settings/settingsSlice';
 
 const rootReducer = combineReducers({
   league: leagueReducer,
   season: seasonReducer,
   coach: coachReducer,
   exhibition: exhibitionReducer,
+  settings: settingsReducer,
 });
 
 const persistConfig = {
@@ -81,7 +83,7 @@ const persistConfig = {
     },
     { debug: false },
   ),
-  whitelist: ['season', 'coach'],
+  whitelist: ['season', 'coach', 'settings'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

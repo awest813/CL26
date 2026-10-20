@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { selectConferenceBrowserRows } from '../features/league/leagueSlice';
 import { useAppSelector } from '../store/hooks';
 
@@ -164,12 +165,15 @@ function ConferencesPage() {
               const isUser = team.id === selectedTeamId;
               return (
               <Link key={team.id} to={`/team/${team.id}`} className={`conferenceTeamCard ${isUser ? 'conferenceTeamCard-you' : ''}`}>
-                <div>
-                  <strong>
-                    {team.schoolName}
-                    {isUser && <span className="youMark ml-1">(You)</span>}
-                  </strong>
-                  <div className="conferenceTeamNickname">{team.nickname}</div>
+                <div className="conferenceTeamIdentity">
+                  <TeamLogo team={team} size="sm" />
+                  <div>
+                    <strong>
+                      {team.schoolName}
+                      {isUser && <span className="youMark ml-1">(You)</span>}
+                    </strong>
+                    <div className="conferenceTeamNickname">{team.nickname}</div>
+                  </div>
                 </div>
                 <div className="conferenceTeamMeta">
                   <span>{team.region}</span>

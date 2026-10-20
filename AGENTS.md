@@ -15,9 +15,10 @@ Build a deterministic, web-based college lacrosse head coach simulation with:
 2. Redux slices live in `src/features/`.
    - `leagueSlice`: static league/team data loaded from JSON at startup; **do not persist**.
    - `seasonSlice`: schedule/results/standings/current week/playoffs; **persist**.
-   - `coachSlice`: selected user team, tactics, settings; **persist**.
+   - `coachSlice`: selected user team, tactics, career; **persist**.
+   - `settingsSlice`: confirmations and display preferences; **persist**.
    - `exhibitionSlice`: sandbox exhibition sim state; **do not persist**.
-3. Persistence configuration must whitelist only persisted gameplay/user slices (`season`, `coach`).
+3. Persistence configuration must whitelist only persisted gameplay/user slices (`season`, `coach`, `settings`).
 4. Prefer derived views + memoized selectors for standings/rankings over storing redundant state.
 
 ## Current phase focus

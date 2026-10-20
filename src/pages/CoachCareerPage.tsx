@@ -6,17 +6,16 @@ import {
   setPracticeFocus,
   setTactics,
   upgradeCoachSkill,
-  acceptJobOffer,
-  declineAllJobOffers,
   selectUserEffectivePrestige,
   WEEKLY_HOURS_CAP,
   processSigningDay,
 } from '../features/coach/coachSlice';
 import {
   processSeasonEnd,
-  initializeManagedRoster,
   beginNextCareerSeason,
 } from '../features/coach/careerThunks';
+import TeamLogo from '../components/TeamLogo';
+import OffseasonMarket from './OffseasonMarket';
 import { selectTeamRecords } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -58,10 +57,10 @@ function JobSecurityBar({ value }: { value: number }) {
 }
 
 function adPressureLabel(pressure: number): { label: string; color: string } {
-  if (pressure >= 80) return { label: 'Board Heat: Extreme', color: '#b91c1c' };
-  if (pressure >= 65) return { label: 'Board Heat: High', color: '#dc2626' };
-  if (pressure >= 45) return { label: 'Board Heat: Moderate', color: '#f59e0b' };
-  return { label: 'Board Heat: Manageable', color: '#16a34a' };
+  if (pressure >= 80) return { label: 'Extreme AD pressure', color: '#b91c1c' };
+  if (pressure >= 65) return { label: 'High AD pressure', color: '#dc2626' };
+  if (pressure >= 45) return { label: 'Moderate AD pressure', color: '#f59e0b' };
+  return { label: 'Low AD pressure', color: '#16a34a' };
 }
 
 function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: number }) {
@@ -89,7 +88,6 @@ function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: 
 function CoachCareerPage() {
   const dispatch = useAppDispatch();
   const teams = useAppSelector((state) => state.league.teams);
-  const conferences = useAppSelector((state) => state.league.conferences);
   const coach = useAppSelector((state) => state.coach);
   const season = useAppSelector((state) => state.season);
   const recordsByTeamId = useAppSelector(selectTeamRecords);
@@ -98,13 +96,8 @@ function CoachCareerPage() {
 
   const [seedInput, setSeedInput] = useState(coach.recruitingSeed || 2026);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [jobOfferError, setJobOfferError] = useState<string | null>(null);
 
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
-  const conferenceNameById = useMemo(
-    () => new Map(conferences.map((conference) => [conference.id, conference.name])),
-    [conferences],
-  );
   const effectiveRecruitingTeams = useMemo(() => {
     if (!coach.selectedTeamId || effectivePrestige === null) return teams;
     return teams.map((team) =>
@@ -239,7 +232,8 @@ function CoachCareerPage() {
     season.scheduleByWeek.length > 0 &&
     season.currentWeekIndex < season.scheduleByWeek.length;
   const seasonEndProcessed = isOffseason && hasSeasonHistoryForYear(coach.seasonHistory, season.year);
-  const canBeginNextYear = offseasonCaps.canAdvanceNextYear;
+  const fired = (coach.employment ?? 'ACTIVE') === 'FIRED';
+  const canBeginNextYear = offseasonCaps.canAdvanceNextYear && !fired;
   const latestSeasonHistory = coach.seasonHistory.length > 0
     ? coach.seasonHistory[coach.seasonHistory.length - 1]
     : null;
@@ -247,17 +241,6 @@ function CoachCareerPage() {
   const displayedWins = recordedSeason?.wins ?? userRecord.wins;
   const displayedLosses = recordedSeason?.losses ?? userRecord.losses;
   const seasonStatusLabel = recordedSeason ? 'Final Season Record' : 'Season Performance';
-
-  async function onAcceptOffer(teamId: string) {
-    setJobOfferError(null);
-    try {
-      await dispatch(acceptJobOffer(teamId)).unwrap();
-      await dispatch(initializeManagedRoster()).unwrap();
-    } catch (error) {
-      console.error('Failed to accept coach job offer.', error);
-      setJobOfferError('The coaching move did not complete. Reload the page and try again.');
-    }
-  }
 
   return (
     <div className="pageStack">
@@ -274,8 +257,11 @@ function CoachCareerPage() {
               Coach {coach.profile.name}
               <span className="ml-2 text-sm font-normal text-gray-500">Year {careerYear}</span>
             </h2>
-            <div className="text-gray-500 text-sm mt-0.5">
-              {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {coach.careerTier} Program &bull; Skill {coach.profile.skill} &bull; Age {coach.profile.age}
+            <div className="text-gray-500 text-sm mt-0.5 programLockup">
+              {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
+              <span>
+                {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {coach.careerTier} Program &bull; Skill {coach.profile.skill} &bull; Age {coach.profile.age}
+              </span>
             </div>
             {selectedTeam && effectivePrestige != null && (
               <div className="text-xs text-gray-500 mt-1">
@@ -293,13 +279,13 @@ function CoachCareerPage() {
             <div className="text-xs text-gray-500 uppercase mb-1">Career Record</div>
             <div className="text-lg font-bold">{coach.careerRecord.totalWins}–{coach.careerRecord.totalLosses}</div>
             <div className="text-xs text-gray-500">
-              {coach.careerRecord.playoffAppearances} playoff app{coach.careerRecord.playoffAppearances !== 1 ? 's' : ''}
+              {coach.careerRecord.playoffAppearances} playoff appearance{coach.careerRecord.playoffAppearances === 1 ? '' : 's'}
               {coach.careerRecord.championships > 0 && ` · ${coach.careerRecord.championships} title${coach.careerRecord.championships !== 1 ? 's' : ''}`}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 pt-3 border-t">
+        <div className="officeStats">
           {/* Season Performance */}
           <div>
             <div className="text-xs text-gray-500 uppercase mb-2">{seasonStatusLabel}</div>
@@ -334,10 +320,12 @@ function CoachCareerPage() {
             <div className="text-xs text-gray-500 uppercase mb-2">Job Security</div>
             <JobSecurityBar value={coach.jobSecurity} />
             <div className="text-xs mt-2" style={{ color: pressureState.color }}>
-              {pressureState.label} ({adPressure}%)
+              {pressureState.label} · {adPressure}%
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              {coach.jobSecurity < 30
+              {(coach.employment ?? 'ACTIVE') === 'FIRED'
+                ? 'The AD let you go. A landing job is in the coach pool.'
+                : coach.jobSecurity < 30
                 ? 'Meeting expectations is critical this season.'
                 : coach.jobSecurity >= 75
                   ? 'You have strong administrative support.'
@@ -390,7 +378,7 @@ function CoachCareerPage() {
       {isOffseason && (
         <div className="card noticeCard">
           <h3 className="text-base font-bold mb-1">Offseason</h3>
-          <div className="flex gap-6 mb-4">
+          <div className="flex gap-6 mb-4 flex-wrap">
             <div>
               <div className="text-xs text-gray-500">Final Record</div>
               <div className="font-semibold">{displayedWins}–{displayedLosses}</div>
@@ -410,53 +398,6 @@ function CoachCareerPage() {
               </div>
             </div>
           </div>
-
-          {coach.pendingJobOffers.length > 0 && (
-            <div className="mb-4 p-3 rounded border bg-white">
-              <div className="flex justify-between items-start gap-3 mb-3">
-                <div>
-                  <h4 className="m-0 text-sm font-bold">Career Opportunity</h4>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-0">
-                    Strong results have created interest from other programs. Accepting resets your roster and recruiting board.
-                  </p>
-                  {jobOfferError && <p className="text-xs text-red-600 mt-2 mb-0">{jobOfferError}</p>}
-                </div>
-                <button type="button" className="btn text-xs" onClick={() => dispatch(declineAllJobOffers())}>
-                  Decline All (+3 security)
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {coach.pendingJobOffers.map((offer) => {
-                  const offerTeam = teams.find((team) => team.id === offer.teamId);
-                  if (!offerTeam) return null;
-                  return (
-                    <div key={offer.teamId} className="border rounded p-3">
-                      <div className="flex justify-between gap-2">
-                        <div>
-                          <div className="font-semibold">
-                            {offerTeam.schoolName} {offerTeam.nickname}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {conferenceNameById.get(offerTeam.conferenceId) ?? 'Independent'} · Prestige {offerTeam.prestige}
-                          </div>
-                        </div>
-                        <span className={offer.tier === 'UPGRADE' ? 'text-green-600 text-xs font-bold' : 'youMark'}>
-                          {offer.tier}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn btn-primary text-xs mt-3"
-                        onClick={() => void onAcceptOffer(offer.teamId)}
-                      >
-                        Accept Offer
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           <div className="flex gap-2 flex-wrap">
             {offseasonCaps.canProcessSigningDay && (
@@ -483,12 +424,14 @@ function CoachCareerPage() {
                 className="btn btn-primary"
                 onClick={onNewSeason}
               >
-                Begin Next Season →
+                Begin next season
               </button>
             )}
             {signingDayResolved && (
               <div className="text-xs text-gray-500 self-center">
-                {!seasonEndProcessed
+                {fired
+                  ? 'The AD let you go. Take a landing job in the coach pool. The next year waits on that.'
+                  : !seasonEndProcessed
                   ? signedClassThisYear.length === 0
                     ? 'No signees this year — finalize to update career record and continue.'
                     : 'Finalize to update career record and job security.'
@@ -498,6 +441,8 @@ function CoachCareerPage() {
           </div>
         </div>
       )}
+
+      {isOffseason && <OffseasonMarket />}
 
       <div className="card">
         <div className="weekActionBar">
@@ -516,25 +461,29 @@ function CoachCareerPage() {
             </p>
           </div>
           {coach.recruitPool.length === 0 ? (
-            <div className="recruitSeed">
-              <label className="text-xs font-semibold text-gray-600">
-                Seed
-                <input
-                  type="number"
-                  value={seedInput}
-                  onChange={(e) => setSeedInput(Number(e.target.value))}
-                  className="w-20 p-1 text-sm"
-                  aria-label="Recruiting seed"
-                />
-              </label>
-              <button
-                type="button"
-                className="btn btn-primary text-sm"
-                onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams: effectiveRecruitingTeams }))}
-              >
-                Start Recruiting
-              </button>
-            </div>
+            isOffseason ? (
+              <p className="text-xs text-gray-500 m-0">The high school class is closed. Use the roster market for the portal and the pro draft.</p>
+            ) : (
+              <div className="recruitSeed">
+                <label className="text-xs font-semibold text-gray-600">
+                  Seed
+                  <input
+                    type="number"
+                    value={seedInput}
+                    onChange={(e) => setSeedInput(Number(e.target.value))}
+                    className="w-20 p-1 text-sm"
+                    aria-label="Recruiting seed"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-primary text-sm"
+                  onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams: effectiveRecruitingTeams }))}
+                >
+                  Start Recruiting
+                </button>
+              </div>
+            )
           ) : (
             <Link to="/career/recruiting" className="btn btn-primary text-sm">
               Open recruiting board
@@ -566,33 +515,30 @@ function CoachCareerPage() {
               <div className="mt-1">Begin the season to advance hours. You can still build the board now.</div>
             )}
             {season.phase === 'PLAYOFF' && (
-              <div className="mt-1">The weekly cycle is locked during the playoffs.</div>
+              <Link to="/career/week" className="block mt-1">
+                Play the next round from the weekly hub
+              </Link>
+            )}
+            {season.phase === 'OFFSEASON' && (
+              <Link to="/career/week" className="block mt-1">
+                Signing day and next year continue on the weekly hub
+              </Link>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Quick Links ── */}
-      <div className="flex gap-3 flex-wrap">
-        <Link to="/career/week" className="text-sm hover:underline font-medium">
-          Weekly Hub →
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link to="/career/recruiting" className="text-sm hover:underline font-medium">
-          Recruiting Board →
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link to="/career/roster" className="text-sm hover:underline font-medium">
-          Roster &amp; Depth Chart →
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link to="/season" className="text-sm hover:underline">Season Dashboard</Link>
-      </div>
+      <nav className="officeJumps" aria-label="Program">
+        <Link to="/career/week">Weekly Hub</Link>
+        <Link to="/career/recruiting">Recruiting</Link>
+        <Link to="/career/roster">Roster</Link>
+        <Link to="/season">Season</Link>
+      </nav>
 
       <div className="card">
-        <h3 className="text-base font-bold m-0">Gameplan</h3>
+        <h3 className="text-base font-bold m-0">Game plan</h3>
         <p className="text-xs text-gray-500 mt-1 mb-3">
-          Your base scheme for every game. Practice focus still shifts tempo and slides during the weekly cycle.
+          The base scheme for every game. The weekly install still shifts tempo and slides.
         </p>
         <div className="tacticGrid">
           <label className="text-xs font-semibold text-gray-600">
@@ -672,33 +618,31 @@ function CoachCareerPage() {
           </label>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 pt-3 mt-3 border-t text-xs">
+        <div className="planReadout">
           <div>
-            <div className="text-gray-400 uppercase mb-1">Weekly prep</div>
-            <div className="font-semibold text-gray-700">{coachGamePlan.focusLabel}</div>
-            <div className="text-gray-500 mt-1">
-              Fatigue status: <span className="font-semibold">{coachGamePlan.fatigueLabel}</span>
-            </div>
+            <div className="planReadoutLabel">This week’s install</div>
+            <div className="planReadoutValue">{coachGamePlan.focusLabel}</div>
+            <div className="planReadoutMeta">Fatigue {coachGamePlan.fatigueLabel}</div>
           </div>
           <div>
-            <div className="text-gray-400 uppercase mb-1">Gameplan edge</div>
-            <div className="text-gray-600">
+            <div className="planReadoutLabel">Game plan edge</div>
+            <div className="planReadoutValue">
               Off {coachGamePlan.modifiers.offense >= 0 ? '+' : ''}{coachGamePlan.modifiers.offense.toFixed(1)}
               {' · '}
               Def {coachGamePlan.modifiers.defense >= 0 ? '+' : ''}{coachGamePlan.modifiers.defense.toFixed(1)}
-              {' · '}
-              Disc {coachGamePlan.modifiers.discipline >= 0 ? '+' : ''}{coachGamePlan.modifiers.discipline.toFixed(1)}
             </div>
-            <div className="text-gray-500 mt-1">
+            <div className="planReadoutMeta">
+              Disc {coachGamePlan.modifiers.discipline >= 0 ? '+' : ''}{coachGamePlan.modifiers.discipline.toFixed(1)}
+              {' · '}
               FO {coachGamePlan.modifiers.faceoff >= 0 ? '+' : ''}{coachGamePlan.modifiers.faceoff.toFixed(1)}
               {' · '}
               GB {coachGamePlan.modifiers.groundBallBonus >= 0 ? '+' : ''}{coachGamePlan.modifiers.groundBallBonus.toFixed(1)}
             </div>
           </div>
           <div>
-            <div className="text-gray-400 uppercase mb-1">Expected impact</div>
-            <ul className="m-0 pl-4 text-gray-600 space-y-1">
-              {prepNotes.length > 0 ? prepNotes.map((note) => <li key={note}>{note}</li>) : <li>Balanced week with no major swing factors.</li>}
+            <div className="planReadoutLabel">What it changes</div>
+            <ul className="planReadoutList">
+              {prepNotes.length > 0 ? prepNotes.map((note) => <li key={note}>{note}</li>) : <li>A balanced week, with no major swing.</li>}
             </ul>
           </div>
         </div>
@@ -726,7 +670,7 @@ function CoachCareerPage() {
             ['development', 'Development Tree', 'Improves weekly/offseason trait growth and turnover discipline.'],
             ['operations', 'Operations Tree', 'Improves fatigue control, goalie prep, and penalty avoidance.'],
           ] as const).map(([key, label, hint]) => (
-            <div key={key} className="border rounded p-2">
+            <div key={key} className="leverCard">
               <div className="text-xs uppercase text-gray-500">{label}</div>
               <div className="text-lg font-bold">
                 {skillTree[key]}/5
@@ -744,7 +688,7 @@ function CoachCareerPage() {
           ))}
         </div>
 
-        <div className="border rounded p-3 mb-3">
+        <div className="leverCard mb-3">
           <div className="text-xs uppercase text-gray-500 mb-1">Current Skill Effects</div>
           <ul className="m-0 pl-4 text-sm text-gray-600 space-y-1">
             {skillImpactNotes.map((line) => (
@@ -759,7 +703,7 @@ function CoachCareerPage() {
             ['boosters', 'Booster Alignment', programResources.boosters, 'Raises support but can increase AD pressure'],
             ['facilities', 'Facilities', programResources.facilities, 'Player growth and pressure shielding'],
           ] as const).map(([key, label, value, hint]) => (
-            <label key={key} className="text-xs font-semibold text-gray-600 border rounded p-2">
+            <label key={key} className="leverCard text-xs font-semibold text-gray-600">
               {label}
               <div className="text-xs text-gray-500 mt-0.5 mb-1 font-normal">{hint}</div>
               <input

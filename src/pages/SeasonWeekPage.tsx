@@ -1,98 +1,111 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Link, Navigate, useParams, useNavigate } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
 import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
 
-const SCORE_BUTTON_STYLE = { background: 'transparent', border: 0 } as const;
+function statBits(player: PlayerGameStats): string {
+  const parts: string[] = [];
+  if (player.goals > 0) parts.push(`${player.goals}G`);
+  if (player.assists > 0) parts.push(`${player.assists}A`);
+  if (player.saves > 0) parts.push(`${player.saves} SV`);
+  return parts.join(' ');
+}
 
 function topPerformerLine(players: PlayerGameStats[]): string {
   return players
     .slice(0, 2)
-    .map((p) => {
-      const parts: string[] = [];
-      if (p.goals > 0) parts.push(`${p.goals}g`);
-      if (p.assists > 0) parts.push(`${p.assists}a`);
-      if (p.saves > 0) parts.push(`${p.saves}sv`);
-      const stats = parts.join(' ');
-      return `${p.name} (${p.position}${stats ? `: ${stats}` : ''})`;
+    .map((player) => {
+      const stats = statBits(player);
+      return stats ? `${player.name} ${stats}` : player.name;
     })
     .join(' · ');
-}
-
-function playerStatLine(player: PlayerGameStats): string {
-  const parts: string[] = [];
-  if (player.goals > 0) parts.push(`${player.goals}g`);
-  if (player.assists > 0) parts.push(`${player.assists}a`);
-  if (player.saves > 0) parts.push(`${player.saves}sv`);
-  const stats = parts.length > 0 ? `: ${parts.join(' ')}` : '';
-  return `${player.name} (${player.position}${stats})`;
 }
 
 function UserGameCard({
   result,
   selectedTeamId,
-  teamNameById,
+  teamById,
 }: {
   result: GameResult;
   selectedTeamId: string;
-  teamNameById: Map<string, string>;
+  teamById: Map<string, { id: string; schoolName: string; nickname: string }>;
 }) {
   const isTeamA = result.teamAId === selectedTeamId;
   const userScore = isTeamA ? result.scoreA : result.scoreB;
   const oppScore = isTeamA ? result.scoreB : result.scoreA;
   const opponentId = isTeamA ? result.teamBId : result.teamAId;
   const won = userScore > oppScore;
+  const user = teamById.get(selectedTeamId);
+  const opponent = teamById.get(opponentId);
   const userStats = isTeamA ? result.statsA : result.statsB;
   const opponentStats = isTeamA ? result.statsB : result.statsA;
-  const topPerformers = [...(isTeamA ? result.topPlayersA : result.topPlayersB)];
-  const awayName = teamNameById.get(result.teamBId) ?? 'Away';
-  const homeName = teamNameById.get(result.teamAId) ?? 'Home';
-  const recap = buildGameRecap(gameResultToSummary(result), awayName, homeName);
+  const topPerformers = isTeamA ? result.topPlayersA : result.topPlayersB;
+  const away = teamById.get(result.teamBId);
+  const home = teamById.get(result.teamAId);
+  const recap = buildGameRecap(
+    gameResultToSummary(result),
+    away?.schoolName ?? 'Away',
+    home?.schoolName ?? 'Home',
+  );
+  const mvpBits = recap.mvp ? statBits(recap.mvp) : '';
 
   return (
-    <section className={`card border-l-4 ${won ? 'border-win' : 'border-loss'}`}>
-      <div className="flex justify-between items-start gap-3">
-        <div>
-          <div className="text-xs text-gray-500 uppercase font-semibold">Your Game</div>
-          <h3 className="m-0 mt-1">
-            {won ? 'Win' : 'Loss'} vs {teamNameById.get(opponentId) ?? 'Opponent'}
-          </h3>
-          <div className="text-2xl font-bold mt-1">
-            {userScore} <span className="text-gray-400">–</span> {oppScore}
+    <section className={`card matchupBoard resultBoard ${won ? 'resultBoard-win' : 'resultBoard-loss'}`} aria-label={won ? 'Win' : 'Loss'}>
+      <div className="matchupBoardTop">
+        <h3 className="m-0 text-base font-bold">Your result</h3>
+        <p className={`matchupKicker ${won ? '' : 'resultKicker-loss'}`}>{won ? 'Win' : 'Loss'}</p>
+      </div>
+      <div className="matchupSides">
+        <div className="matchupSide">
+          <div className="matchupIdentity">
+            {user && <TeamLogo team={user} />}
+            <div>
+              <span className="matchupSchool">{user?.schoolName ?? 'Your program'}</span>
+              {user?.nickname && <span className="matchupNick">{user.nickname}</span>}
+            </div>
           </div>
-          <p className="m-0 mt-2 text-sm text-gray-600">{recap.summary}</p>
-          <p className="m-0 mt-1 text-xs text-gray-500">{recap.keyEdge}</p>
         </div>
-        <span className={won ? 'text-success font-bold' : 'text-danger font-bold'}>{won ? 'WIN' : 'LOSS'}</span>
+        <div className="matchupProb">
+          <span className={`matchupProbValue ${won ? 'matchup-strong' : 'matchup-underdog'}`}>{userScore}–{oppScore}</span>
+          <span className="matchupProbLabel">Final</span>
+        </div>
+        <div className="matchupSide matchupSide-away">
+          <div className="matchupIdentity">
+            {opponent && <TeamLogo team={opponent} />}
+            <div>
+              {opponent ? (
+                <Link to={`/team/${opponent.id}`} className="matchupSchool">{opponent.schoolName}</Link>
+              ) : (
+                <span className="matchupSchool">Opponent</span>
+              )}
+              {opponent?.nickname && <span className="matchupNick">{opponent.nickname}</span>}
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mt-3 pt-3 border-t">
-        <div><span className="text-gray-400 text-xs block">Shots</span>{userStats.shots}–{opponentStats.shots}</div>
-        <div><span className="text-gray-400 text-xs block">Saves</span>{userStats.saves}–{opponentStats.saves}</div>
-        <div><span className="text-gray-400 text-xs block">Ground Balls</span>{userStats.groundBalls}–{opponentStats.groundBalls}</div>
-        <div><span className="text-gray-400 text-xs block">Turnovers</span>{userStats.turnovers}–{opponentStats.turnovers}</div>
+      <div className="statStrip">
+        <div><span>Shots</span><strong>{userStats.shots}–{opponentStats.shots}</strong></div>
+        <div><span>Saves</span><strong>{userStats.saves}–{opponentStats.saves}</strong></div>
+        <div><span>Ground balls</span><strong>{userStats.groundBalls}–{opponentStats.groundBalls}</strong></div>
+        <div><span>Turnovers</span><strong>{userStats.turnovers}–{opponentStats.turnovers}</strong></div>
       </div>
-      <div className="text-xs text-gray-500 mt-2">{recap.efficiencyNote}</div>
-      {recap.mvp && (
-        <div className="text-sm text-gray-600 mt-2">
-          <span className="font-semibold">MVP: </span>
-          {recap.mvp.name} ({recap.mvp.position}
-          {recap.mvp.goals || recap.mvp.assists || recap.mvp.saves
-            ? `: ${[
-                recap.mvp.goals ? `${recap.mvp.goals}g` : null,
-                recap.mvp.assists ? `${recap.mvp.assists}a` : null,
-                recap.mvp.saves ? `${recap.mvp.saves}sv` : null,
-              ].filter(Boolean).join(' ')}`
-            : ''}
-          )
-        </div>
-      )}
-      {topPerformers.length > 0 && (
-        <div className="text-sm text-gray-600 mt-3">
-          <span className="font-semibold">Your top performers: </span>
-          {topPerformers.map(playerStatLine).join(' · ')}
-        </div>
+      <p className="resultLine">{recap.summary}</p>
+      <p className="resultLine">{recap.keyEdge}</p>
+      {(topPerformers.length > 0 || recap.mvp) && (
+        <p className="resultLine">
+          Led by{' '}
+          <strong>
+            {topPerformers.length > 0
+              ? topPerformers.slice(0, 2).map((player) => {
+                const bits = statBits(player);
+                return bits ? `${player.name} ${bits}` : player.name;
+              }).join(' · ')
+              : `${recap.mvp?.name ?? ''}${mvpBits ? ` ${mvpBits}` : ''}`}
+          </strong>
+        </p>
       )}
     </section>
   );
@@ -121,7 +134,6 @@ function SeasonWeekPage() {
   const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
 
   const teamById = useMemo(() => new Map(teams.map((team) => [team.id, team])), [teams]);
-  const teamNameById = useMemo(() => new Map(teams.map((team) => [team.id, `${team.schoolName} ${team.nickname}`])), [teams]);
 
   // Derived state for filtered games
   const displayedGames = useMemo(() => {
@@ -158,7 +170,7 @@ function SeasonWeekPage() {
     return (
       <div className="pageStack">
         <div className="pageHeader">
-          <h2>Week Results</h2>
+          <h2>Week results</h2>
           <p className="pageHeader-sub">Browse scores, team stats, and top performers from each matchup.</p>
         </div>
         <div className="card text-center py-8">
@@ -167,7 +179,7 @@ function SeasonWeekPage() {
             Begin the season from the Season Dashboard to generate the 12-week schedule and unlock week-by-week results.
           </p>
           <Link to="/season" className="btn btn-primary inline-block">
-            Season Dashboard →
+            Season dashboard
           </Link>
         </div>
       </div>
@@ -209,38 +221,30 @@ function SeasonWeekPage() {
         </div>
 
         <div className="seasonWeekFilterGroup">
-          <label className="text-sm">
-            Conference
-            <select
-              value={conferenceFilter}
-              onChange={(e) => setConferenceFilter(e.target.value)}
-              className="p-1 text-sm border rounded ml-1"
-            >
-            <option value="ALL">All Conferences</option>
-            {conferences.map((conf) => (
-              <option key={conf.id} value={conf.id}>
-                {conf.name}
-              </option>
-            ))}
+          <label className="seasonFilter">
+            <span>Conference</span>
+            <select value={conferenceFilter} onChange={(e) => setConferenceFilter(e.target.value)}>
+              <option value="ALL">All conferences</option>
+              {conferences.map((conf) => (
+                <option key={conf.id} value={conf.id}>
+                  {conf.name}
+                </option>
+              ))}
             </select>
           </label>
 
-          <label className="text-sm">
-            Sort
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as 'alpha' | 'score')} className="p-1 text-sm border rounded ml-1">
-            <option value="alpha">Sort: Home A-Z</option>
-            <option value="score">Sort: High Score</option>
-          </select>
+          <label className="seasonFilter">
+            <span>Sort</span>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as 'alpha' | 'score')}>
+              <option value="alpha">Home A–Z</option>
+              <option value="score">Highest score</option>
+            </select>
           </label>
         </div>
       </div>
 
-      <p className="m-0 text-sm text-gray-600">
-        Showing {displayedGames.length} game{displayedGames.length === 1 ? '' : 's'} in week {displayWeek + 1}.
-      </p>
-
       {selectedTeamId && userGameResult && (
-        <UserGameCard result={userGameResult} selectedTeamId={selectedTeamId} teamNameById={teamNameById} />
+        <UserGameCard result={userGameResult} selectedTeamId={selectedTeamId} teamById={teamById} />
       )}
 
       <div className="card p-0 overflow-hidden">
@@ -270,37 +274,50 @@ function SeasonWeekPage() {
                   return (
                     <Fragment key={game.id}>
                       <tr className={`seasonWeekGameRow ${selectedTeamId && (game.homeTeamId === selectedTeamId || game.awayTeamId === selectedTeamId) ? 'youRow' : ''}`}>
-                        <td className={`p-2 text-right ${awayScore > homeScore ? 'font-bold' : ''}`}>
-                            {away ? <Link to={`/team/${away.id}`}>{away.schoolName}</Link> : 'Away'}{' '}
-                            <span className="text-xs text-gray-500 font-normal">({away?.nickname})</span>
-                            {game.awayTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
+                        <td className={`p-2 ${awayScore > homeScore ? 'font-bold' : ''}`}>
+                            <div className="seasonIdentity seasonIdentity-away">
+                              {away && <TeamLogo team={away} size="sm" />}
+                              <div>
+                                {away ? <Link to={`/team/${away.id}`}>{away.schoolName}</Link> : 'Away'}
+                                <span className="pollNick">
+                                  {away?.nickname}
+                                  {game.awayTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                                </span>
+                              </div>
+                            </div>
                         </td>
-                        <td className="p-2 text-center font-mono font-bold bg-gray-50">
+                        <td className="p-2 text-center">
                             <button
                               type="button"
                               disabled={!isFinal}
-                              className="font-mono font-bold"
-                              style={{ ...SCORE_BUTTON_STYLE, cursor: isFinal ? 'pointer' : 'default' }}
+                              className="seasonScoreButton"
                               onClick={() => setExpandedGameId(expandedGameId === game.id ? null : game.id)}
                               aria-expanded={expandedGameId === game.id}
-                              aria-label={isFinal ? `Toggle details for ${away?.schoolName} at ${home?.schoolName}` : undefined}
+                              aria-label={isFinal ? `Toggle details for ${away?.schoolName} at ${home?.schoolName}` : `${away?.schoolName} at ${home?.schoolName}, not played`}
                             >
-                              {isFinal ? `${awayScore} - ${homeScore}` : 'vs'}
+                              {isFinal ? `${awayScore}–${homeScore}` : 'vs'}
                             </button>
                         </td>
-                        <td className={`p-2 text-left ${homeScore > awayScore ? 'font-bold' : ''}`}>
-                            {home ? <Link to={`/team/${home.id}`}>{home.schoolName}</Link> : 'Home'}{' '}
-                            <span className="text-xs text-gray-500 font-normal">({home?.nickname})</span>
-                            {game.homeTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
+                        <td className={`p-2 ${homeScore > awayScore ? 'font-bold' : ''}`}>
+                            <div className="seasonIdentity">
+                              {home && <TeamLogo team={home} size="sm" />}
+                              <div>
+                                {home ? <Link to={`/team/${home.id}`}>{home.schoolName}</Link> : 'Home'}
+                                <span className="pollNick">
+                                  {home?.nickname}
+                                  {game.homeTeamId === selectedTeamId && <span className="youMark"> (You)</span>}
+                                </span>
+                              </div>
+                            </div>
                         </td>
-                        <td className="p-2 text-center text-xs text-gray-600">
-                            {isFinal ? `${result.statsB.shots} - ${result.statsA.shots}` : '-'}
+                        <td className="p-2 text-center text-xs text-gray-600 tabular">
+                            {isFinal ? `${result.statsB.shots}–${result.statsA.shots}` : '–'}
                         </td>
-                        <td className="p-2 text-center text-xs text-gray-600">
-                            {isFinal ? `${result.statsB.turnovers} - ${result.statsA.turnovers}` : '-'}
+                        <td className="p-2 text-center text-xs text-gray-600 tabular">
+                            {isFinal ? `${result.statsB.turnovers}–${result.statsA.turnovers}` : '–'}
                         </td>
-                        <td className="p-2 text-center text-xs text-gray-600">
-                            {isFinal ? `${result.statsB.faceoffPct}% - ${result.statsA.faceoffPct}%` : '-'}
+                        <td className="p-2 text-center text-xs text-gray-600 tabular">
+                            {isFinal ? `${result.statsB.faceoffPct}%–${result.statsA.faceoffPct}%` : '–'}
                         </td>
                       </tr>
                       {isFinal && allPerformers.length > 0 && (
@@ -325,12 +342,12 @@ function SeasonWeekPage() {
                                 </>
                               );
                             })()}
-                            <div className="font-semibold text-gray-500 mb-2">Expanded stats shown away – home.</div>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
-                              <div><span className="text-gray-400 block">Saves</span>{result.statsB.saves} - {result.statsA.saves}</div>
-                              <div><span className="text-gray-400 block">Ground Balls</span>{result.statsB.groundBalls} - {result.statsA.groundBalls}</div>
-                              <div><span className="text-gray-400 block">Penalties</span>{result.statsB.penalties} - {result.statsA.penalties}</div>
-                              <div><span className="text-gray-400 block">Caused TO</span>{result.statsB.causedTurnovers ?? 0} - {result.statsA.causedTurnovers ?? 0}</div>
+                            <div className="font-semibold text-gray-500 mb-2">Expanded stats are away–home.</div>
+                            <div className="statStrip">
+                              <div><span>Saves</span><strong>{result.statsB.saves}–{result.statsA.saves}</strong></div>
+                              <div><span>Ground balls</span><strong>{result.statsB.groundBalls}–{result.statsA.groundBalls}</strong></div>
+                              <div><span>Penalties</span><strong>{result.statsB.penalties}–{result.statsA.penalties}</strong></div>
+                              <div><span>Caused turnovers</span><strong>{result.statsB.causedTurnovers ?? 0}–{result.statsA.causedTurnovers ?? 0}</strong></div>
                             </div>
                             {result.highlights.length > 0 && (
                               <ul className="m-0 pl-4">

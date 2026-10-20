@@ -7,8 +7,10 @@ import {
   applyJobOfferAcceptance,
   clearRecruitPitch,
   coachReducer,
+  declineAllJobOffers,
   initializeRecruitingBoard,
   setRecruitPitch,
+  togglePortalClaim,
 } from './coachSlice.ts';
 
 const mockTeams: Team[] = [
@@ -64,6 +66,10 @@ describe('coach recruiting reducer', () => {
         2025: [{ recruitId: 'prior', signedAtYear: 2025, stars: 4, position: 'M' }],
         2026: [{ recruitId: 'current', signedAtYear: 2026, stars: 3, position: 'A' }],
       },
+      portalClaimIds: ['portal-1'],
+      draftClaimId: 'draft-1',
+      employment: 'FIRED',
+      pendingJobOffers: [{ teamId: 'team-2', tier: 'STEP_DOWN', presentedAtYear: 2026 }],
     };
 
     state = coachReducer(
@@ -81,6 +87,34 @@ describe('coach recruiting reducer', () => {
     assert.deepStrictEqual(state.signedRecruitsByYear[2026], []);
     assert.strictEqual(state.signedRecruitsByYear[2025]?.[0]?.recruitId, 'prior');
     assert.strictEqual(Object.prototype.hasOwnProperty.call(state.signedRecruitsByYear, 2026), true);
+    assert.deepStrictEqual(state.portalClaimIds, []);
+    assert.strictEqual(state.draftClaimId, null);
+    assert.strictEqual(state.employment, 'ACTIVE');
+    assert.deepStrictEqual(state.pendingJobOffers, []);
+  });
+
+  test('a firing keeps the landing offer when decline is clicked', () => {
+    let state = coachReducer(undefined, { type: '@@INIT' });
+    state = {
+      ...state,
+      employment: 'FIRED',
+      jobSecurity: 12,
+      pendingJobOffers: [{ teamId: 'team-2', tier: 'STEP_DOWN', presentedAtYear: 2026 }],
+    };
+    state = coachReducer(state, declineAllJobOffers());
+    assert.equal(state.pendingJobOffers.length, 1);
+    assert.equal(state.jobSecurity, 12);
+  });
+});
+
+describe('offseason market claims', () => {
+  test('portal claims stop at three and at the scholarships left', () => {
+    let state = coachReducer(undefined, { type: '@@INIT' });
+    state = { ...state, scholarshipsAvailable: 2 };
+    state = coachReducer(state, togglePortalClaim('a'));
+    state = coachReducer(state, togglePortalClaim('b'));
+    state = coachReducer(state, togglePortalClaim('c'));
+    assert.deepStrictEqual(state.portalClaimIds, ['a', 'b']);
   });
 });
 

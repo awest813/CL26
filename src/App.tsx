@@ -6,7 +6,6 @@ import ConferencesPage from './pages/ConferencesPage';
 import TeamPage from './pages/TeamPage';
 import RankingsPage from './pages/RankingsPage';
 import ExhibitionPage from './pages/ExhibitionPage';
-import Login from './pages/Login';
 import CoachCareerSetupPage from './pages/CoachCareerSetupPage';
 import CoachCareerPage from './pages/CoachCareerPage';
 import SeasonPage from './pages/SeasonPage';
@@ -17,7 +16,13 @@ import AlphaStagePage from './pages/AlphaStagePage';
 import RosterPage from './pages/RosterPage';
 import WeeklyHubPage from './pages/WeeklyHubPage';
 import RecruitingBoardPage from './pages/RecruitingBoardPage';
+import SettingsPage from './pages/SettingsPage';
 import './App.css';
+
+function routerBasename(): string | undefined {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '')
+  return base === '' ? undefined : base
+}
 
 function App() {
   const router = createBrowserRouter([
@@ -30,7 +35,7 @@ function App() {
         { path: 'team/:id', element: <TeamPage /> },
         { path: 'rankings', element: <RankingsPage /> },
         { path: 'exhibition', element: <ExhibitionPage /> },
-        { path: 'login', element: <Login /> },
+        { path: 'login', element: <Navigate to="/" replace /> },
         { path: 'career', element: <CoachCareerPage /> },
         { path: 'career/setup', element: <CoachCareerSetupPage /> },
         { path: 'career/roster', element: <RosterPage /> },
@@ -42,10 +47,11 @@ function App() {
         { path: 'season/week/:weekIndex', element: <SeasonWeekPage /> },
         { path: 'playoffs', element: <PlayoffsPage /> },
         { path: 'alpha', element: <AlphaStagePage /> },
+        { path: 'settings', element: <SettingsPage /> },
         { path: '*', element: <Navigate to="/" replace /> },
       ],
     },
-  ]);
+  ], { basename: routerBasename() });
 
   return (
     <ErrorBoundary>

@@ -1,4 +1,5 @@
 import { createSelector, createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import type { Employment } from '../../sim/jobOffers';
 import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
@@ -91,6 +92,10 @@ export interface CoachState {
   programResources: ProgramResources;
   programPrestigeDrift: number;
   pendingJobOffers: JobOffer[];
+  /** Missing on saves from before firings existed. Treat undefined as ACTIVE. */
+  employment: Employment;
+  portalClaimIds: string[];
+  draftClaimId: string | null;
   seasonHistory: SeasonHistoryEntry[];
   careerRecord: CareerRecord;
   // Roster management
@@ -133,6 +138,9 @@ const initialState: CoachState = {
   },
   programPrestigeDrift: 0,
   pendingJobOffers: [],
+  employment: 'ACTIVE',
+  portalClaimIds: [],
+  draftClaimId: null,
   seasonHistory: [],
   careerRecord: {
     totalWins: 0,
@@ -176,6 +184,7 @@ const coachSlice = createSlice({
         state.adPressure = defaults.adPressure;
         state.programPrestigeDrift = 0;
         state.pendingJobOffers = [];
+        state.employment = 'ACTIVE';
     },
     initializeRecruitingBoard: (state, action: PayloadAction<{ seed: number; teams: Team[] }>) => {
         state.recruitingSeed = action.payload.seed;
@@ -310,7 +319,11 @@ const coachSlice = createSlice({
     setPendingJobOffers: (state, action: PayloadAction<JobOffer[]>) => {
         state.pendingJobOffers = action.payload;
     },
+    setEmployment: (state, action: PayloadAction<Employment>) => {
+        state.employment = action.payload;
+    },
     declineAllJobOffers: (state) => {
+        if (state.employment === 'FIRED') return;
         state.pendingJobOffers = [];
         state.jobSecurity = Math.max(0, Math.min(100, state.jobSecurity + JOB_SECURITY_DECLINE_BONUS));
     },
@@ -325,6 +338,7 @@ const coachSlice = createSlice({
         state.programExpectations = action.payload.programExpectations;
         state.programPrestigeDrift = 0;
         state.pendingJobOffers = [];
+        state.employment = 'ACTIVE';
         state.recruitPool = [];
         state.boardRecruitIds = [];
         state.weeklyHoursByRecruitId = {};
@@ -340,6 +354,8 @@ const coachSlice = createSlice({
         };
         state.managedRoster = null;
         state.starterIds = [];
+        state.portalClaimIds = [];
+        state.draftClaimId = null;
         state.teamFatigue = 20;
         const defaults = CAREER_TIER_DEFAULTS[action.payload.careerTier];
         state.programResources = defaults.resources;
@@ -427,6 +443,21 @@ const coachSlice = createSlice({
             state.starterIds.push(playerId);
         }
     },
+    togglePortalClaim: (state, action: PayloadAction<string>) => {
+        if (!Array.isArray(state.portalClaimIds)) state.portalClaimIds = [];
+        const id = action.payload;
+        if (state.portalClaimIds.includes(id)) {
+            state.portalClaimIds = state.portalClaimIds.filter((claim) => claim !== id);
+            return;
+        }
+        const room = Math.max(0, state.scholarshipsAvailable);
+        if (state.portalClaimIds.length >= 3 || state.portalClaimIds.length >= room) return;
+        state.portalClaimIds.push(id);
+    },
+    clearOffseasonMarket: (state) => {
+        state.portalClaimIds = [];
+        state.draftClaimId = null;
+    },
     resetCoach: () => initialState,
   },
 });
@@ -451,6 +482,7 @@ export const {
     setAdPressure,
     applyPrestigeDrift,
     setPendingJobOffers,
+    setEmployment,
     declineAllJobOffers,
     applyJobOfferAcceptance,
     applyRecruitingUpdates,
@@ -462,6 +494,8 @@ export const {
     setManagedRoster,
     setStarterIds,
     toggleStarter,
+    togglePortalClaim,
+    clearOffseasonMarket,
     resetCoach,
 } = coachSlice.actions;
 

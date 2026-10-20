@@ -1,9 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
+import TeamLogo from '../components/TeamLogo';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { resetCoach, selectIsCareerReady } from '../features/coach/coachSlice';
-import { resetSeason, selectTeamRecords, selectTop12Projection, selectUserConferenceStanding } from '../features/season/seasonSlice';
-import { persistor } from '../store/persistor';
+import { selectIsCareerReady } from '../features/coach/coachSlice';
+import { selectRankTrends, selectTeamRecords, selectTop12Projection, selectUserConferenceStanding } from '../features/season/seasonSlice';
+import { adGoalCopy } from '../sim/weeklyDesk';
+import { eraseSave } from '../features/settings/eraseSave';
 import { seasonPhaseHomeStatus, seasonPhaseLabel } from '../lib/seasonLabels';
 
 type DashboardAction = {
@@ -31,6 +33,7 @@ function Home() {
   const conferences = useAppSelector((state) => state.league.conferences);
   const records = useAppSelector(selectTeamRecords);
   const top12 = useAppSelector(selectTop12Projection);
+  const top25 = useAppSelector(selectRankTrends);
   const confStanding = useAppSelector(selectUserConferenceStanding);
   const { year, phase, currentWeekIndex, seasonSeed } = season;
   const seasonStarted = phase !== 'PRE';
@@ -46,6 +49,18 @@ function Home() {
   const projectedSeed = coach.selectedTeamId
     ? top12.find((row) => row.teamId === coach.selectedTeamId)?.rank ?? null
     : null;
+  const pollRank = seasonStarted && coach.selectedTeamId
+    ? top25.find((row) => row.teamId === coach.selectedTeamId)?.rank ?? null
+    : null;
+  const adGoal = coach.programExpectations
+    ? adGoalCopy({
+        wins: record?.wins ?? 0,
+        winTarget: coach.programExpectations.winTarget,
+        pollRank,
+        pollKnown: seasonStarted,
+        rankTarget: coach.programExpectations.rankTarget,
+      })
+    : null;
   const statusLabel = seasonPhaseHomeStatus(phase, currentWeekIndex);
   const phaseLabel = seasonPhaseLabel(phase, currentWeekIndex, season.scheduleByWeek.length);
 
@@ -58,9 +73,12 @@ function Home() {
       if (careerReady) return { label: `Open Week ${currentWeekIndex + 1}`, link: '/career/week', primary: true };
       return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
     }
-    if (phase === 'PLAYOFF') return { label: 'Open Playoffs', link: '/playoffs', primary: true };
+    if (phase === 'PLAYOFF') {
+      if (careerReady) return { label: 'Next round', link: '/career/week', primary: true };
+      return { label: 'Open Playoffs', link: '/playoffs', primary: true };
+    }
     if (phase === 'OFFSEASON') {
-      if (careerReady) return { label: 'Run the Offseason', link: '/career', primary: true };
+      if (careerReady) return { label: 'Offseason', link: '/career/week', primary: true };
       return { label: 'Review Season', link: '/season', primary: false };
     }
     return { label: 'View Season', link: '/season', primary: false };
@@ -75,9 +93,7 @@ function Home() {
       'Start a new game? This will permanently erase your current save — all season progress, coach career data, and recruits will be lost.',
     );
     if (!confirmed) return;
-    dispatch(resetCoach());
-    dispatch(resetSeason({ force: true }));
-    persistor.purge().then(() => {
+    eraseSave(dispatch).then(() => {
       navigate('/career/setup');
     }).catch(() => {
       navigate('/career/setup');
@@ -90,10 +106,14 @@ function Home() {
         <section className="commandBoard" aria-labelledby="home-hero-title">
           <div className="commandBoardCopy">
             <p className="commandEyebrow">{conferenceName} · {phaseLabel}</p>
-            <h2 id="home-hero-title">{selectedTeam.schoolName} {selectedTeam.nickname}</h2>
+            <div className="programLockup">
+              <TeamLogo team={selectedTeam} size="lg" />
+              <h2 id="home-hero-title">{selectedTeam.schoolName} {selectedTeam.nickname}</h2>
+            </div>
             <p className="commandLede">
               {coach.profile?.name ?? 'Head coach'} · {year} season · {statusLabel}
             </p>
+            {adGoal && <p className="commandGoals">AD goal: {adGoal.detail}</p>}
           </div>
           <dl className="commandStats" aria-label="Program snapshot">
             <div>
@@ -148,8 +168,8 @@ function Home() {
       )}
 
       <section className="card card-elevated">
-        <h2 className="sectionTitle">This save</h2>
-        <p className="sectionSubtitle">Year, phase, and the seed that fixes the league draw.</p>
+        <h2 className="sectionTitle">Season</h2>
+        <p className="sectionSubtitle">The year, where it stands, and the league seed behind the schedule.</p>
         <dl className="stat-row" aria-label="Current season status">
           <div className="stat-item">
             <dt className="stat-label">Year</dt>
@@ -172,7 +192,7 @@ function Home() {
           {careerReady && (
             <Link to="/career/week" className="link-card">
               <strong>Weekly Hub</strong>
-              <div className="link-card-meta">Practice plan, tactics, and this week’s game</div>
+              <div className="link-card-meta">Game plan, recruiting hours, and this week’s game</div>
             </Link>
           )}
           <Link to="/season/standings" className="link-card">

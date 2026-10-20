@@ -1,27 +1,51 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
+import TeamLogo from '../components/TeamLogo';
 import {
+  selectRankTrends,
   selectTeamRecords,
   selectUserUpcomingGame,
   selectUserLastResult,
+  startPlayoffs,
 } from '../features/season/seasonSlice';
 import {
   setPracticeFocus,
   setRecruitHours,
   selectIsCareerReady,
   selectUserEffectivePrestige,
+  processSigningDay,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
-import { runCareerWeeklyCycle } from '../features/coach/careerThunks';
+import { beginNextCareerSeason, processSeasonEnd, runCareerWeeklyCycle, simCareerPlayoffRound } from '../features/coach/careerThunks';
 import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
+import { generateRoster } from '../sim/generateRoster';
+import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
+import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
+import { estimateWinChance } from '../sim/winEstimate';
+import { confirmPlayCopy } from '../features/settings/settingsSlice';
+import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
+import { buildPositionNeedByPosition } from '../sim/recruiting';
+import { careerOffseasonCapabilities } from '../sim/seasonPhase';
+import { buildWeeklyDesk } from '../sim/weeklyDesk';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { PracticeFocus, GameResult } from '../types/sim';
+import { PracticeFocus, GameResult, Tactics } from '../types/sim';
+
+function schemeCall(tactics: Tactics): string {
+  const tempo = tactics.tempo === 'fast' ? 'Fast tempo' : tactics.tempo === 'slow' ? 'Slow tempo' : 'Balanced tempo';
+  const defense =
+    tactics.defensePackage === 'zone'
+      ? 'Zone defense'
+      : tactics.defensePackage === 'pressure'
+        ? 'Pressure defense'
+        : 'Man defense';
+  return `${tempo} · ${defense}`;
+}
 
 const PRACTICE_FOCUS_DESCRIPTIONS: Record<PracticeFocus, string> = {
   OFFENSE: 'Boosts attack edge and tempo; defensive ratings dip slightly.',
   DEFENSE: 'Hardens D and goalie; may tighten offensive rhythm.',
-  CONDITIONING: 'Builds faceoff & ground-ball legs; lowest fatigue build.',
+  CONDITIONING: 'Builds faceoff and ground-ball legs. The lightest week on fatigue.',
   DISCIPLINE: 'Cuts turnovers and penalties; no direct scoring edge.',
 };
 
@@ -41,64 +65,91 @@ function winProbClass(prob: number): string {
   return 'matchup-underdog';
 }
 
-interface ResultBannerProps {
-  result: GameResult;
-  selectedTeamId: string;
-  teams: { id: string; schoolName: string; nickname: string }[];
+interface ScoreboardTeam {
+  id: string;
+  schoolName: string;
+  nickname: string;
 }
 
-function ResultBanner({ result, selectedTeamId, teams }: ResultBannerProps) {
-  const isTeamA = result.teamAId === selectedTeamId;
-  const userScore = isTeamA ? result.scoreA : result.scoreB;
-  const oppScore = isTeamA ? result.scoreB : result.scoreA;
-  const oppId = isTeamA ? result.teamBId : result.teamAId;
-  const opp = teams.find((t) => t.id === oppId);
-  const won = userScore > oppScore;
-
-  const topPerfs = isTeamA
-    ? result.topPlayersA.slice(0, 2)
-    : result.topPlayersB.slice(0, 2);
-
+function Scoreboard({
+  heading,
+  won,
+  user,
+  opponent,
+  userScore,
+  oppScore,
+  ledBy,
+}: {
+  heading: string;
+  won: boolean;
+  user?: ScoreboardTeam;
+  opponent?: ScoreboardTeam;
+  userScore: number;
+  oppScore: number;
+  ledBy?: string;
+}) {
   return (
-    <div className={`card border-l-4 ${won ? 'border-win' : 'border-loss'}`}>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-xs text-gray-500 uppercase font-semibold">
-          Last Game — Week {(result.weekIndex ?? 0) + 1}
-        </span>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${won ? 'badge-win' : 'badge-loss'}`}>
-          {won ? 'WIN' : 'LOSS'}
-        </span>
+    <section id="week-result" className={`card matchupBoard resultBoard ${won ? 'resultBoard-win' : 'resultBoard-loss'}`} aria-label={won ? 'Win' : 'Loss'}>
+      <div className="matchupBoardTop">
+        <h3 className="m-0 text-base font-bold">{heading}</h3>
+        <p className={`matchupKicker ${won ? 'resultKicker-win' : 'resultKicker-loss'}`}>{won ? 'Win' : 'Loss'}</p>
       </div>
-      <div className="flex items-baseline gap-3">
-        <span className="text-3xl font-bold">{userScore}</span>
-        <span className="text-gray-400 text-sm">–</span>
-        <span className="text-xl text-gray-600">{oppScore}</span>
-        <span className="text-sm text-gray-500 ml-2">
-          vs {opp?.schoolName ?? 'Opponent'}
-        </span>
-      </div>
-      {topPerfs.length > 0 && (
-        <div className="text-xs text-gray-500 mt-1.5">
-          Top performers:{' '}
-          {topPerfs
-            .map((p) => {
-              const parts: string[] = [];
-              if (p.goals > 0) parts.push(`${p.goals}g`);
-              if (p.assists > 0) parts.push(`${p.assists}a`);
-              if (p.saves > 0) parts.push(`${p.saves}sv`);
-              return `${p.name}${parts.length ? ` (${parts.join(' ')})` : ''}`;
-            })
-            .join(' · ')}
+      <div className="matchupSides">
+        <div className="matchupSide">
+          <div className="matchupIdentity">
+            {user && <TeamLogo team={user} />}
+            <div>
+              <span className="matchupSchool">{user?.schoolName ?? 'Your program'}</span>
+              {user?.nickname && <span className="matchupNick">{user.nickname}</span>}
+            </div>
+          </div>
         </div>
+        <div className="matchupProb">
+          <span className={`matchupProbValue ${won ? 'matchup-strong' : 'matchup-underdog'}`}>{userScore}–{oppScore}</span>
+          <span className="matchupProbLabel">Final</span>
+        </div>
+        <div className="matchupSide matchupSide-away">
+          <div className="matchupIdentity">
+            {opponent && <TeamLogo team={opponent} />}
+            <div>
+              {opponent ? (
+                <Link to={`/team/${opponent.id}`} className="matchupSchool">{opponent.schoolName}</Link>
+              ) : (
+                <span className="matchupSchool">Opponent</span>
+              )}
+              {opponent?.nickname && <span className="matchupNick">{opponent.nickname}</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+      {ledBy && (
+        <p className="resultLine">
+          Led by <strong>{ledBy}</strong>
+        </p>
       )}
-    </div>
+    </section>
   );
+}
+
+function regularLedBy(result: GameResult, selectedTeamId: string): string {
+  const isTeamA = result.teamAId === selectedTeamId;
+  const topPerfs = isTeamA ? result.topPlayersA.slice(0, 2) : result.topPlayersB.slice(0, 2);
+  return topPerfs
+    .map((player) => {
+      const parts: string[] = [];
+      if (player.goals > 0) parts.push(`${player.goals}G`);
+      if (player.assists > 0) parts.push(`${player.assists}A`);
+      if (player.saves > 0) parts.push(`${player.saves} SV`);
+      return parts.length > 0 ? `${player.name} ${parts.join(' ')}` : player.name;
+    })
+    .join(' · ');
 }
 
 function WeeklyHubPage() {
   const dispatch = useAppDispatch();
   const [actionError, setActionError] = useState<string | null>(null);
   const [advancing, setAdvancing] = useState(false);
+  const pendingScroll = useRef(false);
   const coach = useAppSelector((state) => state.coach);
   const season = useAppSelector((state) => state.season);
   const teams = useAppSelector((state) => state.league.teams);
@@ -107,6 +158,8 @@ function WeeklyHubPage() {
   const userLastResult = useAppSelector(selectUserLastResult);
   const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
   const isCoachReady = useAppSelector(selectIsCareerReady);
+  const confirmPlay = useAppSelector((state) => state.settings.confirmPlay);
+  const showWinChance = useAppSelector((state) => state.settings.showWinChance);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
   const userRecord = records[selectedTeamId] ?? {
@@ -125,17 +178,7 @@ function WeeklyHubPage() {
       ? userUpcomingGame.awayTeamId
       : userUpcomingGame.homeTeamId
     : null;
-  const opponent = opponentId ? teams.find((t) => t.id === opponentId) : null;
-  const opponentRecord = opponentId
-    ? records[opponentId] ?? {
-        wins: 0,
-        losses: 0,
-        confWins: 0,
-        confLosses: 0,
-        pointsFor: 0,
-        pointsAgainst: 0,
-      }
-    : null;
+  const opponent = opponentId ? teams.find((t) => t.id === opponentId) ?? null : null;
 
   // Coach game plan
   const gamePlan = useMemo(
@@ -151,26 +194,55 @@ function WeeklyHubPage() {
     [coach.practiceFocus, coach.profile, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
 
-  // Win probability blends prestige, roster quality, home edge, fatigue, and practice mods.
+  const playoffSpot = userPlayoffSpot(season.playoffs ?? null, selectedTeamId || null);
+  const playoffRoundLabel = season.playoffs ? PLAYOFF_ROUND_LABELS[season.playoffs.currentRound] : null;
+  const playoffOpponentId = playoffSpot.currentGame
+    ? playoffSpot.currentGame.homeTeamId === selectedTeamId
+      ? playoffSpot.currentGame.awayTeamId
+      : playoffSpot.currentGame.homeTeamId
+    : null;
+  const playoffOpponent = playoffOpponentId ? teams.find((team) => team.id === playoffOpponentId) ?? null : null;
+  const featuredOpponent = season.phase === 'REGULAR' ? opponent : playoffOpponent;
+  const featuredIsHome = season.phase === 'REGULAR'
+    ? isHome
+    : playoffSpot.currentGame?.homeTeamId === selectedTeamId;
+  const featuredRecord = featuredOpponent
+    ? records[featuredOpponent.id] ?? {
+        wins: 0,
+        losses: 0,
+        confWins: 0,
+        confLosses: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+      }
+    : null;
+
+  const weekKey = availabilityWeekKey(
+    season.phase,
+    season.currentWeekIndex,
+    season.playoffs?.currentRound ?? null,
+  );
+  const scratches = useMemo(() => {
+    if (!weekKey || !selectedTeamId || !coach.managedRoster?.length) return [];
+    return weeklyScratches(coach.managedRoster, season.seasonSeed, weekKey, selectedTeamId);
+  }, [coach.managedRoster, season.seasonSeed, selectedTeamId, weekKey]);
+
+  // Estimate blends both rosters, practice, fatigue, and home field. It does not play the game.
   const winProb = useMemo(() => {
-    if (!selectedTeam || !opponent) return null;
-    const roster = coach.managedRoster ?? [];
-    const rosterEdge =
-      roster.length > 0
-        ? roster.reduce((sum, player) => sum + player.overall, 0) / roster.length - 72
-        : 0;
-    const modEdge =
-      (gamePlan.modifiers.offense ?? 0) +
-      (gamePlan.modifiers.defense ?? 0) +
-      (gamePlan.modifiers.faceoff ?? 0) * 0.5;
-    const fatiguePenalty = coach.teamFatigue * 0.08;
-    const homeEdge = isHome ? 3 : -1;
-    const userStrength = Math.max(
-      20,
-      (effectivePrestige ?? selectedTeam.prestige) + rosterEdge + modEdge + homeEdge - fatiguePenalty,
-    );
-    const oppStrength = Math.max(20, opponent.prestige);
-    return Math.round((userStrength / (userStrength + oppStrength)) * 100);
+    if (!selectedTeam || !featuredOpponent) return null;
+    const scratchIds = new Set(scratches.map((scratch) => scratch.playerId));
+    const userRoster = (coach.managedRoster ?? []).filter((player) => !scratchIds.has(player.id));
+    return estimateWinChance({
+      userPrestige: effectivePrestige ?? selectedTeam.prestige,
+      userRoster,
+      opponentPrestige: featuredOpponent.prestige,
+      opponentRoster: generateRoster(featuredOpponent, leagueSeasonRosterSeed(season.seasonSeed)),
+      offense: gamePlan.modifiers.offense ?? 0,
+      defense: gamePlan.modifiers.defense ?? 0,
+      faceoff: gamePlan.modifiers.faceoff ?? 0,
+      fatigue: coach.teamFatigue,
+      isHome: featuredIsHome,
+    });
   }, [
     coach.managedRoster,
     coach.teamFatigue,
@@ -178,8 +250,10 @@ function WeeklyHubPage() {
     gamePlan.modifiers.defense,
     gamePlan.modifiers.faceoff,
     gamePlan.modifiers.offense,
-    isHome,
-    opponent,
+    featuredIsHome,
+    featuredOpponent,
+    scratches,
+    season.seasonSeed,
     selectedTeam,
   ]);
 
@@ -231,6 +305,42 @@ function WeeklyHubPage() {
     dispatch(setRecruitHours({ recruitId, hours: Math.min(requested, allowed) }));
   }
 
+  const top25 = useAppSelector(selectRankTrends);
+  const pollRank = season.phase === 'PRE' ? null : top25.find((row) => row.teamId === selectedTeamId)?.rank ?? null;
+  const weeklyDesk = useMemo(
+    () =>
+      buildWeeklyDesk({
+        phase: season.phase,
+        practiceLabel: PRACTICE_FOCUS_LABELS[coach.practiceFocus],
+        practiceDetail: PRACTICE_FOCUS_DESCRIPTIONS[coach.practiceFocus],
+        schemeLine: schemeCall(coach.tactics),
+        recruitPoolCount: coach.recruitPool.length,
+        boardCount: boardRecruits.length,
+        hoursAssigned: totalHours,
+        hoursCap: WEEKLY_HOURS_CAP,
+        hasRoster: (coach.managedRoster?.length ?? 0) > 0,
+        positionNeeds: buildPositionNeedByPosition(coach.managedRoster),
+        wins: userRecord.wins,
+        winTarget: coach.programExpectations?.winTarget ?? 0,
+        pollRank,
+        pollKnown: season.phase !== 'PRE',
+        rankTarget: coach.programExpectations?.rankTarget ?? 99,
+      }),
+    [
+      boardRecruits.length,
+      coach.managedRoster,
+      coach.practiceFocus,
+      coach.programExpectations?.rankTarget,
+      coach.programExpectations?.winTarget,
+      coach.recruitPool.length,
+      coach.tactics,
+      pollRank,
+      season.phase,
+      totalHours,
+      userRecord.wins,
+    ],
+  );
+
   const isRegularSeason = season.phase === 'REGULAR';
   const canAdvance =
     isRegularSeason &&
@@ -239,6 +349,81 @@ function WeeklyHubPage() {
 
   const maxWeekDisplay = Math.max(1, season.scheduleByWeek.length);
   const currentWeekDisplay = Math.min(season.currentWeekIndex + 1, maxWeekDisplay);
+  const offseasonCaps = careerOffseasonCapabilities({
+    phase: season.phase,
+    year: season.year,
+    hasSelectedTeam: Boolean(selectedTeamId),
+    hasProgramExpectations: Boolean(coach.programExpectations),
+    signedRecruitsByYear: coach.signedRecruitsByYear,
+    seasonHistory: coach.seasonHistory,
+  });
+  const loopStep = nextLoopStep({
+    phase: season.phase,
+    weekNumber: currentWeekDisplay,
+    canPlayWeek: canAdvance,
+    canSetBracket: season.phase === 'PLAYOFF' && season.playoffs == null,
+    canPlayRound: season.phase === 'PLAYOFF' && season.playoffs != null && !season.playoffs.championTeamId,
+    roundLabel: playoffRoundLabel,
+    userPlaying: playoffSpot.currentGame != null,
+    userBye: playoffSpot.bye,
+    userEliminated: playoffSpot.eliminated,
+    userMissedField: season.playoffs != null && playoffSpot.seed == null,
+    canSign: offseasonCaps.canProcessSigningDay,
+    canRecordSeason: offseasonCaps.canFinalizeSeason,
+    canBeginNextYear: offseasonCaps.canAdvanceNextYear,
+    fired: (coach.employment ?? 'ACTIVE') === 'FIRED',
+  });
+  const showPrep = season.phase === 'REGULAR' || season.phase === 'PRE';
+  const pageTitle = season.phase === 'PLAYOFF'
+    ? 'Playoffs'
+    : season.phase === 'OFFSEASON'
+      ? 'Offseason'
+      : season.phase === 'PRE'
+        ? 'Preseason'
+        : `Week ${currentWeekDisplay} Hub`;
+
+  useEffect(() => {
+    if (!pendingScroll.current) return;
+    pendingScroll.current = false;
+    document.getElementById('week-result')?.scrollIntoView({ block: 'start' });
+  }, [season.currentWeekIndex, season.phase, season.playoffs?.currentRound, season.playoffs?.championTeamId]);
+
+  async function runLoopStep() {
+    if (advancing || !loopStep.button || loopStep.action === 'begin-season') return;
+    if (confirmPlay && (loopStep.action === 'play-week' || loopStep.action === 'play-round')) {
+      const label = loopStep.action === 'play-week' ? `week ${currentWeekDisplay}` : (loopStep.button ?? 'This round');
+      const kind = loopStep.action === 'play-week' ? 'week' : 'round';
+      if (!window.confirm(confirmPlayCopy(kind, label))) return;
+    }
+    setActionError(null);
+    setAdvancing(true);
+    try {
+      if (loopStep.action === 'play-week') {
+        pendingScroll.current = true;
+        const outcome = await dispatch(runCareerWeeklyCycle()).unwrap();
+        if (outcome === 'skipped') {
+          pendingScroll.current = false;
+          setActionError('The week did not play. Stay on this hub and try again.');
+        }
+      } else if (loopStep.action === 'set-bracket') {
+        await dispatch(startPlayoffs()).unwrap();
+      } else if (loopStep.action === 'play-round') {
+        pendingScroll.current = true;
+        await dispatch(simCareerPlayoffRound()).unwrap();
+      } else if (loopStep.action === 'signing-day') {
+        await dispatch(processSigningDay()).unwrap();
+      } else if (loopStep.action === 'record-season') {
+        await dispatch(processSeasonEnd()).unwrap();
+      } else if (loopStep.action === 'begin-next-year') {
+        await dispatch(beginNextCareerSeason()).unwrap();
+      }
+    } catch (err) {
+      pendingScroll.current = false;
+      setActionError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAdvancing(false);
+    }
+  }
 
   if (!isCoachReady) {
     return <Navigate to="/career/setup" replace />;
@@ -247,160 +432,165 @@ function WeeklyHubPage() {
   return (
     <div className="pageStack">
       <div className="pageHeader">
-        <h2 className="m-0">Week {currentWeekDisplay} Hub</h2>
+        <h2 className="m-0">{pageTitle}</h2>
         <p className="pageHeader-sub">
           {selectedTeam?.schoolName} {selectedTeam?.nickname} · {userRecord.wins}–{userRecord.losses} overall · {userRecord.confWins}–{userRecord.confLosses} conf
         </p>
       </div>
 
-      <div className="card">
-        {actionError && (
-          <p className="text-sm text-red-600 mb-3" role="alert">
-            {actionError}
-          </p>
-        )}
-        <div className="weekActionBar">
-          <div>
-            <h3 className="m-0 text-base font-bold">
-              {canAdvance ? `Advance week ${currentWeekDisplay}` : 'Season locked'}
-            </h3>
-            <p className="text-sm text-gray-500 mt-0.5 mb-0">
-              {canAdvance
-                ? 'Plays every game this week, then updates recruiting and your roster.'
-                : season.phase === 'PLAYOFF'
-                  ? 'Regular season complete. Go to playoffs.'
-                  : season.phase === 'OFFSEASON'
-                    ? 'Head to the coach office to finish the offseason.'
-                    : season.phase === 'PRE'
-                      ? 'Begin the season from the season dashboard to unlock weekly advances.'
-                      : 'Season complete.'}
-            </p>
-          </div>
-          <div className="flex gap-3 flex-wrap">
-            {canAdvance && (
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={advancing}
-                aria-busy={advancing}
-                onClick={async () => {
-                  if (advancing) return;
-                  setActionError(null);
-                  setAdvancing(true);
-                  try {
-                    await dispatch(runCareerWeeklyCycle()).unwrap();
-                  } catch (err) {
-                    setActionError(err instanceof Error ? err.message : String(err));
-                  } finally {
-                    setAdvancing(false);
-                  }
-                }}
-              >
-                {advancing ? 'Advancing…' : `Advance week ${currentWeekDisplay}`}
-              </button>
-            )}
-            {season.phase === 'PLAYOFF' && (
-              <Link to="/playoffs" className="btn btn-primary">
-                Go to playoffs
-              </Link>
-            )}
-            {season.phase === 'OFFSEASON' && (
-              <Link to="/career" className="btn btn-primary">
-                Coach office
-              </Link>
-            )}
-            {season.phase === 'PRE' && (
-              <Link to="/season" className="btn btn-primary">
-                Begin season
-              </Link>
-            )}
-            <Link to="/season" className="btn text-sm">
-              Season dashboard
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Last game result banner ── */}
-      {userLastResult && (
-        <ResultBanner
-          result={userLastResult}
-          selectedTeamId={selectedTeamId}
-          teams={teams}
+      {playoffSpot.lastGame?.result && (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') ? (
+        <Scoreboard
+          heading={`${PLAYOFF_ROUND_LABELS[playoffSpot.lastGame.round]} final`}
+          won={playoffSpot.lastGame.winnerTeamId === selectedTeamId}
+          user={selectedTeam}
+          opponent={teams.find((team) => team.id === (playoffSpot.lastGame?.homeTeamId === selectedTeamId ? playoffSpot.lastGame.awayTeamId : playoffSpot.lastGame?.homeTeamId))}
+          userScore={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.homeScore : playoffSpot.lastGame.result.awayScore}
+          oppScore={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.awayScore : playoffSpot.lastGame.result.homeScore}
         />
-      )}
+      ) : userLastResult ? (
+        <Scoreboard
+          heading={`Week ${(userLastResult.weekIndex ?? 0) + 1} final`}
+          won={(userLastResult.teamAId === selectedTeamId ? userLastResult.scoreA : userLastResult.scoreB) > (userLastResult.teamAId === selectedTeamId ? userLastResult.scoreB : userLastResult.scoreA)}
+          user={selectedTeam}
+          opponent={teams.find((team) => team.id === (userLastResult.teamAId === selectedTeamId ? userLastResult.teamBId : userLastResult.teamAId))}
+          userScore={userLastResult.teamAId === selectedTeamId ? userLastResult.scoreA : userLastResult.scoreB}
+          oppScore={userLastResult.teamAId === selectedTeamId ? userLastResult.scoreB : userLastResult.scoreA}
+          ledBy={regularLedBy(userLastResult, selectedTeamId)}
+        />
+      ) : null}
 
-      <div className="grid2">
-        {/* ── Upcoming opponent ── */}
-        <div className="card">
-          <h3 className="m-0 mb-3 text-base font-bold">
-            {isRegularSeason ? `Week ${currentWeekDisplay} Matchup` : 'No Upcoming Game'}
-          </h3>
-          {opponent && opponentRecord ? (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="font-bold text-lg">
-                    {isHome ? 'vs' : '@'}{' '}
-                    <Link to={`/team/${opponent.id}`}>{opponent.schoolName}</Link>
-                  </div>
-                  <div className="text-sm text-gray-500">{opponent.nickname}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    Prestige {opponent.prestige} · {isHome ? 'Home' : 'Away'}
-                    {userUpcomingGame?.conferenceGame && ' · Conference'}
-                  </div>
-                </div>
-                {winProb !== null && (
-                  <div className="text-center">
-                    <div className={`text-2xl font-bold ${winProbClass(winProb)}`}>
-                      {winProb}%
-                    </div>
-                    <div className="text-xs text-gray-500">Win prob.</div>
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-6 text-sm border-t pt-3">
-                <div>
-                  <div className="text-xs text-gray-400 uppercase mb-0.5">Overall</div>
-                  <div className="font-semibold">
-                    {opponentRecord.wins}–{opponentRecord.losses}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400 uppercase mb-0.5">Conference</div>
-                  <div className="font-semibold">
-                    {opponentRecord.confWins}–{opponentRecord.confLosses}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400 uppercase mb-0.5">Scoring Diff</div>
-                  {(() => {
-                    const diff = opponentRecord.pointsFor - opponentRecord.pointsAgainst;
-                    return (
-                      <div className={diff >= 0 ? 'text-success font-semibold' : 'text-danger font-semibold'}>
-                        {diff > 0 ? '+' : ''}{diff}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">
-              {season.phase === 'PRE'
-                ? 'Season has not started yet.'
-                : season.phase === 'PLAYOFF'
-                  ? 'Regular season complete — playoffs are underway.'
-                  : season.phase === 'OFFSEASON'
-                    ? 'Season complete. Start the next season from the Career page.'
-                    : 'No game scheduled this week.'}
+      <section className="card matchupBoard" aria-labelledby="loop-title">
+        {actionError && (
+          <p className="text-sm text-red-600 mb-3" role="alert">{actionError}</p>
+        )}
+        <div className="matchupBoardTop">
+          <h3 id="loop-title" className="m-0 text-base font-bold">{loopStep.title}</h3>
+          {featuredOpponent && (
+            <p className="matchupKicker">
+              {featuredIsHome ? 'Home' : 'Away'}
+              {season.phase === 'REGULAR'
+                ? userUpcomingGame?.conferenceGame ? ' · Conference' : ' · Non-conference'
+                : playoffRoundLabel ? ` · ${playoffRoundLabel}` : ''}
             </p>
           )}
         </div>
+        <p className="text-sm text-gray-500 mt-1 mb-0">{loopStep.detail}</p>
+        {featuredOpponent && featuredRecord && selectedTeam && (
+          <div className="matchupSides">
+            <div className="matchupSide">
+              <div className="matchupIdentity">
+                <TeamLogo team={selectedTeam} />
+                <div>
+                  <Link to={`/team/${selectedTeam.id}`} className="matchupSchool">{selectedTeam.schoolName}</Link>
+                  <span className="matchupNick">{selectedTeam.nickname}</span>
+                  <span className="matchupRecord">{userRecord.wins}–{userRecord.losses}</span>
+                </div>
+              </div>
+            </div>
+            <div className="matchupProb">
+              {winProb !== null && showWinChance ? (
+                <>
+                  <span className={`matchupProbValue ${winProbClass(winProb)}`}>{winProb}%</span>
+                  <span className="matchupProbLabel">Estimate</span>
+                  <div
+                    className="meter meter-lg"
+                    role="progressbar"
+                    aria-valuenow={winProb}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label="Win estimate"
+                  >
+                    <span style={{ width: `${winProb}%` }} />
+                  </div>
+                </>
+              ) : (
+                <span className="matchupProbLabel">vs</span>
+              )}
+            </div>
+            <div className="matchupSide matchupSide-away">
+              <div className="matchupIdentity">
+                <TeamLogo team={featuredOpponent} />
+                <div>
+                  <Link to={`/team/${featuredOpponent.id}`} className="matchupSchool">{featuredOpponent.schoolName}</Link>
+                  <span className="matchupNick">{featuredOpponent.nickname}</span>
+                  <span className="matchupRecord">
+                    {featuredRecord.wins}–{featuredRecord.losses}
+                    <span className="matchupDiff">
+                      {featuredRecord.pointsFor - featuredRecord.pointsAgainst > 0 ? '+' : ''}
+                      {featuredRecord.pointsFor - featuredRecord.pointsAgainst}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {scratches.length > 0 && (
+          <p className="text-sm text-red-600 mt-3 mb-0">
+            Out this week: {scratches.map((scratch) => `${scratch.name} (${scratch.position})`).join(', ')}
+          </p>
+        )}
+        <div className="loopActions">
+          {loopStep.action === 'begin-season' ? (
+            <Link to="/season" className="btn btn-primary">Begin season</Link>
+          ) : loopStep.action === 'take-job' ? (
+            <Link to="/career" className="btn btn-primary">Take a job</Link>
+          ) : loopStep.button ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={advancing}
+              aria-busy={advancing}
+              onClick={runLoopStep}
+            >
+              {advancing ? 'Working…' : loopStep.button}
+            </button>
+          ) : null}
+          {season.phase === 'PLAYOFF' && (
+            <Link to="/playoffs" className="btn">Full bracket</Link>
+          )}
+          {season.phase === 'OFFSEASON' && (
+            <Link to="/career" className="btn">Coach office</Link>
+          )}
+        </div>
+      </section>
 
-        {/* ── Practice focus ── */}
-        <div className="card">
-          <h3 className="m-0 mb-3 text-base font-bold">Practice Focus</h3>
+      <section className="card" aria-labelledby="weekly-desk-title">
+        <h3 id="weekly-desk-title" className="m-0 text-base font-bold">This week</h3>
+        <p className="text-sm text-gray-500 mt-1 mb-3">
+          {season.phase === 'PLAYOFF'
+            ? 'The bracket is the job. The install comes back next regular season.'
+              : season.phase === 'OFFSEASON'
+              ? (coach.employment ?? 'ACTIVE') === 'FIRED'
+                ? 'The AD let you go. Take a landing job on the office before the next year.'
+                : 'Signing day and the season record are the next clicks. The portal can wait.'
+              : 'Set the install and the board, then play the week.'}
+        </p>
+        <ul className="deskList">
+          {weeklyDesk.map((task) => (
+            <li key={task.id} className={`deskItem deskItem-${task.tone}`}>
+              <span className="deskStatus">{task.tone === 'ready' ? 'Ready' : task.tone === 'watch' ? 'Watch' : 'Open'}</span>
+              <div>
+                <div className="deskTitle">{task.title}</div>
+                <p className="deskDetail">{task.detail}</p>
+              </div>
+              {task.href?.startsWith('#') ? (
+                <a href={task.href} className="deskAction">{task.action}</a>
+              ) : task.href ? (
+                <Link to={task.href} className="deskAction">{task.action}</Link>
+              ) : task.action ? (
+                <span className="deskAction">{task.action}</span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <div className={showPrep ? 'grid2' : undefined}>
+        {showPrep && (
+        <div className="card" id="week-practice">
+          <h3 className="m-0 mb-1 text-base font-bold">Install</h3>
+          <p className="text-xs text-gray-500 mt-0 mb-3">The practice block on this week’s game plan.</p>
           <div className="choiceGrid mb-3">
             {(Object.keys(PRACTICE_FOCUS_LABELS) as PracticeFocus[]).map((focus) => (
               <button
@@ -415,31 +605,32 @@ function WeeklyHubPage() {
               </button>
             ))}
           </div>
-          <div className="border-t pt-3 grid grid-cols-2 gap-3 text-xs">
+          <div className="planReadout planReadout-pair">
             <div>
-              <div className="text-gray-400 uppercase mb-1">Fatigue now</div>
-              <div className="flex items-center gap-1.5">
-                <span className={fatigueClass}>
-                  {gamePlan.fatigueLabel}
-                </span>
-                <span className="text-gray-600">{coach.teamFatigue}%</span>
-                <span className="text-gray-400">→</span>
-                <span className="font-semibold text-gray-700">{projectedFatigue}%</span>
+              <div className="planReadoutLabel">Fatigue now</div>
+              <div className="planReadoutValue">
+                <span className={fatigueClass}>{gamePlan.fatigueLabel}</span>
+                {' '}
+                {coach.teamFatigue}%
+                <span className="planReadoutMeta"> → {projectedFatigue}%</span>
               </div>
             </div>
             <div>
-              <div className="text-gray-400 uppercase mb-1">Gameplan edge</div>
-              <div className="text-gray-600">
+              <div className="planReadoutLabel">Game plan edge</div>
+              <div className="planReadoutValue">
                 Off {gamePlan.modifiers.offense >= 0 ? '+' : ''}
                 {gamePlan.modifiers.offense.toFixed(1)} · Def{' '}
                 {gamePlan.modifiers.defense >= 0 ? '+' : ''}
-                {gamePlan.modifiers.defense.toFixed(1)} · Disc{' '}
-                {gamePlan.modifiers.discipline >= 0 ? '+' : ''}
+                {gamePlan.modifiers.defense.toFixed(1)}
+              </div>
+              <div className="planReadoutMeta">
+                Disc {gamePlan.modifiers.discipline >= 0 ? '+' : ''}
                 {gamePlan.modifiers.discipline.toFixed(1)}
               </div>
             </div>
           </div>
         </div>
+        )}
 
         <div className="card">
           <h3 className="m-0 mb-3 text-base font-bold">Coach Skill Snapshot</h3>
@@ -460,7 +651,7 @@ function WeeklyHubPage() {
       </div>
 
       {/* ── Recruiting board compact ── */}
-      {boardRecruits.length > 0 && (
+      {showPrep && boardRecruits.length > 0 && (
         <div className="card">
           <div className="flex justify-between items-center mb-3">
             <div>
@@ -548,7 +739,7 @@ function WeeklyHubPage() {
         </div>
       )}
 
-      {boardRecruits.length === 0 && coach.recruitPool.length > 0 && (
+      {showPrep && boardRecruits.length === 0 && coach.recruitPool.length > 0 && (
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
@@ -558,7 +749,7 @@ function WeeklyHubPage() {
               </p>
             </div>
             <Link to="/career/recruiting" className="btn btn-primary text-sm">
-              Open Board →
+              Open board
             </Link>
           </div>
         </div>

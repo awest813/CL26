@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import TeamLogo from '../../components/TeamLogo';
 import { IconClose, IconMenu } from '../../components/UiIcons';
 import { useAppSelector } from '../../store/hooks';
 import { selectIsCareerReady } from '../../features/coach/coachSlice';
@@ -9,8 +10,8 @@ function continueTarget(phase: string, onboardingReady: boolean): { path: string
   if (!onboardingReady) return { path: '/career/setup', label: 'Start Career' };
   if (phase === 'PRE') return { path: '/season', label: 'Begin Season' };
   if (phase === 'REGULAR') return { path: '/career/week', label: 'Weekly Hub' };
-  if (phase === 'PLAYOFF') return { path: '/playoffs', label: 'Playoffs' };
-  if (phase === 'OFFSEASON') return { path: '/career', label: 'Offseason' };
+  if (phase === 'PLAYOFF') return { path: '/career/week', label: 'Next round' };
+  if (phase === 'OFFSEASON') return { path: '/career/week', label: 'Offseason' };
   return { path: '/career', label: 'Continue' };
 }
 
@@ -38,7 +39,9 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
   const confStanding = useAppSelector(selectUserConferenceStanding);
 
   const selectedTeam = teams.find((team) => team.id === selectedTeamId) ?? null;
+  const { pathname } = useLocation();
   const continueAction = continueTarget(season.phase, onboardingReady);
+  const onContinuePage = pathname === continueAction.path;
   const phaseLabel = seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length);
   const record = selectedTeamId ? records[selectedTeamId] : null;
   const projectedSeed = selectedTeamId ? top12.find((row) => row.teamId === selectedTeamId)?.rank ?? null : null;
@@ -78,9 +81,12 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
       <div className="dynastyHeaderMeta">
         {selectedTeam ? (
           <Link to={`/team/${selectedTeam.id}`} className="dynastyProgramChip">
-            <span className="dynastyMetaLabel">Program</span>
-            <strong>{selectedTeam.schoolName}</strong>
-            <small>{recordLine}</small>
+            <TeamLogo team={selectedTeam} size="sm" />
+            <span className="dynastyProgramText">
+              <span className="dynastyMetaLabel">Program</span>
+              <strong>{selectedTeam.schoolName}</strong>
+              <small>{recordLine}</small>
+            </span>
           </Link>
         ) : (
           <div className="dynastyProgramChip">
@@ -94,9 +100,18 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
           <strong>{season.year}</strong>
           <small>{phaseLabel}</small>
         </div>
-        <Link to={continueAction.path} className="btn btn-primary dynastyActionBtn">
-          {continueAction.label}
+        <Link
+          to="/settings"
+          className="btn dynastySettingsBtn"
+          aria-current={pathname === '/settings' ? 'page' : undefined}
+        >
+          Settings
         </Link>
+        {!onContinuePage && (
+          <Link to={continueAction.path} className="btn btn-primary dynastyActionBtn">
+            {continueAction.label}
+          </Link>
+        )}
       </div>
     </header>
   );

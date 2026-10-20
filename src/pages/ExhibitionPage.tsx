@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import TeamLogo from '../components/TeamLogo';
 import { runExhibition, setSeed, setTactics, setTeams } from '../features/exhibition/exhibitionSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Tactics } from '../types/sim';
@@ -124,7 +125,14 @@ function ExhibitionPage() {
 
   const teamAId = exhibition.selectedTeamAId ?? teams[0]?.id ?? '';
   const teamBId = exhibition.selectedTeamBId ?? teams[1]?.id ?? '';
+  const teamA = teams.find((team) => team.id === teamAId) ?? null;
+  const teamB = teams.find((team) => team.id === teamBId) ?? null;
   const sameTeamSelected = Boolean(teamAId && teamBId && teamAId === teamBId);
+  const resultTeam = (name: string) =>
+    teams.find((team) => name === `${team.schoolName} ${team.nickname}`) ?? null;
+  const lastResult = exhibition.lastResult;
+  const resultA = lastResult ? resultTeam(lastResult.teamAName) : null;
+  const resultB = lastResult ? resultTeam(lastResult.teamBName) : null;
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -189,6 +197,20 @@ function ExhibitionPage() {
           </label>
         </div>
 
+        {teamA && teamB && (
+          <div className="exhibitionPreview" aria-hidden="true">
+            <span className="programLockup">
+              <TeamLogo team={teamA} />
+              <span>{teamA.schoolName}</span>
+            </span>
+            <span className="exhibitionVs">vs</span>
+            <span className="programLockup">
+              <TeamLogo team={teamB} />
+              <span>{teamB.schoolName}</span>
+            </span>
+          </div>
+        )}
+
         {sameTeamSelected && (
           <p className="text-sm text-amber-700 mt-2 mb-0">Select two different teams before simulating.</p>
         )}
@@ -224,11 +246,20 @@ function ExhibitionPage() {
         </div>
       </form>
 
-      {exhibition.lastResult ? (
+      {lastResult ? (
         <div className="card">
-          <h3>
-            Final: {exhibition.lastResult.teamAName} {exhibition.lastResult.scoreA} - {exhibition.lastResult.scoreB}{' '}
-            {exhibition.lastResult.teamBName}
+          <h3 className="exhibitionFinal">
+            <span className="programLockup">
+              {resultA && <TeamLogo team={resultA} size="sm" />}
+              <span>{lastResult.teamAName}</span>
+            </span>
+            <span className="exhibitionFinalScore">
+              {lastResult.scoreA}–{lastResult.scoreB}
+            </span>
+            <span className="programLockup">
+              {resultB && <TeamLogo team={resultB} size="sm" />}
+              <span>{lastResult.teamBName}</span>
+            </span>
           </h3>
 
           <h4>Team Box Score</h4>
@@ -250,26 +281,36 @@ function ExhibitionPage() {
             </thead>
             <tbody>
               <tr>
-                <td>{exhibition.lastResult.teamAName}</td>
-                <td>{exhibition.lastResult.statsA.goals}</td>
-                <td>{exhibition.lastResult.statsA.shots}</td>
-                <td>{exhibition.lastResult.statsA.saves}</td>
-                <td>{exhibition.lastResult.statsA.turnovers}</td>
-                <td>{exhibition.lastResult.statsA.causedTurnovers ?? 0}</td>
-                <td>{exhibition.lastResult.statsA.groundBalls}</td>
-                <td>{exhibition.lastResult.statsA.penalties}</td>
-                <td>{exhibition.lastResult.statsA.faceoffPct}%</td>
+                <td>
+                  <span className="standingsTeam">
+                    {resultA && <TeamLogo team={resultA} size="sm" />}
+                    <span>{lastResult.teamAName}</span>
+                  </span>
+                </td>
+                <td>{lastResult.statsA.goals}</td>
+                <td>{lastResult.statsA.shots}</td>
+                <td>{lastResult.statsA.saves}</td>
+                <td>{lastResult.statsA.turnovers}</td>
+                <td>{lastResult.statsA.causedTurnovers ?? 0}</td>
+                <td>{lastResult.statsA.groundBalls}</td>
+                <td>{lastResult.statsA.penalties}</td>
+                <td>{lastResult.statsA.faceoffPct}%</td>
               </tr>
               <tr>
-                <td>{exhibition.lastResult.teamBName}</td>
-                <td>{exhibition.lastResult.statsB.goals}</td>
-                <td>{exhibition.lastResult.statsB.shots}</td>
-                <td>{exhibition.lastResult.statsB.saves}</td>
-                <td>{exhibition.lastResult.statsB.turnovers}</td>
-                <td>{exhibition.lastResult.statsB.causedTurnovers ?? 0}</td>
-                <td>{exhibition.lastResult.statsB.groundBalls}</td>
-                <td>{exhibition.lastResult.statsB.penalties}</td>
-                <td>{exhibition.lastResult.statsB.faceoffPct}%</td>
+                <td>
+                  <span className="standingsTeam">
+                    {resultB && <TeamLogo team={resultB} size="sm" />}
+                    <span>{lastResult.teamBName}</span>
+                  </span>
+                </td>
+                <td>{lastResult.statsB.goals}</td>
+                <td>{lastResult.statsB.shots}</td>
+                <td>{lastResult.statsB.saves}</td>
+                <td>{lastResult.statsB.turnovers}</td>
+                <td>{lastResult.statsB.causedTurnovers ?? 0}</td>
+                <td>{lastResult.statsB.groundBalls}</td>
+                <td>{lastResult.statsB.penalties}</td>
+                <td>{lastResult.statsB.faceoffPct}%</td>
               </tr>
             </tbody>
           </table>
@@ -277,9 +318,9 @@ function ExhibitionPage() {
 
           <div className="grid2">
             <div>
-              <h4>Top Players — {exhibition.lastResult.teamAName}</h4>
+              <h4>Top Players — {lastResult.teamAName}</h4>
               <ul>
-                {exhibition.lastResult.topPlayersA.map((player) => (
+                {lastResult.topPlayersA.map((player) => (
                   <li key={player.playerId}>
                     {player.name} ({player.position}) — G:{player.goals} A:{player.assists} SV:{player.saves}
                   </li>
@@ -287,9 +328,9 @@ function ExhibitionPage() {
               </ul>
             </div>
             <div>
-              <h4>Top Players — {exhibition.lastResult.teamBName}</h4>
+              <h4>Top Players — {lastResult.teamBName}</h4>
               <ul>
-                {exhibition.lastResult.topPlayersB.map((player) => (
+                {lastResult.topPlayersB.map((player) => (
                   <li key={player.playerId}>
                     {player.name} ({player.position}) — G:{player.goals} A:{player.assists} SV:{player.saves}
                   </li>
@@ -300,7 +341,7 @@ function ExhibitionPage() {
 
           <h4>Highlights</h4>
           <ul>
-            {exhibition.lastResult.highlights.map((line, index) => (
+            {lastResult.highlights.map((line, index) => (
               <li key={`${line}-${index}`}>{line}</li>
             ))}
           </ul>

@@ -58,8 +58,8 @@ export function buildGameRecap(game: GameSummary, awayName: string, homeName: st
   return {
     gameId: game.id,
     summary: margin === 0
-      ? `${homeName} and ${awayName} finished level (${game.awayScore}-${game.homeScore}).`
-      : `${winnerName} beat ${loserName} by ${margin} (${game.awayScore}-${game.homeScore}).`,
+      ? `${homeName} and ${awayName} finished level (${game.homeScore}–${game.awayScore}).`
+      : `${winnerName} beat ${loserName} by ${margin} (${homeWon ? game.homeScore : game.awayScore}–${homeWon ? game.awayScore : game.homeScore}).`,
     keyEdge,
     mvp,
     efficiencyNote: `${awayName} shot ${awayShooting}% · ${homeName} shot ${homeShooting}%`,
