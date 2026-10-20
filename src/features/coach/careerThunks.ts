@@ -4,7 +4,7 @@ import { simCurrentWeek, selectTeamRecords, simNextPlayoffRound } from '../seaso
 import {
   advanceCoachWeek,
   advanceRecruitingWeek,
-  runAutoRecruiting,
+  applyAutoRecruitingPlan,
   addCoachXp,
   setAdPressure,
   updateJobSecurity,
@@ -20,7 +20,13 @@ import {
   careerSetupFromPrestige,
   applyPlayoffRoundFatigue,
   clearOffseasonMarket,
+  MAX_HOURS_PER_RECRUIT,
+  programRecruitingBonus,
+  WEEKLY_HOURS_CAP,
 } from './coachSlice';
+import { planAutoRecruiting } from '../../sim/autoRecruit';
+import { buildPositionNeedByPosition } from '../../sim/recruiting';
+import { coachSkillMultiplier } from '../../sim/recruitingWeek';
 import type { GameResult } from '../../types/sim';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
@@ -74,6 +80,46 @@ function computePrestigeDriftDelta(champion: boolean, madePlayoffs: boolean, win
   if (winDiff <= -2) return MODERATE_MISS_PRESTIGE_DRIFT;
   return 0;
 }
+
+/**
+ * Have the staff set the board, hours, and pitches for the next recruiting period.
+ * Returns false when there is no class or no period left to plan.
+ */
+export const runAutoRecruiting = createAsyncThunk<boolean, void, { state: RootState }>(
+  'coach/runAutoRecruiting',
+  async (_arg, { dispatch, getState }) => {
+    const state = getState();
+    const coach = state.coach;
+    const baseTeam = state.league.teams.find((t) => t.id === coach.selectedTeamId);
+    if (!baseTeam || coach.recruitPool.length === 0) return false;
+
+    // One recruiting period runs with each regular-season week. The last one runs
+    // after the final game, so count periods rather than checking the phase.
+    const periodsLeft = state.season.scheduleByWeek.length - coach.recruitingWeekIndex;
+    if (periodsLeft <= 0) return false;
+
+    const team = {
+      ...baseTeam,
+      prestige: Math.max(1, Math.min(100, baseTeam.prestige + (coach.programPrestigeDrift ?? 0))),
+    };
+    const plan = planAutoRecruiting({
+      recruitPool: coach.recruitPool,
+      boardRecruitIds: coach.boardRecruitIds,
+      team,
+      positionNeedByPosition: buildPositionNeedByPosition(coach.managedRoster),
+      classNeedByPosition: buildPositionNeedByPosition(
+        coach.managedRoster?.filter((player) => player.year < 4) ?? null,
+      ),
+      scholarshipsAvailable: coach.scholarshipsAvailable,
+      periodsLeft,
+      hoursCap: WEEKLY_HOURS_CAP,
+      maxHoursPerRecruit: MAX_HOURS_PER_RECRUIT,
+      gainMultiplier: programRecruitingBonus(coach) * coachSkillMultiplier(coach.profile?.skill ?? 72),
+    });
+    dispatch(applyAutoRecruitingPlan(plan));
+    return true;
+  },
+);
 
 export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', void, { state: RootState }>(
   'coach/runCareerWeeklyCycle',

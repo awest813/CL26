@@ -130,8 +130,13 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Interest accumulation each week with competing CPU-school pressure
 - [x] Verbal commitment triggers and lockouts
 - [x] Commitments visible in recruiting board UI
+- [x] CPU programs commit prospects on their own (prestige, region, star pull; 8-commit class cap)
+- [x] Program prestige scales how far your recruiting hours go with each star tier
+- [x] Weekly recruiting report: your commits, lost targets, and the rest of the class
+- [x] Staff-run recruiting: one-click weekly plan, or a toggle that plans before every period
+- [x] Sim to the bracket from the weekly hub through the full career cycle
 
-**Key files:** `src/sim/recruiting.ts`, `src/sim/recruitingWeek.ts`, `src/pages/RecruitingBoardPage.tsx`, `src/features/coach/coachSlice.ts`
+**Key files:** `src/sim/recruiting.ts`, `src/sim/recruitingWeek.ts`, `src/sim/autoRecruit.ts`, `src/pages/RecruitingBoardPage.tsx`, `src/features/coach/coachSlice.ts`, `src/features/coach/careerThunks.ts`
 
 ---
 

@@ -3,8 +3,8 @@ import type { Employment } from '../../sim/jobOffers';
 import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
-import { coachSkillMultiplier, simulateRecruitingWeek, type CpuRecruitingProfile } from '../../sim/recruitingWeek';
-import { planAutoRecruiting, RECRUITING_BOARD_LIMIT, type AutoRecruitPlan } from '../../sim/autoRecruit';
+import { simulateRecruitingWeek, type CpuRecruitingProfile } from '../../sim/recruitingWeek';
+import { RECRUITING_BOARD_LIMIT, type AutoRecruitPlan } from '../../sim/autoRecruit';
 import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
@@ -649,40 +649,6 @@ export function programRecruitingBonus(coach: Pick<CoachState, 'profile' | 'skil
     const boostersBonus = 1 + (boostersLevel - 50) / 400;
     return archetypeBonus * recruitingSkillBonus * nilBonus * boostersBonus;
 }
-
-/** Have the staff set the board, hours, and pitches for the coming recruiting period. */
-export const runAutoRecruiting = createAsyncThunk<boolean, void, { state: RootState }>(
-    'coach/runAutoRecruiting',
-    async (_, { getState, dispatch }) => {
-        const state = getState();
-        const coach = state.coach;
-        const baseTeam = state.league.teams.find(t => t.id === coach.selectedTeamId);
-        if (!baseTeam || coach.recruitPool.length === 0) return false;
-
-        const team = {
-            ...baseTeam,
-            prestige: clamp(baseTeam.prestige + (coach.programPrestigeDrift ?? 0), 1, 100),
-        };
-        // One recruiting period runs with each regular-season week.
-        const periodsLeft = Math.max(1, state.season.scheduleByWeek.length - coach.recruitingWeekIndex);
-        const plan = planAutoRecruiting({
-            recruitPool: coach.recruitPool,
-            boardRecruitIds: coach.boardRecruitIds,
-            team,
-            positionNeedByPosition: buildPositionNeedByPosition(coach.managedRoster),
-            classNeedByPosition: buildPositionNeedByPosition(
-                coach.managedRoster?.filter((player) => player.year < 4) ?? null,
-            ),
-            scholarshipsAvailable: coach.scholarshipsAvailable,
-            periodsLeft,
-            hoursCap: WEEKLY_HOURS_CAP,
-            maxHoursPerRecruit: MAX_HOURS_PER_RECRUIT,
-            gainMultiplier: programRecruitingBonus(coach) * coachSkillMultiplier(coach.profile?.skill ?? 72),
-        });
-        dispatch(applyAutoRecruitingPlan(plan));
-        return true;
-    },
-);
 
 export const advanceRecruitingWeek = createAsyncThunk(
     'coach/advanceRecruitingWeek',

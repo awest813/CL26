@@ -16,6 +16,18 @@ export const PITCH_LABELS: Record<RecruitingPitch, string> = {
   CAMPUS_LIFE: 'Campus',
 };
 
+/**
+ * Where the class stands on the calendar. One recruiting period runs with each
+ * regular-season week, so the count stops once the bracket starts.
+ */
+export function recruitingPeriodLabel(phase: string, periodIndex: number, periodCount: number): string {
+  if (phase === 'PRE') return 'Recruiting opens with the season';
+  if (phase === 'OFFSEASON' || (periodCount > 0 && periodIndex >= periodCount)) {
+    return phase === 'OFFSEASON' ? 'Recruiting is closed' : 'Recruiting periods are done. Signing day follows the bracket';
+  }
+  return `Recruiting period ${periodIndex + 1} of ${periodCount}`;
+}
+
 /** Neighboring regions still score as a soft proximity match. */
 const REGION_NEIGHBORS: Record<string, string[]> = {
   Northeast: ['Mid-Atlantic', 'North'],

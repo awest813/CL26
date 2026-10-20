@@ -5,7 +5,7 @@ A deterministic, web-based college lacrosse head-coaching simulation. Build a pr
 - **128 fictionalized teams** across 16 conferences
 - **12-game regular season** (7 conference round-robin + 5 non-conference)
 - **Full postseason** — weekly Top 25 + Top 12 bracket projection, 12-team playoff with automatic byes for seeds 1–4
-- **Coach career layer** — onboarding, program selection, recruiting board, weekly hub, offseason roster turnover
+- **Coach career layer** — onboarding, program selection, recruiting board with CPU recruiting battles, staff-run recruiting, weekly hub with sim to the bracket, offseason roster turnover
 - **Fully deterministic** — same seed always produces the same schedule, rosters, and results
 - **Client-side only** — all state lives in `localStorage` via redux-persist; no server, no account required
 
@@ -59,8 +59,8 @@ src/
 | `/exhibition` | Seeded exhibition game |
 | `/career/setup` | Create coach + choose program |
 | `/career` | Career hub |
-| `/career/week` | Weekly hub (recruiting hours + focus) |
-| `/career/recruiting` | Recruiting board |
+| `/career/week` | Weekly hub (play a week or sim to the bracket, recruiting hours, practice focus) |
+| `/career/recruiting` | Recruiting board (targets, hours, pitches, staff plan) |
 | `/career/roster` | Roster viewer |
 | `/season` | Season dashboard |
 | `/schedule` | Redirects to `/season` |

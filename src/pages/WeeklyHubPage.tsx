@@ -704,7 +704,7 @@ function WeeklyHubPage() {
             </Link>
           </div>
           <div className="mb-3">
-            <StaffRecruitingControls canPlan={isRegularSeason} />
+            <StaffRecruitingControls canPlan={isRegularSeason && coach.recruitingWeekIndex < season.scheduleByWeek.length} />
           </div>
           {coach.recruitingReport && (
             <div className="mb-3">
@@ -795,7 +795,9 @@ function WeeklyHubPage() {
             <div>
               <h3 className="m-0 text-base font-bold">Recruiting Board</h3>
               <p className="text-sm text-gray-500 mt-1 mb-0">
-                No active targets. Add prospects to your board to allocate recruiting hours this week.
+                {coach.autoRecruiting
+                  ? 'No active targets yet. Your staff fills the board before the week plays.'
+                  : 'No active targets. Add prospects to your board to allocate recruiting hours this week.'}
               </p>
             </div>
             <Link to="/career/recruiting" className="btn btn-primary text-sm">
@@ -803,7 +805,7 @@ function WeeklyHubPage() {
             </Link>
           </div>
           <div className="mt-3">
-            <StaffRecruitingControls canPlan={isRegularSeason} />
+            <StaffRecruitingControls canPlan={isRegularSeason && coach.recruitingWeekIndex < season.scheduleByWeek.length} />
           </div>
         </div>
       )}

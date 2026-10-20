@@ -8,6 +8,7 @@ import {
     getTeamPitchGrade,
     estimateRecruitFit,
     isRecruitingPitch,
+    recruitingPeriodLabel,
 } from './recruiting.ts';
 import type { Team, Recruit, RecruitingPitch } from '../types/sim.ts';
 
@@ -205,5 +206,15 @@ describe('Recruiting Logic', () => {
         assert.strictEqual(isRecruitingPitch('PRESTIGE'), true);
         assert.strictEqual(isRecruitingPitch(''), false);
         assert.strictEqual(isRecruitingPitch('NOT_A_PITCH'), false);
+    });
+});
+
+describe('recruiting period label', () => {
+    test('counts periods through the regular season and stops at the bracket', () => {
+        assert.strictEqual(recruitingPeriodLabel('PRE', 0, 0), 'Recruiting opens with the season');
+        assert.strictEqual(recruitingPeriodLabel('REGULAR', 0, 12), 'Recruiting period 1 of 12');
+        assert.strictEqual(recruitingPeriodLabel('REGULAR', 11, 12), 'Recruiting period 12 of 12');
+        assert.match(recruitingPeriodLabel('PLAYOFF', 12, 12), /Signing day follows the bracket/);
+        assert.strictEqual(recruitingPeriodLabel('OFFSEASON', 12, 12), 'Recruiting is closed');
     });
 });

@@ -17,6 +17,7 @@ import {
   getTeamPitchGrade,
   isRecruitingPitch,
   PITCH_LABELS,
+  recruitingPeriodLabel,
   RECRUITING_POSITION_FILTERS,
 } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -62,6 +63,7 @@ function RecruitingBoardPage() {
   const coach = useAppSelector((state) => state.coach);
   const teams = useAppSelector((state) => state.league.teams);
   const season = useAppSelector(selectSeasonSummary);
+  const scheduleLength = useAppSelector((state) => state.season.scheduleByWeek.length);
 
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState<PositionFilterValue>('ALL');
@@ -230,11 +232,7 @@ function RecruitingBoardPage() {
       <div className="pageHeader">
         <h2>Recruiting Board</h2>
         <p className="pageHeader-sub">
-          {season.phase === 'REGULAR'
-            ? `Recruiting period ${coach.recruitingWeekIndex + 1}`
-            : season.phase === 'PLAYOFF'
-              ? 'Recruiting periods are done. Signing day follows the bracket'
-              : 'Recruiting opens with the season'}{' '}
+          {recruitingPeriodLabel(season.phase, coach.recruitingWeekIndex, scheduleLength)}{' '}
           · {season.year} Class ·{' '}
           {committedToUserCount} committed · {coach.scholarshipsAvailable} scholarships available
           {committedToUserCount > coach.scholarshipsAvailable
@@ -274,7 +272,7 @@ function RecruitingBoardPage() {
         </div>
 
         <div className="mt-3 pt-3 border-t">
-          <StaffRecruitingControls canPlan={season.phase === 'REGULAR'} />
+          <StaffRecruitingControls canPlan={season.phase === 'REGULAR' && coach.recruitingWeekIndex < scheduleLength} />
         </div>
 
         {coach.recruitingReport && (

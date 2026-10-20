@@ -13,12 +13,11 @@ import {
   coachReducer,
   completeCareerSetup,
   MAX_HOURS_PER_RECRUIT,
-  runAutoRecruiting,
   setAutoRecruiting,
   setCoachProfile,
   WEEKLY_HOURS_CAP,
 } from './coachSlice.ts';
-import { beginFirstSeason, runCareerWeeklyCycle, simCareerToBracket } from './careerThunks.ts';
+import { beginFirstSeason, runAutoRecruiting, runCareerWeeklyCycle, simCareerToBracket } from './careerThunks.ts';
 
 function createStore() {
   return configureStore({
@@ -86,5 +85,8 @@ describe('staff-run recruiting', () => {
     assert.ok(commits > 0 && commits <= state.coach.scholarshipsAvailable, `${commits} commits`);
 
     assert.strictEqual(await store.dispatch(simCareerToBracket()).unwrap(), 0, 'nothing left to play');
+    const boardBefore = store.getState().coach.boardRecruitIds;
+    assert.strictEqual(await store.dispatch(runAutoRecruiting()).unwrap(), false, 'no period left to plan');
+    assert.strictEqual(store.getState().coach.boardRecruitIds, boardBefore);
   });
 });

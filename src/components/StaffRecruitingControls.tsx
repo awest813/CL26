@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { runAutoRecruiting, setAutoRecruiting } from '../features/coach/coachSlice';
+import { runAutoRecruiting } from '../features/coach/careerThunks';
+import { setAutoRecruiting } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 type StaffRecruitingControlsProps = {
@@ -10,11 +11,14 @@ type StaffRecruitingControlsProps = {
 function StaffRecruitingControls({ canPlan }: StaffRecruitingControlsProps) {
   const dispatch = useAppDispatch();
   const autoRecruiting = useAppSelector((state) => state.coach.autoRecruiting ?? false);
-  const [planned, setPlanned] = useState(false);
+  const period = useAppSelector((state) => state.coach.recruitingWeekIndex);
+  // The note belongs to the period it was made for and clears once that week plays.
+  const [plannedPeriod, setPlannedPeriod] = useState<number | null>(null);
+  const planned = plannedPeriod === period;
 
   async function onPlan() {
     const applied = await dispatch(runAutoRecruiting()).unwrap();
-    setPlanned(applied);
+    setPlannedPeriod(applied ? period : null);
   }
 
   return (

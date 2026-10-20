@@ -18,6 +18,7 @@ import TeamLogo from '../components/TeamLogo';
 import OffseasonMarket from './OffseasonMarket';
 import { selectTeamRecords } from '../features/season/seasonSlice';
 import { buildCoachGamePlan, summarizeCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
+import { recruitingPeriodLabel } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, SeasonHistoryEntry, Tactics } from '../types/sim';
 import { computeAllSOS, computeRankings, withProgramPrestige } from '../sim/rankings';
@@ -449,7 +450,7 @@ function CoachCareerPage() {
           <div>
             <h3 className="text-base font-bold m-0">Recruiting</h3>
             <p className="text-xs text-gray-500 mt-1 mb-0">
-              Period {coach.recruitingWeekIndex + 1} · Seed {coach.recruitingSeed}
+              {recruitingPeriodLabel(season.phase, coach.recruitingWeekIndex, season.scheduleByWeek.length)} · Seed {coach.recruitingSeed}
               {' · '}
               {committedToUserCount} commit{committedToUserCount === 1 ? '' : 's'}
               {' · '}
