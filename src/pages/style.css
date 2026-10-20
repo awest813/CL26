@@ -245,6 +245,11 @@
     flex-direction: column;
     align-items: stretch;
   }
+
+  /* In a column the 12rem basis would become the label's height. */
+  .standingsToolbar label {
+    flex: 0 0 auto;
+  }
 }
 
 .championLockup {
@@ -735,6 +740,52 @@ caption {
   padding-top: 0.45rem;
 }
 
+/* Numbers read down a column when they share a right edge. */
+th.num,
+td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* A section break inside a table, such as the bubble below the projected field. */
+.tableDivider th {
+  background: transparent;
+  padding-top: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Long tables scroll inside the card and keep their header in view. */
+.dataTableWrap-tall {
+  max-height: 36rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dataTableWrap-tall table {
+  margin-top: 0;
+}
+
+.dataTableWrap-tall thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  th,
+  td {
+    padding: 0.5rem 0.45rem;
+  }
+
+  .hideNarrow {
+    display: none;
+  }
+}
+
 .footer {
   margin-top: 1rem;
   padding-top: 0.75rem;
@@ -984,6 +1035,12 @@ caption {
 .teamSpotlightMeta {
   margin: 0.3rem 0 0;
   color: var(--text-muted);
+}
+
+.dataTableWrap,
+.overflow-x-auto {
+  /* Holds visually hidden header labels inside the scroll box, not the page. */
+  position: relative;
 }
 
 .dataTableWrap {
@@ -1259,6 +1316,138 @@ caption {
   gap: 1rem;
 }
 
+.targetRecruit {
+  min-width: 10rem;
+}
+
+.pitchSelect {
+  min-width: 7.5rem;
+}
+
+.removeTarget {
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  color: #dc2626;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.removeTarget:hover {
+  background: #fef2f2;
+}
+
+/* On a phone each target becomes a small card: who, then pitch and hours, then interest. */
+@media (max-width: 640px) {
+  .targetTable thead {
+    display: none;
+  }
+
+  .targetTable tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'recruit remove'
+      'pitch hours'
+      'interest interest';
+    gap: 0.35rem 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #e4ece7;
+  }
+
+  .targetTable td {
+    padding: 0;
+    border: 0;
+  }
+
+  .targetCell-recruit {
+    grid-area: recruit;
+    min-width: 0;
+  }
+
+  .targetCell-remove {
+    grid-area: remove;
+  }
+
+  .targetCell-pitch {
+    grid-area: pitch;
+  }
+
+  .targetCell-hours {
+    grid-area: hours;
+  }
+
+  .targetCell-interest {
+    grid-area: interest;
+  }
+}
+
+/* Rival programs under a target: who else is in on the prospect, and where. */
+.suitorLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.suitorChip {
+  display: inline-flex;
+  gap: 0.2rem;
+  white-space: nowrap;
+}
+
+.suitorChip-ahead {
+  color: #b42318;
+  font-weight: 700;
+}
+
+.suitorName {
+  display: inline-block;
+  max-width: 8.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.rosterTable {
+  table-layout: fixed;
+  min-width: 40rem;
+}
+
+.rosterCol-role {
+  width: 8.5rem;
+}
+
+.rosterCol-stat {
+  width: 3.4rem;
+}
+
+.rosterCol-action {
+  width: 5.5rem;
+}
+
+.rosterName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+abbr[title] {
+  text-decoration: none;
+  cursor: help;
+}
+
+.grid2-lead {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
 .tacticGrid {
   display: grid;
   grid-template-columns: 1fr;
@@ -1400,6 +1589,13 @@ input[type='range'] {
   margin-bottom: 1rem;
   padding: 1rem 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* A divider only separates the row from something after it. */
+.stat-row:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
 .stat-item {
@@ -2271,19 +2467,6 @@ button.archetypeOption[aria-pressed='true'] {
   font-weight: 700;
 }
 
-.bubbleBlock {
-  margin-top: 1rem;
-}
-
-.bubbleLabel {
-  margin: 0.85rem 0 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
 .bubbleNote {
   margin: 0.85rem 0 0;
   font-size: 0.85rem;
@@ -2292,6 +2475,7 @@ button.archetypeOption[aria-pressed='true'] {
 }
 
 button.seasonScoreButton {
+  white-space: nowrap;
   background: transparent;
   border: 0;
   box-shadow: none;

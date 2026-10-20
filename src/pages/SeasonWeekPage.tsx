@@ -250,14 +250,15 @@ function SeasonWeekPage() {
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <caption className="sr-only">Games this week. Select a score for the game recap.</caption>
               <thead className="bg-gray-50 text-gray-500 border-b">
                 <tr>
                   <th scope="col" className="p-2 text-right w-1/4">Away</th>
                   <th scope="col" className="p-2 text-center w-20">Score</th>
                   <th scope="col" className="p-2 text-left w-1/4">Home</th>
-                  <th scope="col" className="p-2 text-center text-xs">Shots</th>
-                  <th scope="col" className="p-2 text-center text-xs">TO</th>
-                  <th scope="col" className="p-2 text-center text-xs">FO%</th>
+                  <th scope="col" className="p-2 text-center text-xs hideNarrow">Shots</th>
+                  <th scope="col" className="p-2 text-center text-xs hideNarrow"><abbr title="Turnovers">TO</abbr></th>
+                  <th scope="col" className="p-2 text-center text-xs hideNarrow"><abbr title="Faceoff win percentage">FO%</abbr></th>
                 </tr>
               </thead>
               <tbody>
@@ -310,13 +311,13 @@ function SeasonWeekPage() {
                               </div>
                             </div>
                         </td>
-                        <td className="p-2 text-center text-xs text-gray-600 tabular">
+                        <td className="p-2 text-center text-xs text-gray-600 tabular nowrap hideNarrow">
                             {isFinal ? `${result.statsB.shots}–${result.statsA.shots}` : '–'}
                         </td>
-                        <td className="p-2 text-center text-xs text-gray-600 tabular">
+                        <td className="p-2 text-center text-xs text-gray-600 tabular nowrap hideNarrow">
                             {isFinal ? `${result.statsB.turnovers}–${result.statsA.turnovers}` : '–'}
                         </td>
-                        <td className="p-2 text-center text-xs text-gray-600 tabular">
+                        <td className="p-2 text-center text-xs text-gray-600 tabular nowrap hideNarrow">
                             {isFinal ? `${result.statsB.faceoffPct}%–${result.statsA.faceoffPct}%` : '–'}
                         </td>
                       </tr>

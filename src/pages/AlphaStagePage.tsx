@@ -111,7 +111,7 @@ function AlphaStagePage() {
       <section className="card">
         <h3>Feature Checkpoint</h3>
         <table>
-          <caption className="text-sm text-gray-500 text-left mb-2">Alpha feature checkpoint</caption>
+          <caption className="sr-only">Alpha feature checkpoint</caption>
           <thead>
             <tr>
               <th scope="col">Area</th>

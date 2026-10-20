@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import { selectConferenceStandings, selectOverallStandings } from '../features/season/seasonSlice';
@@ -26,6 +26,16 @@ function SeasonStandingsPage() {
   const conferenceRows = useAppSelector(conferenceSelector);
   const userOverallIndex = selectedTeamId ? overall.findIndex((row) => row.team.id === selectedTeamId) : -1;
   const userOverall = userOverallIndex >= 0 ? overall[userOverallIndex] : null;
+  const overallWrapRef = useRef<HTMLDivElement>(null);
+
+  function scrollToUserRow() {
+    const wrap = overallWrapRef.current;
+    const row = wrap?.querySelector<HTMLTableRowElement>('[data-user-row]');
+    if (!wrap || !row) return;
+    // Scroll only the table box, leaving the page where it is.
+    const rowTop = row.getBoundingClientRect().top - wrap.getBoundingClientRect().top + wrap.scrollTop;
+    wrap.scrollTo({ top: Math.max(0, rowTop - wrap.clientHeight / 2), behavior: 'smooth' });
+  }
 
   return (
     <div className="pageStack">
@@ -65,15 +75,15 @@ function SeasonStandingsPage() {
 
         <div className="dataTableWrap">
         <table>
-          <caption className="text-sm text-gray-500 text-left mb-2">Conference standings</caption>
+          <caption className="sr-only">Conference standings</caption>
           <thead>
             <tr>
               <th scope="col">Team</th>
-              <th scope="col">Conf</th>
-              <th scope="col">Overall</th>
-              <th scope="col">PF</th>
-              <th scope="col">PA</th>
-              <th scope="col">Diff</th>
+              <th scope="col" className="num">Conf</th>
+              <th scope="col" className="num">Overall</th>
+              <th scope="col" className="num hideNarrow">PF</th>
+              <th scope="col" className="num hideNarrow">PA</th>
+              <th scope="col" className="num">Diff</th>
             </tr>
           </thead>
           <tbody>
@@ -91,15 +101,15 @@ function SeasonStandingsPage() {
                     </span>
                   </span>
                 </td>
-                <td className="font-semibold">
+                <td className="num font-semibold">
                   {row.record.confWins}-{row.record.confLosses}
                 </td>
-                <td>
+                <td className="num">
                   {row.record.wins}-{row.record.losses}
                 </td>
-                <td>{row.record.pointsFor}</td>
-                <td>{row.record.pointsAgainst}</td>
-                <td className={row.record.pointsFor - row.record.pointsAgainst >= 0 ? 'text-green-600' : 'text-red-500'}>
+                <td className="num hideNarrow">{row.record.pointsFor}</td>
+                <td className="num hideNarrow">{row.record.pointsAgainst}</td>
+                <td className={`num ${row.record.pointsFor - row.record.pointsAgainst >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                   {row.record.pointsFor - row.record.pointsAgainst > 0 ? '+' : ''}
                   {row.record.pointsFor - row.record.pointsAgainst}
                 </td>
@@ -115,27 +125,30 @@ function SeasonStandingsPage() {
         <h3 className="m-0 mb-2">Overall Standings</h3>
         {userOverall && (
           <p className="text-sm text-gray-600 mt-0 mb-2">
-            Your program is {ordinal(userOverallIndex + 1)} overall ({userOverall.record.wins}–{userOverall.record.losses}).
+            Your program is {ordinal(userOverallIndex + 1)} overall ({userOverall.record.wins}–{userOverall.record.losses}).{' '}
+            <button type="button" className="textButton" onClick={scrollToUserRow}>
+              Show your row
+            </button>
           </p>
         )}
-        <div className="dataTableWrap">
+        <div className="dataTableWrap dataTableWrap-tall" ref={overallWrapRef}>
         <table>
-          <caption className="text-sm text-gray-500 text-left mb-2">Overall league standings</caption>
+          <caption className="sr-only">Overall league standings</caption>
           <thead>
             <tr>
-              <th scope="col">#</th>
+              <th scope="col" className="num">#</th>
               <th scope="col">Team</th>
-              <th scope="col">W-L</th>
-              <th scope="col">Conf</th>
-              <th scope="col">Diff</th>
+              <th scope="col" className="num">W-L</th>
+              <th scope="col" className="num">Conf</th>
+              <th scope="col" className="num">Diff</th>
             </tr>
           </thead>
           <tbody>
             {overall.map((row, index) => {
               const isUser = row.team.id === selectedTeamId;
               return (
-              <tr key={row.team.id} className={isUser ? 'youRow' : undefined}>
-                <td className="font-mono text-gray-500">{index + 1}</td>
+              <tr key={row.team.id} className={isUser ? 'youRow' : undefined} data-user-row={isUser || undefined}>
+                <td className="num text-gray-500">{index + 1}</td>
                 <td>
                   <span className="standingsTeam">
                     <TeamLogo team={row.team} size="sm" />
@@ -146,13 +159,13 @@ function SeasonStandingsPage() {
                     </span>
                   </span>
                 </td>
-                <td className="font-semibold">
+                <td className="num font-semibold">
                   {row.record.wins}-{row.record.losses}
                 </td>
-                <td>
+                <td className="num">
                   {row.record.confWins}-{row.record.confLosses}
                 </td>
-                <td className={row.pointDiff >= 0 ? 'text-green-600' : 'text-red-500'}>
+                <td className={`num ${row.pointDiff >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                   {row.pointDiff > 0 ? '+' : ''}{row.pointDiff}
                 </td>
               </tr>

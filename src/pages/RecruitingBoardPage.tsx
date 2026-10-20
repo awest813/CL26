@@ -106,10 +106,13 @@ function RecruitingBoardPage() {
             ? getTeamPitchGrade(selectedTeam, activePitch, recruit, positionNeedByPosition)
             : '-';
 
+        // Your own interest has its own column; this one is the rivals.
         const topSuitors = Object.entries(recruit.interestByTeamId ?? {})
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
+          .filter(([teamId]) => teamId !== selectedTeamId)
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .slice(0, 2)
           .map(([teamId, score]) => ({
+            teamId,
             name: teamNameById.get(teamId) ?? 'Unknown',
             score: Math.round(score),
           }));
@@ -124,7 +127,7 @@ function RecruitingBoardPage() {
         return { recruit, fit, hours, interest, activePitch, pitchGrade, dealbreakerWarning, topSuitors };
       })
       .sort((a, b) => b.interest - a.interest);
-  }, [boardRecruits, coach.weeklyHoursByRecruitId, coach.activePitchesByRecruitId, selectedTeam, teamNameById, positionNeedByPosition]);
+  }, [boardRecruits, coach.weeklyHoursByRecruitId, coach.activePitchesByRecruitId, selectedTeam, selectedTeamId, teamNameById, positionNeedByPosition]);
 
   const filteredRecruits = useMemo(() => {
     return coach.recruitPool
@@ -296,7 +299,7 @@ function RecruitingBoardPage() {
         )}
       </div>
 
-      <div className="grid2">
+      <div className="grid2 grid2-lead">
         {/* ── Target list ── */}
         <div className="card">
           <h3 className="text-base font-bold m-0 mb-3">
@@ -310,21 +313,20 @@ function RecruitingBoardPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm targetTable">
                 <thead>
                   <tr className="text-left text-xs text-gray-400 border-b">
                     <th scope="col" className="pb-2 pr-2">Recruit</th>
-                    <th scope="col" className="pb-2 pr-2">Competition</th>
                     <th scope="col" className="pb-2 pr-2">Pitch</th>
-                    <th scope="col" className="pb-2 w-24">Interest</th>
+                    <th scope="col" className="pb-2 w-20">Interest</th>
                     <th scope="col" className="pb-2 text-right">Hrs</th>
-                    <th scope="col" className="pb-2"></th>
+                    <th scope="col" className="pb-2"><span className="sr-only">Remove</span></th>
                   </tr>
                 </thead>
                 <tbody>
                   {boardRows.map(({ recruit, interest, activePitch, pitchGrade, dealbreakerWarning, topSuitors }) => (
                     <tr key={recruit.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-2 pr-2">
+                      <td className="py-2 pr-2 targetRecruit targetCell-recruit">
                         <div className="font-semibold flex items-center gap-1">
                           {recruit.name}
                           {dealbreakerWarning && (
@@ -339,41 +341,38 @@ function RecruitingBoardPage() {
                             Committed: {teamNameById.get(recruit.committedTeamId) ?? 'Other'}
                           </div>
                         )}
-                        <div className="text-xs text-gray-500">
-                          {'★'.repeat(recruit.stars)} {recruit.position} · {recruit.region}
+                        <div className="text-xs text-gray-500 nowrap">
+                          <span className="text-yellow-500" aria-label={`${recruit.stars} stars`}>{'★'.repeat(recruit.stars)}</span>{' '}
+                          {recruit.position} · {recruit.region}
                         </div>
                         <div className="flex mt-0.5">
                           {recruit.motivations?.map((m, i) => (
                             <MotivationIcon key={i} motivation={m} />
                           ))}
                         </div>
-                      </td>
-                      <td className="py-2 pr-2">
-                        <div className="text-xs space-y-0.5">
-                          {topSuitors.map((s, i) => (
-                            <div
-                              key={i}
-                              className={`flex justify-between ${
-                                s.name === selectedTeam?.schoolName
-                                  ? 'font-bold youMark'
-                                  : 'text-gray-500'
-                              }`}
-                            >
-                              <span className="truncate max-w-[90px]" title={s.name}>
-                                {s.name}
+                        {!recruit.committedTeamId && (
+                          <div className="suitorLine">
+                            <span className="sr-only">Rivals: </span>
+                            {topSuitors.length === 0 && <span>No rivals yet</span>}
+                            {topSuitors.map((suitor) => (
+                              <span
+                                key={suitor.teamId}
+                                className={`suitorChip ${suitor.score > interest ? 'suitorChip-ahead' : ''}`}
+                                title={suitor.score > interest ? `${suitor.name} leads you at ${suitor.score}%` : `${suitor.name} at ${suitor.score}%`}
+                              >
+                                <span className="suitorName">{suitor.name}</span> {suitor.score}%
                               </span>
-                              <span className="ml-1">{s.score}%</span>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        )}
                       </td>
-                      <td className="py-2 pr-2">
+                      <td className="py-2 pr-2 targetCell-pitch">
                         <select
                           id={`pitch-${recruit.id}`}
                           value={activePitch ?? ''}
                           disabled={Boolean(recruit.committedTeamId)}
                           onChange={(e) => onPitchChange(recruit.id, e.target.value)}
-                          className="text-xs p-1 border rounded w-full mb-1"
+                          className="text-xs p-1 border rounded w-full mb-1 pitchSelect"
                           aria-label={`Recruiting pitch for ${recruit.name}`}
                         >
                           <option value="">No Pitch</option>
@@ -397,7 +396,7 @@ function RecruitingBoardPage() {
                           </div>
                         )}
                       </td>
-                      <td className="py-2">
+                      <td className="py-2 targetCell-interest">
                         <div
                           className={`meter mb-0.5 ${interest >= 100 ? 'meter-full' : ''}`}
                           role="progressbar"
@@ -410,7 +409,7 @@ function RecruitingBoardPage() {
                         </div>
                         <div className="text-xs text-center text-gray-500">{cappedInterest(interest)}%</div>
                       </td>
-                      <td className="py-2 text-right">
+                      <td className="py-2 text-right targetCell-hours">
                         <input
                           type="number"
                           min={0}
@@ -423,10 +422,10 @@ function RecruitingBoardPage() {
                           aria-label={`Recruiting hours for ${recruit.name}`}
                         />
                       </td>
-                      <td className="py-2 pl-2">
+                      <td className="py-2 pl-2 targetCell-remove">
                         <button
                           type="button"
-                          className="text-xs text-red-500 hover:underline bg-transparent border-0 cursor-pointer"
+                          className="removeTarget"
                           aria-label={`Remove ${recruit.name} from board`}
                           onClick={() => dispatch(removeRecruitFromBoard(recruit.id))}
                         >
@@ -490,9 +489,11 @@ function RecruitingBoardPage() {
               <thead className="bg-gray-50 sticky top-0">
                 <tr className="text-left text-xs text-gray-400">
                   <th scope="col" className="p-2">Name</th>
-                  <th scope="col" className="p-2">Rtg</th>
-                  <th scope="col" className="p-2">Fit</th>
-                  <th scope="col" className="p-2 text-right">Action</th>
+                  <th scope="col" className="p-2">Stars</th>
+                  <th scope="col" className="p-2 num">
+                    <abbr title="How well your program matches this prospect: prestige, region, stars, and what the prospect wants">Fit</abbr>
+                  </th>
+                  <th scope="col" className="p-2 text-right"><span className="sr-only">Board</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -528,8 +529,8 @@ function RecruitingBoardPage() {
                           <div className="text-xs text-green-600 font-bold">Committed!</div>
                         )}
                       </td>
-                      <td className="p-2 text-yellow-500 text-xs">{'★'.repeat(recruit.stars)}</td>
-                      <td className="p-2 font-mono text-xs">{fit}</td>
+                      <td className="p-2 text-yellow-500 text-xs nowrap" aria-label={`${recruit.stars} stars`}>{'★'.repeat(recruit.stars)}</td>
+                      <td className="p-2 num text-xs">{fit}</td>
                       <td className="p-2 text-right">
                         {onBoard ? (
                           <button

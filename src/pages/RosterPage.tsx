@@ -65,23 +65,23 @@ function PlayerRow({
   const canDemote = isStarter;
 
   return (
-    <tr className={`border-b last:border-0 text-sm ${isStarter ? 'youRow' : ''}`}>
-      <td className="py-1.5 pr-2">
+    <tr className={`text-sm ${isStarter ? 'youRow' : ''}`}>
+      <td>
         <span className={`starterBadge ${isStarter ? 'starterBadge-on' : 'starterBadge-off'}`}>
           {isStarter ? 'Starter' : 'Backup'}
         </span>
         {isOut && <span className="starterBadge starterBadge-out">Out</span>}
       </td>
-      <td className="py-1.5 pr-3 font-medium">{player.name}</td>
-      <td className="py-1.5 pr-3 text-gray-500 text-xs">{playerYearLabel(player.year)}</td>
-      <td className="py-1.5 pr-3 text-gray-500 text-xs">{player.age}</td>
-      <td className={`py-1.5 pr-3 font-bold ${ratingClass(player.overall)}`}>{player.overall}</td>
-      <td className="py-1.5 pr-2 text-xs text-gray-500">{player.shooting}</td>
-      <td className="py-1.5 pr-2 text-xs text-gray-500">{player.passing}</td>
-      <td className="py-1.5 pr-2 text-xs text-gray-500">{player.speed}</td>
-      <td className="py-1.5 pr-2 text-xs text-gray-500">{player.defense}</td>
-      <td className="py-1.5 pr-2 text-xs text-gray-500">{player.IQ}</td>
-      <td className="py-1.5">
+      <td className="font-medium rosterName">{player.name}</td>
+      <td className="num text-gray-500 text-xs">{playerYearLabel(player.year)}</td>
+      <td className="num text-gray-500 text-xs">{player.age}</td>
+      <td className={`num font-bold ${ratingClass(player.overall)}`}>{player.overall}</td>
+      <td className="num text-xs text-gray-500">{player.shooting}</td>
+      <td className="num text-xs text-gray-500">{player.passing}</td>
+      <td className="num text-xs text-gray-500">{player.speed}</td>
+      <td className="num text-xs text-gray-500">{player.defense}</td>
+      <td className="num text-xs text-gray-500">{player.IQ}</td>
+      <td className="text-right">
         {(canPromote || canDemote) && (
           <button
             type="button"
@@ -282,21 +282,36 @@ function RosterPage() {
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="dataTableWrap">
+              {/* Fixed columns so every position table lines up with the next. */}
+              <table className="rosterTable">
+                <caption className="sr-only">{POSITION_LABELS[pos]} depth chart</caption>
+                <colgroup>
+                  <col className="rosterCol-role" />
+                  <col />
+                  <col className="rosterCol-stat" />
+                  <col className="rosterCol-stat" />
+                  <col className="rosterCol-stat" />
+                  <col className="rosterCol-stat" />
+                  <col className="rosterCol-stat" />
+                  <col className="rosterCol-stat" />
+                  <col className="rosterCol-stat" />
+                  <col className="rosterCol-stat" />
+                  <col className="rosterCol-action" />
+                </colgroup>
                 <thead>
-                  <tr className="text-left text-xs text-gray-400 border-b">
-                    <th scope="col" className="pb-1.5 pr-2">Role</th>
-                    <th scope="col" className="pb-1.5 pr-3">Name</th>
-                    <th scope="col" className="pb-1.5 pr-3">Yr</th>
-                    <th scope="col" className="pb-1.5 pr-3">Age</th>
-                    <th scope="col" className="pb-1.5 pr-3">OVR</th>
-                    <th scope="col" className="pb-1.5 pr-2">SHT</th>
-                    <th scope="col" className="pb-1.5 pr-2">PAS</th>
-                    <th scope="col" className="pb-1.5 pr-2">SPD</th>
-                    <th scope="col" className="pb-1.5 pr-2">DEF</th>
-                    <th scope="col" className="pb-1.5 pr-2">IQ</th>
-                    <th scope="col" className="pb-1.5"></th>
+                  <tr>
+                    <th scope="col">Role</th>
+                    <th scope="col">Name</th>
+                    <th scope="col" className="num">Yr</th>
+                    <th scope="col" className="num">Age</th>
+                    <th scope="col" className="num">OVR</th>
+                    <th scope="col" className="num"><abbr title="Shooting">SHT</abbr></th>
+                    <th scope="col" className="num"><abbr title="Passing">PAS</abbr></th>
+                    <th scope="col" className="num"><abbr title="Speed">SPD</abbr></th>
+                    <th scope="col" className="num"><abbr title="Defense">DEF</abbr></th>
+                    <th scope="col" className="num"><abbr title="Lacrosse IQ">IQ</abbr></th>
+                    <th scope="col"><span className="sr-only">Lineup</span></th>
                   </tr>
                 </thead>
                 <tbody>

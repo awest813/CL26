@@ -265,18 +265,18 @@ function ExhibitionPage() {
           <h4>Team Box Score</h4>
           <div className="dataTableWrap">
           <table>
-            <caption className="text-sm text-gray-500 text-left mb-2">Team totals for this exhibition game</caption>
+            <caption className="sr-only">Team totals for this exhibition game</caption>
             <thead>
               <tr>
                 <th scope="col">Team</th>
-                <th scope="col">Goals</th>
-                <th scope="col">Shots</th>
-                <th scope="col">Saves</th>
-                <th scope="col">Turnovers</th>
-                <th scope="col">Caused TO</th>
-                <th scope="col">Ground Balls</th>
-                <th scope="col">Penalties</th>
-                <th scope="col">Faceoff%</th>
+                <th scope="col" className="num">Goals</th>
+                <th scope="col" className="num">Shots</th>
+                <th scope="col" className="num">Saves</th>
+                <th scope="col" className="num">Turnovers</th>
+                <th scope="col" className="num">Caused TO</th>
+                <th scope="col" className="num">Ground Balls</th>
+                <th scope="col" className="num">Penalties</th>
+                <th scope="col" className="num">Faceoff%</th>
               </tr>
             </thead>
             <tbody>
@@ -287,14 +287,14 @@ function ExhibitionPage() {
                     <span>{lastResult.teamAName}</span>
                   </span>
                 </td>
-                <td>{lastResult.statsA.goals}</td>
-                <td>{lastResult.statsA.shots}</td>
-                <td>{lastResult.statsA.saves}</td>
-                <td>{lastResult.statsA.turnovers}</td>
-                <td>{lastResult.statsA.causedTurnovers ?? 0}</td>
-                <td>{lastResult.statsA.groundBalls}</td>
-                <td>{lastResult.statsA.penalties}</td>
-                <td>{lastResult.statsA.faceoffPct}%</td>
+                <td className="num">{lastResult.statsA.goals}</td>
+                <td className="num">{lastResult.statsA.shots}</td>
+                <td className="num">{lastResult.statsA.saves}</td>
+                <td className="num">{lastResult.statsA.turnovers}</td>
+                <td className="num">{lastResult.statsA.causedTurnovers ?? 0}</td>
+                <td className="num">{lastResult.statsA.groundBalls}</td>
+                <td className="num">{lastResult.statsA.penalties}</td>
+                <td className="num">{lastResult.statsA.faceoffPct}%</td>
               </tr>
               <tr>
                 <td>
@@ -303,14 +303,14 @@ function ExhibitionPage() {
                     <span>{lastResult.teamBName}</span>
                   </span>
                 </td>
-                <td>{lastResult.statsB.goals}</td>
-                <td>{lastResult.statsB.shots}</td>
-                <td>{lastResult.statsB.saves}</td>
-                <td>{lastResult.statsB.turnovers}</td>
-                <td>{lastResult.statsB.causedTurnovers ?? 0}</td>
-                <td>{lastResult.statsB.groundBalls}</td>
-                <td>{lastResult.statsB.penalties}</td>
-                <td>{lastResult.statsB.faceoffPct}%</td>
+                <td className="num">{lastResult.statsB.goals}</td>
+                <td className="num">{lastResult.statsB.shots}</td>
+                <td className="num">{lastResult.statsB.saves}</td>
+                <td className="num">{lastResult.statsB.turnovers}</td>
+                <td className="num">{lastResult.statsB.causedTurnovers ?? 0}</td>
+                <td className="num">{lastResult.statsB.groundBalls}</td>
+                <td className="num">{lastResult.statsB.penalties}</td>
+                <td className="num">{lastResult.statsB.faceoffPct}%</td>
               </tr>
             </tbody>
           </table>

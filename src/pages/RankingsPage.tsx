@@ -121,7 +121,7 @@ function RankingsPage() {
         </p>
       </div>
 
-      <div className="grid2">
+      <div className="grid2 grid2-lead">
       <section className="card">
         <h3 className="m-0">Poll <span className="pollWeek">{weekLabel}</span></h3>
         <p className="text-sm text-gray-500 mt-1 mb-2">
@@ -143,11 +143,11 @@ function RankingsPage() {
           <caption className="sr-only">Top 25 poll</caption>
           <thead>
             <tr>
-              <th scope="col">Rank</th>
-              <th scope="col">Trend</th>
+              <th scope="col" className="num">Rank</th>
+              <th scope="col" className="text-center">Trend</th>
               <th scope="col">Team</th>
-              <th scope="col">Record</th>
-              <th scope="col">Points</th>
+              <th scope="col" className="num">Record</th>
+              <th scope="col" className="num hideNarrow">Points</th>
             </tr>
           </thead>
           <tbody>
@@ -156,13 +156,13 @@ function RankingsPage() {
               const isUser = row.teamId === selectedTeamId;
               return (
                 <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
-                  <td className="font-mono font-bold">{row.rank}</td>
-                  <td className="text-center">{rankDeltaDisplay(row.delta)}</td>
+                  <td className="num font-bold">{row.rank}</td>
+                  <td className="text-center nowrap">{rankDeltaDisplay(row.delta)}</td>
                   <td>
                     <PollTeam team={team} isUser={isUser} fallbackId={row.teamId} />
                   </td>
-                  <td className="tabular">{row.record}</td>
-                  <td className="tabular">{row.points}</td>
+                  <td className="num">{row.record}</td>
+                  <td className="num hideNarrow">{row.points}</td>
                 </tr>
               );
             })}
@@ -184,9 +184,9 @@ function RankingsPage() {
           <caption className="sr-only">Top 12 playoff projection</caption>
           <thead>
             <tr>
-              <th scope="col">Seed</th>
+              <th scope="col" className="num">Seed</th>
               <th scope="col">Team</th>
-              <th scope="col">Record</th>
+              <th scope="col" className="num">Record</th>
               <th scope="col">Note</th>
             </tr>
           </thead>
@@ -197,11 +197,11 @@ function RankingsPage() {
               const isUser = row.teamId === selectedTeamId;
               return (
                 <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
-                  <td className="font-mono font-bold">#{row.rank}</td>
+                  <td className="num font-bold">#{row.rank}</td>
                   <td>
                     <PollTeam team={team} isUser={isUser} fallbackId={row.teamId} />
                   </td>
-                  <td className="tabular">{row.record}</td>
+                  <td className="num">{row.record}</td>
                   <td className="text-xs">
                     {hasBye && <span className="youMark">Bye</span>}
                   </td>
@@ -209,6 +209,27 @@ function RankingsPage() {
               );
             })}
           </tbody>
+          {bubbleTeams.length > 0 && (
+            <tbody>
+              <tr className="tableDivider">
+                <th scope="colgroup" colSpan={4}>Next 4 out</th>
+              </tr>
+              {bubbleTeams.map((row) => {
+                const team = teamById.get(row.teamId);
+                const isUser = row.teamId === selectedTeamId;
+                return (
+                  <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
+                    <td className="num text-gray-500">#{row.rank}</td>
+                    <td>
+                      <PollTeam team={team} isUser={isUser} fallbackId={row.teamId} />
+                    </td>
+                    <td className="num">{row.record}</td>
+                    <td />
+                  </tr>
+                );
+              })}
+            </tbody>
+          )}
         </table>
         </div>
 
@@ -216,30 +237,6 @@ function RankingsPage() {
           <p className="bubbleNote">No games yet. This order is the preseason profile.</p>
         )}
 
-        {bubbleTeams.length > 0 && (
-          <div className="bubbleBlock">
-            <p className="bubbleLabel">Next 4 out</p>
-            <div className="dataTableWrap">
-            <table className="w-full text-sm">
-              <tbody>
-                {bubbleTeams.map((row) => {
-                  const team = teamById.get(row.teamId);
-                  const isUser = row.teamId === selectedTeamId;
-                  return (
-                    <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
-                      <td className="py-1 tabular pr-2">#{row.rank}</td>
-                      <td className="py-1">
-                        <PollTeam team={team} isUser={isUser} fallbackId={row.teamId} />
-                      </td>
-                      <td className="py-1 tabular">{row.record}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            </div>
-          </div>
-        )}
       </section>
 
       <section className="card pollExplainer">

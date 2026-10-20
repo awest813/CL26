@@ -202,20 +202,20 @@ function TeamPage() {
         </div>
         <div className="dataTableWrap">
           <table>
-            <caption className="text-sm text-gray-500 text-left mb-2">Roster depth by position</caption>
+            <caption className="sr-only">Roster depth by position</caption>
             <thead>
               <tr>
                 <th scope="col">Position</th>
-                <th scope="col">Players</th>
-                <th scope="col">Avg OVR</th>
+                <th scope="col" className="num">Players</th>
+                <th scope="col" className="num">Avg OVR</th>
               </tr>
             </thead>
             <tbody>
               {teamSummary.positionSummary.map((row) => (
                 <tr key={row.position}>
                   <td>{row.position}</td>
-                  <td>{row.count}</td>
-                  <td>{row.avgOverall}</td>
+                  <td className="num">{row.count}</td>
+                  <td className="num">{row.avgOverall}</td>
                 </tr>
               ))}
             </tbody>
@@ -236,15 +236,15 @@ function TeamPage() {
         </div>
         <div className="dataTableWrap">
           <table>
-            <caption className="text-sm text-gray-500 text-left mb-2">Top roster players</caption>
+            <caption className="sr-only">Top roster players</caption>
             <thead>
               <tr>
                 <th scope="col">Name</th>
                 <th scope="col">Pos</th>
                 <th scope="col">Year</th>
-                <th scope="col">Age</th>
-                <th scope="col">Skill</th>
-                <th scope="col">Overall</th>
+                <th scope="col" className="num hideNarrow">Age</th>
+                <th scope="col" className="num">Skill</th>
+                <th scope="col" className="num">Overall</th>
               </tr>
             </thead>
             <tbody>
@@ -253,9 +253,9 @@ function TeamPage() {
                   <td>{player.name}</td>
                   <td>{player.position}</td>
                   <td>{playerYearLabel(player.year)}</td>
-                  <td>{player.age}</td>
-                  <td>{player.skill}</td>
-                  <td>{player.overall}</td>
+                  <td className="num hideNarrow">{player.age}</td>
+                  <td className="num">{player.skill}</td>
+                  <td className="num font-semibold">{player.overall}</td>
                 </tr>
               ))}
             </tbody>
