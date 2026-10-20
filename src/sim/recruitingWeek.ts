@@ -36,6 +36,29 @@ function getImportanceMultiplier(importance?: 'HIGH' | 'MEDIUM' | 'LOW'): number
   return 0.7; // Pitching something they don't care about
 }
 
+/** How much a pitch scales the base weekly gain: what the prospect cares about times how well you sell it. */
+export function pitchMultiplier(recruit: Recruit, pitch: RecruitingPitch | undefined, grade: string | undefined): number {
+  if (!pitch) return 1;
+  const motivation = recruit.motivations.find(m => m.pitch === pitch);
+  return getImportanceMultiplier(motivation?.importance) * getGradeMultiplier(grade);
+}
+
+/**
+ * How far a program's name carries with a prospect of this tier. A blue chip
+ * expects a top program; a depth recruit is flattered by a big name calling.
+ * 0.5x for a long shot up to 1.15x when the program outclasses the prospect.
+ */
+export function programPull(prestige: number, stars: number): number {
+  const expectedPrestige = 45 + stars * 9;
+  return Math.max(0.5, Math.min(1.15, 1 + (prestige - expectedPrestige) / 60));
+}
+
+/** Coach skill scales user gains from 0.85x at skill 40 to 1.15x at skill 99. */
+export function coachSkillMultiplier(coachSkill: number): number {
+  const boundedCoachSkill = Math.max(40, Math.min(99, coachSkill));
+  return 0.85 + ((boundedCoachSkill - 40) / 59) * 0.3;
+}
+
 /**
  * Average weekly interest a CPU staff adds for one prospect. Prestige and geography
  * do most of the work; a recruit who wants a winner or wants to stay home leans
@@ -92,7 +115,8 @@ export function simulateRecruitingWeek(
   weekIndex: number,
   archetypeBonus: number = 1.0,
   coachSkill: number = 72,
-  cpuProfilesByTeamId: Record<string, CpuRecruitingProfile> = {},
+  /** Prestige and region by program. The user's entry sets their program pull. */
+  teamProfilesByTeamId: Record<string, CpuRecruitingProfile> = {},
 ): RecruitingWeekResult {
   const boardSet = new Set(boardRecruitIds);
   // Commits made this week count toward CPU class caps for recruits checked later.
@@ -130,19 +154,10 @@ export function simulateRecruitingWeek(
         const rawGain = hours * 0.5 + recruit.stars * 0.2 + (rng() * 2 - 1);
 
         // Archetype bonus (RECRUITER +15%, DEVELOPER -5%, TACTICIAN ±0%)
-        // Coach skill scales from 0.85x at skill 40 to 1.15x at skill 99
-        const boundedCoachSkill = Math.max(40, Math.min(99, coachSkill));
-        const skillMult = 0.85 + ((boundedCoachSkill - 40) / 59) * 0.3;
-        const baseGain = rawGain * archetypeBonus * skillMult;
-
-        let pitchBonus = 0;
-        if (activePitch) {
-          const motivation = recruit.motivations.find(m => m.pitch === activePitch);
-          const importanceMult = getImportanceMultiplier(motivation?.importance);
-          const gradeMult = getGradeMultiplier(pitchGrade);
-
-          pitchBonus = baseGain * (importanceMult * gradeMult - 1);
-        }
+        const userProfile = teamProfilesByTeamId[selectedTeamId];
+        const pull = userProfile ? programPull(userProfile.prestige, recruit.stars) : 1;
+        const baseGain = rawGain * archetypeBonus * coachSkillMultiplier(coachSkill) * pull;
+        const pitchBonus = baseGain * (pitchMultiplier(recruit, activePitch, pitchGrade) - 1);
 
         const positionNeedBonus = boardSet.has(recruit.id) ? positionNeedBonusByRecruitId[recruit.id] ?? 0 : 0;
         weeklyGain = Math.max(0, Math.round(baseGain + pitchBonus + positionNeedBonus));
@@ -184,7 +199,7 @@ export function simulateRecruitingWeek(
         gain = -randInt(rng, 0, 2);
       } else {
         const pursuit =
-          cpuWeeklyPursuit(recruit, cpuProfilesByTeamId[teamId] ?? DEFAULT_CPU_PROFILE) *
+          cpuWeeklyPursuit(recruit, teamProfilesByTeamId[teamId] ?? DEFAULT_CPU_PROFILE) *
           cpuBoardPriority(seed, recruit.id, teamId);
         gain = Math.max(1, Math.round(pursuit * (0.5 + rng())));
         if (teamId === cpuLeaderId) gain += 1;

@@ -5,6 +5,7 @@ import { computeWeeklyCoachXp, userWonResult } from './careerThunks.ts';
 import {
   addRecruitToBoard,
   applyJobOfferAcceptance,
+  applyAutoRecruitingPlan,
   applyRecruitingUpdates,
   clearRecruitPitch,
   coachReducer,
@@ -91,6 +92,26 @@ describe('coach recruiting reducer', () => {
     }));
     assert.strictEqual(state.recruitingReport?.totalCommits, 0);
     assert.strictEqual(state.recruitingReport?.period, 2);
+  });
+
+  test('a staff plan cannot push the board past the hour caps', () => {
+    let state = coachReducer(undefined, setSelectedTeam('team-1'));
+    state = coachReducer(state, initializeRecruitingBoard({ seed: 2026, teams: mockTeams }));
+    const ids = state.recruitPool.slice(0, 8).map((r) => r.id);
+    state = coachReducer(state, applyAutoRecruitingPlan({
+      adds: ids.map((recruitId) => ({ recruitId, startingInterest: 30 })),
+      removals: [],
+      hoursByRecruitId: Object.fromEntries(ids.map((id) => [id, 40])),
+      pitchByRecruitId: { [ids[0]]: 'ACADEMIC' },
+      priorityIds: ids,
+    }));
+
+    const hours = state.boardRecruitIds.map((id) => state.weeklyHoursByRecruitId[id]);
+    assert.deepStrictEqual(state.boardRecruitIds, ids);
+    assert.ok(hours.every((h) => h <= 20));
+    assert.strictEqual(hours.reduce((sum, h) => sum + h, 0), 120);
+    assert.strictEqual(state.activePitchesByRecruitId[ids[0]], 'ACADEMIC');
+    assert.strictEqual(state.recruitPool[0].interestByTeamId['team-1'] >= 30, true);
   });
 
   test('a prospect committed elsewhere cannot be added to the board', () => {

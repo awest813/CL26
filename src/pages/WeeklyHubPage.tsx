@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import RecruitingReportNote from '../components/RecruitingReportNote';
+import StaffRecruitingControls from '../components/StaffRecruitingControls';
 import {
   selectRankTrends,
   selectTeamRecords,
@@ -18,7 +19,7 @@ import {
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
-import { beginNextCareerSeason, processSeasonEnd, runCareerWeeklyCycle, simCareerPlayoffRound } from '../features/coach/careerThunks';
+import { beginNextCareerSeason, processSeasonEnd, runCareerWeeklyCycle, simCareerPlayoffRound, simCareerToBracket } from '../features/coach/careerThunks';
 import { advanceFatigue, buildCoachGamePlan, summarizeCoachSkillImpacts, PRACTICE_FOCUS_LABELS } from '../sim/coachEffects';
 import { generateRoster } from '../sim/generateRoster';
 import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
@@ -320,6 +321,7 @@ function WeeklyHubPage() {
         boardCount: openBoardCount,
         hoursAssigned: totalHours,
         hoursCap: WEEKLY_HOURS_CAP,
+        autoRecruiting: coach.autoRecruiting ?? false,
         hasRoster: (coach.managedRoster?.length ?? 0) > 0,
         positionNeeds: buildPositionNeedByPosition(coach.managedRoster),
         wins: userRecord.wins,
@@ -330,6 +332,7 @@ function WeeklyHubPage() {
       }),
     [
       openBoardCount,
+      coach.autoRecruiting,
       coach.managedRoster,
       coach.practiceFocus,
       coach.programExpectations?.rankTarget,
@@ -418,6 +421,32 @@ function WeeklyHubPage() {
         await dispatch(processSeasonEnd()).unwrap();
       } else if (loopStep.action === 'begin-next-year') {
         await dispatch(beginNextCareerSeason()).unwrap();
+      }
+    } catch (err) {
+      pendingScroll.current = false;
+      setActionError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAdvancing(false);
+    }
+  }
+
+  const weeksLeft = Math.max(0, season.scheduleByWeek.length - season.currentWeekIndex);
+
+  async function simToBracket() {
+    if (advancing || loopStep.action !== 'play-week') return;
+    const recruitingLine = coach.recruitPool.length === 0
+      ? ''
+      : coach.autoRecruiting
+        ? ' Your staff runs recruiting each week.'
+        : ' Recruiting keeps your current hours each week. Turn on "Staff runs recruiting" to have them re-planned.';
+    if (!window.confirm(`Play the last ${weeksLeft} regular-season weeks?${recruitingLine}`)) return;
+    setActionError(null);
+    setAdvancing(true);
+    pendingScroll.current = true;
+    try {
+      const played = await dispatch(simCareerToBracket()).unwrap();
+      if (played < weeksLeft) {
+        setActionError(`Stopped after ${played} of ${weeksLeft} weeks. Stay on this hub and try again.`);
       }
     } catch (err) {
       pendingScroll.current = false;
@@ -548,6 +577,11 @@ function WeeklyHubPage() {
               {advancing ? 'Working…' : loopStep.button}
             </button>
           ) : null}
+          {loopStep.action === 'play-week' && weeksLeft > 1 && (
+            <button type="button" className="btn" disabled={advancing} onClick={simToBracket}>
+              Sim to the bracket
+            </button>
+          )}
           {season.phase === 'PLAYOFF' && (
             <Link to="/playoffs" className="btn">Full bracket</Link>
           )}
@@ -669,6 +703,9 @@ function WeeklyHubPage() {
               Full board
             </Link>
           </div>
+          <div className="mb-3">
+            <StaffRecruitingControls canPlan={isRegularSeason} />
+          </div>
           {coach.recruitingReport && (
             <div className="mb-3">
               <RecruitingReportNote report={coach.recruitingReport} recruitPool={coach.recruitPool} teams={teams} />
@@ -764,6 +801,9 @@ function WeeklyHubPage() {
             <Link to="/career/recruiting" className="btn btn-primary text-sm">
               Open board
             </Link>
+          </div>
+          <div className="mt-3">
+            <StaffRecruitingControls canPlan={isRegularSeason} />
           </div>
         </div>
       )}

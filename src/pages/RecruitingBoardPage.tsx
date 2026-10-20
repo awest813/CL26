@@ -21,6 +21,8 @@ import {
 } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import RecruitingReportNote from '../components/RecruitingReportNote';
+import StaffRecruitingControls from '../components/StaffRecruitingControls';
+import { boardStartingInterest, RECRUITING_BOARD_LIMIT } from '../sim/autoRecruit';
 import { RecruitingPitch, RecruitMotivation } from '../types/sim';
 
 type PositionFilterValue = (typeof RECRUITING_POSITION_FILTERS)[number];
@@ -170,9 +172,7 @@ function RecruitingBoardPage() {
     if (!selectedTeam) return;
     const recruit = coach.recruitPool.find((r) => r.id === recruitId);
     if (!recruit) return;
-    const fit = estimateRecruitFit(recruit, selectedTeam);
-    const startingInterest = Math.min(40, Math.round(fit * 0.4 + recruit.stars * 2));
-    dispatch(addRecruitToBoard({ recruitId, startingInterest }));
+    dispatch(addRecruitToBoard({ recruitId, startingInterest: boardStartingInterest(recruit, selectedTeam) }));
   }
 
   function onHoursChange(recruitId: string, nextHours: number) {
@@ -230,7 +230,12 @@ function RecruitingBoardPage() {
       <div className="pageHeader">
         <h2>Recruiting Board</h2>
         <p className="pageHeader-sub">
-          Recruiting period {coach.recruitingWeekIndex + 1} · {season.year} Class ·{' '}
+          {season.phase === 'REGULAR'
+            ? `Recruiting period ${coach.recruitingWeekIndex + 1}`
+            : season.phase === 'PLAYOFF'
+              ? 'Recruiting periods are done. Signing day follows the bracket'
+              : 'Recruiting opens with the season'}{' '}
+          · {season.year} Class ·{' '}
           {committedToUserCount} committed · {coach.scholarshipsAvailable} scholarships available
           {committedToUserCount > coach.scholarshipsAvailable
             ? ' · Signing day will keep only the best fits up to your scholarship cap'
@@ -243,7 +248,7 @@ function RecruitingBoardPage() {
         <div className="flex flex-wrap gap-6 text-sm">
           <div>
             <div className="text-xs text-gray-400 uppercase mb-0.5">Board size</div>
-            <div className="font-bold">{boardRecruits.length} / 25</div>
+            <div className="font-bold">{boardRecruits.length} / {RECRUITING_BOARD_LIMIT}</div>
           </div>
           <div>
             <div className="text-xs text-gray-400 uppercase mb-0.5">Hours used</div>
@@ -266,6 +271,10 @@ function RecruitingBoardPage() {
               Weekly hub
             </Link>
           </div>
+        </div>
+
+        <div className="mt-3 pt-3 border-t">
+          <StaffRecruitingControls canPlan={season.phase === 'REGULAR'} />
         </div>
 
         {coach.recruitingReport && (
@@ -293,7 +302,7 @@ function RecruitingBoardPage() {
         {/* ── Target list ── */}
         <div className="card">
           <h3 className="text-base font-bold m-0 mb-3">
-            Target List ({boardRows.length}/25)
+            Target List ({boardRows.length}/{RECRUITING_BOARD_LIMIT})
           </h3>
 
           {boardRows.length === 0 ? (
@@ -538,7 +547,7 @@ function RecruitingBoardPage() {
                               type="button"
                               className="chipAdd"
                               onClick={() => onAdd(recruit.id)}
-                              disabled={boardSet.size >= 25}
+                              disabled={boardSet.size >= RECRUITING_BOARD_LIMIT}
                             >
                               Add
                             </button>

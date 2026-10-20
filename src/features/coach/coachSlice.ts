@@ -3,7 +3,8 @@ import type { Employment } from '../../sim/jobOffers';
 import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
-import { simulateRecruitingWeek, type CpuRecruitingProfile } from '../../sim/recruitingWeek';
+import { coachSkillMultiplier, simulateRecruitingWeek, type CpuRecruitingProfile } from '../../sim/recruitingWeek';
+import { planAutoRecruiting, RECRUITING_BOARD_LIMIT, type AutoRecruitPlan } from '../../sim/autoRecruit';
 import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
@@ -91,6 +92,8 @@ export interface CoachState {
   activePitchesByRecruitId: Record<string, RecruitingPitch>;
   /** Missing on saves from before the report existed. Treat undefined as null. */
   recruitingReport?: RecruitingReport | null;
+  /** Staff sets the board, hours, and pitches before each week. Missing on older saves: treat as false. */
+  autoRecruiting?: boolean;
   scholarshipsAvailable: number;
   signedRecruitsByYear: Record<number, SignedRecruit[]>;
   practiceFocus: PracticeFocus;
@@ -130,6 +133,7 @@ const initialState: CoachState = {
   weeklyHoursByRecruitId: {},
   activePitchesByRecruitId: {},
   recruitingReport: null,
+  autoRecruiting: false,
   scholarshipsAvailable: 12,
   signedRecruitsByYear: {},
   practiceFocus: 'CONDITIONING',
@@ -222,7 +226,7 @@ const coachSlice = createSlice({
         if (target?.committedTeamId) {
             return;
         }
-        if (!state.boardRecruitIds.includes(action.payload.recruitId) && state.boardRecruitIds.length < 25) {
+        if (!state.boardRecruitIds.includes(action.payload.recruitId) && state.boardRecruitIds.length < RECRUITING_BOARD_LIMIT) {
             state.boardRecruitIds.push(action.payload.recruitId);
             state.weeklyHoursByRecruitId[action.payload.recruitId] = 0;
 
@@ -273,6 +277,45 @@ const coachSlice = createSlice({
     },
     clearRecruitPitch: (state, action: PayloadAction<string>) => {
         delete state.activePitchesByRecruitId[action.payload];
+    },
+    setAutoRecruiting: (state, action: PayloadAction<boolean>) => {
+        state.autoRecruiting = action.payload;
+    },
+    applyAutoRecruitingPlan: (state, action: PayloadAction<AutoRecruitPlan>) => {
+        const plan = action.payload;
+        const removed = new Set(plan.removals);
+        state.boardRecruitIds = state.boardRecruitIds.filter(id => !removed.has(id));
+        plan.removals.forEach((id) => {
+            delete state.weeklyHoursByRecruitId[id];
+            delete state.activePitchesByRecruitId[id];
+        });
+
+        plan.adds.forEach(({ recruitId, startingInterest }) => {
+            const recruit = state.recruitPool.find(r => r.id === recruitId);
+            if (!recruit || recruit.committedTeamId) return;
+            if (state.boardRecruitIds.includes(recruitId) || state.boardRecruitIds.length >= RECRUITING_BOARD_LIMIT) return;
+            state.boardRecruitIds.push(recruitId);
+            if (state.selectedTeamId && (recruit.interestByTeamId[state.selectedTeamId] ?? 0) < startingInterest) {
+                recruit.interestByTeamId[state.selectedTeamId] = startingInterest;
+            }
+        });
+
+        // Replace the whole allocation, holding the same caps as manual entry.
+        let hoursLeft = WEEKLY_HOURS_CAP;
+        const hours: Record<string, number> = {};
+        state.boardRecruitIds.forEach((id) => {
+            const committed = Boolean(state.recruitPool.find(r => r.id === id)?.committedTeamId);
+            const requested = committed ? 0 : Math.max(0, Math.min(MAX_HOURS_PER_RECRUIT, plan.hoursByRecruitId[id] ?? 0));
+            hours[id] = Math.min(requested, hoursLeft);
+            hoursLeft -= hours[id];
+        });
+        state.weeklyHoursByRecruitId = hours;
+
+        Object.entries(plan.pitchByRecruitId).forEach(([id, pitch]) => {
+            if (!state.boardRecruitIds.includes(id)) return;
+            if (pitch) state.activePitchesByRecruitId[id] = pitch;
+            else delete state.activePitchesByRecruitId[id];
+        });
     },
     setPracticeFocus: (state, action: PayloadAction<PracticeFocus>) => {
         state.practiceFocus = action.payload;
@@ -521,6 +564,8 @@ export const {
     setRecruitHours,
     setRecruitPitch,
     clearRecruitPitch,
+    setAutoRecruiting,
+    applyAutoRecruitingPlan,
     setPracticeFocus,
     advanceCoachWeek,
     applyPlayoffRoundFatigue,
@@ -590,6 +635,55 @@ export const acceptJobOffer = createAsyncThunk(
 );
 
 
+/** Archetype, recruiting skill, NIL, and boosters: how far one recruiting hour goes. */
+export function programRecruitingBonus(coach: Pick<CoachState, 'profile' | 'skillTree' | 'programResources'>): number {
+    const archetypeBonus =
+        coach.profile?.archetype === 'RECRUITER' ? 1.15
+        : coach.profile?.archetype === 'DEVELOPER' ? 0.95
+        : 1.0;
+    const recruitingSkill = coach.skillTree?.recruiting ?? 0;
+    const nilLevel = coach.programResources?.nil ?? 50;
+    const boostersLevel = coach.programResources?.boosters ?? 50;
+    const recruitingSkillBonus = 1 + recruitingSkill * 0.03;
+    const nilBonus = 1 + (nilLevel - 50) / 300;
+    const boostersBonus = 1 + (boostersLevel - 50) / 400;
+    return archetypeBonus * recruitingSkillBonus * nilBonus * boostersBonus;
+}
+
+/** Have the staff set the board, hours, and pitches for the coming recruiting period. */
+export const runAutoRecruiting = createAsyncThunk<boolean, void, { state: RootState }>(
+    'coach/runAutoRecruiting',
+    async (_, { getState, dispatch }) => {
+        const state = getState();
+        const coach = state.coach;
+        const baseTeam = state.league.teams.find(t => t.id === coach.selectedTeamId);
+        if (!baseTeam || coach.recruitPool.length === 0) return false;
+
+        const team = {
+            ...baseTeam,
+            prestige: clamp(baseTeam.prestige + (coach.programPrestigeDrift ?? 0), 1, 100),
+        };
+        // One recruiting period runs with each regular-season week.
+        const periodsLeft = Math.max(1, state.season.scheduleByWeek.length - coach.recruitingWeekIndex);
+        const plan = planAutoRecruiting({
+            recruitPool: coach.recruitPool,
+            boardRecruitIds: coach.boardRecruitIds,
+            team,
+            positionNeedByPosition: buildPositionNeedByPosition(coach.managedRoster),
+            classNeedByPosition: buildPositionNeedByPosition(
+                coach.managedRoster?.filter((player) => player.year < 4) ?? null,
+            ),
+            scholarshipsAvailable: coach.scholarshipsAvailable,
+            periodsLeft,
+            hoursCap: WEEKLY_HOURS_CAP,
+            maxHoursPerRecruit: MAX_HOURS_PER_RECRUIT,
+            gainMultiplier: programRecruitingBonus(coach) * coachSkillMultiplier(coach.profile?.skill ?? 72),
+        });
+        dispatch(applyAutoRecruitingPlan(plan));
+        return true;
+    },
+);
+
 export const advanceRecruitingWeek = createAsyncThunk(
     'coach/advanceRecruitingWeek',
     async (_, { getState, dispatch }) => {
@@ -634,22 +728,13 @@ export const advanceRecruitingWeek = createAsyncThunk(
               }
         });
 
-        const archetypeBonus =
-            coach.profile?.archetype === 'RECRUITER' ? 1.15
-            : coach.profile?.archetype === 'DEVELOPER' ? 0.95
-            : 1.0;
-        const recruitingSkill = coach.skillTree?.recruiting ?? 0;
-        const nilLevel = coach.programResources?.nil ?? 50;
-        const boostersLevel = coach.programResources?.boosters ?? 50;
-        const recruitingSkillBonus = 1 + recruitingSkill * 0.03;
-        const nilBonus = 1 + (nilLevel - 50) / 300;
-        const boostersBonus = 1 + (boostersLevel - 50) / 400;
-        const recruitingBonus = archetypeBonus * recruitingSkillBonus * nilBonus * boostersBonus;
+        const recruitingBonus = programRecruitingBonus(coach);
         const coachSkill = coach.profile?.skill ?? 72;
-        const cpuProfilesByTeamId: Record<string, CpuRecruitingProfile> = {};
+        const teamProfilesByTeamId: Record<string, CpuRecruitingProfile> = {};
         teams.forEach((team) => {
-            if (team.id === coach.selectedTeamId) return;
-            cpuProfilesByTeamId[team.id] = { prestige: team.prestige, region: team.region };
+            teamProfilesByTeamId[team.id] = team.id === selectedTeam.id
+                ? { prestige: selectedTeam.prestige, region: selectedTeam.region }
+                : { prestige: team.prestige, region: team.region };
         });
 
         const result = simulateRecruitingWeek(
@@ -665,7 +750,7 @@ export const advanceRecruitingWeek = createAsyncThunk(
             coach.recruitingWeekIndex,
             recruitingBonus,
             coachSkill,
-            cpuProfilesByTeamId,
+            teamProfilesByTeamId,
         );
 
         const commitments: { recruitId: string; teamId: string }[] = [];

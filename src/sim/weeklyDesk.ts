@@ -21,6 +21,8 @@ export interface WeeklyDeskInput {
   boardCount: number;
   hoursAssigned: number;
   hoursCap: number;
+  /** Staff sets the board and hours before each week. */
+  autoRecruiting?: boolean;
   hasRoster: boolean;
   positionNeeds: Record<Position, number>;
   wins: number;
@@ -90,6 +92,16 @@ function recruitingTask(input: WeeklyDeskInput): DeskTask {
       tone: 'open',
       action: 'Start class',
       href: '/career',
+    };
+  }
+  if (input.autoRecruiting) {
+    return {
+      id: 'recruiting',
+      title: 'Recruiting',
+      detail: 'Your staff sets the board, hours, and pitches before each week.',
+      tone: 'ready',
+      action: 'Board',
+      href: '/career/recruiting',
     };
   }
   if (input.boardCount === 0) {

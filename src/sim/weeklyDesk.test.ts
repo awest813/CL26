@@ -26,6 +26,14 @@ function desk(overrides: Partial<WeeklyDeskInput> = {}): WeeklyDeskInput {
 }
 
 describe('weekly desk', () => {
+  test('staff-run recruiting reads as handled even with open hours', () => {
+    const recruiting = buildWeeklyDesk(desk({ autoRecruiting: true, boardCount: 0, hoursAssigned: 0 })).find(
+      (task) => task.id === 'recruiting',
+    );
+    assert.equal(recruiting?.tone, 'ready');
+    assert.match(recruiting?.detail ?? '', /staff/);
+  });
+
   test('open hours and roster holes stay visible before the week is played', () => {
     const tasks = buildWeeklyDesk(desk());
     const recruiting = tasks.find((task) => task.id === 'recruiting');

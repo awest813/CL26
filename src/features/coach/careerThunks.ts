@@ -4,6 +4,7 @@ import { simCurrentWeek, selectTeamRecords, simNextPlayoffRound } from '../seaso
 import {
   advanceCoachWeek,
   advanceRecruitingWeek,
+  runAutoRecruiting,
   addCoachXp,
   setAdPressure,
   updateJobSecurity,
@@ -101,6 +102,9 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
     // Recruiting updates are optional; season progression should still work even if
     // the user has no active targets on their board.
     if (canAdvanceRecruiting) {
+      if (getState().coach.autoRecruiting) {
+        await dispatch(runAutoRecruiting());
+      }
       await dispatch(advanceRecruitingWeek());
     }
 
@@ -141,6 +145,24 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
 
     dispatch(advanceCoachWeek());
     return 'advanced';
+  },
+);
+
+/**
+ * Play every remaining regular-season week through the full career cycle, so
+ * recruiting, XP, and development move exactly as they do one week at a time.
+ * Stops early if a week does not advance. Returns the weeks played.
+ */
+export const simCareerToBracket = createAsyncThunk<number, void, { state: RootState }>(
+  'coach/simCareerToBracket',
+  async (_arg, { dispatch, getState }) => {
+    let played = 0;
+    while (canSimRegularWeek(getState().season)) {
+      const outcome = await dispatch(runCareerWeeklyCycle()).unwrap();
+      if (outcome !== 'advanced') break;
+      played += 1;
+    }
+    return played;
   },
 );
 
