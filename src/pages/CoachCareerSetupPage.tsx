@@ -5,6 +5,7 @@ import { careerSetupFromPrestige, completeCareerSetup, setCoachProfile } from '.
 import { initializeManagedRoster } from '../features/coach/careerThunks';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { CoachArchetype } from '../types/sim';
+import PageHeader from '../components/PageHeader';
 
 const archetypeOptions: Array<{
   value: CoachArchetype;
@@ -108,14 +109,17 @@ function CoachCareerSetupPage() {
   const selectedArchetypeOption = archetypeOptions.find((o) => o.value === archetype)!;
 
   return (
-    <section>
-      <h2>Coach Career Setup</h2>
-      <p className="mutedText">Create your coach, pick an archetype, and choose a program to build.</p>
+    <div className="pageStack">
+      <PageHeader
+        eyebrow="Program"
+        title={coach.onboardingStep === 'READY' ? 'Coach profile' : 'Start a career'}
+        subtitle="Create your coach, pick an archetype, and choose a program to build."
+      />
 
       <form className="card" onSubmit={onStartCareer}>
         <div className="grid2">
           <label>
-            Coach Name
+            Coach name
             <input
               value={coachName}
               onChange={(e) => setCoachName(e.target.value)}
@@ -123,7 +127,7 @@ function CoachCareerSetupPage() {
             />
           </label>
           <label>
-            Alma Mater
+            Alma mater
             <input
               value={almaMater}
               onChange={(e) => setAlmaMater(e.target.value)}
@@ -134,7 +138,7 @@ function CoachCareerSetupPage() {
 
         <div className="grid2">
           <label>
-            Coach Age
+            Coach age
             <input
               type="number"
               min={24}
@@ -144,7 +148,7 @@ function CoachCareerSetupPage() {
             />
           </label>
           <label>
-            Coach Skill (40–99)
+            Coach skill (40–99)
             <input
               type="number"
               min={40}
@@ -160,7 +164,7 @@ function CoachCareerSetupPage() {
 
         {/* Archetype cards */}
         <div style={{ marginTop: 12 }}>
-          <div className="text-sm font-semibold mb-2">Coaching Archetype</div>
+          <div className="text-sm font-semibold mb-2">Coaching archetype</div>
           <div className="archetypeGrid">
             {archetypeOptions.map((option) => {
               const isSelected = archetype === option.value;
@@ -227,10 +231,10 @@ function CoachCareerSetupPage() {
         )}
 
         <button type="submit" className="btn btn-primary" disabled={!canContinue} style={{ marginTop: 16 }}>
-          {coach.onboardingStep === 'READY' ? 'Update Career Setup' : 'Start Career'}
+          {coach.onboardingStep === 'READY' ? 'Save profile' : 'Start career'}
         </button>
       </form>
-    </section>
+    </div>
   );
 }
 

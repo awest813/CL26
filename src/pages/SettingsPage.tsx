@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { eraseSave } from '../features/settings/eraseSave';
 import { setConfirmPlay, setShowWinChance } from '../features/settings/settingsSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import PageHeader from '../components/PageHeader';
 
 function SettingsPage() {
   const dispatch = useAppDispatch();
@@ -31,10 +32,7 @@ function SettingsPage() {
 
   return (
     <div className="pageStack">
-      <div className="pageHeader">
-        <h2 className="m-0">Settings</h2>
-        <p className="pageHeader-sub">How the week plays, and the save in this browser.</p>
-      </div>
+      <PageHeader eyebrow="League" title="Settings" subtitle="How the week plays, and the save in this browser." />
 
       <section className="card" aria-labelledby="settings-play">
         <h3 id="settings-play" className="m-0 text-base font-bold">Play</h3>

@@ -3,6 +3,7 @@ import TeamLogo from '../components/TeamLogo';
 import { runExhibition, setSeed, setTactics, setTeams } from '../features/exhibition/exhibitionSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Tactics } from '../types/sim';
+import PageHeader from '../components/PageHeader';
 
 const tempoOptions: Tactics['tempo'][] = ['slow', 'normal', 'fast'];
 const rideOptions: Tactics['rideClear'][] = ['conservative', 'balanced', 'aggressive'];
@@ -48,7 +49,7 @@ function TacticsControls({
 }) {
   return (
     <div className="card">
-      <h4>{label} Tactics</h4>
+      <h4>{label} tactics</h4>
       <label>
         Tempo
         <select value={value.tempo} onChange={(event) => onChange({ ...value, tempo: event.target.value as Tactics['tempo'] })}>
@@ -60,7 +61,7 @@ function TacticsControls({
         </select>
       </label>
       <label>
-        Ride/Clear
+        Ride / clear
         <select
           value={value.rideClear}
           onChange={(event) => onChange({ ...value, rideClear: event.target.value as Tactics['rideClear'] })}
@@ -73,7 +74,7 @@ function TacticsControls({
         </select>
       </label>
       <label>
-        Slide Aggression
+        Slide timing
         <select
           value={value.slideAggression}
           onChange={(event) => onChange({ ...value, slideAggression: event.target.value as Tactics['slideAggression'] })}
@@ -86,7 +87,7 @@ function TacticsControls({
         </select>
       </label>
       <label>
-        Offense Set
+        Offense set
         <select
           value={value.offenseSet ?? 'balanced'}
           onChange={(event) => onChange({ ...value, offenseSet: event.target.value as NonNullable<Tactics['offenseSet']> })}
@@ -99,7 +100,7 @@ function TacticsControls({
         </select>
       </label>
       <label>
-        Defense Package
+        Defense package
         <select
           value={value.defensePackage ?? 'man'}
           onChange={(event) =>
@@ -154,12 +155,11 @@ function ExhibitionPage() {
 
   return (
     <div className="pageStack">
-      <div className="pageHeader">
-        <h2>Exhibition Lab</h2>
-        <p className="pageHeader-sub">
-          Run a single deterministic game with custom tactics and seeds — results do not affect your career save.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="League"
+        title="Exhibition"
+        subtitle="Run a single deterministic game with custom tactics and seeds. Results do not touch your career save."
+      />
 
       <form className="card" onSubmit={onSubmit}>
         {validationError && (
@@ -238,10 +238,10 @@ function ExhibitionPage() {
             />
           </label>
           <button type="button" className="btn" onClick={() => dispatch(setSeed(Math.floor(Math.random() * 1000000000)))}>
-            Random Seed
+            Random seed
           </button>
           <button type="submit" className="btn btn-primary" disabled={sameTeamSelected}>
-            Sim Game
+            Sim game
           </button>
         </div>
       </form>
@@ -262,7 +262,7 @@ function ExhibitionPage() {
             </span>
           </h3>
 
-          <h4>Team Box Score</h4>
+          <h4>Team box score</h4>
           <div className="dataTableWrap">
           <table>
             <caption className="sr-only">Team totals for this exhibition game</caption>
@@ -274,7 +274,7 @@ function ExhibitionPage() {
                 <th scope="col" className="num">Saves</th>
                 <th scope="col" className="num">Turnovers</th>
                 <th scope="col" className="num">Caused TO</th>
-                <th scope="col" className="num">Ground Balls</th>
+                <th scope="col" className="num">Ground balls</th>
                 <th scope="col" className="num">Penalties</th>
                 <th scope="col" className="num">Faceoff%</th>
               </tr>
@@ -318,7 +318,7 @@ function ExhibitionPage() {
 
           <div className="grid2">
             <div>
-              <h4>Top Players — {lastResult.teamAName}</h4>
+              <h4>Top players — {lastResult.teamAName}</h4>
               <ul>
                 {lastResult.topPlayersA.map((player) => (
                   <li key={player.playerId}>
@@ -328,7 +328,7 @@ function ExhibitionPage() {
               </ul>
             </div>
             <div>
-              <h4>Top Players — {lastResult.teamBName}</h4>
+              <h4>Top players — {lastResult.teamBName}</h4>
               <ul>
                 {lastResult.topPlayersB.map((player) => (
                   <li key={player.playerId}>

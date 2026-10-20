@@ -1,3 +1,4 @@
+import type { Ref } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import TeamLogo from '../../components/TeamLogo';
 import { IconClose, IconMenu } from '../../components/UiIcons';
@@ -7,8 +8,8 @@ import { selectTeamRecords, selectTop12Projection, selectUserConferenceStanding 
 import { seasonPhaseLabel } from '../../lib/seasonLabels';
 
 function continueTarget(phase: string, onboardingReady: boolean): { path: string; label: string } {
-  if (!onboardingReady) return { path: '/career/setup', label: 'Start Career' };
-  if (phase === 'PRE') return { path: '/season', label: 'Begin Season' };
+  if (!onboardingReady) return { path: '/career/setup', label: 'Start career' };
+  if (phase === 'PRE') return { path: '/season', label: 'Begin season' };
   if (phase === 'REGULAR') return { path: '/career/week', label: 'Weekly Hub' };
   if (phase === 'PLAYOFF') return { path: '/career/week', label: 'Next round' };
   if (phase === 'OFFSEASON') return { path: '/career/week', label: 'Offseason' };
@@ -27,9 +28,10 @@ function ordinal(n: number): string {
 type HeaderProps = {
   menuOpen: boolean;
   onToggleMenu: () => void;
+  menuButtonRef: Ref<HTMLButtonElement>;
 };
 
-function Header({ menuOpen, onToggleMenu }: HeaderProps) {
+function Header({ menuOpen, onToggleMenu, menuButtonRef }: HeaderProps) {
   const onboardingReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
   const teams = useAppSelector((state) => state.league.teams);
@@ -59,6 +61,7 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
     <header className="header dynastyHeader">
       <div className="dynastyBrandLockup">
         <button
+          ref={menuButtonRef}
           type="button"
           className="menuToggleButton headerMenuButton"
           onClick={onToggleMenu}
@@ -85,7 +88,10 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
             <span className="dynastyProgramText">
               <span className="dynastyMetaLabel">Program</span>
               <strong>{selectedTeam.schoolName}</strong>
-              <small>{recordLine}</small>
+              <small>
+                {recordLine}
+                <span className="dynastyPhaseInline"> · {phaseLabel}</span>
+              </small>
             </span>
           </Link>
         ) : (
@@ -100,19 +106,12 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
           <strong>{season.year}</strong>
           <small>{phaseLabel}</small>
         </div>
-        <Link
-          to="/settings"
-          className="btn dynastySettingsBtn"
-          aria-current={pathname === '/settings' ? 'page' : undefined}
-        >
-          Settings
-        </Link>
-        {!onContinuePage && (
-          <Link to={continueAction.path} className="btn btn-primary dynastyActionBtn">
-            {continueAction.label}
-          </Link>
-        )}
       </div>
+      {!onContinuePage && (
+        <Link to={continueAction.path} className="btn btn-primary dynastyActionBtn">
+          {continueAction.label}
+        </Link>
+      )}
     </header>
   );
 }

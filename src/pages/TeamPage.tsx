@@ -4,6 +4,7 @@ import TeamLogo from '../components/TeamLogo';
 import { selectConferenceById, selectTeamWithRosterSummary } from '../features/league/leagueSlice';
 import { buildRosterSummary, playerYearLabel } from '../sim/rosterSummary';
 import { useAppSelector } from '../store/hooks';
+import PageHeader from '../components/PageHeader';
 
 function TeamPage() {
   const { id } = useParams();
@@ -39,11 +40,15 @@ function TeamPage() {
 
   if (!teamSummary) {
     return (
-      <section className="card">
-        <h2>Team not found</h2>
-        <p className="m-0">We couldn&apos;t find a program for id: {id ?? 'unknown'}.</p>
-        <Link to="/conferences">Back to conferences</Link>
-      </section>
+      <div className="pageStack">
+        <PageHeader eyebrow="League" title="Team not found" />
+        <div className="card emptyState">
+          <p>We couldn&apos;t find a program for id: {id ?? 'unknown'}.</p>
+          <div className="emptyState-actions">
+            <Link to="/conferences" className="btn btn-primary">Browse conferences</Link>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -97,7 +102,7 @@ function TeamPage() {
 
       <div className="grid2 teamSummaryGrid">
         <section className="card">
-          <h3 className="m-0">Program Snapshot</h3>
+          <h3 className="m-0">Program snapshot</h3>
           <div className="teamInfoList">
             <div className="teamInfoRow">
               <span className="teamInfoLabel">Conference</span>
@@ -170,7 +175,7 @@ function TeamPage() {
       <section className="card">
         <div className="seasonHeaderRow">
           <div>
-            <h3 className="m-0">Roster Identity</h3>
+            <h3 className="m-0">Roster identity</h3>
             <p className="pageHeader-sub">
               {isManagedRoster
                 ? 'Unit strengths from your current roster, including development and signed players.'
@@ -226,7 +231,7 @@ function TeamPage() {
       <section className="card">
         <div className="seasonHeaderRow">
           <div>
-            <h3 className="m-0">Top Players</h3>
+            <h3 className="m-0">Top players</h3>
             <p className="pageHeader-sub">
               {isManagedRoster
                 ? 'Top players on your current roster.'

@@ -1,11 +1,15 @@
+import { useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import TeamLogo from '../../components/TeamLogo';
+import { IconClose } from '../../components/UiIcons';
 import { useAppSelector } from '../../store/hooks';
 import { selectIsCareerReady } from '../../features/coach/coachSlice';
 
 type LeftNavBarProps = {
   isMenuOpen: boolean;
   onNavigate?: () => void;
+  /** Closes the phone and tablet drawer. */
+  onClose?: () => void;
 };
 
 type NavItem = {
@@ -24,8 +28,14 @@ function latestResultsWeek(phase: string, currentWeekIndex: number, scheduleLeng
   return lastIndex;
 }
 
-function LeftNavBar({ isMenuOpen, onNavigate }: LeftNavBarProps) {
+function LeftNavBar({ isMenuOpen, onNavigate, onClose }: LeftNavBarProps) {
   const location = useLocation();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (isMenuOpen) closeButtonRef.current?.focus();
+  }, [isMenuOpen]);
+
   const currentWeekIndex = useAppSelector((state) => state.season.currentWeekIndex);
   const scheduleLength = useAppSelector((state) => state.season.scheduleByWeek.length);
   const phase = useAppSelector((state) => state.season.phase);
@@ -54,7 +64,7 @@ function LeftNavBar({ isMenuOpen, onNavigate }: LeftNavBarProps) {
           prefix: '/season/week',
         },
         { to: '/season/standings', label: 'Standings', hint: 'Conference race' },
-        { to: '/rankings', label: 'Poll', hint: 'Top 25 and field' },
+        { to: '/rankings', label: 'Top 25', hint: 'Poll and projected field' },
         { to: '/playoffs', label: 'Playoffs', hint: '12-team bracket' },
       ],
     },
@@ -75,6 +85,13 @@ function LeftNavBar({ isMenuOpen, onNavigate }: LeftNavBarProps) {
 
   return (
     <nav className={`leftNav dynastySideNav ${isMenuOpen ? 'leftNav-open' : ''}`} aria-label="Primary">
+      <div className="navDrawerBar">
+        <span className="navDrawerTitle">Menu</span>
+        <button ref={closeButtonRef} type="button" className="navDrawerClose" onClick={onClose}>
+          <IconClose className="menuToggleIcon" />
+          <span className="sr-only">Close menu</span>
+        </button>
+      </div>
       <div className="dynastyCoachCard">
         <p className="dynastyCoachLabel">Head Coach</p>
         <h3>{coachProfile?.name ?? 'No coach yet'}</h3>

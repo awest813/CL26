@@ -7,6 +7,7 @@ import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectSeasonCapabilities, resetSeason } from '../features/season/seasonSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName } from '../types/sim';
+import PageHeader from '../components/PageHeader';
 
 const ROUND_LABELS: Record<PlayoffRoundName, string> = {
     'ROUND1': 'First Round (5–12)',
@@ -76,44 +77,38 @@ function PlayoffsPage() {
     }
   };
 
-  if (summary.phase === 'REGULAR') {
-      return (
-          <div className="card text-center py-8">
-              <h2>Playoffs have not started</h2>
-              <p className="text-gray-500 mb-4">Complete the regular season to unlock the post-season bracket.</p>
-              <p className="text-sm text-gray-500">Week {summary.currentWeekIndex + 1} of 12 in progress.</p>
-              <Link to="/season" className="btn btn-primary mt-4 inline-block">Season dashboard</Link>
+  if (summary.phase === 'REGULAR' || summary.phase === 'PRE') {
+    return (
+      <div className="pageStack">
+        <PageHeader eyebrow="Season" title="Playoffs" subtitle="The 12-team bracket. Seeds 1 to 4 get a bye." />
+        <div className="card emptyState">
+          <h3>The bracket is not set yet</h3>
+          <p>
+            {summary.phase === 'PRE'
+              ? 'Begin the season, then finish the 12-week regular season to set the field.'
+              : `Week ${summary.currentWeekIndex + 1} of 12 is in progress. The field is set after the last regular-season week.`}
+          </p>
+          <div className="emptyState-actions">
+            <Link to="/rankings" className="btn btn-primary">Projected field</Link>
+            <Link to="/season" className="btn">Season dashboard</Link>
           </div>
-      );
-  }
-
-  if (summary.phase === 'PRE') {
-      return (
-          <div className="card text-center py-8">
-              <h2>Playoffs have not started</h2>
-              <p className="text-gray-500 mb-4">
-                Preseason setup is still open. Begin the season, then finish the 12-week regular season to unlock the bracket.
-              </p>
-              <Link to="/season" className="btn btn-primary mt-2 inline-block">Season dashboard</Link>
-          </div>
-      );
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="pageStack">
-      <div className="card">
-        <div className="seasonHeaderRow">
-          <div className="pageHeader m-0">
-            <h2 className="m-0">Playoffs</h2>
-            <p className="pageHeader-sub">
-              {isComplete
-                ? `${summary.year} champion is set`
-                : playoffState
-                  ? ROUND_LABELS[playoffState.currentRound]
-                  : 'The field is not set'}
-            </p>
-          </div>
-          <div className="seasonActionGroup">
+      <PageHeader
+        eyebrow="Season"
+        title="Playoffs"
+        subtitle={isComplete
+          ? `The ${summary.year} champion is set.`
+          : playoffState
+            ? ROUND_LABELS[playoffState.currentRound]
+            : 'The field is not set.'}
+        actions={
+          <>
             {canStart && (
               <button type="button" className="btn btn-primary" onClick={handleStartPlayoffs}>
                 Set the bracket
@@ -126,7 +121,7 @@ function PlayoffsPage() {
             )}
             {isComplete && (
               hasCareerTeam ? (
-                <Link to="/career/week" className="btn btn-primary">Continue on the hub</Link>
+                <Link to="/career/week" className="btn btn-primary">Continue in the Weekly Hub</Link>
               ) : (
                 <button type="button" className="btn btn-primary" onClick={handleNewSeason}>
                   Begin new season
@@ -134,11 +129,11 @@ function PlayoffsPage() {
               )
             )}
             {hasCareerTeam && !isComplete && (
-              <Link to="/career/week" className="btn">Weekly hub</Link>
+              <Link to="/career/week" className="btn">Weekly Hub</Link>
             )}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {actionError && (
         <div className="card border border-red-200 bg-red-50 text-sm text-red-700">
@@ -175,7 +170,7 @@ function PlayoffsPage() {
         <div className="playoffLayoutGrid">
             {/* Seeding panel */}
             <div className="card">
-                <h3>Tournament Seeds</h3>
+                <h3>Tournament seeds</h3>
                 <div className="overflow-y-auto dataTableWrap" style={{ maxHeight: '560px' }}>
                     <table className="w-full text-sm">
                         <thead>

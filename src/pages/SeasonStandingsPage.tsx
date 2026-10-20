@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import { selectConferenceStandings, selectOverallStandings } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
+import PageHeader from '../components/PageHeader';
 
 function ordinal(n: number): string {
   const mod = n % 100;
@@ -39,17 +40,20 @@ function SeasonStandingsPage() {
 
   return (
     <div className="pageStack">
-      <div className="pageHeader">
-        <h2>Standings</h2>
-        <p className="pageHeader-sub">
-          Conference tables sort by conference record, then point differential, overall record, and school name.
-          Overall tables sort by record, then point differential and school name.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Season"
+        title="Standings"
+        subtitle={
+          <>
+            Conference tables sort by conference record, then point differential, overall record, and school name.
+            Overall tables sort by record, then point differential and school name.
+          </>
+        }
+      />
 
       <div className="card">
         <div className="standingsToolbar">
-          <h3 className="m-0">Conference Standings</h3>
+          <h3 className="m-0">Conference standings</h3>
           <label className="text-sm">
             Conference
             <select
@@ -122,7 +126,7 @@ function SeasonStandingsPage() {
       </div>
 
       <div className="card">
-        <h3 className="m-0 mb-2">Overall Standings</h3>
+        <h3 className="m-0 mb-2">Overall standings</h3>
         {userOverall && (
           <p className="text-sm text-gray-600 mt-0 mb-2">
             Your program is {ordinal(userOverallIndex + 1)} overall ({userOverall.record.wins}–{userOverall.record.losses}).{' '}

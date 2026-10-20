@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import { selectConferenceBrowserRows } from '../features/league/leagueSlice';
 import { useAppSelector } from '../store/hooks';
+import PageHeader from '../components/PageHeader';
 
 function ConferencesPage() {
   const conferenceRows = useAppSelector(selectConferenceBrowserRows);
@@ -70,13 +71,14 @@ function ConferencesPage() {
 
   return (
     <div className="pageStack">
-      <div className="pageHeader">
-        <h2>Conferences</h2>
-        <p className="pageHeader-sub">Browse the full 128-team league by conference, region, and generated roster profile.</p>
-        {userConferenceId && orderedRows.some((row) => row.conference.id === userConferenceId) && (
-          <a href="#your-conference" className="text-sm font-semibold">Jump to your conference</a>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="League"
+        title="Conferences"
+        subtitle="Browse the full 128-team league by conference, region, and generated roster profile."
+        actions={userConferenceId && orderedRows.some((row) => row.conference.id === userConferenceId) ? (
+          <a href="#your-conference" className="btn">Jump to your conference</a>
+        ) : undefined}
+      />
 
       <div className="card card-elevated leagueOverviewCard">
         <div className="leagueOverviewStats" aria-label="League browser summary">

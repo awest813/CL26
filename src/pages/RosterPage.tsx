@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import TeamLogo from '../components/TeamLogo';
 import { toggleStarter } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position, POSITION_ORDER } from '../types/sim';
 import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
 import { getRosterDepthSummary } from '../sim/rosterManagement';
 import { playerYearLabel } from '../sim/rosterSummary';
+import PageHeader from '../components/PageHeader';
 
 const POSITION_LABELS: Record<Position, string> = {
   A: 'Attack',
@@ -165,47 +165,42 @@ function RosterPage() {
 
   if (roster.length === 0) {
     return (
-      <section className="card">
-        <h2>Roster Management</h2>
-        <p className="text-gray-500">
-          No roster loaded. Complete career setup to generate your team&apos;s roster.
-        </p>
-        <Link to="/career/setup" className="btn btn-primary">Go to Setup</Link>
-      </section>
+      <div className="pageStack">
+        <PageHeader eyebrow="Program" title="Roster" />
+        <div className="card emptyState">
+          <h3>No roster yet</h3>
+          <p>Finish career setup to generate your program&apos;s roster.</p>
+          <div className="emptyState-actions">
+            <Link to="/career/setup" className="btn btn-primary">Set up your career</Link>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="pageStack">
-      {/* Header */}
+      <PageHeader
+        eyebrow="Program"
+        title="Roster"
+        subtitle={`${selectedTeam?.schoolName ?? ''} ${selectedTeam?.nickname ?? ''} · ${season.year} season · ${roster.length} players`}
+      />
+
       <div className="card">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h2 className="m-0 text-xl">
-              Roster Management
-            </h2>
-            <div className="text-sm text-gray-500 mt-0.5 programLockup">
-              {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
-              <span>
-                {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {season.year} Season &bull; {roster.length} players
-              </span>
-            </div>
-            <p className="text-xs text-gray-600 mt-2 mb-0 max-w-2xl">
-              Starters drive in-game ratings and who gets scoring chances. Bench players still contribute, but at a lower weight—set your depth chart before big weeks and the postseason.
-            </p>
-            {scratches.length > 0 && (
-              <p className="text-sm text-red-600 mt-2 mb-0">
-                Out this week: {scratches.map((scratch) => `${scratch.name} (${scratch.position})`).join(', ')}. They sit this game. The rest of the roster stays.
-              </p>
-            )}
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-gray-400 uppercase mb-1">Roster OVR</div>
-            <div className={`text-2xl font-bold ${ratingClass(rosterOverall)}`}>{rosterOverall}</div>
-          </div>
-        </div>
+        <p className="text-sm text-gray-600 m-0 max-w-2xl">
+          Starters drive in-game ratings and who gets scoring chances. Bench players still contribute, but at a lower weight. Set your depth chart before big weeks and the postseason.
+        </p>
+        {scratches.length > 0 && (
+          <p className="text-sm text-red-600 mt-2 mb-0">
+            Out this week: {scratches.map((scratch) => `${scratch.name} (${scratch.position})`).join(', ')}. They sit this game. The rest of the roster stays.
+          </p>
+        )}
 
         <div className="rosterSummaryGrid">
+          <div className="rosterSummaryTile">
+            <span>Roster OVR</span>
+            <strong className={ratingClass(rosterOverall)}>{rosterOverall}</strong>
+          </div>
           <div className="rosterSummaryTile">
             <span>Offensive core</span>
             <strong>{offensiveCore}</strong>
@@ -225,7 +220,7 @@ function RosterPage() {
         </div>
 
         {/* Depth summary grid */}
-        <div className="grid grid-cols-6 gap-2 border-t pt-3">
+        <div className="grid grid-cols-6 gap-2 border-t pt-3 mt-4">
           {depthSummary.map((d) => (
             <div key={d.position} className="text-center">
               <div className="text-xs text-gray-400 font-semibold uppercase">{d.position}</div>
@@ -239,7 +234,7 @@ function RosterPage() {
       {/* Offseason notes */}
       {season.phase === 'OFFSEASON' && (
         <div className="card noticeCard-warn">
-          <h3 className="text-base font-bold mb-2">Offseason Roster Notes</h3>
+          <h3 className="text-base font-bold mb-2">Offseason roster notes</h3>
           <div className="flex gap-6 text-sm">
             <div>
               <div className="text-xs text-gray-400">Graduating Seniors</div>
@@ -336,7 +331,7 @@ function RosterPage() {
       {/* Signed recruits incoming */}
       {signedClass.length > 0 && (
         <div className="card">
-          <h3 className="text-base font-bold mb-2">Signed Recruiting Class ({signedClass.length})</h3>
+          <h3 className="text-base font-bold mb-2">Signed recruiting class ({signedClass.length})</h3>
           <p className="text-xs text-gray-500 mb-2">
             These recruits will join the roster at the start of next season.
           </p>
@@ -355,10 +350,6 @@ function RosterPage() {
           </div>
         </div>
       )}
-
-      <div className="mt-2">
-        <Link to="/career" className="text-sm hover:underline">Back to coach office</Link>
-      </div>
     </div>
   );
 }

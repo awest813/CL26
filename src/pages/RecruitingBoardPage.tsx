@@ -25,6 +25,7 @@ import RecruitingReportNote from '../components/RecruitingReportNote';
 import StaffRecruitingControls from '../components/StaffRecruitingControls';
 import { boardStartingInterest, RECRUITING_BOARD_LIMIT } from '../sim/autoRecruit';
 import { RecruitingPitch, RecruitMotivation } from '../types/sim';
+import PageHeader from '../components/PageHeader';
 
 type PositionFilterValue = (typeof RECRUITING_POSITION_FILTERS)[number];
 
@@ -210,21 +211,20 @@ function RecruitingBoardPage() {
     const classClosed = season.phase === 'OFFSEASON';
     return (
       <div className="pageStack">
-        <div className="pageHeader">
-          <h2>Recruiting Board</h2>
-          <p className="pageHeader-sub">
-            {classClosed
-              ? 'The high school class is closed. The portal and the pro draft are on the office.'
-              : 'Start recruiting to manage your prospect pool.'}
-          </p>
-        </div>
-        <div className="card text-center py-10">
-          <p className="text-gray-500 mb-4">
-            {classClosed ? 'The high school class is closed.' : 'No recruit pool loaded yet.'}
-          </p>
-          <Link to="/career" className="btn btn-primary">
-            {classClosed ? 'Open the portal and the pro draft' : 'Start the class in the coach office'}
-          </Link>
+        <PageHeader
+          eyebrow="Program"
+          title="Recruiting"
+          subtitle={classClosed
+            ? 'The high school class is closed. The portal and the pro draft are on the office.'
+            : 'Start recruiting to manage your prospect pool.'}
+        />
+        <div className="card emptyState">
+          <h3>{classClosed ? 'The high school class is closed' : 'No recruit pool yet'}</h3>
+          <div className="emptyState-actions">
+            <Link to="/career" className="btn btn-primary">
+              {classClosed ? 'Open the portal and the pro draft' : 'Start the class in the Coach Office'}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -232,17 +232,20 @@ function RecruitingBoardPage() {
 
   return (
     <div className="pageStack">
-      <div className="pageHeader">
-        <h2>Recruiting Board</h2>
-        <p className="pageHeader-sub">
-          {recruitingPeriodLabel(season.phase, coach.recruitingWeekIndex, scheduleLength)}{' '}
-          · {season.year} Class ·{' '}
-          {committedToUserCount} committed · {coach.scholarshipsAvailable} scholarships available
-          {committedToUserCount > coach.scholarshipsAvailable
-            ? ' · Signing day will keep only the best fits up to your scholarship cap'
-            : ''}
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Program"
+        title="Recruiting"
+        subtitle={
+          <>
+            {recruitingPeriodLabel(season.phase, coach.recruitingWeekIndex, scheduleLength)}{' '}
+            · {season.year} class ·{' '}
+            {committedToUserCount} committed · {coach.scholarshipsAvailable} scholarships available
+            {committedToUserCount > coach.scholarshipsAvailable
+              ? ' · Signing day will keep only the best fits up to your scholarship cap'
+              : ''}
+          </>
+        }
+      />
 
       {/* ── Summary bar ── */}
       <div className="card">
@@ -269,7 +272,7 @@ function RecruitingBoardPage() {
           </div>
           <div className="ml-auto self-center">
             <Link to="/career/week" className="btn text-sm">
-              Weekly hub
+              Weekly Hub
             </Link>
           </div>
         </div>
@@ -303,7 +306,7 @@ function RecruitingBoardPage() {
         {/* ── Target list ── */}
         <div className="card">
           <h3 className="text-base font-bold m-0 mb-3">
-            Target List ({boardRows.length}/{RECRUITING_BOARD_LIMIT})
+            Target list ({boardRows.length}/{RECRUITING_BOARD_LIMIT})
           </h3>
 
           {boardRows.length === 0 ? (
@@ -375,7 +378,7 @@ function RecruitingBoardPage() {
                           className="text-xs p-1 border rounded w-full mb-1 pitchSelect"
                           aria-label={`Recruiting pitch for ${recruit.name}`}
                         >
-                          <option value="">No Pitch</option>
+                          <option value="">No pitch</option>
                           {Object.entries(PITCH_LABELS).map(([key, label]) => (
                             <option key={key} value={key}>
                               {label}
@@ -444,7 +447,7 @@ function RecruitingBoardPage() {
         <div className="card">
           <div className="flex justify-between items-center mb-3">
             <div>
-              <h3 className="text-base font-bold m-0">Prospect Pool</h3>
+              <h3 className="text-base font-bold m-0">Prospect pool</h3>
               <div className="text-xs text-gray-500 mt-1">
                 Showing {visibleRecruits.length} of {filteredRecruits.length} matches
               </div>
@@ -454,7 +457,7 @@ function RecruitingBoardPage() {
               className="textButton"
               onClick={() => { setSearch(''); setPositionFilter('ALL'); }}
             >
-              Reset Filters
+              Reset filters
             </button>
           </div>
 

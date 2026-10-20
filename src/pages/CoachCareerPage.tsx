@@ -23,6 +23,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, SeasonHistoryEntry, Tactics } from '../types/sim';
 import { computeAllSOS, computeRankings, withProgramPrestige } from '../sim/rankings';
 import { careerOffseasonCapabilities, hasSeasonHistoryForYear } from '../sim/seasonPhase';
+import PageHeader from '../components/PageHeader';
 
 const ARCHETYPE_BONUSES: Record<string, string[]> = {
   RECRUITER: ['+15% weekly interest gain', 'Expanded recruit reach', 'Faster commitments on key needs'],
@@ -245,6 +246,11 @@ function CoachCareerPage() {
 
   return (
     <div className="pageStack">
+      <PageHeader
+        eyebrow="Program"
+        title="Coach Office"
+        subtitle="Your job, the recruiting class, the game plan, and the staff behind it."
+      />
       {actionError && (
         <div className="card border border-red-200 bg-red-50 text-sm text-red-800" role="alert">
           {actionError}
@@ -252,12 +258,12 @@ function CoachCareerPage() {
       )}
       {/* ── Career Dashboard ── */}
       <div className="card">
-        <div className="flex justify-between items-start mb-3">
+        <div className="cardHeadRow mb-3">
           <div>
-            <h2 className="m-0 text-xl">
+            <h3 className="m-0 text-xl">
               Coach {coach.profile.name}
               <span className="ml-2 text-sm font-normal text-gray-500">Year {careerYear}</span>
-            </h2>
+            </h3>
             <div className="text-gray-500 text-sm mt-0.5 programLockup">
               {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
               <span>
@@ -337,7 +343,7 @@ function CoachCareerPage() {
           {/* Archetype */}
           <div>
             <div className="text-xs text-gray-500 uppercase mb-2">Archetype: {archetype.charAt(0) + archetype.slice(1).toLowerCase()}</div>
-            <ul className="text-xs space-y-1">
+            <ul className="text-xs space-y-1 m-0 p-0 list-none">
               {archetypeBonuses.map((bonus, i) => (
                 <li key={i} className="flex items-center gap-1 youMark">
                   <span>+</span> {bonus}
@@ -506,10 +512,10 @@ function CoachCareerPage() {
             </select>
           </label>
           <div className="text-xs text-gray-500">
-            <div>Fatigue {coach.teamFatigue}%. The weekly hub uses this same focus.</div>
+            <div>Fatigue {coach.teamFatigue}%. The Weekly Hub uses this same focus.</div>
             {canAdvanceWeeklyCycle && (
               <Link to="/career/week" className="block mt-1">
-                Advance week {season.currentWeekIndex + 1} from the weekly hub
+                Advance week {season.currentWeekIndex + 1} from the Weekly Hub
               </Link>
             )}
             {season.phase === 'PRE' && coach.recruitPool.length > 0 && (
@@ -517,24 +523,17 @@ function CoachCareerPage() {
             )}
             {season.phase === 'PLAYOFF' && (
               <Link to="/career/week" className="block mt-1">
-                Play the next round from the weekly hub
+                Play the next round from the Weekly Hub
               </Link>
             )}
             {season.phase === 'OFFSEASON' && (
               <Link to="/career/week" className="block mt-1">
-                Signing day and next year continue on the weekly hub
+                Signing day and next year continue on the Weekly Hub
               </Link>
             )}
           </div>
         </div>
       </div>
-
-      <nav className="officeJumps" aria-label="Program">
-        <Link to="/career/week">Weekly Hub</Link>
-        <Link to="/career/recruiting">Recruiting</Link>
-        <Link to="/career/roster">Roster</Link>
-        <Link to="/season">Season</Link>
-      </nav>
 
       <div className="card">
         <h3 className="text-base font-bold m-0">Game plan</h3>
@@ -651,15 +650,15 @@ function CoachCareerPage() {
       </div>
 
       <div className="card">
-        <div className="flex justify-between items-start mb-3">
+        <div className="cardHeadRow mb-3">
           <div>
-            <h3 className="text-base font-bold m-0">Staff &amp; Program Levers</h3>
+            <h3 className="text-base font-bold m-0">Staff and program levers</h3>
             <p className="text-xs text-gray-500 mt-1 mb-0">
               Practice focus drives weekly trait growth; staff upgrades and resources shape recruiting, development, and AD pressure.
             </p>
           </div>
           <div className="text-right text-xs text-gray-500">
-            <div>Coach Level {coachLevel}</div>
+            <div>Coach level {coachLevel}</div>
             <div>XP {coachXp}/100</div>
             <div className="font-semibold youMark">Skill points: {coachSkillPoints}</div>
           </div>

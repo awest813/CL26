@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '../store/hooks';
 import { selectSeasonHasStarted, selectSeasonSummary, selectTop12Projection, selectTop25Rankings } from '../features/season/seasonSlice';
+import PageHeader from '../components/PageHeader';
 
 const alphaChecklist = [
   {
@@ -26,7 +27,7 @@ const alphaChecklist = [
   {
     area: 'Alpha UX + Quality Bar',
     status: 'in-progress',
-    details: 'The weekly hub, settings, and narrow layout are in. A full accessibility pass is still open.',
+    details: 'The Weekly Hub, settings, and narrow layout are in. A full accessibility pass is still open.',
   },
 ] as const;
 
@@ -98,18 +99,16 @@ function AlphaStagePage() {
 
   return (
     <div className="pageStack">
+      <PageHeader
+        title="Alpha progress"
+        subtitle="Where the project is today versus what it still needs before the game is alpha-ready."
+      />
       <section className="card">
-        <h2>Alpha Stage Progress</h2>
-        <p className="text-sm text-gray-500">
-          This view tracks where the project is today versus what we still need before calling the game alpha-ready.
-        </p>
-        <div style={{ marginTop: '0.75rem' }}>
-          <strong>{progressPct}% complete</strong> ({completed}/{alphaChecklist.length} focus areas complete)
-        </div>
+        <strong>{progressPct}% complete</strong> ({completed}/{alphaChecklist.length} focus areas complete)
       </section>
 
       <section className="card">
-        <h3>Feature Checkpoint</h3>
+        <h3>Feature checkpoint</h3>
         <table>
           <caption className="sr-only">Alpha feature checkpoint</caption>
           <thead>
@@ -132,7 +131,7 @@ function AlphaStagePage() {
       </section>
 
       <section className="card">
-        <h3>Alpha Exit Checklist Tracker</h3>
+        <h3>Alpha exit checklist</h3>
         <p className="text-sm text-gray-500">
           Save-aware checklist status based on current simulation progress and alpha criteria.
         </p>
@@ -169,7 +168,7 @@ function AlphaStagePage() {
       </section>
 
       <section className="card">
-        <h3>Lacrosse Elements Sprint Target</h3>
+        <h3>Lacrosse elements sprint target</h3>
         <p className="text-sm text-gray-500">
           Release scope is locked to deterministic branding, data integrity, roster clarity, schedule/playoff correctness,
           rankings transparency, and balanced match simulation.
@@ -200,7 +199,7 @@ function AlphaStagePage() {
         </ol>
         <div style={{ marginTop: '1rem' }}>
           <Link to="/season" className="btn btn-primary">
-            Continue Season Work
+            Continue season work
           </Link>
         </div>
       </section>

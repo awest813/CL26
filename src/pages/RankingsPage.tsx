@@ -6,6 +6,7 @@ import { useAppSelector } from '../store/hooks';
 import { selectRankingTeams, selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary, selectTop16Rankings } from '../features/season/seasonSlice';
 import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
 import { seasonRankingsWeekLabel } from '../lib/seasonLabels';
+import PageHeader from '../components/PageHeader';
 
 function PollTeam({
   team,
@@ -112,14 +113,13 @@ function RankingsPage() {
 
   return (
     <div className="pageStack">
-      <div className="pageHeader">
-        <h2>Top 25</h2>
-        <p className="pageHeader-sub">
-          {isPostseason
-            ? `The final ${summary.year} poll and the tournament field.`
-            : 'The poll and the projected 12-team field, updated after each week.'}
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Season"
+        title="Top 25"
+        subtitle={isPostseason
+          ? `The final ${summary.year} poll and the tournament field.`
+          : 'The poll and the projected 12-team field, updated after each week.'}
+      />
 
       <div className="grid2 grid2-lead">
       <section className="card">

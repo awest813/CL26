@@ -15,6 +15,7 @@ import { selectIsCareerReady } from '../features/coach/coachSlice';
 import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { seasonPhaseLabel } from '../lib/seasonLabels';
+import PageHeader from '../components/PageHeader';
 
 interface NextStepAction {
   label: string;
@@ -72,13 +73,13 @@ function SeasonPage() {
     }
     if (summary.phase === 'PLAYOFF') {
       if (coachReady) {
-        return { label: 'The next round is on the weekly hub. The full bracket stays on the playoff page.', link: '/career/week', cta: 'Continue on the hub' };
+        return { label: 'The next round is on the Weekly Hub. The full bracket stays on the playoff page.', link: '/career/week', cta: 'Continue in the Weekly Hub' };
       }
       return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open playoffs' };
     }
     if (summary.phase === 'OFFSEASON') {
       if (coachReady) {
-        return { label: 'Signing day, the season record, and next year continue on the hub.', link: '/career/week', cta: 'Continue on the hub' };
+        return { label: 'Signing day, the season record, and next year continue on the hub.', link: '/career/week', cta: 'Continue in the Weekly Hub' };
       }
       return { label: 'Season is complete. Begin a fresh season when ready.', link: null, cta: null };
     }
@@ -135,14 +136,13 @@ function SeasonPage() {
   if (!hasSeason) {
     return (
       <div className="pageStack">
-        <div className="pageHeader">
-          <h2>Begin Season</h2>
-          <p className="pageHeader-sub">
-            {coachReady
-              ? 'Set the season seed to generate schedules, refresh your roster draw, and open recruiting.'
-              : 'Configure your seed to generate this year\'s schedules and CPU rosters.'}
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Season"
+          title="Begin season"
+          subtitle={coachReady
+            ? 'Set the season seed to generate schedules, refresh your roster draw, and open recruiting.'
+            : 'Configure your seed to generate this year\'s schedules and CPU rosters.'}
+        />
 
         {!coachReady && (
           <div className="card border border-amber-200 bg-amber-50 text-sm text-amber-900">
@@ -160,7 +160,7 @@ function SeasonPage() {
 
           <div className="flex flex-wrap gap-4 items-end mb-4">
             <label className="flex-1">
-              <span className="text-sm font-semibold">Season Seed</span>
+              <span className="text-sm font-semibold">Season seed</span>
               <input
                 type="number"
                 value={seedInput}
@@ -185,7 +185,7 @@ function SeasonPage() {
 
           <div className="flex justify-end">
             <button type="button" className="btn btn-primary" onClick={handleStartSeason} disabled={!hasValidSeed}>
-              Begin Season
+              Begin season
             </button>
           </div>
         </div>
@@ -195,78 +195,80 @@ function SeasonPage() {
 
   return (
     <div className="pageStack">
-      <div className="card">
-        <div className="seasonHeaderRow">
-          <div className="pageHeader m-0">
-            <h2 className="m-0 text-xl font-bold">Season Dashboard</h2>
-            <p className="pageHeader-sub">
-              {summary.year} · {seasonPhaseLabel(summary.phase, summary.currentWeekIndex, scheduleLength)}
-            </p>
-          </div>
-
-          {actionError && (
-            <p className="text-sm text-red-600 m-0 mb-2 w-full" role="alert">
-              {actionError}
-            </p>
-          )}
-          {summary.phase === 'REGULAR' && (
-            <div className="seasonActionGroup">
-              {coachReady ? (
+      <PageHeader
+        eyebrow="Season"
+        title="Dashboard"
+        subtitle={`${summary.year} · ${seasonPhaseLabel(summary.phase, summary.currentWeekIndex, scheduleLength)}`}
+        actions={
+          <>
+            {summary.phase === 'REGULAR' && (
+              coachReady ? (
                 <Link to="/career/week" className="btn btn-primary">
-                  Advance in Weekly Hub
+                  Play the week in the Weekly Hub
                 </Link>
               ) : (
                 <>
                   <button type="button" className="btn btn-primary" onClick={handleSimWeek}>
-                    Sim Week {displayWeek + 1}
+                    Sim week {displayWeek + 1}
                   </button>
                   <button type="button" className="btn" onClick={handleSimSeason}>
-                    Sim To End
+                    Sim to the end
                   </button>
                 </>
-              )}
-            </div>
-          )}
-          {summary.phase === 'PLAYOFF' && (
-            <div className="seasonActionGroup">
-              {coachReady ? (
-                <Link to="/career/week" className="btn btn-primary">
-                  Continue on the hub
+              )
+            )}
+            {summary.phase === 'PLAYOFF' && (
+              <>
+                {coachReady && (
+                  <Link to="/career/week" className="btn btn-primary">
+                    Continue in the Weekly Hub
+                  </Link>
+                )}
+                <Link to="/playoffs" className={coachReady ? 'btn' : 'btn btn-primary'}>
+                  {coachReady ? 'Full bracket' : 'Go to the playoffs'}
                 </Link>
-              ) : null}
-              <Link to="/playoffs" className={coachReady ? 'btn' : 'btn btn-primary'}>
-                {coachReady ? 'Full bracket' : 'Go to Playoffs'}
-              </Link>
-            </div>
-          )}
-          {summary.phase === 'OFFSEASON' && (
-            <div className="seasonActionGroup">
-              <Link to="/playoffs" className="btn">
-                View Playoff Results
-              </Link>
-              {coachReady ? (
-                <Link to="/career/week" className="btn btn-primary">
-                  Continue on the hub
+              </>
+            )}
+            {summary.phase === 'OFFSEASON' && (
+              <>
+                <Link to="/playoffs" className="btn">
+                  Playoff results
                 </Link>
-              ) : (
-                <button type="button" className="btn btn-primary" onClick={handleNewSeason}>
-                  Begin New Season
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+                {coachReady ? (
+                  <Link to="/career/week" className="btn btn-primary">
+                    Continue in the Weekly Hub
+                  </Link>
+                ) : (
+                  <button type="button" className="btn btn-primary" onClick={handleNewSeason}>
+                    Begin new season
+                  </button>
+                )}
+              </>
+            )}
+          </>
+        }
+      />
 
-        <div className="seasonLinkRow">
+      {actionError && (
+        <div className="card border border-red-200 bg-red-50 text-sm text-red-700" role="alert">
+          {actionError}
+        </div>
+      )}
+
+      <div className="card">
+        <div className="seasonLinkRow seasonLinkRow-flush">
           <Link to="/season/standings" className="seasonInlineLink">
-            View Standings
+            Standings
           </Link>
           <Link to={`/season/week/${displayWeek}`} className="seasonInlineLink">
-            Full Weekly Schedule
+            Week {displayWeek + 1} results
+          </Link>
+          <Link to="/rankings" className="seasonInlineLink">
+            Top 25
           </Link>
           {capabilities.canResetSeason && (
             <button type="button" onClick={handleReset} className="seasonInlineLink seasonInlineLink-danger ml-auto">
-              Reset Season
+              Reset season
             </button>
           )}
         </div>

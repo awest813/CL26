@@ -5,6 +5,7 @@ import { selectWeekGames } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import { GameResult, PlayerGameStats } from '../types/sim';
 import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
+import PageHeader from '../components/PageHeader';
 
 function statBits(player: PlayerGameStats): string {
   const parts: string[] = [];
@@ -169,18 +170,19 @@ function SeasonWeekPage() {
   if (totalWeeks === 0) {
     return (
       <div className="pageStack">
-        <div className="pageHeader">
-          <h2>Week results</h2>
-          <p className="pageHeader-sub">Browse scores, team stats, and top performers from each matchup.</p>
-        </div>
-        <div className="card text-center py-8">
-          <h3 className="m-0">No schedule yet</h3>
-          <p className="text-gray-500 mb-4">
-            Begin the season from the Season Dashboard to generate the 12-week schedule and unlock week-by-week results.
-          </p>
-          <Link to="/season" className="btn btn-primary inline-block">
-            Season dashboard
-          </Link>
+        <PageHeader
+          eyebrow="Season"
+          title="Results"
+          subtitle="Scores, team stats, and top performers from each matchup."
+        />
+        <div className="card emptyState">
+          <h3>No schedule yet</h3>
+          <p>Begin the season from the season dashboard to generate the 12-week schedule.</p>
+          <div className="emptyState-actions">
+            <Link to="/season" className="btn btn-primary">
+              Season dashboard
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -192,10 +194,11 @@ function SeasonWeekPage() {
 
   return (
     <div className="pageStack">
-      <div className="pageHeader">
-        <h2>Week {displayWeek + 1} Schedule</h2>
-        <p className="pageHeader-sub">Browse results, team stats, and top performers from each matchup.</p>
-      </div>
+      <PageHeader
+        eyebrow="Season"
+        title="Results"
+        subtitle={`Week ${displayWeek + 1} of ${totalWeeks}. Scores, team stats, and top performers from each matchup.`}
+      />
 
       <div className="card seasonWeekControlCard">
         <div className="seasonWeekNavGroup">

@@ -32,6 +32,8 @@ import { careerOffseasonCapabilities } from '../sim/seasonPhase';
 import { buildWeeklyDesk } from '../sim/weeklyDesk';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PracticeFocus, GameResult, Tactics } from '../types/sim';
+import PageHeader from '../components/PageHeader';
+import { seasonPhaseLabel } from '../lib/seasonLabels';
 
 function schemeCall(tactics: Tactics): string {
   const tempo = tactics.tempo === 'fast' ? 'Fast tempo' : tactics.tempo === 'slow' ? 'Slow tempo' : 'Balanced tempo';
@@ -71,6 +73,18 @@ interface ScoreboardTeam {
   id: string;
   schoolName: string;
   nickname: string;
+}
+
+/** Point differential beside a record, once the team has played. */
+function PointDiff({ pointsFor, pointsAgainst, played }: { pointsFor: number; pointsAgainst: number; played: number }) {
+  if (played === 0) return null;
+  const diff = pointsFor - pointsAgainst;
+  return (
+    <span className="matchupDiff" title="Point differential">
+      {diff > 0 ? '+' : ''}
+      {diff}
+    </span>
+  );
 }
 
 function Scoreboard({
@@ -379,13 +393,6 @@ function WeeklyHubPage() {
     fired: (coach.employment ?? 'ACTIVE') === 'FIRED',
   });
   const showPrep = season.phase === 'REGULAR' || season.phase === 'PRE';
-  const pageTitle = season.phase === 'PLAYOFF'
-    ? 'Playoffs'
-    : season.phase === 'OFFSEASON'
-      ? 'Offseason'
-      : season.phase === 'PRE'
-        ? 'Preseason'
-        : `Week ${currentWeekDisplay} Hub`;
 
   useEffect(() => {
     if (!pendingScroll.current) return;
@@ -462,12 +469,15 @@ function WeeklyHubPage() {
 
   return (
     <div className="pageStack">
-      <div className="pageHeader">
-        <h2 className="m-0">{pageTitle}</h2>
-        <p className="pageHeader-sub">
-          {selectedTeam?.schoolName} {selectedTeam?.nickname} · {userRecord.wins}–{userRecord.losses} overall · {userRecord.confWins}–{userRecord.confLosses} conf
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Program"
+        title="Weekly Hub"
+        subtitle={
+          <>
+            {seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length)} · {selectedTeam?.schoolName} {selectedTeam?.nickname} · {userRecord.wins}–{userRecord.losses} overall · {userRecord.confWins}–{userRecord.confLosses} conf
+          </>
+        }
+      />
 
       {playoffSpot.lastGame?.result && (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') ? (
         <Scoreboard
@@ -514,7 +524,10 @@ function WeeklyHubPage() {
                 <div>
                   <Link to={`/team/${selectedTeam.id}`} className="matchupSchool">{selectedTeam.schoolName}</Link>
                   <span className="matchupNick">{selectedTeam.nickname}</span>
-                  <span className="matchupRecord">{userRecord.wins}–{userRecord.losses}</span>
+                  <span className="matchupRecord">
+                    {userRecord.wins}–{userRecord.losses}
+                    <PointDiff pointsFor={userRecord.pointsFor} pointsAgainst={userRecord.pointsAgainst} played={userRecord.wins + userRecord.losses} />
+                  </span>
                 </div>
               </div>
             </div>
@@ -546,10 +559,7 @@ function WeeklyHubPage() {
                   <span className="matchupNick">{featuredOpponent.nickname}</span>
                   <span className="matchupRecord">
                     {featuredRecord.wins}–{featuredRecord.losses}
-                    <span className="matchupDiff">
-                      {featuredRecord.pointsFor - featuredRecord.pointsAgainst > 0 ? '+' : ''}
-                      {featuredRecord.pointsFor - featuredRecord.pointsAgainst}
-                    </span>
+                    <PointDiff pointsFor={featuredRecord.pointsFor} pointsAgainst={featuredRecord.pointsAgainst} played={featuredRecord.wins + featuredRecord.losses} />
                   </span>
                 </div>
               </div>
@@ -586,7 +596,7 @@ function WeeklyHubPage() {
             <Link to="/playoffs" className="btn">Full bracket</Link>
           )}
           {season.phase === 'OFFSEASON' && (
-            <Link to="/career" className="btn">Coach office</Link>
+            <Link to="/career" className="btn">Coach Office</Link>
           )}
         </div>
       </section>
@@ -669,7 +679,7 @@ function WeeklyHubPage() {
         )}
 
         <div className="card">
-          <h3 className="m-0 mb-3 text-base font-bold">Coach Skill Snapshot</h3>
+          <h3 className="m-0 mb-3 text-base font-bold">Coach skill snapshot</h3>
           <div className="text-xs text-gray-500 mb-2">
             Recruiting {coach.skillTree.recruiting}/{MAX_COACH_SKILL_LEVEL} · Development {coach.skillTree.development}/{MAX_COACH_SKILL_LEVEL} · Operations {coach.skillTree.operations}/{MAX_COACH_SKILL_LEVEL}
           </div>
@@ -680,7 +690,7 @@ function WeeklyHubPage() {
           </ul>
           <div className="mt-3">
             <Link to="/career" className="text-sm hover:underline">
-              Upgrade coach skills in the coach office
+              Upgrade coach skills in the Coach Office
             </Link>
           </div>
         </div>
@@ -691,7 +701,7 @@ function WeeklyHubPage() {
         <div className="card">
           <div className="flex justify-between items-center mb-3">
             <div>
-              <h3 className="m-0 text-base font-bold">Active Recruiting Board</h3>
+              <h3 className="m-0 text-base font-bold">Active recruiting board</h3>
               <div className="text-xs text-gray-500 mt-0.5">
                 {openBoardCount} open of {boardRecruits.length} targets · Hours remaining:{' '}
                 <span className={`font-semibold ${hoursRemaining < 0 ? 'text-hours-over' : 'text-hours-ok'}`}>
@@ -793,7 +803,7 @@ function WeeklyHubPage() {
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="m-0 text-base font-bold">Recruiting Board</h3>
+              <h3 className="m-0 text-base font-bold">Recruiting board</h3>
               <p className="text-sm text-gray-500 mt-1 mb-0">
                 {coach.autoRecruiting
                   ? 'No active targets yet. Your staff fills the board before the week plays.'
