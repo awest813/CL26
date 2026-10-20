@@ -380,13 +380,23 @@ export const { resetSeason } = seasonSlice.actions;
 export const seasonReducer = seasonSlice.reducer;
 
 // Selectors
-export const selectSeasonSummary = (state: RootState) => ({
-    phase: state.season.phase,
-    year: state.season.year,
-    currentWeekIndex: state.season.currentWeekIndex,
-    completedWeeks: state.season.completedWeeks,
-    seasonSeed: state.season.seasonSeed,
-});
+// Memoized so components that read it do not re-render on every store update.
+export const selectSeasonSummary = createSelector(
+  [
+    (state: RootState) => state.season.phase,
+    (state: RootState) => state.season.year,
+    (state: RootState) => state.season.currentWeekIndex,
+    (state: RootState) => state.season.completedWeeks,
+    (state: RootState) => state.season.seasonSeed,
+  ],
+  (phase, year, currentWeekIndex, completedWeeks, seasonSeed) => ({
+    phase,
+    year,
+    currentWeekIndex,
+    completedWeeks,
+    seasonSeed,
+  }),
+);
 
 export const selectSeasonHasStarted = (state: RootState) => state.season.phase !== 'PRE';
 

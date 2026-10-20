@@ -1,4 +1,5 @@
 import type { Position } from '../types/sim.ts';
+import { FATIGUE_SLOWDOWN_THRESHOLD } from './coachEffects.ts';
 
 export type DeskTone = 'ready' | 'open' | 'watch';
 export type SeasonPhase = 'PRE' | 'REGULAR' | 'PLAYOFF' | 'OFFSEASON';
@@ -30,6 +31,10 @@ export interface WeeklyDeskInput {
   pollRank: number | null;
   pollKnown: boolean;
   rankTarget: number;
+  /** In the playoffs: your program still has a game to play, so the install still applies. */
+  inBracket?: boolean;
+  /** Team fatigue, 0–100. At the slowdown threshold the plan row turns to a warning. */
+  fatigue?: number;
 }
 
 const POSITION_NAMES: Record<Position, string> = {
@@ -45,7 +50,9 @@ export function adGoalCopy(input: Pick<WeeklyDeskInput, 'wins' | 'winTarget' | '
   detail: string;
   tone: DeskTone;
 } {
-  const winsLine = `${input.wins} of ${input.winTarget} wins`;
+  const winsLine = input.wins >= input.winTarget
+    ? `${input.wins} wins, past the target of ${input.winTarget}`
+    : `${input.wins} of ${input.winTarget} wins`;
   let rankLine = `Target is a Top ${input.rankTarget} finish.`;
   if (input.pollKnown && input.pollRank != null) {
     rankLine = `Poll #${input.pollRank}. Target is Top ${input.rankTarget}.`;
@@ -182,7 +189,7 @@ function needsTask(input: WeeklyDeskInput): DeskTask {
 }
 
 function planTask(input: WeeklyDeskInput): DeskTask {
-  if (input.phase === 'PLAYOFF' || input.phase === 'OFFSEASON') {
+  if ((input.phase === 'PLAYOFF' && !input.inBracket) || input.phase === 'OFFSEASON') {
     return {
       id: 'plan',
       title: 'Game plan',
@@ -190,6 +197,17 @@ function planTask(input: WeeklyDeskInput): DeskTask {
       tone: 'ready',
       action: 'Scheme',
       href: '/career',
+    };
+  }
+  const fatigue = Math.round(input.fatigue ?? 0);
+  if (fatigue >= FATIGUE_SLOWDOWN_THRESHOLD) {
+    return {
+      id: 'plan',
+      title: 'Game plan',
+      detail: `Fatigue is ${fatigue}%, so the team plays slow and every edge drags. Conditioning recovers legs. ${input.practiceLabel} is set.`,
+      tone: 'watch',
+      action: 'Install',
+      href: '#week-practice',
     };
   }
   return {

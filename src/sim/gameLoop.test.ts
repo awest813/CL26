@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import type { PlayoffGame, PlayoffState } from '../types/sim.ts';
-import { nextLoopStep, userPlayoffSpot } from './gameLoop.ts';
+import { nextLoopStep, playoffRoundButton, userPlayoffRun, userPlayoffSpot } from './gameLoop.ts';
 
 function game(partial: Partial<PlayoffGame> & Pick<PlayoffGame, 'id' | 'round' | 'homeTeamId' | 'awayTeamId'>): PlayoffGame {
   return {
@@ -23,6 +23,42 @@ function bracket(partial: Partial<PlayoffState> = {}): PlayoffState {
     ...partial,
   };
 }
+
+describe('user playoff run', () => {
+  test('a bye then a quarterfinal loss is 0–1, out in the quarterfinals', () => {
+    const run = userPlayoffRun(bracket({
+      currentRound: 'SEMIFINAL',
+      rounds: {
+        ROUND1: [game({ id: 'r1', round: 'ROUND1', homeTeamId: 'x', awayTeamId: 'y', winnerTeamId: 'x' })],
+        QUARTERFINAL: [game({ id: 'q1', round: 'QUARTERFINAL', homeTeamId: 'user', awayTeamId: 'x', winnerTeamId: 'x' })],
+        SEMIFINAL: [],
+        FINAL: [],
+      },
+    }), 'user');
+    assert.deepEqual(run, { wins: 0, losses: 1, lastRound: 'QUARTERFINAL' });
+  });
+
+  test('a title run counts every bracket win', () => {
+    const won = (id: string, round: PlayoffGame['round']) =>
+      game({ id, round, homeTeamId: 'user', awayTeamId: `opp-${id}`, winnerTeamId: 'user' });
+    const run = userPlayoffRun(bracket({
+      currentRound: 'FINAL',
+      championTeamId: 'user',
+      rounds: { ROUND1: [won('r1', 'ROUND1')], QUARTERFINAL: [won('q1', 'QUARTERFINAL')], SEMIFINAL: [won('s1', 'SEMIFINAL')], FINAL: [won('f1', 'FINAL')] },
+    }), 'user');
+    assert.deepEqual(run, { wins: 4, losses: 0, lastRound: 'FINAL' });
+  });
+
+  test('a program outside the field has no run', () => {
+    assert.deepEqual(userPlayoffRun(bracket(), 'nobody'), { wins: 0, losses: 0, lastRound: null });
+    assert.deepEqual(userPlayoffRun(null, 'user'), { wins: 0, losses: 0, lastRound: null });
+  });
+
+  test('round buttons read as a sentence', () => {
+    assert.equal(playoffRoundButton('Quarterfinals', true), 'Play the quarterfinals');
+    assert.equal(playoffRoundButton('First round', false), 'Sim the first round');
+  });
+});
 
 describe('user playoff spot', () => {
   test('a top-four seed is on a bye until the quarterfinals', () => {
@@ -118,7 +154,7 @@ describe('next loop step', () => {
     });
     assert.equal(step.action, 'play-round');
     assert.match(step.detail, /bye/);
-    assert.equal(step.button, 'Sim First round');
+    assert.equal(step.button, 'Sim the first round');
   });
 
   test('the offseason walks signing day, the record, then next year', () => {

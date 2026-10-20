@@ -24,38 +24,39 @@ function routerBasename(): string | undefined {
   return base === '' ? undefined : base
 }
 
-function App() {
-  const router = createBrowserRouter([
-    {
-      path: '/',
-      element: <Layout />,
-      children: [
-        { index: true, element: <Home /> },
-        { path: 'conferences', element: <ConferencesPage /> },
-        { path: 'team/:id', element: <TeamPage /> },
-        { path: 'rankings', element: <RankingsPage /> },
-        { path: 'exhibition', element: <ExhibitionPage /> },
-        { path: 'login', element: <Navigate to="/" replace /> },
-        { path: 'career', element: <CoachCareerPage /> },
-        { path: 'career/setup', element: <CoachCareerSetupPage /> },
-        { path: 'career/roster', element: <RosterPage /> },
-        { path: 'career/week', element: <WeeklyHubPage /> },
-        { path: 'career/recruiting', element: <RecruitingBoardPage /> },
-        { path: 'season', element: <SeasonPage /> },
-        { path: 'schedule', element: <Navigate to="/season" replace /> },
-        { path: 'season/standings', element: <SeasonStandingsPage /> },
-        { path: 'season/week/:weekIndex', element: <SeasonWeekPage /> },
-        { path: 'playoffs', element: <PlayoffsPage /> },
-        { path: 'alpha', element: <AlphaStagePage /> },
-        { path: 'settings', element: <SettingsPage /> },
-        { path: '*', element: <Navigate to="/" replace /> },
-      ],
-    },
-  ], { basename: routerBasename() });
+// Created once, outside render, so the router keeps its state across App re-renders.
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Layout />,
+    children: [
+      { index: true, element: <Home /> },
+      { path: 'conferences', element: <ConferencesPage /> },
+      { path: 'team/:id', element: <TeamPage /> },
+      { path: 'rankings', element: <RankingsPage /> },
+      { path: 'exhibition', element: <ExhibitionPage /> },
+      { path: 'login', element: <Navigate to="/" replace /> },
+      { path: 'career', element: <CoachCareerPage /> },
+      { path: 'career/setup', element: <CoachCareerSetupPage /> },
+      { path: 'career/roster', element: <RosterPage /> },
+      { path: 'career/week', element: <WeeklyHubPage /> },
+      { path: 'career/recruiting', element: <RecruitingBoardPage /> },
+      { path: 'season', element: <SeasonPage /> },
+      { path: 'schedule', element: <Navigate to="/season" replace /> },
+      { path: 'season/standings', element: <SeasonStandingsPage /> },
+      { path: 'season/week/:weekIndex', element: <SeasonWeekPage /> },
+      { path: 'playoffs', element: <PlayoffsPage /> },
+      { path: 'alpha', element: <AlphaStagePage /> },
+      { path: 'settings', element: <SettingsPage /> },
+      { path: '*', element: <Navigate to="/" replace /> },
+    ],
+  },
+], { basename: routerBasename() });
 
+function App() {
   return (
     <ErrorBoundary>
-      <RouterProvider router={router} />
+      <RouterProvider router={router} future={{ v7_startTransition: true }} />
     </ErrorBoundary>
   );
 }

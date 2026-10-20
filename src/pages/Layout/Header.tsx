@@ -47,13 +47,20 @@ function Header({ menuOpen, onToggleMenu, menuButtonRef }: HeaderProps) {
   const phaseLabel = seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length);
   const record = selectedTeamId ? records[selectedTeamId] : null;
   const projectedSeed = selectedTeamId ? top12.find((row) => row.teamId === selectedTeamId)?.rank ?? null : null;
+  // Once the bracket is set the seed is real; before that it is a projection.
+  const bracketSeed = selectedTeamId
+    ? season.playoffs?.seeds.find((row) => row.teamId === selectedTeamId)?.seed ?? null
+    : null;
   const seasonStarted = season.phase !== 'PRE';
+  const seedLabel = season.playoffs
+    ? bracketSeed != null ? `#${bracketSeed} seed` : null
+    : (season.phase === 'REGULAR' || season.phase === 'PLAYOFF') && projectedSeed != null ? `#${projectedSeed} proj` : null;
 
   const recordLine = record
     ? [
         `${record.wins}–${record.losses}`,
         confStanding && seasonStarted ? `${ordinal(confStanding.place)} conf` : null,
-        seasonStarted && projectedSeed != null ? `#${projectedSeed} proj` : null,
+        seedLabel,
       ].filter(Boolean).join(' · ')
     : 'No games yet';
 

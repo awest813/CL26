@@ -154,6 +154,8 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Fatigue and recovery status tracked per week
 - [x] Lightweight weekly injury scratches for the coached team, with the lineup still able to field
 - [x] Coach modifiers passed into `simulateGame` inputs (match engine stays pure)
+- [x] Playoff install: a program still in the bracket sets its install per round; the desk warns once fatigue slows the team
+- [x] Career record counts bracket games; each season row shows the playoff record and the round reached
 - [x] Game plan transparency: game-day calls show what the install or fatigue overrode, the edge includes the scheme's own shift, and each install shows its fatigue cost and the traits it grows
 
 **Key files:** `src/sim/coachEffects.ts`, `src/sim/injuries.ts`, `src/sim/seasonSim.ts`, `src/pages/WeeklyHubPage.tsx`

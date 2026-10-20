@@ -295,8 +295,12 @@ async function runDynasty(seasonCount: number) {
     'a season record did not cover 12 games',
   );
 
-  const histWins = finalState.coach.seasonHistory.reduce((sum, entry) => sum + entry.wins, 0);
-  const histLosses = finalState.coach.seasonHistory.reduce((sum, entry) => sum + entry.losses, 0);
+  const histWins = finalState.coach.seasonHistory.reduce((sum, entry) => sum + entry.wins + (entry.playoffWins ?? 0), 0);
+  const histLosses = finalState.coach.seasonHistory.reduce((sum, entry) => sum + entry.losses + (entry.playoffLosses ?? 0), 0);
+  assert.ok(
+    finalState.coach.seasonHistory.every((entry) => entry.champion === (entry.playoffRound === 'FINAL' && entry.playoffLosses === 0 && (entry.playoffWins ?? 0) > 0)),
+    'a champion row should end in the final with no bracket loss',
+  );
   assert.strictEqual(finalState.coach.careerRecord.totalWins, histWins);
   assert.strictEqual(finalState.coach.careerRecord.totalLosses, histLosses);
 

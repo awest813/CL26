@@ -22,7 +22,7 @@ describe('settings', () => {
   test('the confirm copy names the week or the round', () => {
     assert.match(confirmPlayCopy('week', 'week 4'), /week 4/);
     assert.match(confirmPlayCopy('week', 'week 4'), /slate/);
-    assert.match(confirmPlayCopy('round', 'Sim First round'), /First round/);
-    assert.doesNotMatch(confirmPlayCopy('round', 'Sim First round'), /slate/);
+    assert.match(confirmPlayCopy('round', 'Sim the first round'), /first round/);
+    assert.doesNotMatch(confirmPlayCopy('round', 'Sim the first round'), /slate/);
   });
 });

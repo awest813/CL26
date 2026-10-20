@@ -247,6 +247,11 @@ export interface SeasonHistoryEntry {
   losses: number;
   madePlayoffs: boolean;
   champion: boolean;
+  /** Bracket games, kept apart from the 12-game regular season. Missing on saves from before they were tracked. */
+  playoffWins?: number;
+  playoffLosses?: number;
+  /** The deepest round the program played in. */
+  playoffRound?: PlayoffRoundName | null;
   recruitsSigned: number;
   avgRecruitStars: number;
   jobSecurityEnd: number;

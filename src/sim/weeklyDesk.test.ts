@@ -87,10 +87,29 @@ describe('weekly desk', () => {
     assert.equal(recruiting?.href, '/career');
   });
 
-  test('playoff weeks lock the install and hold the board', () => {
+  test('playoff weeks out of the bracket lock the install and hold the board', () => {
     const tasks = buildWeeklyDesk(desk({ phase: 'PLAYOFF' }));
     assert.match(tasks.find((task) => task.id === 'plan')?.detail ?? '', /next regular season/);
     assert.match(tasks.find((task) => task.id === 'recruiting')?.detail ?? '', /pause/);
+  });
+
+  test('a program still in the bracket keeps its install on the desk', () => {
+    const plan = buildWeeklyDesk(desk({ phase: 'PLAYOFF', inBracket: true })).find((task) => task.id === 'plan');
+    assert.equal(plan?.href, '#week-practice');
+    assert.doesNotMatch(plan?.detail ?? '', /next regular season/);
+  });
+
+  test('a worn-out team turns the game plan row into a warning', () => {
+    const plan = buildWeeklyDesk(desk({ fatigue: 75 })).find((task) => task.id === 'plan');
+    assert.equal(plan?.tone, 'watch');
+    assert.match(plan?.detail ?? '', /75%/);
+    assert.match(plan?.detail ?? '', /Conditioning/);
+  });
+
+  test('wins past the target read as met, not as a fraction', () => {
+    const goal = adGoalCopy({ wins: 10, winTarget: 7, pollRank: 19, pollKnown: true, rankTarget: 35 });
+    assert.match(goal.detail, /10 wins, past the target of 7/);
+    assert.equal(goal.tone, 'ready');
   });
 
   test('missing the poll target is a watch even when wins are ahead', () => {

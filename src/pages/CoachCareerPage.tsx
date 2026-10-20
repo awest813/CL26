@@ -28,7 +28,7 @@ import {
 import { GameDayEdge, GameDayScheme, InstallPicker, TacticSelects } from '../components/GamePlan';
 import { recruitingPeriodLabel } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { SeasonHistoryEntry } from '../types/sim';
+import { PlayoffRoundName, SeasonHistoryEntry } from '../types/sim';
 import { computeAllSOS, computeRankings, withProgramPrestige } from '../sim/rankings';
 import { careerOffseasonCapabilities, hasSeasonHistoryForYear } from '../sim/seasonPhase';
 import PageHeader from '../components/PageHeader';
@@ -73,18 +73,31 @@ function adPressureLabel(pressure: number): { label: string; color: string } {
   return { label: 'Low AD pressure', color: '#16a34a' };
 }
 
+const PLAYOFF_EXIT_LABELS: Record<PlayoffRoundName, string> = {
+  ROUND1: 'Out in the first round',
+  QUARTERFINAL: 'Out in the quarterfinals',
+  SEMIFINAL: 'Out in the semifinals',
+  FINAL: 'Runner-up',
+};
+
 function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: number }) {
+  const bracketGames = (entry.playoffWins ?? 0) + (entry.playoffLosses ?? 0);
   return (
     <tr className="border-b last:border-0 text-sm">
       <td className="py-1.5 pr-3 text-gray-500">Yr {index + 1} ({entry.year})</td>
-      <td className="py-1.5 pr-3 font-semibold">{entry.wins}–{entry.losses}</td>
+      <td className="py-1.5 pr-3">
+        <span className="font-semibold">{entry.wins}–{entry.losses}</span>
+        {bracketGames > 0 && (
+          <span className="text-xs text-gray-500"> · {entry.playoffWins ?? 0}–{entry.playoffLosses ?? 0} playoffs</span>
+        )}
+      </td>
       <td className="py-1.5 pr-3">
         {entry.champion ? (
           <span className="text-yellow-500 font-bold">Champion</span>
         ) : entry.madePlayoffs ? (
-          <span className="youMark">Playoffs</span>
+          <span className="youMark">{entry.playoffRound ? PLAYOFF_EXIT_LABELS[entry.playoffRound] : 'Made the field'}</span>
         ) : (
-          <span className="text-gray-400">No Playoffs</span>
+          <span className="text-gray-400">Missed the field</span>
         )}
       </td>
       <td className="py-1.5 pr-3 text-gray-600">{entry.recruitsSigned} signed ({entry.avgRecruitStars.toFixed(1)}★)</td>
@@ -303,7 +316,7 @@ function CoachCareerPage() {
             )}
           </div>
           <div className="text-right">
-            <div className="text-xs text-gray-500 uppercase mb-1">Career Record</div>
+            <div className="text-xs text-gray-500 uppercase mb-1">Career record</div>
             <div className="text-lg font-bold">{coach.careerRecord.totalWins}–{coach.careerRecord.totalLosses}</div>
             <div className="text-xs text-gray-500">
               {coach.careerRecord.playoffAppearances} playoff appearance{coach.careerRecord.playoffAppearances === 1 ? '' : 's'}
@@ -377,7 +390,7 @@ function CoachCareerPage() {
         {coach.seasonHistory.length > 0 && (
           <div className="mt-3 pt-3 border-t">
             <div className="text-xs text-gray-400 uppercase font-semibold mb-2">
-              Career History ({coach.seasonHistory.length} season{coach.seasonHistory.length !== 1 ? 's' : ''})
+              Career history ({coach.seasonHistory.length} season{coach.seasonHistory.length !== 1 ? 's' : ''})
             </div>
             <div className="overflow-x-auto max-h-64 overflow-y-auto">
               <table className="w-full text-sm">

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import { simCareerPlayoffRound } from '../features/coach/careerThunks';
-import { PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
+import { PLAYOFF_ROUND_LABELS, playoffRoundButton, userPlayoffSpot } from '../sim/gameLoop';
 import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectSeasonCapabilities, resetSeason } from '../features/season/seasonSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -62,7 +62,7 @@ function PlayoffsPage() {
 
   const handleSimRound = async () => {
     if (confirmPlay) {
-      const label = playoffSpot.currentGame ? `Play ${roundShort}` : `Sim ${roundShort}`;
+      const label = playoffRoundButton(roundShort, Boolean(playoffSpot.currentGame));
       if (!window.confirm(confirmPlayCopy('round', label))) return;
     }
     setActionError(null);
@@ -116,7 +116,7 @@ function PlayoffsPage() {
             )}
             {canSim && (
               <button type="button" className="btn btn-primary" onClick={handleSimRound}>
-                {playoffSpot.currentGame ? `Play ${roundShort}` : `Sim ${roundShort}`}
+                {playoffRoundButton(roundShort, Boolean(playoffSpot.currentGame))}
               </button>
             )}
             {isComplete && (

@@ -10,6 +10,11 @@ export const PLAYOFF_ROUND_LABELS: Record<PlayoffRoundName, string> = {
 
 const ROUND_ORDER: PlayoffRoundName[] = ['ROUND1', 'QUARTERFINAL', 'SEMIFINAL', 'FINAL'];
 
+/** "Play the quarterfinals" when your program is in the round, "Sim the first round" when it is not. */
+export function playoffRoundButton(roundLabel: string, userPlaying: boolean): string {
+  return `${userPlaying ? 'Play' : 'Sim'} the ${roundLabel.toLowerCase()}`;
+}
+
 export interface UserPlayoffSpot {
   seed: number | null;
   currentGame: PlayoffGame | null;
@@ -46,6 +51,29 @@ export function userPlayoffSpot(playoffs: PlayoffState | null, teamId: string | 
   const eliminated = seed != null && lostLast && playoffs.championTeamId !== teamId;
 
   return { seed, currentGame, lastGame, bye, eliminated };
+}
+
+export interface UserPlayoffRun {
+  wins: number;
+  losses: number;
+  /** The last round the program played a game in, or null if it never played one. */
+  lastRound: PlayoffRoundName | null;
+}
+
+/** The program's bracket games so far: record and how deep it went. */
+export function userPlayoffRun(playoffs: PlayoffState | null, teamId: string | null): UserPlayoffRun {
+  const run: UserPlayoffRun = { wins: 0, losses: 0, lastRound: null };
+  if (!playoffs || !teamId) return run;
+  const id: string = teamId;
+  const decided = (row: PlayoffGame): boolean => involves(row, id) && row.winnerTeamId != null;
+  for (const round of ROUND_ORDER) {
+    const game = playoffs.rounds[round].find(decided);
+    if (!game) continue;
+    run.lastRound = round;
+    if (game.winnerTeamId === teamId) run.wins += 1;
+    else run.losses += 1;
+  }
+  return run;
 }
 
 export type LoopAction =
@@ -119,7 +147,7 @@ export function nextLoopStep(input: {
       action: 'play-round',
       title: input.roundLabel ?? 'Playoffs',
       detail,
-      button: input.userPlaying ? `Play ${roundLabel}` : `Sim ${roundLabel}`,
+      button: playoffRoundButton(roundLabel, Boolean(input.userPlaying)),
     };
   }
 

@@ -436,8 +436,9 @@ const coachSlice = createSlice({
         }
         state.seasonHistory.push(action.payload);
         state.careerRecord.seasonsCompleted += 1;
-        state.careerRecord.totalWins += action.payload.wins;
-        state.careerRecord.totalLosses += action.payload.losses;
+        // The career record counts bracket games too; the season row keeps them apart.
+        state.careerRecord.totalWins += action.payload.wins + (action.payload.playoffWins ?? 0);
+        state.careerRecord.totalLosses += action.payload.losses + (action.payload.playoffLosses ?? 0);
         if (action.payload.madePlayoffs) state.careerRecord.playoffAppearances += 1;
         if (action.payload.champion) state.careerRecord.championships += 1;
         if (state.profile) {

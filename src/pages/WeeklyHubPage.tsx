@@ -217,6 +217,11 @@ function WeeklyHubPage() {
   );
 
   const playoffSpot = userPlayoffSpot(season.playoffs ?? null, selectedTeamId || null);
+  // A seeded program with games left still plays its install in the bracket.
+  const inBracket = season.phase === 'PLAYOFF'
+    && playoffSpot.seed != null
+    && !playoffSpot.eliminated
+    && season.playoffs?.championTeamId == null;
   const playoffRoundLabel = season.playoffs ? PLAYOFF_ROUND_LABELS[season.playoffs.currentRound] : null;
   const playoffOpponentId = playoffSpot.currentGame
     ? playoffSpot.currentGame.homeTeamId === selectedTeamId
@@ -351,6 +356,8 @@ function WeeklyHubPage() {
         pollRank,
         pollKnown: season.phase !== 'PRE',
         rankTarget: coach.programExpectations?.rankTarget ?? 99,
+        inBracket,
+        fatigue: coach.teamFatigue,
       }),
     [
       openBoardCount,
@@ -361,6 +368,8 @@ function WeeklyHubPage() {
       coach.programExpectations?.winTarget,
       coach.recruitPool.length,
       gamePlan.tactics,
+      inBracket,
+      coach.teamFatigue,
       pollRank,
       season.phase,
       totalHours,
@@ -401,6 +410,7 @@ function WeeklyHubPage() {
     fired: (coach.employment ?? 'ACTIVE') === 'FIRED',
   });
   const showPrep = season.phase === 'REGULAR' || season.phase === 'PRE';
+  const showInstall = showPrep || inBracket;
 
   useEffect(() => {
     if (!pendingScroll.current) return;
@@ -613,7 +623,9 @@ function WeeklyHubPage() {
         <h3 id="weekly-desk-title" className="m-0 text-base font-bold">This week</h3>
         <p className="text-sm text-gray-500 mt-1 mb-3">
           {season.phase === 'PLAYOFF'
-            ? 'The bracket is the job. The install comes back next regular season.'
+            ? inBracket
+              ? 'The bracket is the job. Set the install for this round, then play it.'
+              : 'Your season is over. The install comes back next regular season.'
               : season.phase === 'OFFSEASON'
               ? (coach.employment ?? 'ACTIVE') === 'FIRED'
                 ? 'The AD let you go. Take a landing job on the office before the next year.'
@@ -640,8 +652,8 @@ function WeeklyHubPage() {
         </ul>
       </section>
 
-      <div className={showPrep ? 'grid2' : undefined}>
-        {showPrep && (
+      <div className={showInstall ? 'grid2' : undefined}>
+        {showInstall && (
         <section className="card" id="week-practice" aria-labelledby="week-practice-title">
           <h3 id="week-practice-title" className="m-0 mb-1 text-base font-bold">Install</h3>
           <p className="text-xs text-gray-500 mt-0 mb-3">

@@ -25,6 +25,7 @@ import {
   WEEKLY_HOURS_CAP,
 } from './coachSlice';
 import { planAutoRecruiting } from '../../sim/autoRecruit';
+import { userPlayoffRun } from '../../sim/gameLoop';
 import { buildPositionNeedByPosition } from '../../sim/recruiting';
 import { coachSkillMultiplier } from '../../sim/recruitingWeek';
 import type { GameResult } from '../../types/sim';
@@ -253,6 +254,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const playoffSeeds = season.playoffs?.seeds ?? [];
     const madePlayoffs = playoffSeeds.some((s) => s.teamId === coach.selectedTeamId);
     const champion = season.playoffs?.championTeamId === coach.selectedTeamId;
+    const playoffRun = userPlayoffRun(season.playoffs ?? null, coach.selectedTeamId);
 
     // Job security delta: compare actual wins to win target
     const winDiff = wins - coach.programExpectations.winTarget;
@@ -315,6 +317,9 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       losses,
       madePlayoffs,
       champion,
+      playoffWins: playoffRun.wins,
+      playoffLosses: playoffRun.losses,
+      playoffRound: playoffRun.lastRound,
       recruitsSigned: signedClass.length,
       avgRecruitStars: Math.round(avgRecruitStars * 100) / 100,
       jobSecurityEnd: newJobSecurity,
