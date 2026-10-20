@@ -240,6 +240,13 @@ h1 {
   margin: 0;
 }
 
+/* Card titles: one size everywhere. Any class that sets its own size or margin still wins. */
+h3 {
+  font-size: 1rem;
+  line-height: 1.3;
+  margin: 0 0 0.5rem;
+}
+
 button {
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);

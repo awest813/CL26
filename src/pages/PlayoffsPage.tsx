@@ -9,11 +9,12 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName } from '../types/sim';
 import PageHeader from '../components/PageHeader';
 
+/** The shared round names, with who plays in the two early rounds. */
 const ROUND_LABELS: Record<PlayoffRoundName, string> = {
-    'ROUND1': 'First Round (5–12)',
-    'QUARTERFINAL': 'Quarterfinals (Top-4 byes enter)',
-    'SEMIFINAL': 'Semifinals',
-    'FINAL': 'National Championship'
+  ROUND1: `${PLAYOFF_ROUND_LABELS.ROUND1} · seeds 5–12`,
+  QUARTERFINAL: `${PLAYOFF_ROUND_LABELS.QUARTERFINAL} · the top four enter`,
+  SEMIFINAL: PLAYOFF_ROUND_LABELS.SEMIFINAL,
+  FINAL: PLAYOFF_ROUND_LABELS.FINAL,
 };
 
 function displaySeed(gameSeed: number, teamId: string, seedByTeamId: Map<string, number>): number | undefined {
@@ -171,13 +172,19 @@ function PlayoffsPage() {
             {/* Seeding panel */}
             <div className="card">
                 <h3>Tournament seeds</h3>
-                <div className="overflow-y-auto dataTableWrap" style={{ maxHeight: '560px' }}>
-                    <table className="w-full text-sm">
+                <div className="dataTableWrap">
+                    <table className="seedsTable text-sm">
+                        <caption className="sr-only">Tournament seeds and where each team stands</caption>
+                        <colgroup>
+                            <col className="seedsCol-seed" />
+                            <col />
+                            <col className="seedsCol-status" />
+                        </colgroup>
                         <thead>
-                            <tr className="text-left text-gray-500 border-b">
-                                <th scope="col" className="pb-2 w-10">Seed</th>
-                                <th scope="col" className="pb-2">Team</th>
-                                <th scope="col" className="pb-2 text-right pr-1">Result</th>
+                            <tr>
+                                <th scope="col" className="num">Seed</th>
+                                <th scope="col">Team</th>
+                                <th scope="col" className="num">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -205,22 +212,22 @@ function PlayoffsPage() {
                                       key={seed.teamId}
                                       className={`border-b last:border-0 ${isChamp ? 'bg-yellow-50' : ''} ${isUser ? 'youRow' : ''}`}
                                     >
-                                        <td className="py-1.5 font-mono font-bold text-center">#{seed.seed}</td>
+                                        <td className="num font-bold">#{seed.seed}</td>
                                         <td className="py-1.5">
                                             {team ? (
                                               <span className="standingsTeam">
                                                 <TeamLogo team={team} size="sm" />
                                                 <span>
-                                                  <div className="font-semibold leading-tight">
-                                                    {team.schoolName}
-                                                    {isUser && <span className="youMark ml-1">(You)</span>}
+                                                  <div className="font-semibold leading-tight seedsTeamLine">
+                                                    <span className="seedsTeamName" title={team.schoolName}>{team.schoolName}</span>
+                                                    {isUser && <span className="youMark">(You)</span>}
                                                   </div>
                                                   <div className="text-xs text-gray-500">{team.nickname}</div>
                                                 </span>
                                               </span>
                                             ) : seed.teamId}
                                         </td>
-                                        <td className="py-1.5 text-right text-xs pr-1">
+                                        <td className="num text-xs">
                                             {isChamp && <span className="text-yellow-700 font-bold">Champ</span>}
                                             {!isChamp && showBye && <span className="youMark">Bye</span>}
                                             {!isChamp && lostAGame && <span className="text-gray-400">Out</span>}

@@ -168,8 +168,8 @@ function Home() {
       )}
 
       <section className="card card-elevated">
-        <h2 className="sectionTitle">Season</h2>
-        <p className="sectionSubtitle">The year, where it stands, and the league seed behind the schedule.</p>
+        <h3 className="sectionTitle">Season</h3>
+        <p className="sectionSubtitle">The year, where it stands, and the random seed that drew the schedule.</p>
         <dl className="stat-row" aria-label="Current season status">
           <div className="stat-item">
             <dt className="stat-label">Year</dt>
@@ -180,7 +180,7 @@ function Home() {
             <dd className="value">{statusLabel}</dd>
           </div>
           <div className="stat-item">
-            <dt className="stat-label">Seed</dt>
+            <dt className="stat-label">Schedule seed</dt>
             <dd className="value value-compact">{seasonStarted ? seasonSeed : '—'}</dd>
           </div>
         </dl>

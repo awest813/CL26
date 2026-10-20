@@ -137,7 +137,7 @@ function TeamPage() {
         </section>
 
         <section className="card">
-          <h3 className="m-0">Top-End Talent</h3>
+          <h3 className="m-0">Top-end talent</h3>
           {topPlayer ? (
             <div className="teamSpotlightCard">
               <span className="teamInfoLabel">Best player</span>

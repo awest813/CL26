@@ -504,6 +504,7 @@
 
 .dynastyCoachCard h3 {
   margin: 0.2rem 0;
+  font-size: 1.12rem;
 }
 
 .dynastyCoachCard p {
@@ -1324,6 +1325,11 @@ td.num {
   margin: 0;
 }
 
+/* A section title with no subtitle still needs room before its content. */
+.sectionTitle + .link-grid {
+  margin-top: 0.75rem;
+}
+
 .sectionSubtitle {
   margin: 0.4rem 0 0;
   color: #6b7280;
@@ -1547,8 +1553,50 @@ abbr[title] {
 
 .playoffLayoutGrid {
   display: grid;
-  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(270px, 320px) minmax(0, 1fr);
   gap: 1rem;
+  align-items: start;
+}
+
+/* All twelve seeds fit without scrolling; the status column stays narrow. */
+.seedsTable {
+  table-layout: fixed;
+}
+
+.seedsCol-seed {
+  width: 3.2rem;
+}
+
+.seedsCol-status {
+  width: 3.8rem;
+}
+
+.seedsTable th,
+.seedsTable td {
+  padding: 0.45rem 0.4rem;
+}
+
+/* The name truncates; "(You)" stays whole beside it. */
+.seedsTeamLine {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.seedsTeamName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seedsTeamLine .youMark {
+  flex: 0 0 auto;
+}
+
+.seedsTable .standingsTeam > span {
+  min-width: 0;
 }
 
 @media (max-width: 1100px) {

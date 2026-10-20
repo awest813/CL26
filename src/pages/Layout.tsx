@@ -38,10 +38,18 @@ function Layout() {
     }
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    // The drawer is modal: the header and the page behind it leave the tab order until it closes.
+    const behind = [
+      document.querySelector<HTMLElement>('.skip-link'),
+      document.querySelector<HTMLElement>('.dynastyHeader'),
+      document.getElementById('main-content'),
+    ];
+    behind.forEach((element) => element?.setAttribute('inert', ''));
     window.addEventListener('keydown', onKeyDown);
     drawerQuery.addEventListener('change', onWidthChange);
     return () => {
       document.body.style.overflow = previousOverflow;
+      behind.forEach((element) => element?.removeAttribute('inert'));
       window.removeEventListener('keydown', onKeyDown);
       drawerQuery.removeEventListener('change', onWidthChange);
     };
