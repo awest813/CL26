@@ -67,7 +67,7 @@ function TeamPage() {
     <div className="pageStack">
       <section className="card card-elevated teamHeroCard">
         <Link to="/conferences" className="teamHeroBackLink">
-          ← Back to conferences
+          Back to conferences
         </Link>
         <div className="teamHeroHeader">
           <div className="programLockup">

@@ -166,7 +166,7 @@ function RosterPage() {
   }
 
   return (
-    <div className="flex-col gap-4">
+    <div className="pageStack">
       {/* Header */}
       <div className="card">
         <div className="flex justify-between items-start mb-3">

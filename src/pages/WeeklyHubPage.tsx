@@ -522,9 +522,6 @@ function WeeklyHubPage() {
           {season.phase === 'OFFSEASON' && (
             <Link to="/career" className="btn">Coach office</Link>
           )}
-          {loopStep.action !== 'begin-season' && (
-            <Link to="/season" className="btn">Season dashboard</Link>
-          )}
         </div>
       </section>
 
@@ -720,7 +717,7 @@ function WeeklyHubPage() {
               </p>
             </div>
             <Link to="/career/recruiting" className="btn btn-primary text-sm">
-              Open Board →
+              Open board
             </Link>
           </div>
         </div>

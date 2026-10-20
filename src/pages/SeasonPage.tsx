@@ -65,14 +65,14 @@ function SeasonPage() {
       return {
         label: 'Sim from this page, or create a coach to run the full weekly loop.',
         link: '/career/setup',
-        cta: 'Set Up Coach →',
+        cta: 'Set up coach',
       };
     }
     if (summary.phase === 'PLAYOFF') {
       if (coachReady) {
         return { label: 'The next round is on the weekly hub. The full bracket stays on the playoff page.', link: '/career/week', cta: 'Continue on the hub' };
       }
-      return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open Playoffs →' };
+      return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open playoffs' };
     }
     if (summary.phase === 'OFFSEASON') {
       if (coachReady) {
@@ -267,14 +267,16 @@ function SeasonPage() {
             </button>
           )}
         </div>
-        <div className="mt-3 border-t pt-3 flex items-center justify-between gap-3">
-          <div className="text-sm text-gray-600">{nextStep.label}</div>
-          {!coachReady && nextStep.link && nextStep.cta && (
-            <Link to={nextStep.link} className="btn btn-primary text-sm">
-              {nextStep.cta}
-            </Link>
-          )}
-        </div>
+        {!coachReady && (
+          <div className="mt-3 border-t pt-3 flex items-center justify-between gap-3">
+            <div className="text-sm text-gray-600">{nextStep.label}</div>
+            {nextStep.link && nextStep.cta && (
+              <Link to={nextStep.link} className="btn btn-primary text-sm">
+                {nextStep.cta}
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="card">

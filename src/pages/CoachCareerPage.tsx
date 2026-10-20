@@ -375,7 +375,7 @@ function CoachCareerPage() {
       {isOffseason && (
         <div className="card noticeCard">
           <h3 className="text-base font-bold mb-1">Offseason</h3>
-          <div className="flex gap-6 mb-4">
+          <div className="flex gap-6 mb-4 flex-wrap">
             <div>
               <div className="text-xs text-gray-500">Final Record</div>
               <div className="font-semibold">{displayedWins}–{displayedLosses}</div>
@@ -421,7 +421,7 @@ function CoachCareerPage() {
                 className="btn btn-primary"
                 onClick={onNewSeason}
               >
-                Begin Next Season →
+                Begin next season
               </button>
             )}
             {signingDayResolved && (

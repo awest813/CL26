@@ -170,7 +170,7 @@ function SeasonWeekPage() {
     return (
       <div className="pageStack">
         <div className="pageHeader">
-          <h2>Week Results</h2>
+          <h2>Week results</h2>
           <p className="pageHeader-sub">Browse scores, team stats, and top performers from each matchup.</p>
         </div>
         <div className="card text-center py-8">
@@ -179,7 +179,7 @@ function SeasonWeekPage() {
             Begin the season from the Season Dashboard to generate the 12-week schedule and unlock week-by-week results.
           </p>
           <Link to="/season" className="btn btn-primary inline-block">
-            Season Dashboard →
+            Season dashboard
           </Link>
         </div>
       </div>

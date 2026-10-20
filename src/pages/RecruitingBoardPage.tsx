@@ -217,7 +217,7 @@ function RecruitingBoardPage() {
             {classClosed ? 'The high school class is closed.' : 'No recruit pool loaded yet.'}
           </p>
           <Link to="/career" className="btn btn-primary">
-            {classClosed ? 'Open the portal and the pro draft' : 'Go to Coach Office to start recruiting →'}
+            {classClosed ? 'Open the portal and the pro draft' : 'Start the class in the coach office'}
           </Link>
         </div>
       </div>
@@ -254,7 +254,6 @@ function RecruitingBoardPage() {
             <div className="text-xs text-gray-400 uppercase mb-0.5">Committed</div>
             <div className={`font-bold ${committedToUserCount > coach.scholarshipsAvailable ? 'text-amber-600' : ''}`}>
               {committedToUserCount}
-              {committedToUserCount > coach.scholarshipsAvailable ? ' ⚠' : ''}
             </div>
           </div>
           <div>
@@ -263,7 +262,7 @@ function RecruitingBoardPage() {
           </div>
           <div className="ml-auto self-center">
             <Link to="/career/week" className="btn text-sm">
-              ← Weekly Hub
+              Weekly hub
             </Link>
           </div>
         </div>
@@ -274,12 +273,7 @@ function RecruitingBoardPage() {
             {Object.entries(positionNeedByPosition).map(([pos, need]) => (
               <span
                 key={pos}
-                className="text-xs px-2 py-0.5 rounded-full border font-semibold"
-                style={{
-                  borderColor: need > 0 ? '#f59e0b' : '#d1d5db',
-                  color: need > 0 ? '#92400e' : '#6b7280',
-                  background: need > 0 ? '#fef3c7' : '#f9fafb',
-                }}
+                className={need > 0 ? 'needChip needChip-short' : 'needChip'}
               >
                 {pos}: {need > 0 ? `need ${need}` : 'full'}
               </span>

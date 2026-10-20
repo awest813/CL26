@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import { simCareerPlayoffRound } from '../features/coach/careerThunks';
+import { PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
 import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectSeasonCapabilities, resetSeason } from '../features/season/seasonSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName } from '../types/sim';
@@ -37,6 +38,8 @@ function PlayoffsPage() {
   const userTeamId = coach.selectedTeamId;
   const userSeed = userTeamId ? seedByTeamId.get(userTeamId) ?? null : null;
   const userMadeField = userSeed != null;
+  const playoffSpot = userPlayoffSpot(playoffState ?? null, userTeamId ?? null);
+  const roundShort = playoffState ? PLAYOFF_ROUND_LABELS[playoffState.currentRound] : '';
 
   const handleNewSeason = () => {
     if (confirm('Start a new season? Current season results will be preserved in your career history.')) {
@@ -70,10 +73,10 @@ function PlayoffsPage() {
   if (summary.phase === 'REGULAR') {
       return (
           <div className="card text-center py-8">
-              <h2>Playoffs Not Started</h2>
+              <h2>Playoffs have not started</h2>
               <p className="text-gray-500 mb-4">Complete the regular season to unlock the post-season bracket.</p>
               <p className="text-sm text-gray-500">Week {summary.currentWeekIndex + 1} of 12 in progress.</p>
-              <Link to="/season" className="btn btn-primary mt-4 inline-block">Season Dashboard →</Link>
+              <Link to="/season" className="btn btn-primary mt-4 inline-block">Season dashboard</Link>
           </div>
       );
   }
@@ -81,50 +84,53 @@ function PlayoffsPage() {
   if (summary.phase === 'PRE') {
       return (
           <div className="card text-center py-8">
-              <h2>Playoffs Not Started</h2>
+              <h2>Playoffs have not started</h2>
               <p className="text-gray-500 mb-4">
                 Preseason setup is still open. Begin the season, then finish the 12-week regular season to unlock the bracket.
               </p>
-              <Link to="/season" className="btn btn-primary mt-2 inline-block">Open Season Dashboard →</Link>
+              <Link to="/season" className="btn btn-primary mt-2 inline-block">Season dashboard</Link>
           </div>
       );
   }
 
   return (
     <div className="pageStack">
-      {/* Header controls */}
-      <div className="card flex justify-between items-center">
-        <div>
-            <h2 className="m-0">College Lacrosse Playoff</h2>
-            <div className="text-sm text-gray-500 mt-1">
-                {isComplete
-                  ? `${summary.year} Season Complete`
-                  : `Current Round: ${playoffState ? ROUND_LABELS[playoffState.currentRound] : 'Selection Pending'}`}
-            </div>
-        </div>
-
-        <div className="flex gap-2">
+      <div className="card">
+        <div className="seasonHeaderRow">
+          <div className="pageHeader m-0">
+            <h2 className="m-0">Playoffs</h2>
+            <p className="pageHeader-sub">
+              {isComplete
+                ? `${summary.year} champion is set`
+                : playoffState
+                  ? ROUND_LABELS[playoffState.currentRound]
+                  : 'The field is not set'}
+            </p>
+          </div>
+          <div className="seasonActionGroup">
             {canStart && (
-                <button type="button" className="btn btn-primary" onClick={handleStartPlayoffs}>
-                    Initialize Bracket
-                </button>
+              <button type="button" className="btn btn-primary" onClick={handleStartPlayoffs}>
+                Set the bracket
+              </button>
             )}
             {canSim && (
-                <button type="button" className="btn btn-primary" onClick={handleSimRound}>
-                    Simulate {ROUND_LABELS[playoffState!.currentRound]}
-                </button>
+              <button type="button" className="btn btn-primary" onClick={handleSimRound}>
+                {playoffSpot.currentGame ? `Play ${roundShort}` : `Sim ${roundShort}`}
+              </button>
             )}
             {isComplete && (
-                hasCareerTeam ? (
-                  <button type="button" className="btn btn-primary" onClick={() => navigate('/career')}>
-                      Open Career Office
-                  </button>
-                ) : (
-                  <button type="button" className="btn btn-primary" onClick={handleNewSeason}>
-                      Begin New Season
-                  </button>
-                )
+              hasCareerTeam ? (
+                <Link to="/career/week" className="btn btn-primary">Continue on the hub</Link>
+              ) : (
+                <button type="button" className="btn btn-primary" onClick={handleNewSeason}>
+                  Begin new season
+                </button>
+              )
             )}
+            {hasCareerTeam && !isComplete && (
+              <Link to="/career/week" className="btn">Weekly hub</Link>
+            )}
+          </div>
         </div>
       </div>
 
@@ -259,7 +265,7 @@ function PlayoffsPage() {
                                     return (
                                         <div
                                           key={game.id}
-                                          className={`border rounded p-3 text-sm bg-gray-50 ${involvesUser ? 'playoffUserGame' : ''}`}
+                                          className={`playoffGame ${involvesUser ? 'playoffUserGame' : ''}`}
                                         >
                                             {/* Away team row */}
                                             <div className={`flex justify-between items-center mb-1 ${awayWon ? 'font-bold text-black' : awayLost ? 'playoffSide-out text-gray-400' : 'text-gray-700'}`}>

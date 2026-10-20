@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import TeamLogo from '../../components/TeamLogo';
 import { IconClose, IconMenu } from '../../components/UiIcons';
 import { useAppSelector } from '../../store/hooks';
@@ -39,7 +39,9 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
   const confStanding = useAppSelector(selectUserConferenceStanding);
 
   const selectedTeam = teams.find((team) => team.id === selectedTeamId) ?? null;
+  const { pathname } = useLocation();
   const continueAction = continueTarget(season.phase, onboardingReady);
+  const onContinuePage = pathname === continueAction.path;
   const phaseLabel = seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length);
   const record = selectedTeamId ? records[selectedTeamId] : null;
   const projectedSeed = selectedTeamId ? top12.find((row) => row.teamId === selectedTeamId)?.rank ?? null : null;
@@ -98,9 +100,11 @@ function Header({ menuOpen, onToggleMenu }: HeaderProps) {
           <strong>{season.year}</strong>
           <small>{phaseLabel}</small>
         </div>
-        <Link to={continueAction.path} className="btn btn-primary dynastyActionBtn">
-          {continueAction.label}
-        </Link>
+        {!onContinuePage && (
+          <Link to={continueAction.path} className="btn btn-primary dynastyActionBtn">
+            {continueAction.label}
+          </Link>
+        )}
       </div>
     </header>
   );
