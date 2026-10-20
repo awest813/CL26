@@ -68,10 +68,15 @@ function SeasonPage() {
         cta: 'Set Up Coach →',
       };
     }
-    if (summary.phase === 'PLAYOFF') return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open Playoffs →' };
+    if (summary.phase === 'PLAYOFF') {
+      if (coachReady) {
+        return { label: 'The next round is on the weekly hub. The full bracket stays on the playoff page.', link: '/career/week', cta: 'Continue on the hub' };
+      }
+      return { label: 'Regular season is complete. Continue into the playoff bracket.', link: '/playoffs', cta: 'Open Playoffs →' };
+    }
     if (summary.phase === 'OFFSEASON') {
       if (coachReady) {
-        return { label: 'Finalize offseason actions, then begin the next year.', link: '/career', cta: 'Open Career Office →' };
+        return { label: 'Signing day, the season record, and next year continue on the hub.', link: '/career/week', cta: 'Continue on the hub' };
       }
       return { label: 'Season is complete. Begin a fresh season when ready.', link: null, cta: null };
     }
@@ -221,8 +226,13 @@ function SeasonPage() {
           )}
           {summary.phase === 'PLAYOFF' && (
             <div className="seasonActionGroup">
-              <Link to="/playoffs" className="btn btn-primary">
-                Go to Playoffs
+              {coachReady ? (
+                <Link to="/career/week" className="btn btn-primary">
+                  Continue on the hub
+                </Link>
+              ) : null}
+              <Link to="/playoffs" className={coachReady ? 'btn' : 'btn btn-primary'}>
+                {coachReady ? 'Full bracket' : 'Go to Playoffs'}
               </Link>
             </div>
           )}
@@ -232,8 +242,8 @@ function SeasonPage() {
                 View Playoff Results
               </Link>
               {coachReady ? (
-                <Link to="/career" className="btn btn-primary">
-                  Open Career Office
+                <Link to="/career/week" className="btn btn-primary">
+                  Continue on the hub
                 </Link>
               ) : (
                 <button type="button" className="btn btn-primary" onClick={handleNewSeason}>

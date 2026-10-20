@@ -510,7 +510,14 @@ function CoachCareerPage() {
               <div className="mt-1">Begin the season to advance hours. You can still build the board now.</div>
             )}
             {season.phase === 'PLAYOFF' && (
-              <div className="mt-1">The weekly cycle is locked during the playoffs.</div>
+              <Link to="/career/week" className="block mt-1">
+                Play the next round from the weekly hub
+              </Link>
+            )}
+            {season.phase === 'OFFSEASON' && (
+              <Link to="/career/week" className="block mt-1">
+                Signing day and next year continue on the weekly hub
+              </Link>
             )}
           </div>
         </div>

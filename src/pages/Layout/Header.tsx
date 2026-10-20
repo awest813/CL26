@@ -10,8 +10,8 @@ function continueTarget(phase: string, onboardingReady: boolean): { path: string
   if (!onboardingReady) return { path: '/career/setup', label: 'Start Career' };
   if (phase === 'PRE') return { path: '/season', label: 'Begin Season' };
   if (phase === 'REGULAR') return { path: '/career/week', label: 'Weekly Hub' };
-  if (phase === 'PLAYOFF') return { path: '/playoffs', label: 'Playoffs' };
-  if (phase === 'OFFSEASON') return { path: '/career', label: 'Offseason' };
+  if (phase === 'PLAYOFF') return { path: '/career/week', label: 'Next round' };
+  if (phase === 'OFFSEASON') return { path: '/career/week', label: 'Offseason' };
   return { path: '/career', label: 'Continue' };
 }
 

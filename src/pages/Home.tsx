@@ -73,9 +73,12 @@ function Home() {
       if (careerReady) return { label: `Open Week ${currentWeekIndex + 1}`, link: '/career/week', primary: true };
       return { label: `Go to Week ${currentWeekIndex + 1}`, link: '/season', primary: true };
     }
-    if (phase === 'PLAYOFF') return { label: 'Open Playoffs', link: '/playoffs', primary: true };
+    if (phase === 'PLAYOFF') {
+      if (careerReady) return { label: 'Next round', link: '/career/week', primary: true };
+      return { label: 'Open Playoffs', link: '/playoffs', primary: true };
+    }
     if (phase === 'OFFSEASON') {
-      if (careerReady) return { label: 'Run the Offseason', link: '/career', primary: true };
+      if (careerReady) return { label: 'Offseason', link: '/career/week', primary: true };
       return { label: 'Review Season', link: '/season', primary: false };
     }
     return { label: 'View Season', link: '/season', primary: false };

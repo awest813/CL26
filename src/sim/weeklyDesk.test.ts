@@ -39,7 +39,8 @@ describe('weekly desk', () => {
     assert.match(needs?.detail ?? '', /Faceoff 1/);
     assert.equal(plan?.tone, 'ready');
     assert.match(plan?.detail ?? '', /Conditioning/);
-    assert.equal(plan?.href, null);
+    assert.equal(plan?.action, 'Install');
+    assert.equal(plan?.href, '#week-practice');
   });
 
   test('a full board and a covered roster read as ready', () => {

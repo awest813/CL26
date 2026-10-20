@@ -1867,6 +1867,17 @@ button.archetypeOption[aria-pressed='true'] {
   width: 5.5rem;
 }
 
+#week-result {
+  scroll-margin-top: 5.5rem;
+}
+
+.loopActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
 .weekActionBar {
   display: flex;
   justify-content: space-between;
