@@ -20,6 +20,7 @@ import {
   RECRUITING_POSITION_FILTERS,
 } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import RecruitingReportNote from '../components/RecruitingReportNote';
 import { RecruitingPitch, RecruitMotivation } from '../types/sim';
 
 type PositionFilterValue = (typeof RECRUITING_POSITION_FILTERS)[number];
@@ -267,6 +268,12 @@ function RecruitingBoardPage() {
           </div>
         </div>
 
+        {coach.recruitingReport && (
+          <div className="mt-3 pt-3 border-t">
+            <RecruitingReportNote report={coach.recruitingReport} recruitPool={coach.recruitPool} teams={teams} />
+          </div>
+        )}
+
         {/* Position need indicators */}
         {positionNeedByPosition && (
           <div className="mt-3 pt-3 border-t flex flex-wrap gap-2">
@@ -320,6 +327,11 @@ function RecruitingBoardPage() {
                             <span className="text-xs text-green-600 font-bold">✓</span>
                           )}
                         </div>
+                        {recruit.committedTeamId && recruit.committedTeamId !== selectedTeamId && (
+                          <div className="text-xs text-red-500">
+                            Committed: {teamNameById.get(recruit.committedTeamId) ?? 'Other'}
+                          </div>
+                        )}
                         <div className="text-xs text-gray-500">
                           {'★'.repeat(recruit.stars)} {recruit.position} · {recruit.region}
                         </div>
@@ -352,6 +364,7 @@ function RecruitingBoardPage() {
                         <select
                           id={`pitch-${recruit.id}`}
                           value={activePitch ?? ''}
+                          disabled={Boolean(recruit.committedTeamId)}
                           onChange={(e) => onPitchChange(recruit.id, e.target.value)}
                           className="text-xs p-1 border rounded w-full mb-1"
                           aria-label={`Recruiting pitch for ${recruit.name}`}
@@ -397,6 +410,8 @@ function RecruitingBoardPage() {
                           max={MAX_HOURS_PER_RECRUIT}
                           value={coach.weeklyHoursByRecruitId[recruit.id] ?? 0}
                           onChange={(e) => onHoursChange(recruit.id, Number(e.target.value) || 0)}
+                          disabled={Boolean(recruit.committedTeamId)}
+                          title={recruit.committedTeamId ? 'Committed prospects take no hours' : undefined}
                           className="w-12 p-1 border rounded text-center text-sm"
                           aria-label={`Recruiting hours for ${recruit.name}`}
                         />

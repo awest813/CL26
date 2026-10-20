@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
+import RecruitingReportNote from '../components/RecruitingReportNote';
 import {
   selectRankTrends,
   selectTeamRecords,
@@ -293,6 +294,7 @@ function WeeklyHubPage() {
     0,
   );
   const hoursRemaining = WEEKLY_HOURS_CAP - totalHours;
+  const openBoardCount = boardRecruits.filter((r) => !r.committedTeamId).length;
 
   function onHoursChange(recruitId: string, nextHours: number) {
     const current = coach.weeklyHoursByRecruitId[recruitId] ?? 0;
@@ -315,7 +317,7 @@ function WeeklyHubPage() {
         practiceDetail: PRACTICE_FOCUS_DESCRIPTIONS[coach.practiceFocus],
         schemeLine: schemeCall(coach.tactics),
         recruitPoolCount: coach.recruitPool.length,
-        boardCount: boardRecruits.length,
+        boardCount: openBoardCount,
         hoursAssigned: totalHours,
         hoursCap: WEEKLY_HOURS_CAP,
         hasRoster: (coach.managedRoster?.length ?? 0) > 0,
@@ -327,7 +329,7 @@ function WeeklyHubPage() {
         rankTarget: coach.programExpectations?.rankTarget ?? 99,
       }),
     [
-      boardRecruits.length,
+      openBoardCount,
       coach.managedRoster,
       coach.practiceFocus,
       coach.programExpectations?.rankTarget,
@@ -657,7 +659,7 @@ function WeeklyHubPage() {
             <div>
               <h3 className="m-0 text-base font-bold">Active Recruiting Board</h3>
               <div className="text-xs text-gray-500 mt-0.5">
-                {boardRecruits.length} targets · Hours remaining:{' '}
+                {openBoardCount} open of {boardRecruits.length} targets · Hours remaining:{' '}
                 <span className={`font-semibold ${hoursRemaining < 0 ? 'text-hours-over' : 'text-hours-ok'}`}>
                   {hoursRemaining}/{WEEKLY_HOURS_CAP}
                 </span>
@@ -667,6 +669,11 @@ function WeeklyHubPage() {
               Full board
             </Link>
           </div>
+          {coach.recruitingReport && (
+            <div className="mb-3">
+              <RecruitingReportNote report={coach.recruitingReport} recruitPool={coach.recruitPool} teams={teams} />
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -688,6 +695,11 @@ function WeeklyHubPage() {
                         {committed && (
                           <span className="ml-1.5 text-xs text-green-600 font-bold">
                             ✓
+                          </span>
+                        )}
+                        {recruit.committedTeamId && !committed && (
+                          <span className="ml-1.5 text-xs text-red-500">
+                            Committed: {teams.find((t) => t.id === recruit.committedTeamId)?.schoolName ?? 'Other'}
                           </span>
                         )}
                         <div className="text-xs text-gray-400">
@@ -716,6 +728,7 @@ function WeeklyHubPage() {
                           onChange={(e) =>
                             onHoursChange(recruit.id, Number(e.target.value) || 0)
                           }
+                          disabled={Boolean(recruit.committedTeamId)}
                           className="w-12 p-1 border rounded text-center text-sm"
                           aria-label={`Recruiting hours for ${recruit.name}`}
                         />

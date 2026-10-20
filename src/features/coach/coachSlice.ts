@@ -3,7 +3,7 @@ import type { Employment } from '../../sim/jobOffers';
 import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
 import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
-import { simulateRecruitingWeek } from '../../sim/recruitingWeek';
+import { simulateRecruitingWeek, type CpuRecruitingProfile } from '../../sim/recruitingWeek';
 import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
@@ -65,6 +65,17 @@ export interface ProgramResources {
   facilities: number;
 }
 
+/** What changed on the trail during the last simulated recruiting period. */
+export interface RecruitingReport {
+  /** 1-based recruiting period that just finished. */
+  period: number;
+  committedToUserIds: string[];
+  /** Board targets that picked another program this period. */
+  lostTargets: { recruitId: string; teamId: string }[];
+  /** Commits anywhere in the class this period, the user's included. */
+  totalCommits: number;
+}
+
 export interface CoachState {
   selectedTeamId: string | null;
   tactics: Tactics;
@@ -78,6 +89,8 @@ export interface CoachState {
   recruitingWeekIndex: number;
   weeklyHoursByRecruitId: Record<string, number>;
   activePitchesByRecruitId: Record<string, RecruitingPitch>;
+  /** Missing on saves from before the report existed. Treat undefined as null. */
+  recruitingReport?: RecruitingReport | null;
   scholarshipsAvailable: number;
   signedRecruitsByYear: Record<number, SignedRecruit[]>;
   practiceFocus: PracticeFocus;
@@ -116,6 +129,7 @@ const initialState: CoachState = {
   recruitingWeekIndex: 0,
   weeklyHoursByRecruitId: {},
   activePitchesByRecruitId: {},
+  recruitingReport: null,
   scholarshipsAvailable: 12,
   signedRecruitsByYear: {},
   practiceFocus: 'CONDITIONING',
@@ -200,9 +214,14 @@ const coachSlice = createSlice({
         state.weeklyHoursByRecruitId = {};
         state.activePitchesByRecruitId = {};
         state.recruitingWeekIndex = 0;
+        state.recruitingReport = null;
         state.scholarshipsAvailable = 12;
     },
     addRecruitToBoard: (state, action: PayloadAction<{ recruitId: string; startingInterest: number }>) => {
+        const target = state.recruitPool.find(r => r.id === action.payload.recruitId);
+        if (target?.committedTeamId) {
+            return;
+        }
         if (!state.boardRecruitIds.includes(action.payload.recruitId) && state.boardRecruitIds.length < 25) {
             state.boardRecruitIds.push(action.payload.recruitId);
             state.weeklyHoursByRecruitId[action.payload.recruitId] = 0;
@@ -226,6 +245,11 @@ const coachSlice = createSlice({
 
         // Ensure recruit is on the board
         if (!state.boardRecruitIds.includes(recruitId)) {
+            return;
+        }
+        // A committed prospect is off the trail; hours there would be wasted.
+        if (state.recruitPool.find(r => r.id === recruitId)?.committedTeamId) {
+            state.weeklyHoursByRecruitId[recruitId] = 0;
             return;
         }
 
@@ -344,6 +368,7 @@ const coachSlice = createSlice({
         state.weeklyHoursByRecruitId = {};
         state.activePitchesByRecruitId = {};
         state.recruitingWeekIndex = 0;
+        state.recruitingReport = null;
         state.scholarshipsAvailable = 12;
         // Commits belonged to the previous program. Keep the year key so signing
         // day stays resolved and the next-year handoff can run, but drop this
@@ -389,6 +414,7 @@ const coachSlice = createSlice({
         state.weeklyHoursByRecruitId = {};
         state.activePitchesByRecruitId = {};
         state.recruitingWeekIndex = 0;
+        state.recruitingReport = null;
         state.scholarshipsAvailable = 12;
         state.teamFatigue = 20;
     },
@@ -407,10 +433,32 @@ const coachSlice = createSlice({
         });
 
         // Apply commitments
+        const boardSet = new Set(state.boardRecruitIds);
+        const report: RecruitingReport = {
+            period: state.recruitingWeekIndex,
+            committedToUserIds: [],
+            lostTargets: [],
+            totalCommits: 0,
+        };
         action.payload.commitments.forEach(({ recruitId, teamId }) => {
             const recruit = state.recruitPool.find(r => r.id === recruitId);
-            if (recruit) {
-                recruit.committedTeamId = teamId;
+            if (!recruit || recruit.committedTeamId) return;
+            recruit.committedTeamId = teamId;
+            report.totalCommits += 1;
+            if (teamId === state.selectedTeamId) {
+                report.committedToUserIds.push(recruitId);
+            } else if (boardSet.has(recruitId)) {
+                report.lostTargets.push({ recruitId, teamId });
+            }
+        });
+        state.recruitingReport = report;
+
+        // Hours and pitches on committed prospects go back to the weekly pool.
+        state.boardRecruitIds.forEach((recruitId) => {
+            const recruit = state.recruitPool.find(r => r.id === recruitId);
+            if (recruit?.committedTeamId) {
+                state.weeklyHoursByRecruitId[recruitId] = 0;
+                delete state.activePitchesByRecruitId[recruitId];
             }
         });
     },
@@ -598,6 +646,11 @@ export const advanceRecruitingWeek = createAsyncThunk(
         const boostersBonus = 1 + (boostersLevel - 50) / 400;
         const recruitingBonus = archetypeBonus * recruitingSkillBonus * nilBonus * boostersBonus;
         const coachSkill = coach.profile?.skill ?? 72;
+        const cpuProfilesByTeamId: Record<string, CpuRecruitingProfile> = {};
+        teams.forEach((team) => {
+            if (team.id === coach.selectedTeamId) return;
+            cpuProfilesByTeamId[team.id] = { prestige: team.prestige, region: team.region };
+        });
 
         const result = simulateRecruitingWeek(
             coach.recruitPool,
@@ -611,7 +664,8 @@ export const advanceRecruitingWeek = createAsyncThunk(
             coach.recruitingSeed,
             coach.recruitingWeekIndex,
             recruitingBonus,
-            coachSkill
+            coachSkill,
+            cpuProfilesByTeamId,
         );
 
         const commitments: { recruitId: string; teamId: string }[] = [];

@@ -1,10 +1,21 @@
 import type { Recruit, RecruitingPitch, TeamId } from '../types/sim.ts';
-import { makeRng, randInt } from './rng.ts';
+import { makeRng, randInt, seedToNumber } from './rng.ts';
+import { regionsAreProximate } from './recruiting.ts';
 
 export interface RecruitingWeekResult {
   interestByRecruitId: Record<string, Record<string, number>>; // recruitId -> teamId -> interest
   committedTeamByRecruitId: Record<string, TeamId | null>;
 }
+
+/** What the CPU side needs to know about a program to recruit for it. */
+export interface CpuRecruitingProfile {
+  prestige: number;
+  region: string;
+}
+
+/** CPU programs stop chasing new commits once their class is this size. */
+export const CPU_CLASS_CAP = 8;
+const DEFAULT_CPU_PROFILE: CpuRecruitingProfile = { prestige: 60, region: '' };
 
 function getGradeMultiplier(grade?: string): number {
   if (!grade) return 1.0;
@@ -25,6 +36,49 @@ function getImportanceMultiplier(importance?: 'HIGH' | 'MEDIUM' | 'LOW'): number
   return 0.7; // Pitching something they don't care about
 }
 
+/**
+ * Average weekly interest a CPU staff adds for one prospect. Prestige and geography
+ * do most of the work; a recruit who wants a winner or wants to stay home leans
+ * harder toward programs that sell those.
+ */
+export function cpuWeeklyPursuit(recruit: Recruit, profile: CpuRecruitingProfile): number {
+  const prestigeTerm = Math.max(0, (profile.prestige - 45) / 10);
+  const sameRegion = profile.region !== '' && profile.region === recruit.region;
+  const nearRegion = !sameRegion && profile.region !== '' && regionsAreProximate(profile.region, recruit.region);
+  const regionTerm = sameRegion ? 1.5 : nearRegion ? 0.75 : 0;
+  const motivationTerm = recruit.motivations.reduce((sum, motivation) => {
+    if (motivation.importance !== 'HIGH') return sum;
+    if (motivation.pitch === 'PRESTIGE' && profile.prestige >= 78) return sum + 1;
+    if (motivation.pitch === 'CHAMPIONSHIP' && profile.prestige >= 85) return sum + 1;
+    if (motivation.pitch === 'PROXIMITY' && (sameRegion || nearRegion)) return sum + 1;
+    if (motivation.pitch === 'PLAYING_TIME' && profile.prestige < 70) return sum + 1;
+    return sum;
+  }, 0);
+  const starFactor = 0.4 + recruit.stars * 0.2;
+  return 1 + prestigeTerm * starFactor + regionTerm + motivationTerm;
+}
+
+/**
+ * How high a prospect sits on one staff's own board, fixed for the whole cycle.
+ * Spreads commit timing so the class does not all land in the same week.
+ */
+export function cpuBoardPriority(seed: number, recruitId: string, teamId: string): number {
+  const rng = makeRng(seedToNumber(`${seed}:priority:${recruitId}:${teamId}`));
+  const roll = rng();
+  // Skewed low: most suitors are lukewarm, a few make the prospect a priority.
+  return 0.35 + roll * roll * 1.2;
+}
+
+function committedCountsByTeam(recruits: Recruit[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  recruits.forEach((recruit) => {
+    if (recruit.committedTeamId) {
+      counts.set(recruit.committedTeamId, (counts.get(recruit.committedTeamId) ?? 0) + 1);
+    }
+  });
+  return counts;
+}
+
 export function simulateRecruitingWeek(
   recruits: Recruit[],
   boardRecruitIds: string[],
@@ -38,9 +92,11 @@ export function simulateRecruitingWeek(
   weekIndex: number,
   archetypeBonus: number = 1.0,
   coachSkill: number = 72,
+  cpuProfilesByTeamId: Record<string, CpuRecruitingProfile> = {},
 ): RecruitingWeekResult {
-  const rng = makeRng(seed + weekIndex * 9973);
   const boardSet = new Set(boardRecruitIds);
+  // Commits made this week count toward CPU class caps for recruits checked later.
+  const classSizeByTeamId = committedCountsByTeam(recruits);
 
   const interestByRecruitId: Record<string, Record<string, number>> = {};
   const committedTeamByRecruitId: Record<string, TeamId | null> = {};
@@ -53,6 +109,9 @@ export function simulateRecruitingWeek(
       return;
     }
 
+    // One stream per prospect per week, so moving hours on one target never
+    // reshuffles CPU outcomes on another.
+    const rng = makeRng(seedToNumber(`${seed}:${weekIndex}:${recruit.id}`));
     const nextInterestMap: Record<string, number> = { ...recruit.interestByTeamId };
 
     // --- 1. User Team Logic ---
@@ -100,23 +159,37 @@ export function simulateRecruitingWeek(
     }
 
     // --- 2. CPU Teams Logic ---
-    // Passive CPU pressure is intentionally softer than a focused user hour allocation.
-    Object.keys(nextInterestMap).forEach(teamId => {
-        if (teamId === selectedTeamId) return; // Skip user
+    // Each suitor works the prospect in proportion to its pull. The current CPU
+    // leader presses a little harder, and a full class backs off. A focused user
+    // allocation (20 hours) outpaces most suitors; only an elite staff that has
+    // made the prospect a priority keeps pace.
+    const cpuTeamIds = Object.keys(nextInterestMap)
+      .filter((teamId) => teamId !== selectedTeamId)
+      .sort();
+    let cpuLeaderId: string | null = null;
+    cpuTeamIds.forEach((teamId) => {
+      if (cpuLeaderId === null || recruit.interestByTeamId[teamId] > recruit.interestByTeamId[cpuLeaderId]) {
+        cpuLeaderId = teamId;
+      }
+    });
 
-        const prev = nextInterestMap[teamId];
-        const effort = rng();
-        let gain = 0;
-        if (effort > 0.45) {
-             // ~55% of weeks: modest 1-3 point bump
-             gain = randInt(rng, 1, 3);
-        } else if (effort < 0.2) {
-             // Occasional cool-off
-             gain = randInt(rng, -2, 0);
-        }
-
-        const next = Math.max(0, Math.min(100, prev + gain));
-        nextInterestMap[teamId] = next;
+    cpuTeamIds.forEach((teamId) => {
+      const prev = nextInterestMap[teamId];
+      const effort = rng();
+      let gain: number;
+      if ((classSizeByTeamId.get(teamId) ?? 0) >= CPU_CLASS_CAP) {
+        gain = -randInt(rng, 2, 4);
+      } else if (effort < 0.12) {
+        // Occasional quiet week or a visit that fell flat.
+        gain = -randInt(rng, 0, 2);
+      } else {
+        const pursuit =
+          cpuWeeklyPursuit(recruit, cpuProfilesByTeamId[teamId] ?? DEFAULT_CPU_PROFILE) *
+          cpuBoardPriority(seed, recruit.id, teamId);
+        gain = Math.max(1, Math.round(pursuit * (0.5 + rng())));
+        if (teamId === cpuLeaderId) gain += 1;
+      }
+      nextInterestMap[teamId] = Math.max(0, Math.min(100, prev + gain));
     });
 
     // --- 3. Commitment Check ---
@@ -125,6 +198,7 @@ export function simulateRecruitingWeek(
 
     Object.entries(nextInterestMap).forEach(([teamId, interest]) => {
         if (interest >= 100) {
+            if (teamId !== selectedTeamId && (classSizeByTeamId.get(teamId) ?? 0) >= CPU_CLASS_CAP) return;
             if (interest > bestInterest) {
                 bestInterest = interest;
                 bestTeamId = teamId;
@@ -137,6 +211,9 @@ export function simulateRecruitingWeek(
         }
     });
 
+    if (bestTeamId) {
+      classSizeByTeamId.set(bestTeamId, (classSizeByTeamId.get(bestTeamId) ?? 0) + 1);
+    }
     interestByRecruitId[recruit.id] = nextInterestMap;
     committedTeamByRecruitId[recruit.id] = bestTeamId;
   });

@@ -5,11 +5,14 @@ import { computeWeeklyCoachXp, userWonResult } from './careerThunks.ts';
 import {
   addRecruitToBoard,
   applyJobOfferAcceptance,
+  applyRecruitingUpdates,
   clearRecruitPitch,
   coachReducer,
   declineAllJobOffers,
   initializeRecruitingBoard,
+  setRecruitHours,
   setRecruitPitch,
+  setSelectedTeam,
   togglePortalClaim,
 } from './coachSlice.ts';
 
@@ -47,6 +50,56 @@ describe('coach recruiting reducer', () => {
     state = coachReducer(state, clearRecruitPitch(recruitId));
 
     assert.strictEqual(state.activePitchesByRecruitId[recruitId], undefined);
+  });
+
+  test('weekly commits fill the recruiting report and free the hours they held', () => {
+    let state = coachReducer(undefined, setSelectedTeam('team-1'));
+    state = coachReducer(state, initializeRecruitingBoard({ seed: 2026, teams: mockTeams }));
+    const [mine, lost, open] = state.recruitPool.map((r) => r.id);
+    for (const id of [mine, lost, open]) {
+      state = coachReducer(state, addRecruitToBoard({ recruitId: id, startingInterest: 20 }));
+      state = coachReducer(state, setRecruitHours({ recruitId: id, hours: 15 }));
+      state = coachReducer(state, setRecruitPitch({ recruitId: id, pitch: 'PRESTIGE' }));
+    }
+
+    state = coachReducer(state, applyRecruitingUpdates({
+      interestUpdates: {},
+      commitments: [
+        { recruitId: mine, teamId: 'team-1' },
+        { recruitId: lost, teamId: 'team-2' },
+      ],
+    }));
+
+    assert.deepStrictEqual(state.recruitingReport, {
+      period: 1,
+      committedToUserIds: [mine],
+      lostTargets: [{ recruitId: lost, teamId: 'team-2' }],
+      totalCommits: 2,
+    });
+    assert.strictEqual(state.weeklyHoursByRecruitId[mine], 0);
+    assert.strictEqual(state.weeklyHoursByRecruitId[lost], 0);
+    assert.strictEqual(state.weeklyHoursByRecruitId[open], 15);
+    assert.strictEqual(state.activePitchesByRecruitId[lost], undefined);
+
+    state = coachReducer(state, setRecruitHours({ recruitId: lost, hours: 10 }));
+    assert.strictEqual(state.weeklyHoursByRecruitId[lost], 0, 'committed prospects take no hours');
+
+    // Re-sent commitments from later weeks are not new news.
+    state = coachReducer(state, applyRecruitingUpdates({
+      interestUpdates: {},
+      commitments: [{ recruitId: lost, teamId: 'team-2' }],
+    }));
+    assert.strictEqual(state.recruitingReport?.totalCommits, 0);
+    assert.strictEqual(state.recruitingReport?.period, 2);
+  });
+
+  test('a prospect committed elsewhere cannot be added to the board', () => {
+    let state = coachReducer(undefined, setSelectedTeam('team-1'));
+    state = coachReducer(state, initializeRecruitingBoard({ seed: 2026, teams: mockTeams }));
+    const id = state.recruitPool[0].id;
+    state = coachReducer(state, applyRecruitingUpdates({ interestUpdates: {}, commitments: [{ recruitId: id, teamId: 'team-2' }] }));
+    state = coachReducer(state, addRecruitToBoard({ recruitId: id, startingInterest: 20 }));
+    assert.deepStrictEqual(state.boardRecruitIds, []);
   });
 
   test('setting a pitch for a non-board recruit is ignored', () => {
