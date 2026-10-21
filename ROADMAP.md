@@ -1,5 +1,7 @@
 # College Lacrosse Head Coach Sim — Roadmap
 
+> Sim gap list and phased gameplan: [docs/SIM_AUDIT.md](./docs/SIM_AUDIT.md)
+
 ## Vision
 
 A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism and fully fictionalized schools/branding. Core pillars:

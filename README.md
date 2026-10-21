@@ -12,6 +12,7 @@ A deterministic, web-based college lacrosse head-coaching simulation. Build a pr
 The project site is [https://awest813.github.io/CL26/](https://awest813.github.io/CL26/). It publishes from `master` after GitHub Pages is set to **GitHub Actions**. See [Deploy](#deploy).
 
 See [ROADMAP.md](./ROADMAP.md) for milestone status and what's coming next.
+See [docs/SIM_AUDIT.md](./docs/SIM_AUDIT.md) for the match-engine calibration, sim gap list, and gameplan.
 
 ## Quick start
 
