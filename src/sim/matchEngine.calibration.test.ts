@@ -1,0 +1,169 @@
+import assert from 'node:assert';
+import { describe, test } from 'node:test';
+import { simulateGame } from './matchEngine.ts';
+import { generateRoster } from './generateRoster.ts';
+import { DEFAULT_TACTICS } from './tactics.ts';
+import leagueData from '../data/teams128.json' with { type: 'json' };
+import type { Player, Team } from '../types/sim.ts';
+
+/**
+ * League-wide box-score bands, so engine changes cannot drift away from a
+ * D-I-like game without a test noticing. Run `bun scripts/calibrate-engine.ts`
+ * for the full table these bands come from.
+ */
+const teams = leagueData.teams as Team[];
+const GAMES = 1000;
+
+interface Totals {
+  games: number;
+  goals: number;
+  shots: number;
+  shotsOnGoal: number;
+  saves: number;
+  groundBalls: number;
+  turnovers: number;
+  penalties: number;
+  homeWins: number;
+  overtimeGames: number;
+}
+
+function playLeagueSample(): Totals {
+  const totals: Totals = { games: 0, goals: 0, shots: 0, shotsOnGoal: 0, saves: 0, groundBalls: 0, turnovers: 0, penalties: 0, homeWins: 0, overtimeGames: 0 };
+  for (let i = 0; i < GAMES; i += 1) {
+    const home = teams[(i * 37) % teams.length];
+    const away = teams[(i * 53 + 11) % teams.length];
+    if (home.id === away.id) continue;
+    const rosterSeed = `calibration-${i % 4}`;
+    const result = simulateGame(
+      { team: home, roster: generateRoster(home, rosterSeed) },
+      { team: away, roster: generateRoster(away, rosterSeed) },
+      DEFAULT_TACTICS,
+      DEFAULT_TACTICS,
+      i * 7919 + 3,
+    );
+    totals.games += 1;
+    for (const stats of [result.statsA, result.statsB]) {
+      totals.goals += stats.goals;
+      totals.shots += stats.shots;
+      totals.shotsOnGoal += stats.shotsOnGoal ?? 0;
+      totals.saves += stats.saves;
+      totals.groundBalls += stats.groundBalls;
+      totals.turnovers += stats.turnovers;
+      totals.penalties += stats.penalties;
+    }
+    if (result.scoreA > result.scoreB) totals.homeWins += 1;
+    if (result.highlights.some((line) => /overtime/i.test(line))) totals.overtimeGames += 1;
+  }
+  return totals;
+}
+
+function assertBand(label: string, value: number, min: number, max: number): void {
+  assert.ok(value >= min && value <= max, `${label} ${value.toFixed(3)} outside [${min}, ${max}]`);
+}
+
+describe('match engine calibration bands', () => {
+  const totals = playLeagueSample();
+  const teamGames = totals.games * 2;
+
+  test('scoring volume looks like a D-I game', () => {
+    assertBand('goals per team', totals.goals / teamGames, 10, 13.5);
+    assertBand('shots per team', totals.shots / teamGames, 32, 42);
+    assertBand('shooting pct', totals.goals / totals.shots, 0.27, 0.35);
+    assertBand('save pct on shots on goal', totals.saves / totals.shotsOnGoal, 0.45, 0.58);
+  });
+
+  test('possession battles look like a D-I game', () => {
+    assertBand('ground balls per team', totals.groundBalls / teamGames, 24, 34);
+    assertBand('turnovers per team', totals.turnovers / teamGames, 10, 16);
+    assertBand('penalties per team', totals.penalties / teamGames, 2, 4.5);
+  });
+
+  test('home field and overtime rates stay believable', () => {
+    assertBand('home win pct', totals.homeWins / totals.games, 0.51, 0.6);
+    assertBand('overtime rate', totals.overtimeGames / totals.games, 0.03, 0.12);
+  });
+});
+
+const alpha: Team = { id: 'alpha', schoolName: 'Alpha State', nickname: 'Arrows', conferenceId: 'c1', region: 'East', prestige: 70 };
+const beta: Team = { id: 'beta', schoolName: 'Beta Tech', nickname: 'Breakers', conferenceId: 'c2', region: 'West', prestige: 70 };
+
+describe('match engine event model', () => {
+  test('faceoff percentage is the share of draws actually won', () => {
+    const rosterA = generateRoster(alpha, 'fo-model');
+    const rosterB = generateRoster(beta, 'fo-model');
+    for (let seed = 1; seed <= 40; seed += 1) {
+      const result = simulateGame({ team: alpha, roster: rosterA }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, seed);
+      const taken = result.statsA.faceoffsTaken ?? 0;
+      assert.strictEqual(taken, result.statsB.faceoffsTaken);
+      assert.strictEqual((result.statsA.faceoffWins ?? 0) + (result.statsB.faceoffWins ?? 0), taken);
+      // One draw to open each regulation quarter and one after every goal, except a goal that ends a period or the game.
+      assert.ok(taken >= 4 && taken <= 4 + result.scoreA + result.scoreB + 30, `seed ${seed}: ${taken} draws`);
+      assert.ok(Math.abs(result.statsA.faceoffPct - ((result.statsA.faceoffWins ?? 0) / taken) * 100) < 0.11);
+    }
+  });
+
+  test('shots on goal split into goals and saves', () => {
+    const rosterA = generateRoster(alpha, 'sog-model');
+    const rosterB = generateRoster(beta, 'sog-model');
+    for (let seed = 1; seed <= 40; seed += 1) {
+      const result = simulateGame({ team: alpha, roster: rosterA }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, seed);
+      assert.strictEqual(result.statsA.shotsOnGoal, result.scoreA + result.statsB.saves);
+      assert.strictEqual(result.statsB.shotsOnGoal, result.scoreB + result.statsA.saves);
+      assert.ok((result.statsA.shotsOnGoal ?? 0) <= result.statsA.shots);
+    }
+  });
+
+  test('a star shooter leads his team in goals', () => {
+    const rosterA = generateRoster(alpha, 'star-model');
+    const rosterB = generateRoster(beta, 'star-model');
+    const starIndex = rosterA.findIndex((player) => player.position === 'A');
+    const star: Player = { ...rosterA[starIndex], shooting: 99, IQ: 95 };
+    const roster = rosterA.map((player, index) => (index === starIndex ? star : player));
+
+    const goalsByPlayer = new Map<string, number>();
+    for (let seed = 1; seed <= 300; seed += 1) {
+      const result = simulateGame({ team: alpha, roster }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, seed);
+      for (const row of result.topPlayersA) {
+        goalsByPlayer.set(row.playerId, (goalsByPlayer.get(row.playerId) ?? 0) + row.goals);
+      }
+    }
+    const leader = [...goalsByPlayer.entries()].sort((a, b) => b[1] - a[1])[0];
+    assert.strictEqual(leader[0], star.id);
+  });
+
+  test('overtime is sudden death: the first goal ends it', () => {
+    const rosterA = generateRoster(alpha, 'ot-model');
+    const rosterB = generateRoster(beta, 'ot-model');
+    let overtimeGames = 0;
+    for (let seed = 1; seed <= 600 && overtimeGames < 10; seed += 1) {
+      const result = simulateGame({ team: alpha, roster: rosterA }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, seed);
+      if (!result.highlights.some((line) => /wins in overtime/.test(line))) continue;
+      overtimeGames += 1;
+      assert.strictEqual(Math.abs(result.scoreA - result.scoreB), 1, `seed ${seed} OT margin`);
+      assert.ok(!result.highlights.some((line) => /sudden-death winner/.test(line)), `seed ${seed} needed the deadlock fallback`);
+    }
+    assert.ok(overtimeGames > 0);
+  });
+
+  test('same inputs give the same game', () => {
+    const rosterA = generateRoster(alpha, 'determinism');
+    const rosterB = generateRoster(beta, 'determinism');
+    const first = simulateGame({ team: alpha, roster: rosterA }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, 4242);
+    const second = simulateGame({ team: alpha, roster: rosterA }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, 4242);
+    assert.deepStrictEqual(first, second);
+  });
+
+  test('highlights only describe events from the game', () => {
+    const rosterA = generateRoster(alpha, 'highlight-model');
+    const rosterB = generateRoster(beta, 'highlight-model');
+    const result = simulateGame({ team: alpha, roster: rosterA }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, 99);
+    const names = new Set([...rosterA, ...rosterB].map((player) => player.name));
+    const goalLines = result.highlights.filter((line) => /, (Alpha State|Beta Tech), /.test(line));
+    assert.ok(goalLines.length > 0);
+    for (const line of goalLines) {
+      const scorer = line.split(' — ')[1].split(',')[0];
+      assert.ok(names.has(scorer), `unknown scorer in "${line}"`);
+    }
+    assert.ok(result.highlights.some((line) => line.startsWith('Halftime')));
+  });
+});

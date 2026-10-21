@@ -36,6 +36,10 @@ function leagueAverages(): void {
   let groundBalls = 0;
   let turnovers = 0;
   let penalties = 0;
+  let shotsOnGoal = 0;
+  let faceoffs = 0;
+  let clearsMade = 0;
+  let clearAttempts = 0;
   let favoriteGames = 0;
   let favoriteWins = 0;
   const scores: number[] = [];
@@ -65,6 +69,10 @@ function leagueAverages(): void {
     groundBalls += result.statsA.groundBalls + result.statsB.groundBalls;
     turnovers += result.statsA.turnovers + result.statsB.turnovers;
     penalties += result.statsA.penalties + result.statsB.penalties;
+    shotsOnGoal += (result.statsA.shotsOnGoal ?? 0) + (result.statsB.shotsOnGoal ?? 0);
+    faceoffs += result.statsA.faceoffsTaken ?? 0;
+    clearsMade += (result.statsA.clearsMade ?? 0) + (result.statsB.clearsMade ?? 0);
+    clearAttempts += (result.statsA.clearAttempts ?? 0) + (result.statsB.clearAttempts ?? 0);
     const gap = home.prestige - away.prestige;
     if (Math.abs(gap) >= 10) {
       favoriteGames += 1;
@@ -83,7 +91,10 @@ function leagueAverages(): void {
     'goals p10–p90': `${quantile(scores, 0.1)}–${quantile(scores, 0.9)}`,
     shots: (shots / teamGames).toFixed(1),
     'shooting pct': pct(goals, shots),
-    'save pct (saves / shots)': pct(saves, shots),
+    'shots on goal': (shotsOnGoal / teamGames).toFixed(1),
+    'save pct (saves / shots on goal)': pct(saves, shotsOnGoal),
+    'faceoffs per game (both teams)': (faceoffs / played).toFixed(1),
+    'clear pct': pct(clearsMade, clearAttempts),
     'ground balls': (groundBalls / teamGames).toFixed(1),
     turnovers: (turnovers / teamGames).toFixed(1),
     penalties: (penalties / teamGames).toFixed(2),

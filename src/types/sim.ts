@@ -109,6 +109,12 @@ export interface TeamGameStats {
   groundBalls: number;
   penalties: number;
   faceoffPct: number;
+  /** Shots that reached the cage (goals + saves). Missing on games played before it was tracked. */
+  shotsOnGoal?: number;
+  faceoffWins?: number;
+  faceoffsTaken?: number;
+  clearsMade?: number;
+  clearAttempts?: number;
 }
 
 export interface PlayerGameStats {
@@ -119,6 +125,10 @@ export interface PlayerGameStats {
   goals: number;
   assists: number;
   saves: number;
+  /** Missing on games played before per-player shots and ground balls were tracked. */
+  shots?: number;
+  groundBalls?: number;
+  causedTurnovers?: number;
 }
 
 export type TopPerformer = PlayerGameStats;

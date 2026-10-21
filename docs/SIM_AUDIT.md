@@ -6,41 +6,44 @@ Audit date: 2026-10-21. Scope: everything under `src/sim/`, plus the places in `
 
 - `npm run test:regression`: every suite passes, including the 20-season career harness (about 3 minutes).
 - `npm run lint`: clean. `npm run build`: clean.
-- `src/sim/timeUtils.test.ts` exists but is not listed in the `test:regression` script, so it never runs in CI.
+- ~~`src/sim/timeUtils.test.ts` is not listed in the `test:regression` script.~~ Fixed in Phase 1.
 - Determinism holds. Every game, recruit pool, and injury roll comes from a seed.
 
 The career loop around the sim is in good shape: phases, recruiting, signing day, portal, draft, job security. Most of the gaps are in the match engine itself and in the CPU side of the league. The CPU side is static.
 
-## Calibration: what the engine produces today
+## Calibration: before and after Phase 1
 
-Measured with `bun scripts/calibrate-engine.ts`: 6,000 games between generated rosters, default tactics on both sides. The reference column is an approximate NCAA D-I men's per-team average. Use it to find the direction to tune, not as an exact target.
+Measured with `bun scripts/calibrate-engine.ts`: 6,000 games between generated rosters, default tactics on both sides. The reference column is an approximate NCAA D-I men's per-team average. Use it to find the direction to tune, not as an exact target. `src/sim/matchEngine.calibration.test.ts` now holds the engine inside bands around these numbers.
 
-| Stat (per team per game) | Engine | Approx. D-I reference | Verdict |
+| Stat (per team per game) | Audit (before) | After Phase 1 | Approx. D-I reference |
 |---|---|---|---|
-| Goals | 9.4 (p10–p90: 5–14) | 11–12 | Low |
-| Shots | 15.9 | 33–38 | **Less than half** |
-| Shooting % | 59% | 28–31% | **About double** |
-| Save % (saves / shots) | 29% | ~50–55% of shots on goal | **Far too low** |
-| Ground balls | 19.0 | ~28–32 | Low |
-| Turnovers | 11.1 | ~13–15 | Slightly low |
-| Penalties | 4.5 | ~3–4 | Slightly high |
-| Home win % | 53% | ~55–58% | OK |
-| Overtime rate | 7.5% | ~8–10% | OK |
-| One-goal games | 22% | ~20–25% | OK |
-| Favorite (10+ prestige) win % | 89% | — | Very chalky, see L1 |
+| Goals | 9.4 (p10–p90: 5–14) | 12.0 (7–18) | 11–12 |
+| Shots | **15.9** | 37.7 | 33–38 |
+| Shots on goal | not tracked | 24.2 | ~22–25 |
+| Shooting % | **59%** | 31.8% | 28–31% |
+| Save % | **29% of all shots** | 50.4% of shots on goal | ~50–55% of shots on goal |
+| Faceoffs per game (both teams) | not modeled | 26.9 | ~25–28 |
+| Clear % | not modeled | 87.5% | ~85–88% |
+| Ground balls | 19.0 | 28.7 | ~28–32 |
+| Turnovers | 11.1 | 12.7 | ~13–15 |
+| Penalties | 4.5 | 3.0 | ~3–4 |
+| Home win % | 53% | 54.7% | ~55–58% |
+| Overtime rate | 7.5% | 5.9% | ~8–10% |
+| One-goal games | 22% | 16.4% | ~20–25% |
+| Favorite (10+ prestige) win % | 89% | 87.8% | — (L1, Phase 3) |
 
 Sensitivity (two programs of about the same strength, opponent on default tactics):
 
-| Change | Win % (baseline 47.8%) |
-|---|---|
-| Offense set crease | 53.8% |
-| Ride aggressive | 53.7% |
-| Every "aggressive" option at once | **63.1%** |
-| Faceoff specialist at 95 / at 45 | **65.6% / 26.9%** |
-| Goalie at 95 / at 45 | 64.6% / 31.6% |
-| A 99-shooting attacker | 0.42 goals per game, the same share as a 60-rated teammate |
+| Change | Before (baseline 47.8%) | After Phase 1 (baseline 46.5%) |
+|---|---|---|
+| Offense set crease | 53.8% | 50.6% |
+| Ride aggressive | 53.7% | 48.5% |
+| Every "aggressive" option at once | **63.1%** | 54.8% (still the best; Phase 2) |
+| Faceoff specialist at 95 / at 45 | **65.6% / 26.9%** | 52.5% / 37.7% |
+| Goalie at 95 / at 45 | 64.6% / 31.6% | 57.1% / 31.9% |
+| A 99-shooting attacker | 0.42 goals per game, same share as a 60-rated teammate | 2.47 goals per game, the team leader |
 
-Read the scores as "right final scores from the wrong box score." Goals and margins land in a believable range because two errors cancel: too few shots and too many of them going in.
+Before Phase 1, the final scores were right but the box score was wrong. Goals and margins landed in a believable range because two errors cancelled out: too few shots, and too many of them going in. Now the box score itself is close to D-I. Still open: one-goal games and overtime run a little low, because the rating gap between programs still decides too much. That is the static CPU rosters (L1) more than the engine.
 
 ---
 
@@ -52,19 +55,19 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 
 | # | Sev | Gap | Where | Notes |
 |---|---|---|---|---|
-| E1 | P0 | **Box score is mis-calibrated.** Shots are about 16 and shooting is about 59%. The possession funnel (penalty → turnover → `shotChance` → miss → save) ends too many possessions with no shot, and the shots that do happen score too often. | `runPossession`, ~L389–495 | Allow several shot attempts per possession (rebound, backup, reset) and split shots from shots on goal. Retune the save chance to about 0.5 of shots on goal. |
-| E2 | P0 | **Faceoffs do not drive possession.** The possession split is fixed once at kickoff (`shareA`), and possessions then strictly alternate. The faceoff % in the box score comes from separate draws taken after the game (`extraFaceoffs`) and has no effect on the result. After a goal there is no faceoff, so a team cannot win a draw and score again. | L327–330, L514, L566–574 | Replace the pre-allocated, interleaved order with a game loop driven by events. A faceoff after every goal and at the start of each quarter decides the next possession. Scoring runs then come out of the play instead of being stitched on afterward. |
-| E3 | P0 | **Individual skill does not decide who scores.** Shooters and assisters are picked by depth weight only (starter 1.78, bench 0.38). Shooting, passing, and IQ only move the team average. | `weightedPlayerForGoal` L252 | Weight shooters by shooting × role × starter weight, and assisters by passing and IQ. This is what makes recruiting a star attacker matter. |
+| E1 | ✅ | **Done in Phase 1.** Box score is mis-calibrated.** Shots are about 16 and shooting is about 59%. The possession funnel (penalty → turnover → `shotChance` → miss → save) ends too many possessions with no shot, and the shots that do happen score too often. | `runPossession`, ~L389–495 | Allow several shot attempts per possession (rebound, backup, reset) and split shots from shots on goal. Retune the save chance to about 0.5 of shots on goal. |
+| E2 | ✅ | **Done in Phase 1.** Faceoffs did not drive possession. The possession split is fixed once at kickoff (`shareA`), and possessions then strictly alternate. The faceoff % in the box score comes from separate draws taken after the game (`extraFaceoffs`) and has no effect on the result. After a goal there is no faceoff, so a team cannot win a draw and score again. | L327–330, L514, L566–574 | Replace the pre-allocated, interleaved order with a game loop driven by events. A faceoff after every goal and at the start of each quarter decides the next possession. Scoring runs then come out of the play instead of being stitched on afterward. |
+| E3 | ✅ | **Done in Phase 1.** Individual skill did not decide who scored. Shooters and assisters are picked by depth weight only (starter 1.78, bench 0.38). Shooting, passing, and IQ only move the team average. | `weightedPlayerForGoal` L252 | Weight shooters by shooting × role × starter weight, and assisters by passing and IQ. This is what makes recruiting a star attacker matter. |
 | E4 | P0 | **Dominant scheme, no counters.** Every tactic is a flat bonus, and "all aggressive" is strictly best (+15 pp). Nothing depends on the opponent's scheme or roster. | `offenseBoostFromTactics`, `defenseBoostFromTactics` L156–176 | Add a matchup matrix (for example, zone beats invert, pressure is weak against motion, early slides punish dodge-heavy sets) and real costs (fast tempo raises turnovers; pressure raises fouls and gives up odd-man chances). The goal is no single best setting. |
 | E5 | P1 | **Faceoff and goalie ratings are proxies.** Faceoff uses `overall`, passing, speed, and discipline. Goalie uses `defense` and IQ. There is no faceoff or save attribute, and one player moves the win rate by about 35–40 pp. | L120, L132 | Add a position-specific rating (`faceoff` for FO, `saving` for G, generated and developed like the others), and narrow the clamp in `computeFaceoffShare`. A wing ground-ball battle by the LSMs should share the faceoff result. |
 | E6 | P1 | **Ground balls are random.** They are `randInt(10, 18)` plus a bonus, rolled before the game, and only turnovers add more. | L332–333 | Generate ground balls from events: faceoff scrums, missed and saved shots that stay live, caused turnovers. Credit a player. |
 | E7 | P1 | **Man-up is one possession at +4%.** A defensive flag gives no extra-man possession window, no EMO or man-down stats, and no releasable versus non-releasable penalties. Offensive flags just end the possession. | L404–420 | Model penalty time (30 s, 1 min) as a stretch of possessions at man-up. Track EMO conversion. Tie it to discipline and the slide scheme. |
 | E8 | P1 | **Stamina is unused in games, and there is no in-game fatigue.** `stamina` is generated and developed but never read by the engine. Team fatigue only touches the user's modifiers. | `calcRatings`; `coachEffects.ts` | Give midfield lines and in-game fatigue a fourth-quarter decay scaled by stamina and depth. This is the natural home for the "conditioning" install. |
 | E9 | P1 | **No game-state behavior.** No stall or keep-away when ahead late, no extra aggression when trailing, no clock. `gameRules.ts` defines the 80 s shot clock and other constants that the engine never reads. | — | Track time per possession (`MEN_SHOT_CLOCK_SECONDS`) so tempo means seconds, and add leading and trailing adjustments in Q4. |
-| E10 | P1 | **Overtime ends in a coin flip.** Three 5-possession periods, then `resolveDeadlockWinner` invents a goal. NCAA overtime is unlimited sudden-death. | L54, L541–562 | With the event loop from E2, run sudden-death until someone scores (with a safety cap that is actually never hit). |
+| E10 | ✅ | **Done in Phase 1.** Overtime ended in a coin flip. Three 5-possession periods, then `resolveDeadlockWinner` invents a goal. NCAA overtime is unlimited sudden-death. | L54, L541–562 | With the event loop from E2, run sudden-death until someone scores (with a safety cap that is actually never hit). |
 | E11 | P1 | **Thin player stat lines.** Only goals, assists, and saves. No shots, ground balls, caused turnovers, turnovers, faceoffs won, or penalties per player. Only the top 5 per team are returned, and only 2 per team are stored in `GameSummary`. | `PlayerGameStats` in `types/sim.ts` | This blocks season stat leaders, awards, All-American teams, and draft logic based on production. |
-| E12 | P2 | **Some highlights are made up.** Filler lines (L582–594) are rolled at random times and do not describe events from the game. | L582 | Generate highlights only from real events. Fewer and accurate beats more and invented. |
-| E13 | P2 | **Clears and rides are not events.** `rideClear` only moves the offense's own turnover rate and offense boost. There are no failed clears, rides, or 20-second violations. | L392–396 | Add them as part of the E2 event loop. |
+| E12 | ✅ | **Done in Phase 1.** Some highlights were made up. Filler lines (L582–594) are rolled at random times and do not describe events from the game. | L582 | Generate highlights only from real events. Fewer and accurate beats more and invented. |
+| E13 | P2 | **Partly done in Phase 1:** clears and rides are events now (clear %, failed clears, beaten rides turning into transition chances). Still missing: 20-second violations. Original gap: clears and rides were not events. `rideClear` only moves the offense's own turnover rate and offense boost. There are no failed clears, rides, or 20-second violations. | L392–396 | Add them as part of the E2 event loop. |
 | E14 | P2 | **Home field is a flat bump, applied in every game.** The playoff semifinals and final use it too (`simulateGame` defaults `homeAdvantageForA: true`), although those are neutral-site in the NCAA format. | L326; `playoffs.ts` L294 | Pass `homeAdvantageForA: false` for the semifinals and final. Optional: scale the bump by program or fan support. |
 
 ### B. League ecosystem: CPU programs
@@ -100,8 +103,8 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 
 | # | Sev | Gap | Notes |
 |---|---|---|---|
-| T1 | P1 | No calibration guard. The engine can drift silently. | `scripts/calibrate-engine.ts` (added with this audit) prints the tables above. Next: a fast `matchEngine.calibration.test.ts` that asserts bands (for example, shots 30–40, shooting 26–34%, home win 52–60%) on about 1,000 games. |
-| T2 | P2 | `timeUtils.test.ts` is not in `test:regression`. | Add it to the script. |
+| T1 | ✅ | **Done in Phase 1** (`matchEngine.calibration.test.ts`). No calibration guard. The engine can drift silently. | `scripts/calibrate-engine.ts` (added with this audit) prints the tables above. Next: a fast `matchEngine.calibration.test.ts` that asserts bands (for example, shots 30–40, shooting 26–34%, home win 52–60%) on about 1,000 games. |
+| T2 | ✅ | **Done in Phase 1.** `timeUtils.test.ts` is not in `test:regression`. | Add it to the script. |
 | T3 | P2 | Season and playoff sims build every roster with `generateRoster` inside the loop, so each roster is regenerated many times per week. | Memoize per (team, seed) or keep it in the league ledger from L1. This matters once rosters become persistent. |
 
 ---
@@ -110,7 +113,22 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 
 Order matters. Engine calibration comes first, because every later system (CPU rosters, schemes, rankings) is tuned against the engine's output. Each phase ships on its own and keeps the regression suite green. The engine stays pure in `src/sim/`.
 
-### Phase 1: calibration harness and engine core (E1, E2, E3, E10, T1, T2)
+### Phase 1: calibration harness and engine core (E1, E2, E3, E10, T1, T2) — ✅ done
+
+Shipped: an event-driven `simulateGame` with the same signature and `GameResult` shape. It has:
+- a draw after every goal and at each period start
+- clears and rides
+- up to five shots per possession, with backups and rebounds
+- an 80-second shot clock, and possession length set by tempo
+- unlimited sudden-death overtime
+- shooters picked by shooting and IQ, feeders by passing and IQ
+- optional new stats: shots on goal, faceoff wins and draws taken, clears, and per-player shots, ground balls, and caused turnovers
+- highlights built only from real events
+
+Calibration bands and event-model tests live in `src/sim/matchEngine.calibration.test.ts`. Saved games keep their stored results. New games use the new engine.
+
+Original plan:
+
 
 1. Turn `scripts/calibrate-engine.ts` into banded assertions (`matchEngine.calibration.test.ts`) and add it, along with `timeUtils.test.ts`, to `test:regression`. Start with the bands loose, around today's values, then tighten them as the engine moves.
 2. Rewrite the inner loop as an event loop: faceoff → possession (clear → settled offense → shot attempts → rebound or reset) → next faceoff or change of possession. Keep the public `simulateGame` signature and `GameResult` shape so the UI and slices do not change.
@@ -133,6 +151,8 @@ Order matters. Engine calibration comes first, because every later system (CPU r
 
 ### Phase 3: a living league (L1, L3, L4, L5, D3, T3)
 
+Decided: CPU programs get a talent ledger, not full rosters. Generated rosters move to about 32 players, two deep at every position.
+
 1. A CPU talent ledger persisted in `season` (it is gameplay state, so it fits the whitelist): per-team rating offsets updated at signing day from CPU commits, departures, and draft picks. `generateRoster` takes the offset. This keeps storage small and avoids persisting 127 full rosters.
 2. CPU prestige drift from results, with the same clamp as the user's program.
 3. CPU injuries using the existing seeded scratch roll.
@@ -142,6 +162,8 @@ Order matters. Engine calibration comes first, because every later system (CPU r
 **Done when:** over 20 seasons, programs rise and fall, and a CPU program that signs top classes for three years climbs the poll.
 
 ### Phase 4: NCAA-ish postseason and poll (S1, S2, S3, E14)
+
+Decided: the 6 highest-ranked conference champions get guaranteed bids. The other 6 spots are at-large.
 
 1. Neutral-site semifinals and final.
 2. Poll fixes: capped margin, no scoring-volume term, RPI-style SOS, quality-win tiers, and prestige weight that fades through the season. Update the methodology copy on the Rankings page.
@@ -154,9 +176,9 @@ Player stat lines and season leaders, then awards and All-Americans. Line fatigu
 
 ---
 
-## Open design decisions
+## Design decisions (settled 2026-10-21)
 
-1. **Auto bids:** do all 16 conference champions get in (that is more than a 12-team field holds), only the top N, or does a conference title just break ties among bubble teams? Recommendation: the 6 highest-ranked conference champions get guaranteed bids, and the other 6 spots are at-large. That keeps it NCAA-ish with 16 conferences.
-2. **Roster scale:** stay at about 25 generated players, or move to about 40 with a gameday 10 and lines? Recommendation: about 32, a 2-deep chart at every position, which is enough for injuries and lines without bloating the UI.
-3. **Men's only?** `gameRules.ts` carries women's constants. Recommendation: men's only through alpha, and keep the constants.
-4. **CPU rosters: a ledger or full persisted rosters?** Recommendation: the ledger (Phase 3). Full rosters cost localStorage space and add little until there is a CPU roster viewer.
+1. **Auto bids:** the 6 highest-ranked conference champions get guaranteed bids, and the other 6 spots are at-large. This is built in Phase 4.
+2. **Roster scale:** about 32 generated players, two deep at every position. This is built in Phase 3.
+3. **Men's or women's:** men's only through alpha. The women's constants stay in `gameRules.ts`, unused.
+4. **CPU rosters:** a small talent record per team, not 127 saved rosters. This is built in Phase 3.

@@ -1,35 +1,25 @@
 import { describe, expect, test } from 'bun:test';
-import { clockForPossession } from './timeUtils.ts';
+import { clockAtElapsed } from './timeUtils.ts';
 
-describe('clockForPossession calculates correct quarter and time', () => {
-  test('start of the game', () => {
-    const result = clockForPossession(0, 100);
-    expect(result).toEqual({ quarter: 1, time: '15:00', label: 'Q1' });
+describe('clockAtElapsed reads the game clock from elapsed seconds', () => {
+  test('opening draw', () => {
+    expect(clockAtElapsed(0)).toEqual({ quarter: 1, time: '15:00', label: 'Q1' });
   });
 
-  test('end of first quarter', () => {
-    const result = clockForPossession(25, 100);
-    expect(result).toEqual({ quarter: 2, time: '15:00', label: 'Q2' });
+  test('mid first quarter', () => {
+    expect(clockAtElapsed(452)).toEqual({ quarter: 1, time: '7:28', label: 'Q1' });
   });
 
-  test('middle of the game', () => {
-    const result = clockForPossession(50, 100);
-    expect(result).toEqual({ quarter: 3, time: '15:00', label: 'Q3' });
+  test('start of the second half', () => {
+    expect(clockAtElapsed(1800)).toEqual({ quarter: 3, time: '15:00', label: 'Q3' });
   });
 
-  test('middle of a quarter', () => {
-    const result = clockForPossession(12, 100);
-    expect(result).toEqual({ quarter: 1, time: '7:48', label: 'Q1' });
+  test('final horn stays in the fourth quarter', () => {
+    expect(clockAtElapsed(3600)).toEqual({ quarter: 4, time: '0:00', label: 'Q4' });
+    expect(clockAtElapsed(3700)).toEqual({ quarter: 4, time: '0:00', label: 'Q4' });
   });
 
-  test('handles total being 0 safely', () => {
-    const result = clockForPossession(0, 0);
-    expect(result).toEqual({ quarter: 1, time: '15:00', label: 'Q1' });
-  });
-
-  test('overtime periods use OT labels', () => {
-    const result = clockForPossession(2, 10, { overtimePeriod: 1 });
-    expect(result.label).toBe('OT');
-    expect(result.quarter).toBe(5);
+  test('overtime counts down a four-minute period', () => {
+    expect(clockAtElapsed(30, { overtimePeriod: 2 })).toEqual({ quarter: 6, time: '3:30', label: 'OT2' });
   });
 });
