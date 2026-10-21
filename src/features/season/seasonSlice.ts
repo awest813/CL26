@@ -3,6 +3,7 @@ import { SeasonState, TeamRecord, GameResult } from '../../types/sim';
 import { RootState } from '../../store/store';
 import { generateSeasonSchedule } from '../../sim/schedule';
 import { simulateGame } from '../../sim/matchEngine';
+import { programTactics } from '../../sim/schemeMatchups';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
@@ -146,8 +147,9 @@ export const simCurrentWeek = createAsyncThunk(
         ? userAvailability.roster
         : getRoster(game.awayTeamId);
 
-      const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
-      const awayTactics = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : DEFAULT_TACTICS;
+      // Every CPU program runs its own staff's scheme.
+      const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : programTactics(homeTeam);
+      const awayTactics = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : programTactics(awayTeam);
 
       const gameSeed = composeSeasonGameSeed(
         seasonSeed,

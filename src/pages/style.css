@@ -2261,6 +2261,17 @@ details[open] > summary::before {
   color: var(--warning-fg);
 }
 
+.scoutingLines {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.scoutingLines li + li {
+  margin-top: 0.25rem;
+}
+
 .schemeCallCause {
   font-size: 0.62rem;
   font-weight: 800;

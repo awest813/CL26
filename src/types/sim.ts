@@ -59,6 +59,10 @@ export interface Player extends PlayerRatings {
   age: number;
   skill: number;
   overall: number;
+  /** Faceoff specialist rating. Missing on players saved before it existed; see `faceoffRating`. */
+  faceoff?: number;
+  /** Goalkeeping rating. Missing on players saved before it existed; see `savingRating`. */
+  saving?: number;
 }
 
 export interface Recruit {
@@ -115,6 +119,9 @@ export interface TeamGameStats {
   faceoffsTaken?: number;
   clearsMade?: number;
   clearAttempts?: number;
+  /** Goals scored while a man up, and the man-up chances the other side's penalties gave. */
+  extraManGoals?: number;
+  extraManOpportunities?: number;
 }
 
 export interface PlayerGameStats {

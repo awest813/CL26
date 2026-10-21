@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position, POSITION_ORDER } from '../types/sim';
 import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
 import { getRosterDepthSummary } from '../sim/rosterManagement';
+import { faceoffRating, savingRating } from '../sim/playerSpecialty';
 import { playerYearLabel } from '../sim/rosterSummary';
 import PageHeader from '../components/PageHeader';
 
@@ -16,6 +17,18 @@ const POSITION_LABELS: Record<Position, string> = {
   FO: 'Faceoff',
   G: 'Goalie',
 };
+
+/** The rating that matters most for a specialist: faceoffs for a faceoff man, saves for a goalie. */
+function specialtyRating(player: Player): number | null {
+  if (player.position === 'FO') return faceoffRating(player);
+  if (player.position === 'G') return savingRating(player);
+  return null;
+}
+
+function specialtyClass(player: Player): string {
+  const rating = specialtyRating(player);
+  return rating == null ? '' : ratingClass(rating);
+}
 
 const STARTER_COUNTS: Record<Position, number> = {
   A: 3,
@@ -81,6 +94,7 @@ function PlayerRow({
       <td className="num text-xs text-gray-500">{player.speed}</td>
       <td className="num text-xs text-gray-500">{player.defense}</td>
       <td className="num text-xs text-gray-500">{player.IQ}</td>
+      <td className={`num font-bold ${specialtyClass(player)}`}>{specialtyRating(player) ?? ''}</td>
       <td className="text-right">
         {(canPromote || canDemote) && (
           <button
@@ -292,6 +306,7 @@ function RosterPage() {
                   <col className="rosterCol-stat" />
                   <col className="rosterCol-stat" />
                   <col className="rosterCol-stat" />
+                  <col className="rosterCol-stat" />
                   <col className="rosterCol-action" />
                 </colgroup>
                 <thead>
@@ -306,6 +321,10 @@ function RosterPage() {
                     <th scope="col" className="num"><abbr title="Speed">SPD</abbr></th>
                     <th scope="col" className="num"><abbr title="Defense">DEF</abbr></th>
                     <th scope="col" className="num"><abbr title="Lacrosse IQ">IQ</abbr></th>
+                    {/* Kept in every table so the columns line up; only specialists fill it. */}
+                    <th scope="col" className="num">
+                      {pos === 'FO' ? <abbr title="Faceoffs">FO</abbr> : pos === 'G' ? <abbr title="Saves">SV</abbr> : <span className="sr-only">Specialty</span>}
+                    </th>
                     <th scope="col"><span className="sr-only">Lineup</span></th>
                   </tr>
                 </thead>

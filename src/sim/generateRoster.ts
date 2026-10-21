@@ -1,6 +1,7 @@
 import { Player, Position, Team } from '../types/sim';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
+import { rollSpecialties } from './playerSpecialty';
 
 const POSITION_DISTRIBUTION: Position[] = [
   'A', 'A', 'A',
@@ -50,6 +51,8 @@ export function generateRoster(team: Team, seed: string): Player[] {
       stamina,
       discipline,
       overall,
+      // Own stream, so adding the specialties left every existing rating where it was.
+      ...rollSpecialties(position, baseline, makeRng(seedToNumber(`${seed}:${team.id}:${index}:specialty`))),
     };
   });
 }

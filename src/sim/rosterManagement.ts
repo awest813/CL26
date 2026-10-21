@@ -1,6 +1,7 @@
 import { Player, Position, SignedRecruit, Team } from '../types/sim';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
+import { faceoffRating, growSpecialty, rollSpecialties, savingRating } from './playerSpecialty';
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
 const FACILITIES_BONUS_DIVISOR = 22;
@@ -80,6 +81,7 @@ export function convertRecruitToPlayer(
     stamina,
     discipline,
     overall,
+    ...rollSpecialties(position, baseline, makeRng(seedToNumber(`${team.id}:${signedRecruit.recruitId}:specialty`))),
   };
 }
 
@@ -121,7 +123,11 @@ export function developPlayers(
     const overall = Math.round((shooting + passing + speed + defense + IQ + stamina + discipline) / 7);
     const skill = clamp(Math.round(overall + randInt(rng, -2, 2)));
 
-    return { ...player, shooting, passing, speed, defense, IQ, stamina, discipline, overall, skill };
+    // Only a specialist works on his specialty; it grows like the other traits.
+    const faceoff = player.position === 'FO' ? growSpecialty(faceoffRating(player), growth, rng) : faceoffRating(player);
+    const saving = player.position === 'G' ? growSpecialty(savingRating(player), growth, rng) : savingRating(player);
+
+    return { ...player, shooting, passing, speed, defense, IQ, stamina, discipline, overall, skill, faceoff, saving };
   });
 }
 
@@ -329,6 +335,7 @@ export function applyRosterTurnover(
       stamina: clamp(Math.round(baseline + randInt(rng, -6, 6))),
       discipline: clamp(Math.round(baseline + randInt(rng, -5, 7))),
       overall,
+      ...rollSpecialties(pos, baseline - overallPenalty, makeRng(seedToNumber(`${team.id}:${tag}:${newSeed}:${walkOnSerial}:specialty`))),
     });
   };
 

@@ -2,6 +2,17 @@ import { GameResult, Player, PlayerGameStats, Position, TeamGameplayModifiers, T
 import { makeRng, normalish, pickOne, randInt } from './rng.ts';
 import { MEN_SHOT_CLOCK_SECONDS, PERIOD_LENGTH_SECONDS, PERIODS, REGULATION_SECONDS } from './gameRules.ts';
 import { clockAtElapsed, OVERTIME_PERIOD_SECONDS } from './timeUtils.ts';
+import { faceoffRating, savingRating } from './playerSpecialty.ts';
+import {
+  edgeToRatingPoints,
+  schemeClearEdge,
+  schemeDefensiveFoulEdge,
+  schemeGroundBallEdge,
+  schemeOffensiveFoulEdge,
+  schemeShotQualityEdge,
+  schemeTurnoverEdge,
+} from './schemeMatchups.ts';
+import { DEFAULT_TACTICS } from './tactics.ts';
 
 export type { Tactics, TeamSimInput, TeamGameStats, PlayerGameStats, GameResult };
 
@@ -50,7 +61,6 @@ const TURNOVER_BASE_CHANCE = 0.13;
 const TURNOVER_MIN_CHANCE = 0.05;
 const TURNOVER_MAX_CHANCE = 0.3;
 const RETAINED_POSSESSION_TURNOVER_SCALE = 0.45;
-const AGGRESSIVE_CLEAR_TURNOVER_COST = 0.02;
 const DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR = 900;
 const SHOT_ATTEMPT_BASE_CHANCE = 0.9;
 const SHOT_ATTEMPT_MIN_CHANCE = 0.72;
@@ -59,12 +69,21 @@ const CAUSED_TURNOVER_GROUND_BALL_CHANCE = 0.55;
 
 const DISCIPLINE_PIVOT = 72;
 const PENALTY_BASE_CHANCE = 0.03;
-const DEFENSIVE_FOUL_BASE_CHANCE = 0.055;
+const DEFENSIVE_FOUL_BASE_CHANCE = 0.062;
 const PENALTY_MIN_CHANCE = 0.012;
 const PENALTY_MAX_CHANCE = 0.15;
-const EARLY_SLIDE_PENALTY_COST = 0.015;
 const DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR = 400;
-const MAN_UP_GOAL_BOOST = 0.09;
+// Penalty time: the fouling team plays a man down until it is served (or, for a releasable foul, until the other side scores).
+const MAN_UP_GOAL_BOOST = 0.01;
+/** With the extra man, the offense wins more of the chases after a missed shot. */
+const MAN_UP_BACKUP_BONUS = 0.05;
+const MAN_UP_SETUP_SECONDS_MIN = 8;
+const MAN_UP_SETUP_SECONDS_MAX = 24;
+const MAN_UP_SHOT_BOOST = 0.03;
+const MAN_UP_TURNOVER_SCALE = 0.6;
+const MAN_DOWN_CLEAR_COST = 0.08;
+const MAN_DOWN_QUALITY_COST = 0.03;
+const OFFENSIVE_PERSONAL_FOUL_SHARE = 0.4;
 
 // Clears: the team that gains the ball in its own end has to carry it over midfield.
 const CLEAR_BASE_CHANCE = 0.87;
@@ -75,6 +94,8 @@ const TRANSITION_QUALITY_BOOST = 0.07;
 
 // Faceoffs: one draw per goal and per period start.
 const FACEOFF_EDGE_DIVISOR = 40;
+const FACEOFF_WING_WEIGHT = 0.2;
+const NO_SPECIALIST_FACEOFF = 55;
 const FACEOFF_EDGE_WEIGHT = 0.12;
 const FACEOFF_FORM_VARIANCE = 0.04;
 const FACEOFF_MIN_CHANCE = 0.3;
@@ -99,7 +120,7 @@ const MAX_SHOTS_PER_POSSESSION = 5;
 const ASSIST_CHANCE = 0.56;
 
 // Clock: the offense's tempo sets how long it holds the ball before the first look.
-const SETUP_SECONDS: Record<Tactics['tempo'], number> = { slow: 46, normal: 37, fast: 29 };
+const SETUP_SECONDS: Record<Tactics['tempo'], number> = { slow: 47, normal: 38, fast: 30 };
 const RESET_SECONDS_MIN = 8;
 const RESET_SECONDS_MAX = 20;
 const CLEAR_SECONDS = 9;
@@ -183,6 +204,8 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
   let foDenom = 0;
   let disWeighted = 0;
   let disDenom = 0;
+  let wingWeighted = 0;
+  let wingDenom = 0;
   let faceoffPlayer: Player | null = null;
   let faceoffPlayerWeight = 0;
 
@@ -190,6 +213,12 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
     const w = playerDepthWeight(p.id, starterSet);
     disWeighted += p.discipline * w;
     disDenom += w;
+    // Wings on the draw: long poles first, short-stick middies behind them.
+    if (p.position === 'LSM' || p.position === 'M') {
+      const wingWeight = p.position === 'LSM' ? w : w * 0.4;
+      wingWeighted += (p.speed * 0.6 + p.defense * 0.2 + p.IQ * 0.2) * wingWeight;
+      wingDenom += wingWeight;
+    }
 
     const pos = p.position;
     if (pos === 'A') {
@@ -204,8 +233,7 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
       defWeighted += (p.defense * 0.6 + p.speed * 0.2 + p.IQ * 0.2) * w;
       defDenom += w;
     } else if (pos === 'FO') {
-      const fc = p.passing * 0.15 + p.speed * 0.2 + p.discipline * 0.2 + p.overall * 0.45;
-      foWeighted += fc * w;
+      foWeighted += faceoffRating(p) * w;
       foDenom += w;
       if (w > faceoffPlayerWeight) {
         faceoffPlayer = p;
@@ -222,8 +250,9 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
   return {
     offense: offWeighted / Math.max(offDenom, 1e-6),
     defense: defWeighted / Math.max(defDenom, 1e-6),
-    goalie: goaliePlayer.defense * 0.7 + goaliePlayer.IQ * 0.3,
-    faceoff: foDenom > 0 ? foWeighted / foDenom : 62,
+    goalie: savingRating(goaliePlayer) * 0.75 + goaliePlayer.IQ * 0.25,
+    faceoff: (foDenom > 0 ? foWeighted / foDenom : NO_SPECIALIST_FACEOFF) * (1 - FACEOFF_WING_WEIGHT)
+      + (wingDenom > 0 ? wingWeighted / wingDenom : NO_SPECIALIST_FACEOFF) * FACEOFF_WING_WEIGHT,
     discipline: disWeighted / Math.max(disDenom, 1e-6),
     goaliePlayer,
     faceoffPlayer,
@@ -234,86 +263,43 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
   };
 }
 
-function offenseBoostFromTactics(tactics: Tactics): number {
-  let boost = 0;
-  if (tactics.rideClear === 'aggressive') boost += 1.8;
-  if (tactics.rideClear === 'conservative') boost -= 1.2;
-  if (tactics.slideAggression === 'late') boost += 1;
-  if (tactics.slideAggression === 'early') boost -= 0.7;
-  if (tactics.offenseSet === 'motion') boost += 1.2;
-  if (tactics.offenseSet === 'invert') boost += 1.5;
-  if (tactics.offenseSet === 'crease') boost += 1;
-  return boost;
-}
-
-function defenseBoostFromTactics(tactics: Tactics): number {
-  let boost = 0;
-  if (tactics.slideAggression === 'early') boost += 1.7;
-  if (tactics.slideAggression === 'late') boost -= 1.3;
-  if (tactics.rideClear === 'aggressive') boost += 0.8;
-  if (tactics.defensePackage === 'zone') boost += 1.5;
-  if (tactics.defensePackage === 'pressure') boost += 2.1;
-  return boost;
-}
-
-/** How far a scheme moves offense, defense, and ground balls, on the same scale as the gameplan modifiers. */
-export function tacticRatingShift(tactics: Tactics): { offense: number; defense: number; groundBalls: number } {
+/**
+ * How far a scheme moves offense, defense, and ground balls against an opponent's scheme
+ * (a standard man look by default), on the same scale as the gameplan modifiers.
+ */
+export function tacticRatingShift(
+  tactics: Tactics,
+  opponent: Tactics = DEFAULT_TACTICS,
+): { offense: number; defense: number; groundBalls: number } {
   return {
-    offense: offenseBoostFromTactics(tactics),
-    defense: defenseBoostFromTactics(tactics),
-    groundBalls: groundBallBonusFromTactics(tactics),
+    offense: edgeToRatingPoints(schemeShotQualityEdge(tactics, opponent)),
+    defense: edgeToRatingPoints(-schemeShotQualityEdge(opponent, tactics)),
+    groundBalls: schemeGroundBallEdge(tactics),
   };
 }
 
-function shotQualityModifierFromTactics(tactics: Tactics): number {
-  if (tactics.offenseSet === 'motion') return 0.016;
-  if (tactics.offenseSet === 'invert') return 0.01;
-  if (tactics.offenseSet === 'crease') return 0.022;
-  return 0;
-}
-
-function turnoverModifierFromTactics(tactics: Tactics): number {
-  if (tactics.offenseSet === 'invert') return 0.016;
-  if (tactics.offenseSet === 'motion') return -0.012;
-  if (tactics.offenseSet === 'crease') return -0.004;
-  return 0;
-}
-
-function pressureTurnoverBonusFromDefense(tactics: Tactics): number {
-  if (tactics.defensePackage === 'pressure') return 0.02;
-  if (tactics.defensePackage === 'zone') return -0.006;
-  return 0;
-}
-
-function penaltyModifierFromOffenseTactics(tactics: Tactics): number {
-  if (tactics.offenseSet === 'invert') return 0.004;
-  if (tactics.offenseSet === 'crease') return 0.008;
-  return 0;
-}
-
-function defensiveFoulChanceFromTactics(tactics: Tactics, defenseDiscipline: number): number {
-  let chance = DEFENSIVE_FOUL_BASE_CHANCE;
-  if (tactics.slideAggression === 'early') chance += EARLY_SLIDE_PENALTY_COST;
-  if (tactics.defensePackage === 'pressure') chance += 0.012;
-  if (tactics.defensePackage === 'zone') chance += 0.004;
-  chance -= (defenseDiscipline - DISCIPLINE_PIVOT) / DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR;
-  return clamp(chance, 0.005, 0.14);
-}
-
-function groundBallBonusFromTactics(tactics: Tactics): number {
-  if (tactics.defensePackage === 'pressure') return 2;
-  if (tactics.defensePackage === 'zone') return -1;
-  return 0;
-}
-
 /** Clear success for the team carrying the ball out, against the other side's ride. */
-function clearChance(clearing: Tactics, riding: Tactics, clearingDiscipline: number): number {
-  let chance = CLEAR_BASE_CHANCE + (clearingDiscipline - DISCIPLINE_PIVOT) / 600;
-  if (clearing.rideClear === 'conservative') chance += 0.03;
-  if (clearing.rideClear === 'aggressive') chance -= 0.01;
-  if (riding.rideClear === 'aggressive') chance -= 0.06;
-  if (riding.rideClear === 'conservative') chance += 0.03;
+function clearChance(clearing: Tactics, riding: Tactics, clearingDiscipline: number, manDown: boolean): number {
+  const chance = CLEAR_BASE_CHANCE + (clearingDiscipline - DISCIPLINE_PIVOT) / 600 + schemeClearEdge(clearing, riding)
+    - (manDown ? MAN_DOWN_CLEAR_COST : 0);
   return clamp(chance, CLEAR_MIN_CHANCE, CLEAR_MAX_CHANCE);
+}
+
+interface PenaltyCall {
+  seconds: number;
+  releasable: boolean;
+  label: string;
+}
+
+const TECHNICAL_FOULS = ['Holding', 'Interference', 'Pushing', 'Illegal procedure'];
+const PERSONAL_FOULS = ['Slashing', 'Cross-check', 'Tripping', 'Illegal body check'];
+
+/** Technical fouls are 30 seconds and released by a goal; personal fouls are a minute or more and served in full. */
+function rollPenalty(rng: () => number): PenaltyCall {
+  const roll = rng();
+  if (roll < 0.62) return { seconds: 30, releasable: true, label: pickOne(rng, TECHNICAL_FOULS) };
+  if (roll < 0.96) return { seconds: 60, releasable: false, label: pickOne(rng, PERSONAL_FOULS) };
+  return { seconds: 120, releasable: false, label: 'Unnecessary roughness' };
 }
 
 const SETTLED_GOAL_PHRASES = ['buries a step-down rip', 'finishes after a slick feed', 'beats the goalie stick side high', 'bounces one in from the alley'];
@@ -409,7 +395,7 @@ export function simulateGame(
 
   function blankStats(input: TeamSimInput, mods: EffectiveGameplayModifiers, tactics: Tactics): TeamGameStats {
     // Loose balls the box score credits outside the modeled events (dropped passes, scrums after whistles).
-    const scrums = Math.max(0, randInt(rng, 3, 7) + Math.round(mods.groundBallBonus + groundBallBonusFromTactics(tactics)));
+    const scrums = Math.max(0, randInt(rng, 3, 7) + Math.round(mods.groundBallBonus + schemeGroundBallEdge(tactics)));
     return {
       teamId: input.team.id,
       goals: 0,
@@ -425,6 +411,8 @@ export function simulateGame(
       faceoffsTaken: 0,
       clearsMade: 0,
       clearAttempts: 0,
+      extraManGoals: 0,
+      extraManOpportunities: 0,
     };
   }
 
@@ -468,6 +456,20 @@ export function simulateGame(
   let overtimePeriod = 0;
   /** A possession can run past the horn; its events still belong to the period it started in. */
   let periodEndForClock = PERIOD_LENGTH_SECONDS;
+  /** Penalty time each side still has to serve, in seconds. It carries over between periods. */
+  const penaltyLeft: Record<Side, number> = { A: 0, B: 0 };
+  const penaltyReleasable: Record<Side, boolean> = { A: false, B: false };
+
+  function advanceClock(seconds: number): void {
+    elapsed += seconds;
+    penaltyLeft.A = Math.max(0, penaltyLeft.A - seconds);
+    penaltyLeft.B = Math.max(0, penaltyLeft.B - seconds);
+  }
+
+  /** True while `side` has the extra man: the other side is serving time and it is not. */
+  function hasManUp(side: Side): boolean {
+    return penaltyLeft[other(side)] > 0 && penaltyLeft[side] === 0;
+  }
 
   function clockLabel(): string {
     // Just short of the horn, so a play at the buzzer reads "Q1 0:00" rather than the next period's "15:00".
@@ -512,6 +514,24 @@ export function simulateGame(
     row.causedTurnovers = (row.causedTurnovers ?? 0) + 1;
   }
 
+  function assessPenalty(fouling: Side): void {
+    const call = rollPenalty(rng);
+    const foulingSide = sides[fouling];
+    const otherSide = sides[other(fouling)];
+    foulingSide.stats.penalties += 1;
+    if (penaltyLeft[fouling] === 0) {
+      otherSide.stats.extraManOpportunities = (otherSide.stats.extraManOpportunities ?? 0) + 1;
+      penaltyReleasable[fouling] = call.releasable;
+    } else {
+      penaltyReleasable[fouling] = penaltyReleasable[fouling] && call.releasable;
+    }
+    penaltyLeft[fouling] += call.seconds;
+    if (rng() < 0.35) {
+      const length = call.seconds === 30 ? '30 seconds' : call.seconds === 60 ? 'one minute' : `${call.seconds / 60} minutes`;
+      addPlay(`${call.label} on ${foulingSide.input.team.schoolName}, ${length}; ${otherSide.input.team.schoolName} goes man-up.`);
+    }
+  }
+
   /** One draw. Returns the side that wins possession. */
   function faceoff(): Side {
     const edge = (sideA.ratings.faceoff + sideA.mods.faceoff - sideB.ratings.faceoff - sideB.mods.faceoff) / FACEOFF_EDGE_DIVISOR;
@@ -530,7 +550,7 @@ export function simulateGame(
     } else {
       creditGroundBall(winSide);
     }
-    elapsed += FACEOFF_SECONDS;
+    advanceClock(FACEOFF_SECONDS);
     return winner;
   }
 
@@ -546,8 +566,13 @@ export function simulateGame(
 
     if (start === 'clear') {
       offense.stats.clearAttempts = (offense.stats.clearAttempts ?? 0) + 1;
-      elapsed += CLEAR_SECONDS;
-      const cleared = rng() < clearChance(offense.tactics, defense.tactics, offense.ratings.discipline + offense.mods.discipline);
+      advanceClock(CLEAR_SECONDS);
+      const cleared = rng() < clearChance(
+        offense.tactics,
+        defense.tactics,
+        offense.ratings.discipline + offense.mods.discipline,
+        hasManUp(other(offenseSide)),
+      );
       if (!cleared) {
         offense.stats.turnovers += 1;
         if (rng() < 0.5) creditCausedTurnover(defense);
@@ -565,48 +590,64 @@ export function simulateGame(
     const adjustedOffenseDiscipline = offense.ratings.discipline + offense.mods.discipline;
     const adjustedDefenseDiscipline = defense.ratings.discipline + defense.mods.discipline;
 
-    const defensePenaltyChance = defensiveFoulChanceFromTactics(defense.tactics, adjustedDefenseDiscipline);
-    let manUpBoost = 0;
-    if (rng() < defensePenaltyChance) {
-      defense.stats.penalties += 1;
-      manUpBoost = MAN_UP_GOAL_BOOST;
-      if (rng() < 0.3) addPlay(`${defense.input.team.schoolName} flagged on the slide; ${offense.input.team.schoolName} goes man-up.`);
-    }
+    const defenseSide = other(offenseSide);
+    const defensiveFoulChance = clamp(
+      DEFENSIVE_FOUL_BASE_CHANCE + schemeDefensiveFoulEdge(defense.tactics) - defense.mods.penaltyAvoidance
+        - (adjustedDefenseDiscipline - DISCIPLINE_PIVOT) / DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR,
+      PENALTY_MIN_CHANCE,
+      PENALTY_MAX_CHANCE,
+    );
+    if (rng() < defensiveFoulChance) assessPenalty(defenseSide);
 
     const offensePenaltyChance = clamp(
       PENALTY_BASE_CHANCE + (DISCIPLINE_PIVOT - adjustedOffenseDiscipline) / 400 - offense.mods.penaltyAvoidance
-        + penaltyModifierFromOffenseTactics(offense.tactics),
+        + schemeOffensiveFoulEdge(offense.tactics),
       PENALTY_MIN_CHANCE,
       PENALTY_MAX_CHANCE,
     );
     if (rng() < offensePenaltyChance) {
-      offense.stats.penalties += 1;
-      elapsed += randInt(rng, 6, 16);
-      if (rng() < 0.25) addPlay(`${offense.input.team.schoolName} flagged for a push, possession flips.`);
+      if (rng() < OFFENSIVE_PERSONAL_FOUL_SHARE) {
+        assessPenalty(offenseSide);
+      } else {
+        // A technical by the team with the ball just gives it away.
+        offense.stats.penalties += 1;
+        if (rng() < 0.25) addPlay(`${offense.input.team.schoolName} flagged for a push, possession flips.`);
+      }
+      advanceClock(randInt(rng, 6, 16));
       return { scored: false, next: 'settled' };
     }
 
+    const manUpAtStart = hasManUp(offenseSide);
+    const manDownAtStart = hasManUp(defenseSide);
     const disciplineGap = (DISCIPLINE_PIVOT - adjustedOffenseDiscipline) / 140;
-    const ownClearCost = offense.tactics.rideClear === 'aggressive' ? AGGRESSIVE_CLEAR_TURNOVER_COST : 0;
-    const conservativeBonus = offense.tactics.rideClear === 'conservative' ? 0.015 : 0;
     const forcedTurnoverChance = clamp(
-      TURNOVER_BASE_CHANCE + disciplineGap + ownClearCost - conservativeBonus - offense.mods.turnoverAvoidance
+      TURNOVER_BASE_CHANCE + disciplineGap - offense.mods.turnoverAvoidance
         - defense.mods.discipline / DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR
-        + turnoverModifierFromTactics(offense.tactics) + pressureTurnoverBonusFromDefense(defense.tactics),
+        + schemeTurnoverEdge(offense.tactics, defense.tactics),
       TURNOVER_MIN_CHANCE,
       TURNOVER_MAX_CHANCE,
-    );
+    ) * (manUpAtStart ? MAN_UP_TURNOVER_SCALE : 1);
 
-    const offensePower = offense.ratings.offense + offense.mods.offense + offenseBoostFromTactics(offense.tactics);
-    const defensePower = defense.ratings.defense + defense.mods.defense + defenseBoostFromTactics(defense.tactics);
+    const offensePower = offense.ratings.offense + offense.mods.offense;
+    const defensePower = defense.ratings.defense + defense.mods.defense;
     const quality = (offensePower - defensePower) / SHOT_QUALITY_POWER_DIVISOR + offense.mods.shotQuality
-      + shotQualityModifierFromTactics(offense.tactics) + (transition ? TRANSITION_QUALITY_BOOST : 0)
+      + schemeShotQualityEdge(offense.tactics, defense.tactics) + (transition ? TRANSITION_QUALITY_BOOST : 0)
+      - (manDownAtStart ? MAN_DOWN_QUALITY_COST : 0)
       + normalish(rng) * SHOT_QUALITY_VARIANCE;
-    const shotAttemptChance = clamp(SHOT_ATTEMPT_BASE_CHANCE + quality * 0.5, SHOT_ATTEMPT_MIN_CHANCE, SHOT_ATTEMPT_MAX_CHANCE);
+    const shotAttemptChance = clamp(
+      SHOT_ATTEMPT_BASE_CHANCE + quality * 0.5 + (manUpAtStart ? MAN_UP_SHOT_BOOST : 0),
+      SHOT_ATTEMPT_MIN_CHANCE,
+      SHOT_ATTEMPT_MAX_CHANCE,
+    );
     const goalieRating = defense.ratings.goalie + defense.mods.goalie;
 
-    let shotClockUsed = transition ? TRANSITION_SECONDS : SETUP_SECONDS[offense.tactics.tempo] * (0.6 + rng() * 0.8);
-    elapsed += shotClockUsed;
+    // A man-up offense attacks inside its penalty window instead of running its usual sets.
+    let shotClockUsed = transition
+      ? TRANSITION_SECONDS
+      : manUpAtStart
+        ? randInt(rng, MAN_UP_SETUP_SECONDS_MIN, MAN_UP_SETUP_SECONDS_MAX)
+        : SETUP_SECONDS[offense.tactics.tempo] * (0.6 + rng() * 0.8);
+    advanceClock(shotClockUsed);
 
     for (let attempt = 0; attempt < MAX_SHOTS_PER_POSSESSION; attempt += 1) {
       const turnoverScale = attempt === 0 ? 1 : RETAINED_POSSESSION_TURNOVER_SCALE;
@@ -637,11 +678,11 @@ export function simulateGame(
       const onGoalChance = clamp(ON_GOAL_BASE_CHANCE + shooterEdge + quality * 0.3, ON_GOAL_MIN_CHANCE, ON_GOAL_MAX_CHANCE);
       if (rng() >= onGoalChance) {
         // Off target. The team closest to the ball when it leaves play keeps it.
-        if (rng() < MISS_BACKUP_CHANCE) {
+        if (rng() < MISS_BACKUP_CHANCE + (hasManUp(offenseSide) ? MAN_UP_BACKUP_BONUS : 0)) {
           if (rng() < 0.3) creditGroundBall(offense);
           const reset = randInt(rng, RESET_SECONDS_MIN, RESET_SECONDS_MAX);
           shotClockUsed += reset;
-          elapsed += reset;
+          advanceClock(reset);
           continue;
         }
         if (rng() < 0.3) creditGroundBall(defense);
@@ -649,8 +690,9 @@ export function simulateGame(
       }
 
       offense.stats.shotsOnGoal = (offense.stats.shotsOnGoal ?? 0) + 1;
+      const manUpNow = hasManUp(offenseSide);
       const goalChance = clamp(
-        GOAL_BASE_CHANCE + (offensePower - goalieRating) / 400 + (shooterSkill(shooter) - SHOOTER_SKILL_PIVOT) / 300 + quality * 0.35 + manUpBoost,
+        GOAL_BASE_CHANCE + (offensePower - goalieRating) / 400 + (shooterSkill(shooter) - SHOOTER_SKILL_PIVOT) / 300 + quality * 0.35 + (manUpNow ? MAN_UP_GOAL_BOOST : 0),
         GOAL_MIN_CHANCE,
         GOAL_MAX_CHANCE,
       );
@@ -666,7 +708,7 @@ export function simulateGame(
             // A shot on cage resets the shot clock.
             const reset = randInt(rng, RESET_SECONDS_MIN, RESET_SECONDS_MAX);
             shotClockUsed = reset;
-            elapsed += reset;
+            advanceClock(reset);
             continue;
           }
           creditGroundBall(defense);
@@ -676,6 +718,11 @@ export function simulateGame(
 
       offense.stats.goals += 1;
       ensurePlayerStats(offense, shooter).goals += 1;
+      if (manUpNow) {
+        offense.stats.extraManGoals = (offense.stats.extraManGoals ?? 0) + 1;
+        // A goal releases a technical foul early.
+        if (penaltyReleasable[defenseSide]) penaltyLeft[defenseSide] = 0;
+      }
       let assistName: string | null = null;
       if (rng() < ASSIST_CHANCE && !transition) {
         const feeder = drawFromPool(rng, offense.ratings.feeders, shooter, shooter);
@@ -695,7 +742,7 @@ export function simulateGame(
       scoringRunClock = clockLabel();
 
       const phrase = pickOne(rng, scoringPhrasesForTactics(offense.tactics, transition));
-      const manUpNote = manUpBoost > 0 ? ' on the man-up' : '';
+      const manUpNote = manUpNow ? ' on the man-up' : '';
       const assistNote = assistName ? ` (assist: ${assistName})` : '';
       addPlay(`${shooter.name}, ${offense.input.team.schoolName}, ${phrase}${manUpNote}${assistNote}.`);
       return { scored: true, next: 'faceoff' };

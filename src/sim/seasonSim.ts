@@ -1,6 +1,6 @@
 import { generateRoster } from './generateRoster';
 import { simulateGame } from './matchEngine';
-import { DEFAULT_TACTICS } from './tactics';
+import { programTactics } from './schemeMatchups';
 import { Conference, GameSummary, ScheduledGame, Tactics, Team, TeamRecord } from '../types/sim';
 
 interface SeasonSimInputs {
@@ -69,8 +69,8 @@ export function simulateWeek(
       throw new Error(`Missing team in week simulation for game ${game.id}`);
     }
 
-    const homeTactics = inputs.tacticsByTeamId?.[home.id] ?? DEFAULT_TACTICS;
-    const awayTactics = inputs.tacticsByTeamId?.[away.id] ?? DEFAULT_TACTICS;
+    const homeTactics = inputs.tacticsByTeamId?.[home.id] ?? programTactics(home);
+    const awayTactics = inputs.tacticsByTeamId?.[away.id] ?? programTactics(away);
 
     const result = simulateGame(
       { team: home, roster: generateRoster(home, inputs.rosterSeed) },

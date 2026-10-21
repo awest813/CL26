@@ -13,6 +13,7 @@ import { generateRoster } from '../src/sim/generateRoster.ts';
 import { DEFAULT_TACTICS } from '../src/sim/tactics.ts';
 import leagueData from '../src/data/teams128.json' with { type: 'json' };
 import type { Player, Tactics, Team } from '../src/types/sim.ts';
+import { DEFENSE_PACKAGES, OFFENSE_SETS } from '../src/sim/schemeMatchups.ts';
 
 const teams = leagueData.teams as Team[];
 const GAMES = 6000;
@@ -40,6 +41,8 @@ function leagueAverages(): void {
   let faceoffs = 0;
   let clearsMade = 0;
   let clearAttempts = 0;
+  let extraManGoals = 0;
+  let extraManOpportunities = 0;
   let favoriteGames = 0;
   let favoriteWins = 0;
   const scores: number[] = [];
@@ -73,6 +76,8 @@ function leagueAverages(): void {
     faceoffs += result.statsA.faceoffsTaken ?? 0;
     clearsMade += (result.statsA.clearsMade ?? 0) + (result.statsB.clearsMade ?? 0);
     clearAttempts += (result.statsA.clearAttempts ?? 0) + (result.statsB.clearAttempts ?? 0);
+    extraManGoals += (result.statsA.extraManGoals ?? 0) + (result.statsB.extraManGoals ?? 0);
+    extraManOpportunities += (result.statsA.extraManOpportunities ?? 0) + (result.statsB.extraManOpportunities ?? 0);
     const gap = home.prestige - away.prestige;
     if (Math.abs(gap) >= 10) {
       favoriteGames += 1;
@@ -98,6 +103,8 @@ function leagueAverages(): void {
     'ground balls': (groundBalls / teamGames).toFixed(1),
     turnovers: (turnovers / teamGames).toFixed(1),
     penalties: (penalties / teamGames).toFixed(2),
+    'man-up chances': (extraManOpportunities / teamGames).toFixed(2),
+    'man-up conversion': pct(extraManGoals, extraManOpportunities),
     'home win pct': pct(homeWins, played),
     'overtime rate': pct(overtime, played),
     'one-goal games': pct(oneGoal, played),
@@ -152,10 +159,10 @@ function sensitivity(): void {
     rosterA.map((player) => (player.position === position ? { ...player, ...patch } : player));
   const players: Record<string, Player[]> = {
     baseline: rosterA,
-    'FO all 95': swap('FO', { overall: 95, speed: 95, discipline: 95, passing: 95 }),
-    'FO all 45': swap('FO', { overall: 45, speed: 45, discipline: 45, passing: 45 }),
-    'G defense/IQ 95': swap('G', { defense: 95, IQ: 95 }),
-    'G defense/IQ 45': swap('G', { defense: 45, IQ: 45 }),
+    'FO faceoff 95': swap('FO', { faceoff: 95 }),
+    'FO faceoff 50': swap('FO', { faceoff: 50 }),
+    'G saving 95': swap('G', { saving: 95 }),
+    'G saving 50': swap('G', { saving: 50 }),
   };
 
   console.log('\nSingle-position sensitivity (same matchup, default tactics)');
@@ -172,5 +179,66 @@ function sensitivity(): void {
   console.log(`\n99-shooting attacker: ${(starGoals / SAMPLE).toFixed(2)} goals per game (top-5 box only) among ${fieldPlayers} A/M on the roster`);
 }
 
+/**
+ * Every scheme against a field of opponent schemes. A scheme's worst-case edge is its
+ * win rate minus the default scheme's, against the opponent where that gap is smallest.
+ * No scheme should have a large worst-case edge: that would be a scheme to always run.
+ */
+function schemeSearch(): void {
+  const byPrestige = [...teams].sort((a, b) => a.prestige - b.prestige);
+  const teamA = byPrestige[64];
+  const teamB = byPrestige[65];
+  const rosterA = generateRoster(teamA, 'calibrate-sensitivity');
+  const rosterB = generateRoster(teamB, 'calibrate-sensitivity');
+  let games = 200;
+
+  const all: Tactics[] = [];
+  for (const tempo of ['slow', 'normal', 'fast'] as const)
+    for (const rideClear of ['conservative', 'balanced', 'aggressive'] as const)
+      for (const slideAggression of ['early', 'normal', 'late'] as const)
+        for (const offenseSet of OFFENSE_SETS)
+          for (const defensePackage of DEFENSE_PACKAGES) all.push({ tempo, rideClear, slideAggression, offenseSet, defensePackage });
+  const opponents: Tactics[] = [];
+  for (const offenseSet of OFFENSE_SETS)
+    for (const defensePackage of DEFENSE_PACKAGES)
+      for (const slideAggression of ['early', 'late'] as const)
+        opponents.push({ ...DEFAULT_TACTICS, offenseSet, defensePackage, slideAggression });
+
+  const winVs = (tactics: Tactics, opponent: Tactics): number => {
+    let wins = 0;
+    for (let i = 0; i < games; i += 1) {
+      const result = simulateGame({ team: teamA, roster: rosterA }, { team: teamB, roster: rosterB }, tactics, opponent, i * 31 + 5, { homeAdvantageForA: i % 2 === 0 });
+      if (result.scoreA > result.scoreB) wins += 1;
+    }
+    return wins / games;
+  };
+  const baseline = opponents.map((opponent) => winVs(DEFAULT_TACTICS, opponent));
+  const longBaseline = new Map<number, number>();
+  const winVsBaseline = (index: number): number => {
+    if (!longBaseline.has(index)) longBaseline.set(index, winVs(DEFAULT_TACTICS, opponents[index]));
+    return longBaseline.get(index) as number;
+  };
+  const rows = all.map((tactics) => {
+    const edges = opponents.map((opponent, index) => winVs(tactics, opponent) - baseline[index]);
+    return { tactics, worst: Math.min(...edges), average: edges.reduce((sum, edge) => sum + edge, 0) / edges.length };
+  });
+  rows.sort((a, b) => b.worst - a.worst);
+  // Re-measure the leaders with more games, so a lucky sample does not top the table.
+  games = 2000;
+  const leaders = rows.slice(0, 8).map((row) => {
+    const edges = opponents.map((opponent, index) => winVs(row.tactics, opponent) - winVsBaseline(index));
+    return { tactics: row.tactics, worst: Math.min(...edges), average: edges.reduce((sum, edge) => sum + edge, 0) / edges.length };
+  });
+  leaders.sort((a, b) => b.worst - a.worst);
+  rows.splice(0, 8, ...leaders);
+  console.log(`\nScheme search: ${all.length} schemes x ${opponents.length} opponents, 200 games each (top 8 re-run at 2,000). Top 8 by worst-case edge:`);
+  console.table(rows.slice(0, 8).map((row) => ({
+    scheme: `${row.tactics.tempo}/${row.tactics.rideClear}/${row.tactics.slideAggression}/${row.tactics.offenseSet}/${row.tactics.defensePackage}`,
+    worst: row.worst.toFixed(3),
+    average: row.average.toFixed(3),
+  })));
+}
+
 leagueAverages();
 sensitivity();
+if (process.argv.includes('--schemes')) schemeSearch();

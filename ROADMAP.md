@@ -78,6 +78,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Final score, team box stats, top performers, highlights
 - [x] Same teams + tactics + seed → identical output
 - [x] Event-driven engine: faceoffs after goals, clears and rides, multiple shots per possession, 80-second shot clock, sudden-death overtime, skill-weighted shooters, box score calibrated to D-I (see `docs/SIM_AUDIT.md`)
+- [x] Schemes that counter each other, faceoff and save ratings, real penalty time and man-up stats, a scheme identity for every program, and opponent scouting on the Weekly Hub
 
 **Key files:** `src/sim/rng.ts`, `src/sim/matchEngine.ts`, `src/features/exhibition/exhibitionSlice.ts`, `src/pages/ExhibitionPage.tsx`
 

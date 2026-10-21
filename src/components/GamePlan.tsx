@@ -1,6 +1,7 @@
 import { PRACTICE_FOCUS_DETAILS, PRACTICE_FOCUS_LABELS, weeklyFatigueChange } from '../sim/coachEffects';
 import type { CoachGamePlan, TacticChange } from '../sim/coachEffects';
 import { tacticRatingShift } from '../sim/matchEngine';
+import { scoutOpponent } from '../sim/schemeMatchups';
 import { INSTALL_GROWTH_TRAITS } from '../sim/rosterManagement';
 import { TACTIC_FIELDS, tacticHint, tacticShortLabel, tacticValue } from '../lib/tacticLabels';
 import type { CoachArchetype, PracticeFocus, Tactics } from '../types/sim';
@@ -128,9 +129,12 @@ export function GameDayScheme({ plan, changes }: GameDaySchemeProps) {
   );
 }
 
-/** Offense, defense, and ground balls include the scheme's own shift; the rest come from the install, staff, and fatigue. */
-function gameDayEdge(plan: CoachGamePlan) {
-  const shift = tacticRatingShift(plan.tactics);
+/**
+ * Offense, defense, and ground balls include the scheme's shift against this week's opponent
+ * (a standard man look when there is none); the rest come from the install, staff, and fatigue.
+ */
+function gameDayEdge(plan: CoachGamePlan, opponent?: Tactics) {
+  const shift = tacticRatingShift(plan.tactics, opponent);
   return [
     { key: 'off', label: 'Offense', short: 'Off', value: plan.modifiers.offense + shift.offense },
     { key: 'def', label: 'Defense', short: 'Def', value: plan.modifiers.defense + shift.defense },
@@ -142,10 +146,10 @@ function gameDayEdge(plan: CoachGamePlan) {
 }
 
 /** The game-day edge as one row of small figures. */
-export function GameDayEdge({ plan }: { plan: CoachGamePlan }) {
+export function GameDayEdge({ plan, opponent }: { plan: CoachGamePlan; opponent?: Tactics }) {
   return (
     <dl className="edgeGrid" aria-label="Game-day edge">
-      {gameDayEdge(plan).map((row) => (
+      {gameDayEdge(plan, opponent).map((row) => (
         <div
           key={row.key}
           className={`edgeCell ${row.value >= 0.05 ? 'edgeCell-up' : row.value <= -0.05 ? 'edgeCell-down' : ''}`}
@@ -157,5 +161,46 @@ export function GameDayEdge({ plan }: { plan: CoachGamePlan }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+type ScoutingReportProps = {
+  plan: CoachGamePlan;
+  opponent: Tactics;
+  opponentName: string;
+};
+
+/** The opponent's scheme, how this week's calls line up with it, and the call that would line up better. */
+export function ScoutingReport({ plan, opponent, opponentName }: ScoutingReportProps) {
+  const report = scoutOpponent(plan.tactics, opponent);
+  const yourOffense = tacticShortLabel('offenseSet', tacticValue(plan.tactics, 'offenseSet'));
+  const yourDefense = tacticShortLabel('defensePackage', tacticValue(plan.tactics, 'defensePackage'));
+  const theirOffense = tacticShortLabel('offenseSet', tacticValue(opponent, 'offenseSet'));
+  const theirDefense = tacticShortLabel('defensePackage', tacticValue(opponent, 'defensePackage'));
+  const betterOffense = report.bestOffenseEdge > report.offenseEdge
+    ? `${tacticShortLabel('offenseSet', report.bestOffenseSet)} would be ${signed(report.bestOffenseEdge)}.`
+    : 'Nothing lines up better.';
+  const betterDefense = report.bestDefenseEdge > report.defenseEdge
+    ? `${tacticShortLabel('defensePackage', report.bestDefensePackage)} would be ${signed(report.bestDefenseEdge)}.`
+    : 'Nothing lines up better.';
+
+  return (
+    <div className="scoutingReport">
+      <ul className="schemeList" aria-label={`${opponentName} scheme`}>
+        {TACTIC_FIELDS.map((field) => (
+          <li key={field.key} className="schemeCall">
+            <span>{tacticShortLabel(field.key, tacticValue(opponent, field.key))}</span>
+          </li>
+        ))}
+      </ul>
+      <ul className="scoutingLines">
+        <li>
+          Your {yourOffense.toLowerCase()} against their {theirDefense.toLowerCase()}: <strong>{signed(report.offenseEdge)}</strong>. {betterOffense}
+        </li>
+        <li>
+          Their {theirOffense.toLowerCase()} against your {yourDefense.toLowerCase()}: <strong>{signed(report.defenseEdge)}</strong> for you. {betterDefense}
+        </li>
+      </ul>
+    </div>
   );
 }

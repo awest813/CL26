@@ -1,7 +1,7 @@
 import { generateRoster } from './generateRoster';
 import { simulateGame } from './matchEngine';
+import { programTactics } from './schemeMatchups';
 import { seedToNumber } from './rng';
-import { DEFAULT_TACTICS } from './tactics';
 import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, RankingRow, TeamGameplayModifiers, Tactics, Team, TeamSimInput } from '../types/sim';
 
 function composePlayoffGameSeed(
@@ -288,8 +288,8 @@ export function simulatePlayoffRound(
           ? { team: awayTeam, roster: awayRoster, gameplan: coach.modifiers }
           : { team: awayTeam, roster: awayRoster };
 
-    const homeTactics = homeIsCoach ? coach.tactics : DEFAULT_TACTICS;
-    const awayTactics = awayIsCoach ? coach.tactics : DEFAULT_TACTICS;
+    const homeTactics = homeIsCoach ? coach.tactics : programTactics(homeTeam);
+    const awayTactics = awayIsCoach ? coach.tactics : programTactics(awayTeam);
 
     const result = simulateGame(
       homeInput,

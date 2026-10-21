@@ -148,7 +148,7 @@ describe('match engine gameplay modifiers', () => {
     assert.ok(cleanMistakes < sloppyMistakes);
   });
 
-  test('motion offense set creates more attacking volume over a seed sample', () => {
+  test('motion offense creates more attacking volume than balanced against a zone', () => {
     const rosterA = generateRoster(teamA, 'strategy-offense-test');
     const rosterB = generateRoster(teamB, 'strategy-offense-test');
     let balancedShots = 0;
@@ -159,14 +159,14 @@ describe('match engine gameplay modifiers', () => {
         { team: teamA, roster: rosterA },
         { team: teamB, roster: rosterB },
         { ...tactics, offenseSet: 'balanced' },
-        tactics,
+        { ...tactics, defensePackage: 'zone' },
         seed,
       );
       const motion = simulateGame(
         { team: teamA, roster: rosterA },
         { team: teamB, roster: rosterB },
         { ...tactics, offenseSet: 'motion' },
-        tactics,
+        { ...tactics, defensePackage: 'zone' },
         seed,
       );
       balancedShots += balanced.statsA.shots;

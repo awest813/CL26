@@ -210,6 +210,8 @@ function playerFromRatings(
     stamina: rating,
     discipline: rating,
     overall: rating,
+    faceoff: position === 'FO' ? rating : clampRating(rating - 18),
+    saving: position === 'G' ? rating : 40,
   };
 }
 

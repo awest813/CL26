@@ -28,7 +28,8 @@ import {
   PRACTICE_FOCUS_DETAILS,
   PRACTICE_FOCUS_LABELS,
 } from '../sim/coachEffects';
-import { GameDayEdge, GameDayScheme, InstallPicker } from '../components/GamePlan';
+import { GameDayEdge, GameDayScheme, InstallPicker, ScoutingReport } from '../components/GamePlan';
+import { programTactics } from '../sim/schemeMatchups';
 import { generateRoster } from '../sim/generateRoster';
 import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
@@ -233,6 +234,8 @@ function WeeklyHubPage() {
   const featuredIsHome = season.phase === 'REGULAR'
     ? isHome
     : playoffSpot.currentGame?.homeTeamId === selectedTeamId;
+  // The opponent's staff runs the same scheme every week; the hub scouts it.
+  const opponentScheme = useMemo(() => (featuredOpponent ? programTactics(featuredOpponent) : undefined), [featuredOpponent]);
   const featuredRecord = featuredOpponent
     ? records[featuredOpponent.id] ?? {
         wins: 0,
@@ -259,7 +262,7 @@ function WeeklyHubPage() {
     if (!selectedTeam || !featuredOpponent) return null;
     const scratchIds = new Set(scratches.map((scratch) => scratch.playerId));
     const userRoster = (coach.managedRoster ?? []).filter((player) => !scratchIds.has(player.id));
-    const schemeShift = tacticRatingShift(gamePlan.tactics);
+    const schemeShift = tacticRatingShift(gamePlan.tactics, opponentScheme);
     return estimateWinChance({
       userPrestige: effectivePrestige ?? selectedTeam.prestige,
       userRoster,
@@ -279,6 +282,7 @@ function WeeklyHubPage() {
     gamePlan.modifiers.faceoff,
     gamePlan.modifiers.offense,
     gamePlan.tactics,
+    opponentScheme,
     featuredIsHome,
     featuredOpponent,
     scratches,
@@ -677,11 +681,17 @@ function WeeklyHubPage() {
             </div>
             <div>
               <div className="planReadoutLabel">Game-day edge</div>
-              <GameDayEdge plan={gamePlan} />
+              <GameDayEdge plan={gamePlan} opponent={opponentScheme} />
             </div>
           </div>
           <div className="planReadoutLabel mt-3">Game day</div>
           <GameDayScheme plan={gamePlan} changes={gameDayChanges} />
+          {featuredOpponent && opponentScheme && (
+            <>
+              <div className="planReadoutLabel mt-3">Scouting: {featuredOpponent.schoolName}</div>
+              <ScoutingReport plan={gamePlan} opponent={opponentScheme} opponentName={featuredOpponent.schoolName} />
+            </>
+          )}
           <Link to="/career#game-plan" className="text-sm hover:underline inline-block mt-3">
             Change the base scheme in the Coach Office
           </Link>

@@ -4,7 +4,8 @@ import { simulateGame } from './matchEngine.ts';
 import { generateRoster } from './generateRoster.ts';
 import { DEFAULT_TACTICS } from './tactics.ts';
 import leagueData from '../data/teams128.json' with { type: 'json' };
-import type { Player, Team } from '../types/sim.ts';
+import type { Player, Tactics, Team } from '../types/sim.ts';
+import { DEFENSE_PACKAGES, OFFENSE_SETS } from './schemeMatchups.ts';
 
 /**
  * League-wide box-score bands, so engine changes cannot drift away from a
@@ -25,10 +26,12 @@ interface Totals {
   penalties: number;
   homeWins: number;
   overtimeGames: number;
+  extraManGoals: number;
+  extraManOpportunities: number;
 }
 
 function playLeagueSample(): Totals {
-  const totals: Totals = { games: 0, goals: 0, shots: 0, shotsOnGoal: 0, saves: 0, groundBalls: 0, turnovers: 0, penalties: 0, homeWins: 0, overtimeGames: 0 };
+  const totals: Totals = { games: 0, goals: 0, shots: 0, shotsOnGoal: 0, saves: 0, groundBalls: 0, turnovers: 0, penalties: 0, homeWins: 0, overtimeGames: 0, extraManGoals: 0, extraManOpportunities: 0 };
   for (let i = 0; i < GAMES; i += 1) {
     const home = teams[(i * 37) % teams.length];
     const away = teams[(i * 53 + 11) % teams.length];
@@ -50,6 +53,8 @@ function playLeagueSample(): Totals {
       totals.groundBalls += stats.groundBalls;
       totals.turnovers += stats.turnovers;
       totals.penalties += stats.penalties;
+      totals.extraManGoals += stats.extraManGoals ?? 0;
+      totals.extraManOpportunities += stats.extraManOpportunities ?? 0;
     }
     if (result.scoreA > result.scoreB) totals.homeWins += 1;
     if (result.highlights.some((line) => /overtime/i.test(line))) totals.overtimeGames += 1;
@@ -76,6 +81,11 @@ describe('match engine calibration bands', () => {
     assertBand('ground balls per team', totals.groundBalls / teamGames, 24, 34);
     assertBand('turnovers per team', totals.turnovers / teamGames, 10, 16);
     assertBand('penalties per team', totals.penalties / teamGames, 2, 4.5);
+  });
+
+  test('man-up chances convert at a D-I rate', () => {
+    assertBand('man-up chances per team', totals.extraManOpportunities / teamGames, 1.8, 4);
+    assertBand('man-up conversion', totals.extraManGoals / totals.extraManOpportunities, 0.25, 0.45);
   });
 
   test('home field and overtime rates stay believable', () => {
@@ -166,4 +176,92 @@ describe('match engine event model', () => {
     }
     assert.ok(result.highlights.some((line) => line.startsWith('Halftime')));
   });
+});
+
+describe('match engine specialists and penalties', () => {
+  const rosterA = generateRoster(alpha, 'specialists');
+  const rosterB = generateRoster(beta, 'specialists');
+  const withSpecialty = (position: Player['position'], patch: Partial<Player>) =>
+    rosterA.map((player) => (player.position === position ? { ...player, ...patch } : player));
+
+  function sample(roster: Player[], games = 200) {
+    let faceoffWins = 0;
+    let faceoffs = 0;
+    let saves = 0;
+    let shotsOnGoalAgainst = 0;
+    let wins = 0;
+    for (let seed = 1; seed <= games; seed += 1) {
+      const result = simulateGame({ team: alpha, roster }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, seed, { homeAdvantageForA: seed % 2 === 0 });
+      faceoffWins += result.statsA.faceoffWins ?? 0;
+      faceoffs += result.statsA.faceoffsTaken ?? 0;
+      saves += result.statsA.saves;
+      shotsOnGoalAgainst += result.statsB.shotsOnGoal ?? 0;
+      if (result.scoreA > result.scoreB) wins += 1;
+    }
+    return { faceoffPct: faceoffWins / faceoffs, savePct: saves / shotsOnGoalAgainst, winPct: wins / games };
+  }
+
+  test('a better faceoff man wins more draws', () => {
+    const strong = sample(withSpecialty('FO', { faceoff: 95 }));
+    const weak = sample(withSpecialty('FO', { faceoff: 50 }));
+    assert.ok(strong.faceoffPct > weak.faceoffPct + 0.05, `${strong.faceoffPct} vs ${weak.faceoffPct}`);
+    assert.ok(strong.faceoffPct < 0.72, 'one faceoff man should not own the X');
+  });
+
+  test('a better goalie saves more shots on goal', () => {
+    const strong = sample(withSpecialty('G', { saving: 95 }));
+    const weak = sample(withSpecialty('G', { saving: 50 }));
+    assert.ok(strong.savePct > weak.savePct + 0.04, `${strong.savePct} vs ${weak.savePct}`);
+  });
+
+  test('an undisciplined team hands the other side more man-up chances', () => {
+    const sloppy = rosterA.map((player) => ({ ...player, discipline: 45 }));
+    const clean = rosterA.map((player) => ({ ...player, discipline: 90 }));
+    let sloppyChances = 0;
+    let cleanChances = 0;
+    for (let seed = 1; seed <= 150; seed += 1) {
+      sloppyChances += simulateGame({ team: alpha, roster: sloppy }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, seed).statsB.extraManOpportunities ?? 0;
+      cleanChances += simulateGame({ team: alpha, roster: clean }, { team: beta, roster: rosterB }, DEFAULT_TACTICS, DEFAULT_TACTICS, seed).statsB.extraManOpportunities ?? 0;
+    }
+    assert.ok(sloppyChances > cleanChances * 1.3, `${sloppyChances} vs ${cleanChances}`);
+  });
+});
+
+describe('no scheme to always run', () => {
+  // Same matchup, same seeds: each candidate against a field of opponent schemes, compared with the default scheme.
+  const rosterA = generateRoster(alpha, 'scheme-field');
+  const rosterB = generateRoster(beta, 'scheme-field');
+  const GAMES_PER_PAIR = 250;
+  const opponents: Tactics[] = OFFENSE_SETS.flatMap((offenseSet) =>
+    DEFENSE_PACKAGES.map((defensePackage) => ({ ...DEFAULT_TACTICS, offenseSet, defensePackage })),
+  );
+
+  function winRate(tactics: Tactics, opponent: Tactics): number {
+    let wins = 0;
+    for (let i = 0; i < GAMES_PER_PAIR; i += 1) {
+      const result = simulateGame({ team: alpha, roster: rosterA }, { team: beta, roster: rosterB }, tactics, opponent, i * 31 + 5, { homeAdvantageForA: i % 2 === 0 });
+      if (result.scoreA > result.scoreB) wins += 1;
+    }
+    return wins / GAMES_PER_PAIR;
+  }
+
+  const baseline = opponents.map((opponent) => winRate(DEFAULT_TACTICS, opponent));
+  const candidates: Record<string, Tactics> = {
+    'all aggressive': { tempo: 'fast', rideClear: 'aggressive', slideAggression: 'late', offenseSet: 'invert', defensePackage: 'pressure' },
+    'all patient': { tempo: 'slow', rideClear: 'conservative', slideAggression: 'normal', offenseSet: 'motion', defensePackage: 'zone' },
+    motion: { ...DEFAULT_TACTICS, offenseSet: 'motion' },
+    invert: { ...DEFAULT_TACTICS, offenseSet: 'invert' },
+    crease: { ...DEFAULT_TACTICS, offenseSet: 'crease' },
+    zone: { ...DEFAULT_TACTICS, defensePackage: 'zone' },
+    pressure: { ...DEFAULT_TACTICS, defensePackage: 'pressure' },
+    'motion zone early': { ...DEFAULT_TACTICS, offenseSet: 'motion', defensePackage: 'zone', slideAggression: 'early' },
+  };
+
+  for (const [name, tactics] of Object.entries(candidates)) {
+    test(`${name} has an opponent it gains little or nothing against`, () => {
+      const edges = opponents.map((opponent, index) => winRate(tactics, opponent) - baseline[index]);
+      const worst = Math.min(...edges);
+      assert.ok(worst <= 0.05, `${name} beats default by at least ${(worst * 100).toFixed(1)} pp against every opponent`);
+    });
+  }
 });
