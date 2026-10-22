@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import { fatigueWear, lateGameAdjustment, simulateGame } from './matchEngine.ts';
+import { fatigueWear, homeFieldScale, lateGameAdjustment, simulateGame } from './matchEngine.ts';
 import { generateRoster } from './generateRoster.ts';
 import { programStarters } from './programLedger.ts';
 import { DEFAULT_TACTICS } from './tactics.ts';
@@ -342,5 +342,13 @@ describe('weekly installs', () => {
     });
     const spread = Math.max(...rates.map((row) => row.rate)) - Math.min(...rates.map((row) => row.rate));
     assert.ok(spread <= 0.06, `installs span ${(spread * 100).toFixed(1)} pp: ${JSON.stringify(rates)}`);
+  });
+});
+
+describe('home field by program', () => {
+  test('a bigger program has a bigger home crowd', () => {
+    assert.ok(homeFieldScale(90) > homeFieldScale(68));
+    assert.ok(homeFieldScale(68) > homeFieldScale(48));
+    assert.ok(Math.abs(homeFieldScale(66) - 1.04) < 0.05, 'a mid-table program is about average');
   });
 });

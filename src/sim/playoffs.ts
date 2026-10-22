@@ -1,7 +1,7 @@
 import { programRoster, programStarters } from './programLedger';
 import { rosterForAvailability, weeklyScratches } from './injuries';
 import { simulateGame } from './matchEngine';
-import { programTactics } from './schemeMatchups';
+import { gameDayProgramTactics, programTactics } from './schemeMatchups';
 import { seedToNumber } from './rng';
 import { FieldSeed, GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, ProgramLedger, RankingRow, TeamGameplayModifiers, Tactics, Team, TeamSimInput } from '../types/sim';
 
@@ -332,8 +332,12 @@ export function simulatePlayoffRound(
     const homeInput = homeIsCoach ? coachInput(homeTeam, coach) : cpuInput(homeTeam);
     const awayInput = awayIsCoach ? coachInput(awayTeam, coach) : cpuInput(awayTeam);
 
-    const homeTactics = homeIsCoach ? coach.tactics : programTactics(homeTeam);
-    const awayTactics = awayIsCoach ? coach.tactics : programTactics(awayTeam);
+    // CPU staffs adjust their base scheme to the opponent's, seeded by the game.
+    const homeBase = homeIsCoach ? coach.tactics : programTactics(homeTeam);
+    const awayBase = awayIsCoach ? coach.tactics : programTactics(awayTeam);
+    const gameKey = `${options.seasonSeed ?? baseSeed}:${game.id}`;
+    const homeTactics = homeIsCoach ? homeBase : gameDayProgramTactics(homeTeam, awayBase, gameKey);
+    const awayTactics = awayIsCoach ? awayBase : gameDayProgramTactics(awayTeam, homeBase, gameKey);
 
     const result = simulateGame(
       homeInput,

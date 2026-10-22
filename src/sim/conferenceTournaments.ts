@@ -1,6 +1,7 @@
 import type { Conference, ConferenceTournament, ConferenceTournamentGame, Tactics, Team, TeamRecord, TeamSimInput } from '../types/sim';
 import { simulateGame } from './matchEngine.ts';
 import { seedToNumber } from './rng.ts';
+import { gameDayProgramTactics } from './schemeMatchups.ts';
 import { compareConferenceStanding } from './standings.ts';
 
 /**
@@ -17,7 +18,19 @@ export const CONFERENCE_TOURNAMENT_SIZE = 4;
 /** Everything one side brings to a game: who plays and what they run. */
 export interface TournamentSide {
   input: TeamSimInput;
+  /** The base scheme. A CPU side adjusts it to the opponent on game day. */
   tactics: Tactics;
+  cpu?: boolean;
+}
+
+/** The key a staff's game-day adjustment is seeded by, for a championship game. */
+export function conferenceGameKey(seasonSeed: number, gameId: string): string {
+  return `${seasonSeed}:${gameId}`;
+}
+
+/** A conference's semifinal id for a seed: 1 and 4 meet in the first, 2 and 3 in the second. */
+export function conferenceSemifinalId(conferenceId: string, seed: number): string {
+  return `${conferenceId}-semi-${seed === 1 || seed === 4 ? 1 : 2}`;
 }
 
 /** The conference's top four by the conference table. */
@@ -46,7 +59,10 @@ function playGame(
   const weekKey = round === 'SEMIFINAL' ? CONFERENCE_SEMIFINAL_KEY : CONFERENCE_FINAL_KEY;
   const home = sideFor(homeTeamId, weekKey);
   const away = sideFor(awayTeamId, weekKey);
-  const result = simulateGame(home.input, away.input, home.tactics, away.tactics, seedToNumber(JSON.stringify([seasonSeed, id, homeTeamId, awayTeamId])));
+  const gameKey = conferenceGameKey(seasonSeed, id);
+  const homeTactics = home.cpu ? gameDayProgramTactics(home.input.team, away.tactics, gameKey) : home.tactics;
+  const awayTactics = away.cpu ? gameDayProgramTactics(away.input.team, home.tactics, gameKey) : away.tactics;
+  const result = simulateGame(home.input, away.input, homeTactics, awayTactics, seedToNumber(JSON.stringify([seasonSeed, id, homeTeamId, awayTeamId])));
   return {
     id,
     round,
@@ -77,8 +93,8 @@ export function playConferenceTournaments(input: {
     if (seeds.length < CONFERENCE_TOURNAMENT_SIZE) continue;
 
     const semifinals = [
-      playGame(`${conference.id}-semi-1`, 'SEMIFINAL', seeds[0], seeds[3], 1, 4, input.sideFor, input.seasonSeed),
-      playGame(`${conference.id}-semi-2`, 'SEMIFINAL', seeds[1], seeds[2], 2, 3, input.sideFor, input.seasonSeed),
+      playGame(conferenceSemifinalId(conference.id, 1), 'SEMIFINAL', seeds[0], seeds[3], 1, 4, input.sideFor, input.seasonSeed),
+      playGame(conferenceSemifinalId(conference.id, 2), 'SEMIFINAL', seeds[1], seeds[2], 2, 3, input.sideFor, input.seasonSeed),
     ];
     const finalists = semifinals
       .map((game) => ({ teamId: game.winnerTeamId, seed: seeds.indexOf(game.winnerTeamId) + 1 }))

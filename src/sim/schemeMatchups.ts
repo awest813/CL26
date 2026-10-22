@@ -127,6 +127,56 @@ export function programTactics(team: Pick<Team, 'id'>): Tactics {
   };
 }
 
+/** How likely a CPU staff is to change its base scheme to counter a given opponent, 0 to 1. Seeded by program, like its scheme. */
+export function staffAdaptability(team: Pick<Team, 'id'>): number {
+  const rng = makeRng(seedToNumber(`${team.id}:staff-adaptability`));
+  return Math.round(rng() * 100) / 100;
+}
+
+/** The defense package that best handles this offense, and the offense set that best attacks this defense. */
+function bestCounters(base: Tactics, opponent: Tactics): { defensePackage: DefensePackage; offenseSet: OffenseSet } {
+  let defensePackage: DefensePackage = base.defensePackage ?? 'man';
+  let bestDefense = -schemeShotQualityEdge(opponent, base);
+  for (const pkg of DEFENSE_PACKAGES) {
+    const edge = -schemeShotQualityEdge(opponent, { ...base, defensePackage: pkg });
+    if (edge > bestDefense) {
+      bestDefense = edge;
+      defensePackage = pkg;
+    }
+  }
+  let offenseSet: OffenseSet = base.offenseSet ?? 'balanced';
+  let bestOffense = schemeShotQualityEdge(base, opponent);
+  for (const set of OFFENSE_SETS) {
+    const edge = schemeShotQualityEdge({ ...base, offenseSet: set }, opponent);
+    if (edge > bestOffense) {
+      bestOffense = edge;
+      offenseSet = set;
+    }
+  }
+  return { defensePackage, offenseSet };
+}
+
+/**
+ * What a CPU staff runs in one game. It starts from its base scheme and, depending on how
+ * adaptable the staff is, switches its defense package to counter the opponent's offense
+ * and, less often, its offense set to attack the opponent's defense. The roll is seeded by
+ * the game, so the hub can scout exactly what the staff will do.
+ */
+export function gameDayProgramTactics(team: Pick<Team, 'id'>, opponentTactics: Tactics, gameKey: string): Tactics {
+  const base = programTactics(team);
+  const adaptability = staffAdaptability(team);
+  const rng = makeRng(seedToNumber(`${gameKey}:${team.id}:game-plan`));
+  const counters = bestCounters(base, opponentTactics);
+  return {
+    ...base,
+    defensePackage: rng() < adaptability * DEFENSE_ADJUST_RATE ? counters.defensePackage : base.defensePackage,
+    offenseSet: rng() < adaptability * OFFENSE_ADJUST_RATE ? counters.offenseSet : base.offenseSet,
+  };
+}
+
+const DEFENSE_ADJUST_RATE = 0.7;
+const OFFENSE_ADJUST_RATE = 0.4;
+
 export interface ScoutingReport {
   /** Your offense against their defense, in rating points (positive favors you). */
   offenseEdge: number;
@@ -140,15 +190,21 @@ export interface ScoutingReport {
   bestDefenseEdge: number;
 }
 
-/** How your game-day scheme lines up with an opponent's, and what would line up better. */
-export function scoutOpponent(user: Tactics, opponent: Tactics): ScoutingReport {
+/**
+ * How your game-day scheme lines up with an opponent's, and what would line up better.
+ * With `respond`, each alternative is judged against what the opponent would run in
+ * answer to it, so a staff that counters your change is accounted for.
+ */
+export function scoutOpponent(user: Tactics, opponent: Tactics, respond?: (user: Tactics) => Tactics): ScoutingReport {
+  const answer = (candidate: Tactics) => (respond ? respond(candidate) : opponent);
   const offenseEdge = edgeToRatingPoints(schemeShotQualityEdge(user, opponent));
   const defenseEdge = edgeToRatingPoints(-schemeShotQualityEdge(opponent, user));
 
   let bestOffenseSet: OffenseSet = user.offenseSet ?? 'balanced';
   let bestOffenseEdge = offenseEdge;
   for (const set of OFFENSE_SETS) {
-    const edge = edgeToRatingPoints(schemeShotQualityEdge({ ...user, offenseSet: set }, opponent));
+    const candidate = { ...user, offenseSet: set };
+    const edge = edgeToRatingPoints(schemeShotQualityEdge(candidate, answer(candidate)));
     if (edge > bestOffenseEdge) {
       bestOffenseSet = set;
       bestOffenseEdge = edge;
@@ -158,7 +214,8 @@ export function scoutOpponent(user: Tactics, opponent: Tactics): ScoutingReport 
   let bestDefensePackage: DefensePackage = user.defensePackage ?? 'man';
   let bestDefenseEdge = defenseEdge;
   for (const pkg of DEFENSE_PACKAGES) {
-    const edge = edgeToRatingPoints(-schemeShotQualityEdge(opponent, { ...user, defensePackage: pkg }));
+    const candidate = { ...user, defensePackage: pkg };
+    const edge = edgeToRatingPoints(-schemeShotQualityEdge(answer(candidate), candidate));
     if (edge > bestDefenseEdge) {
       bestDefensePackage = pkg;
       bestDefenseEdge = edge;

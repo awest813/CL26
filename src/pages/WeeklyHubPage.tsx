@@ -28,13 +28,13 @@ import {
   PRACTICE_FOCUS_LABELS,
 } from '../sim/coachEffects';
 import { GameDayEdge, GameDayScheme, InstallPicker, ScoutingReport } from '../components/GamePlan';
-import { programTactics } from '../sim/schemeMatchups';
+import { gameDayProgramTactics, programTactics } from '../sim/schemeMatchups';
 import { programRoster, programStarters } from '../sim/programLedger';
 import { availabilityWeekKey, injuryTimeline, rosterForAvailability, weeklyScratches } from '../sim/injuries';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import { estimateWinChance } from '../sim/winEstimate';
 import { isNeutralSiteRound } from '../sim/playoffs';
-import { CONFERENCE_SEMIFINAL_KEY, CONFERENCE_TOURNAMENT_SIZE, conferenceTournamentSeeds, tournamentRunFor } from '../sim/conferenceTournaments';
+import { CONFERENCE_SEMIFINAL_KEY, CONFERENCE_TOURNAMENT_SIZE, conferenceSemifinalId, conferenceTournamentSeeds, tournamentRunFor } from '../sim/conferenceTournaments';
 import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
 import { buildPositionNeedByPosition } from '../sim/recruiting';
@@ -254,8 +254,19 @@ function WeeklyHubPage() {
     : inConferenceChampionship
       ? userConferenceSeed <= 2
       : playoffSpot.currentGame?.homeTeamId === selectedTeamId;
-  // The opponent's staff runs the same scheme every week; the hub scouts it.
-  const opponentScheme = useMemo(() => (featuredOpponent ? programTactics(featuredOpponent) : undefined), [featuredOpponent]);
+  // The opponent's staff has a base scheme and may adjust it to this week's calls; the hub scouts both.
+  const featuredGameId = season.phase === 'REGULAR'
+    ? userUpcomingGame?.id ?? null
+    : inConferenceChampionship && userConference
+      ? conferenceSemifinalId(userConference.id, userConferenceSeed)
+      : playoffSpot.currentGame?.id ?? null;
+  const opponentBaseScheme = useMemo(() => (featuredOpponent ? programTactics(featuredOpponent) : undefined), [featuredOpponent]);
+  const opponentScheme = useMemo(
+    () => (featuredOpponent && featuredGameId
+      ? gameDayProgramTactics(featuredOpponent, gamePlan.tactics, `${season.seasonSeed}:${featuredGameId}`)
+      : opponentBaseScheme),
+    [featuredGameId, featuredOpponent, gamePlan.tactics, opponentBaseScheme, season.seasonSeed],
+  );
   const featuredRecord = featuredOpponent
     ? records[featuredOpponent.id] ?? {
         wins: 0,
@@ -745,7 +756,15 @@ function WeeklyHubPage() {
           {featuredOpponent && opponentScheme && (
             <>
               <div className="planReadoutLabel mt-3">Scouting: {featuredOpponent.schoolName}</div>
-              <ScoutingReport plan={gamePlan} opponent={opponentScheme} opponentName={featuredOpponent.schoolName} />
+              <ScoutingReport
+                plan={gamePlan}
+                opponent={opponentScheme}
+                opponentBase={opponentBaseScheme}
+                opponentName={featuredOpponent.schoolName}
+                respond={featuredGameId
+                  ? (calls) => gameDayProgramTactics(featuredOpponent, calls, `${season.seasonSeed}:${featuredGameId}`)
+                  : undefined}
+              />
             </>
           )}
           <Link to="/career#game-plan" className="text-sm hover:underline inline-block mt-3">

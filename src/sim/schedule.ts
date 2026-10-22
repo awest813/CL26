@@ -1,8 +1,10 @@
 import type { Conference, ScheduledGame, Team } from '../types/sim.ts';
-import { makeRng, randInt } from './rng.ts';
+import { makeRng } from './rng.ts';
 import { buildRivalries, RIVALRY_WEEK_INDEX } from './rivalries.ts';
 
 const TOTAL_WEEKS = 12;
+/** How strongly the open non-conference weeks favor an opponent from the same region. */
+const REGIONAL_PREFERENCE = 0.1;
 
 function gameId(weekIndex: number, home: string, away: string): string {
   return `w${weekIndex}-${home}-vs-${away}`;
@@ -64,6 +66,7 @@ function tryBuildWeekMatchups(
 ): ScheduledGame[] | null {
   const teamIds = teams.map((team) => team.id);
   const confByTeam = new Map(teams.map((team) => [team.id, team.conferenceId]));
+  const regionByTeam = new Map(teams.map((team) => [team.id, team.region]));
   const scheduled: [string, string][] = [];
   const used = new Set<string>();
 
@@ -87,10 +90,13 @@ function tryBuildWeekMatchups(
 
     if (candidates.length === 0) return false;
 
-    for (let i = candidates.length - 1; i > 0; i -= 1) {
-      const j = randInt(rng, 0, i);
-      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
-    }
+    // Mostly regional: neighbors from other conferences are tried first, in a shuffled order,
+    // with enough noise that some games still cross the country.
+    const order = new Map(candidates.map((candidate) => [
+      candidate,
+      (regionByTeam.get(candidate) === regionByTeam.get(teamId) ? REGIONAL_PREFERENCE : 0) + rng(),
+    ]));
+    candidates.sort((a, b) => (order.get(b) ?? 0) - (order.get(a) ?? 0));
 
     for (const opponent of candidates) {
       used.add(teamId);

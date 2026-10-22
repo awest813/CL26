@@ -58,3 +58,21 @@ describe('rivalry week', () => {
     });
   }
 });
+
+describe('regional non-conference games', () => {
+  test('the open weeks lean toward opponents from the same region', () => {
+    const regionById = new Map(teams.map((team) => [team.id, team.region]));
+    let regional = 0;
+    let total = 0;
+    for (const seed of [3, 4, 5]) {
+      const schedule = generateSeasonSchedule(teams, conferences, seed);
+      for (const game of schedule.slice(7, RIVALRY_WEEK_INDEX).flat()) {
+        total += 1;
+        if (regionById.get(game.homeTeamId) === regionById.get(game.awayTeamId)) regional += 1;
+      }
+    }
+    // A random draw would make about one game in nine regional.
+    const share = regional / total;
+    assert.ok(share > 0.35 && share < 0.9, `${(share * 100).toFixed(0)}% regional`);
+  });
+});

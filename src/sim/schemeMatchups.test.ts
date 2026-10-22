@@ -2,8 +2,10 @@ import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import {
   DEFENSE_PACKAGES,
+  gameDayProgramTactics,
   OFFENSE_SETS,
   programTactics,
+  staffAdaptability,
   schemeShotQualityEdge,
   scoutOpponent,
 } from './schemeMatchups.ts';
@@ -86,5 +88,46 @@ describe('scouting report', () => {
     const report = scoutOpponent(withSet('motion'), withPackage('zone'));
     assert.strictEqual(report.bestOffenseSet, 'motion');
     assert.strictEqual(report.bestOffenseEdge, report.offenseEdge);
+  });
+});
+
+describe('game-day adjustments', () => {
+  const invert: Tactics = { ...DEFAULT_TACTICS, offenseSet: 'invert' };
+
+  test('the same game gives the same plan', () => {
+    const team = teams[3];
+    assert.deepStrictEqual(gameDayProgramTactics(team, invert, '7:w1-x'), gameDayProgramTactics(team, invert, '7:w1-x'));
+  });
+
+  test('an adaptable staff counters the opponent far more often than a stubborn one', () => {
+    // Staffs whose base defense is not already zone, so a counter to invert is a visible change.
+    const ranked = [...teams]
+      .filter((team) => programTactics(team).defensePackage !== 'zone')
+      .sort((a, b) => staffAdaptability(a) - staffAdaptability(b));
+    const stubborn = ranked[0];
+    const adaptable = ranked[ranked.length - 1];
+    const countered = (team: Team) => {
+      let times = 0;
+      for (let game = 0; game < 200; game += 1) {
+        const base = programTactics(team);
+        const plan = gameDayProgramTactics(team, invert, `game-${game}`);
+        if (plan.defensePackage === 'zone' && base.defensePackage !== 'zone') times += 1;
+        if (plan.tempo !== base.tempo || plan.rideClear !== base.rideClear) throw new Error('only the sets change');
+      }
+      return times;
+    };
+    assert.ok(countered(adaptable) > 80, `adaptable staff countered ${countered(adaptable)} of 200`);
+    assert.ok(countered(stubborn) < 30, `stubborn staff countered ${countered(stubborn)} of 200`);
+  });
+
+  test('the scouting suggestion accounts for a staff that will answer it', () => {
+    // A staff that always answers with the best defense against whatever you run.
+    const respond = (calls: Tactics): Tactics => {
+      const options = DEFENSE_PACKAGES.map((pkg) => ({ ...DEFAULT_TACTICS, defensePackage: pkg }));
+      return options.sort((a, b) => schemeShotQualityEdge(calls, a) - schemeShotQualityEdge(calls, b))[0];
+    };
+    const naive = scoutOpponent(DEFAULT_TACTICS, withPackage('man'));
+    const informed = scoutOpponent(DEFAULT_TACTICS, withPackage('man'), respond);
+    assert.ok(naive.bestOffenseEdge > informed.bestOffenseEdge, 'a staff that answers should shrink the best edge');
   });
 });

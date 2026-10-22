@@ -166,13 +166,23 @@ export function GameDayEdge({ plan, opponent }: { plan: CoachGamePlan; opponent?
 
 type ScoutingReportProps = {
   plan: CoachGamePlan;
+  /** What they will run against this week's calls. */
   opponent: Tactics;
+  /** Their usual scheme, to say what their staff changed for you. */
+  opponentBase?: Tactics;
   opponentName: string;
+  /** What their staff would run against a different set of calls. */
+  respond?: (calls: Tactics) => Tactics;
 };
 
 /** The opponent's scheme, how this week's calls line up with it, and the call that would line up better. */
-export function ScoutingReport({ plan, opponent, opponentName }: ScoutingReportProps) {
-  const report = scoutOpponent(plan.tactics, opponent);
+export function ScoutingReport({ plan, opponent, opponentBase, opponentName, respond }: ScoutingReportProps) {
+  const adjustments = opponentBase
+    ? (['defensePackage', 'offenseSet'] as const)
+        .filter((key) => tacticValue(opponent, key) !== tacticValue(opponentBase, key))
+        .map((key) => `${tacticShortLabel(key, tacticValue(opponent, key)).toLowerCase()} instead of their usual ${tacticShortLabel(key, tacticValue(opponentBase, key)).toLowerCase()}`)
+    : [];
+  const report = scoutOpponent(plan.tactics, opponent, respond);
   const yourOffense = tacticShortLabel('offenseSet', tacticValue(plan.tactics, 'offenseSet'));
   const yourDefense = tacticShortLabel('defensePackage', tacticValue(plan.tactics, 'defensePackage'));
   const theirOffense = tacticShortLabel('offenseSet', tacticValue(opponent, 'offenseSet'));
@@ -181,7 +191,7 @@ export function ScoutingReport({ plan, opponent, opponentName }: ScoutingReportP
     ? `${tacticShortLabel('offenseSet', report.bestOffenseSet)} would be ${signed(report.bestOffenseEdge)}.`
     : 'Nothing lines up better.';
   const betterDefense = report.bestDefenseEdge > report.defenseEdge
-    ? `${tacticShortLabel('defensePackage', report.bestDefensePackage)} would be ${signed(report.bestDefenseEdge)}.`
+    ? `${tacticShortLabel('defensePackage', report.bestDefensePackage)} would be ${signed(report.bestDefenseEdge)} for you.`
     : 'Nothing lines up better.';
 
   return (
@@ -194,6 +204,11 @@ export function ScoutingReport({ plan, opponent, opponentName }: ScoutingReportP
         ))}
       </ul>
       <ul className="scoutingLines">
+        {adjustments.length > 0 && (
+          <li>
+            Their staff is adjusting to your calls: {adjustments.join(' and ')}.
+          </li>
+        )}
         <li>
           Your {yourOffense.toLowerCase()} against their {theirDefense.toLowerCase()}: <strong>{signed(report.offenseEdge)}</strong>. {betterOffense}
         </li>

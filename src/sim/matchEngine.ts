@@ -425,8 +425,16 @@ export function lateGameAdjustment(margin: number, secondsLeft: number): LateGam
 const DESPERATION_RIDE_EDGE = 0.06;
 const DESPERATION_FOUL_EDGE = 0.02;
 
-const HOME_FIELD_OFFENSE = 2.6;
-const HOME_FIELD_DEFENSE = 2.2;
+/**
+ * How much a home crowd is worth, from the program's size: a small school's home field is
+ * about two-thirds of the average, a blue blood's about a third more.
+ */
+export function homeFieldScale(prestige: number): number {
+  return clamp(0.78 + (prestige - 48) / 70, 0.65, 1.45);
+}
+
+const HOME_FIELD_OFFENSE = 2.9;
+const HOME_FIELD_DEFENSE = 2.5;
 const HOME_FIELD_FACEOFF = 2;
 const HOME_FIELD_DISCIPLINE = 0.6;
 
@@ -466,10 +474,11 @@ export function simulateGame(
   const modifiersB = resolveGameplayModifiers(teamB);
 
   if (homeAdvantageForA) {
-    modifiersA.offense += HOME_FIELD_OFFENSE;
-    modifiersA.defense += HOME_FIELD_DEFENSE;
-    modifiersA.faceoff += HOME_FIELD_FACEOFF;
-    modifiersA.discipline += HOME_FIELD_DISCIPLINE;
+    const crowd = homeFieldScale(teamA.team.prestige);
+    modifiersA.offense += HOME_FIELD_OFFENSE * crowd;
+    modifiersA.defense += HOME_FIELD_DEFENSE * crowd;
+    modifiersA.faceoff += HOME_FIELD_FACEOFF * crowd;
+    modifiersA.discipline += HOME_FIELD_DISCIPLINE * crowd;
   }
 
   function blankStats(input: TeamSimInput, mods: EffectiveGameplayModifiers, tactics: Tactics): TeamGameStats {
@@ -683,7 +692,11 @@ export function simulateGame(
         offense.stats.turnovers += 1;
         if (rng() < 0.5) creditCausedTurnover(defense);
         if (rng() < CAUSED_TURNOVER_GROUND_BALL_CHANCE) creditGroundBall(defense);
-        if (rng() < 0.2) addPlay(`${defense.input.team.schoolName} rides it back on a failed clear.`);
+        if (rng() < 0.2) {
+          addPlay(rng() < 0.3
+            ? `${offense.input.team.schoolName} cannot get it over midfield in 20 seconds; possession to ${defense.input.team.schoolName}.`
+            : `${defense.input.team.schoolName} rides it back on a failed clear.`);
+        }
         // The riding team gains it in its offensive end.
         return { scored: false, next: 'settled' };
       }

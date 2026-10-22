@@ -3,7 +3,7 @@ import { SeasonState, TeamRecord, GameResult, ProgramLedger, ProgramLedgerEntry 
 import { RootState } from '../../store/store';
 import { generateSeasonSchedule } from '../../sim/schedule';
 import { simulateGame } from '../../sim/matchEngine';
-import { programTactics } from '../../sim/schemeMatchups';
+import { gameDayProgramTactics, programTactics } from '../../sim/schemeMatchups';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
@@ -162,9 +162,12 @@ export const simCurrentWeek = createAsyncThunk(
         ? userAvailability ?? { roster: generateRoster(awayTeam, rosterSeed), starterIds: [] }
         : cpuLineup(game.awayTeamId);
 
-      // Every CPU program runs its own staff's scheme.
-      const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : programTactics(homeTeam);
-      const awayTactics = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : programTactics(awayTeam);
+      // Every CPU program runs its own staff's scheme, adjusted to the opponent when the staff is inclined to.
+      const homeBase = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : programTactics(homeTeam);
+      const awayBase = game.awayTeamId === coachState.selectedTeamId ? coachTeamTactics : programTactics(awayTeam);
+      const gameKey = `${seasonSeed}:${game.id}`;
+      const homeTactics = game.homeTeamId === coachState.selectedTeamId ? homeBase : gameDayProgramTactics(homeTeam, awayBase, gameKey);
+      const awayTactics = game.awayTeamId === coachState.selectedTeamId ? awayBase : gameDayProgramTactics(awayTeam, homeBase, gameKey);
 
       const gameSeed = composeSeasonGameSeed(
         seasonSeed,
@@ -257,7 +260,7 @@ function conferenceTournamentSides(state: RootState): (teamId: string, weekKey: 
     }
     const roster = programRoster(team, season.programLedger, rosterSeed);
     const lineup = rosterForAvailability(roster, programStarters(roster), weeklyScratches(roster, season.seasonSeed, weekKey, teamId));
-    return { input: { team, roster: lineup.roster, starterIds: lineup.starterIds }, tactics: programTactics(team) };
+    return { input: { team, roster: lineup.roster, starterIds: lineup.starterIds }, tactics: programTactics(team), cpu: true };
   };
 }
 
