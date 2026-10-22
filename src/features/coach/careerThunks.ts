@@ -38,7 +38,7 @@ import {
   entrantToPlayer,
 } from '../../sim/offseasonMarket';
 import { computePollInputs, computeRankings } from '../../sim/rankings';
-import { advanceProgramLedger, draftLedger, prestigeDriftForSeason, programRoster, withLeaguePrestige } from '../../sim/programLedger';
+import { advanceProgramLedger, draftLedger, nextPrestigeDrift, prestigeDriftForSeason, programRoster, withLeaguePrestige } from '../../sim/programLedger';
 import { buildSeasonJobMarket } from '../../sim/jobOffers';
 import {
   canSimRegularWeek,
@@ -285,7 +285,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const currentTeam = teams.find((team) => team.id === coach.selectedTeamId);
     const currentEffectivePrestige = Math.max(
       1,
-      Math.min(100, (currentTeam?.prestige ?? 50) + (coach.programPrestigeDrift ?? 0) + prestigeDriftDelta),
+      Math.min(100, (currentTeam?.prestige ?? 50) + nextPrestigeDrift(coach.programPrestigeDrift ?? 0, prestigeDriftDelta)),
     );
 
     // Signing class stats
@@ -311,6 +311,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       recruitsSigned: signedClass.length,
       avgRecruitStars: Math.round(avgRecruitStars * 100) / 100,
       jobSecurityEnd: newJobSecurity,
+      prestigeEnd: currentEffectivePrestige,
     }));
 
     dispatch(setAdPressure(boostedPressure));

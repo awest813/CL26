@@ -1,6 +1,7 @@
 import type { Player, Position, Recruit, RecruitingPitch, RecruitMotivation, Team } from '../types/sim.ts';
 import { POSITION_ORDER } from '../types/sim.ts';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng.ts';
+import { prestigeStars } from './prestige.ts';
 import namesData from '../data/names.json' with { type: 'json' };
 import { LEAGUE_REGIONS } from './leagueDataValidation.ts';
 import { ROSTER_POSITION_TARGETS } from './generateRoster.ts';
@@ -171,24 +172,51 @@ function playingTimeGradeFromNeed(recruit: Recruit, positionNeedByPosition?: Rec
   return 'C';
 }
 
+/** A school trait that does not come from prestige: 0 to 1, fixed per school. */
+function schoolTrait(team: Team, trait: string): number | null {
+  if (!team.id) return null;
+  return makeRng(seedToNumber(`school:${trait}:${team.id}`))();
+}
+
+/** Academics: each school has its own standing, nudged by how big the program is. */
+function academicGrade(team: Team): string {
+  const roll = schoolTrait(team, 'academics');
+  if (roll == null) return team.prestige > 80 ? 'A' : team.prestige > 60 ? 'B' : 'C';
+  const score = 30 + roll * 55 + (team.prestige - 65) * 0.3;
+  if (score >= 74) return 'A';
+  if (score >= 64) return 'B+';
+  if (score >= 52) return 'B';
+  if (score >= 38) return 'C';
+  return 'D';
+}
+
+/** Campus life: a fixed draw per school, mostly B range with a few standouts and a few duds. */
+function campusLifeGrade(team: Team): string {
+  const roll = schoolTrait(team, 'campus');
+  if (roll == null) return 'B+';
+  if (roll >= 0.85) return 'A';
+  if (roll >= 0.5) return 'B+';
+  if (roll >= 0.15) return 'B';
+  return 'C';
+}
+
 export function calculateTeamGrade(team: Team, pitch: RecruitingPitch, recruitRegion?: string): string {
-  // Simplified logic for grades
+  const stars = prestigeStars(team.prestige);
   switch (pitch) {
     case 'PLAYING_TIME':
-      // Simplified: Assume team needs players if prestige is lower
-      return team.prestige < 50 ? 'A+' : team.prestige < 70 ? 'B' : 'C';
+      // Without a roster to read, a smaller program is the likelier place to play early.
+      return stars <= 2 ? 'A+' : stars <= 3.5 ? 'B' : 'C';
     case 'PROXIMITY':
       if (!recruitRegion) return 'B';
       return proximityPitchGrade(team.region, recruitRegion);
     case 'ACADEMIC':
-      // Random deterministic based on name length? Or just prestige correlation
-      return team.prestige > 80 ? 'A' : team.prestige > 60 ? 'B' : 'C';
+      return academicGrade(team);
     case 'PRESTIGE':
-      return team.prestige > 85 ? 'A+' : team.prestige > 70 ? 'A' : team.prestige > 55 ? 'B' : team.prestige > 40 ? 'C' : 'D';
+      return stars >= 4.5 ? 'A+' : stars >= 3.5 ? 'A' : stars >= 2 ? 'B' : stars >= 1.5 ? 'C' : 'D';
     case 'CHAMPIONSHIP':
-       return team.prestige > 90 ? 'A+' : team.prestige > 75 ? 'A' : team.prestige > 55 ? 'C' : 'D';
+      return stars >= 5 ? 'A+' : stars >= 4 ? 'A' : stars >= 2 ? 'C' : 'D';
     case 'CAMPUS_LIFE':
-       return 'B+'; // Everyone has decent campus life in sim
+      return campusLifeGrade(team);
     default:
       return 'C';
   }
@@ -208,4 +236,28 @@ export function getTeamPitchGrade(
        return proximityPitchGrade(team.region, recruit.region);
    }
    return calculateTeamGrade(team, pitch, recruit.region);
+}
+
+/** Every pitch with the grade this program earns on it for one prospect, best first among what he wants. */
+export function pitchGradesFor(
+  team: Team,
+  recruit: Recruit,
+  positionNeedByPosition?: Record<Position, number>,
+): Array<{ pitch: RecruitingPitch; grade: string; importance: RecruitMotivation['importance'] | null }> {
+  return PITCHES.map((pitch) => ({
+    pitch,
+    grade: getTeamPitchGrade(team, pitch, recruit, positionNeedByPosition),
+    importance: recruit.motivations.find((motivation) => motivation.pitch === pitch)?.importance ?? null,
+  }));
+}
+
+/** A dealbreaker the program cannot meet: a D or F on the one thing the prospect will not give up. */
+export function dealbreakerConflict(
+  team: Team,
+  recruit: Recruit,
+  positionNeedByPosition?: Record<Position, number>,
+): { pitch: RecruitingPitch; grade: string } | null {
+  if (!recruit.dealbreaker) return null;
+  const grade = getTeamPitchGrade(team, recruit.dealbreaker, recruit, positionNeedByPosition);
+  return grade === 'D' || grade === 'F' ? { pitch: recruit.dealbreaker, grade } : null;
 }

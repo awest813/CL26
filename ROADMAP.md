@@ -1,6 +1,6 @@
 # College Lacrosse Head Coach Sim — Roadmap
 
-> Sim gap list and phased gameplan: [docs/SIM_AUDIT.md](./docs/SIM_AUDIT.md)
+> Sim gap list and phased gameplan: [docs/SIM_AUDIT.md](./docs/SIM_AUDIT.md) · Alpha polish plan: [docs/ALPHA_POLISH_PLAN.md](./docs/ALPHA_POLISH_PLAN.md)
 
 ## Vision
 

@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
+import PrestigeStars from '../components/PrestigeStars';
+import { formatPrestige } from '../sim/prestige';
 import { selectConferenceById, selectTeamWithRosterSummary } from '../features/league/leagueSlice';
 import { buildRosterSummary, playerYearLabel } from '../sim/rosterSummary';
 import { useAppSelector } from '../store/hooks';
@@ -76,7 +78,7 @@ function TeamPage() {
   const rivalry = rivalryFor(buildRivalries(leagueTeams), teamSummary.team.id);
   const rival = rivalry ? leagueTeams.find((team) => team.id === rivalOf(rivalry, teamSummary.team.id)) : undefined;
   const trophyHolder = rivalry ? leagueTeams.find((team) => team.id === trophyHolders?.[rivalry.trophy]) : undefined;
-  const signed = (value: number) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value)}`;
+  const signed = (value: number) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatPrestige(Math.abs(value))}`;
 
   return (
     <div className="pageStack">
@@ -97,7 +99,7 @@ function TeamPage() {
             </div>
           </div>
           <div className="teamHeroBadges" aria-label="Program profile">
-            <span className="conferenceMetricChip">Prestige {displayedPrestige}</span>
+            <span className="conferenceMetricChip"><PrestigeStars prestige={displayedPrestige} showTier showValue /></span>
             <span className="conferenceMetricChip">Roster overall {teamSummary.rosterOverall}</span>
             <span className="conferenceMetricChip">Players {teamSummary.rosterSize}</span>
           </div>
@@ -129,10 +131,7 @@ function TeamPage() {
             {isOwnTeam && prestigeDrift !== 0 && (
               <div className="teamInfoRow">
                 <span className="teamInfoLabel">Career drift</span>
-                <strong>
-                  {prestigeDrift > 0 ? '+' : ''}
-                  {prestigeDrift} (base {teamSummary.team.prestige})
-                </strong>
+                <strong>{signed(prestigeDrift)} (base {teamSummary.team.prestige})</strong>
               </div>
             )}
             {rivalry && rival && (

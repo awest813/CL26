@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import TeamLogo from '../components/TeamLogo';
+import PrestigeStars from '../components/PrestigeStars';
+import { selectRankingTeams } from '../features/season/seasonSlice';
 import { acceptJobOffer, declineAllJobOffers, togglePortalClaim } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
@@ -27,6 +29,8 @@ function OffseasonMarket() {
   const coach = useAppSelector((state) => state.coach);
   const teams = useAppSelector((state) => state.league.teams);
   const conferences = useAppSelector((state) => state.league.conferences);
+  // A job reads the program as it stands now, the prestige accepting it carries over.
+  const currentTeams = useAppSelector(selectRankingTeams);
   const season = useAppSelector((state) => state.season);
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
   const claims = coach.portalClaimIds ?? [];
@@ -248,6 +252,7 @@ function OffseasonMarket() {
           <ul className="marketList mt-2">
             {marketCoaches.map((staff) => {
               const school = teams.find((team) => team.id === staff.teamId);
+              const schoolPrestige = currentTeams.find((team) => team.id === staff.teamId)?.prestige;
               const offer = coach.pendingJobOffers.find((item) => item.teamId === staff.teamId);
               return (
                 <li key={staff.id} className="marketRow">
@@ -260,6 +265,7 @@ function OffseasonMarket() {
                         {school ? ` · ${school.schoolName}` : ''}
                         {school ? ` · ${conferenceName.get(school.conferenceId) ?? 'Independent'}` : ''}
                       </span>
+                      {schoolPrestige != null && <PrestigeStars prestige={schoolPrestige} showTier />}
                     </span>
                   </span>
                   {offer ? (

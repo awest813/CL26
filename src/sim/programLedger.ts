@@ -48,6 +48,11 @@ export function prestigeDriftForSeason(champion: boolean, madePlayoffs: boolean,
   return 0;
 }
 
+/** Earned prestige after one more season: last year's drift fades, this year's result adds. */
+export function nextPrestigeDrift(drift: number, seasonDelta: number): number {
+  return roundTenth(clamp(drift * PRESTIGE_DRIFT_RETENTION + seasonDelta, MIN_PRESTIGE_DRIFT, MAX_PRESTIGE_DRIFT));
+}
+
 export function ledgerEntry(ledger: ProgramLedger | null | undefined, teamId: string): ProgramLedgerEntry {
   return ledger?.[teamId] ?? EMPTY_ENTRY;
 }
@@ -174,7 +179,7 @@ export function advanceProgramLedger(season: ProgramLedgerSeason): ProgramLedger
     const wins = record?.wins ?? 0;
     const winDiff = Math.round(wins - (expectedWins.get(team.id) ?? 6));
     const driftDelta = prestigeDriftForSeason(champion === team.id, seeds.has(team.id), winDiff);
-    const prestigeDrift = roundTenth(clamp(entry.prestigeDrift * PRESTIGE_DRIFT_RETENTION + driftDelta, MIN_PRESTIGE_DRIFT, MAX_PRESTIGE_DRIFT));
+    const prestigeDrift = nextPrestigeDrift(entry.prestigeDrift, driftDelta);
 
     const classEdge = (stars - expectedStars(team.prestige)) * CLASS_TALENT_PER_STAR;
     const departures = (season.earlyEntrantsByTeamId[team.id] ?? 0) * EARLY_ENTRY_TALENT_COST;

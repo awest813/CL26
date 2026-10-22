@@ -20,8 +20,8 @@ const FOCUS_MODIFIERS: Record<PracticeFocus, TeamGameplayModifiers> = {
   },
   DEFENSE: {
     offense: -0.8,
-    defense: 4,
-    goalie: 2.2,
+    defense: 5.2,
+    goalie: 2.6,
     faceoff: 0,
     discipline: 0,
     shotQuality: 0,
@@ -37,19 +37,19 @@ const FOCUS_MODIFIERS: Record<PracticeFocus, TeamGameplayModifiers> = {
     discipline: 4,
     shotQuality: 0,
     turnoverAvoidance: 0.015,
-    penaltyAvoidance: 0.03,
+    penaltyAvoidance: 0.022,
     groundBallBonus: 0,
   },
   CONDITIONING: {
     offense: 0,
-    defense: 1.4,
+    defense: 1,
     goalie: 0,
-    faceoff: 1.8,
+    faceoff: 1.6,
     discipline: 0,
     shotQuality: 0,
     turnoverAvoidance: 0,
     penaltyAvoidance: 0,
-    groundBallBonus: 3.5,
+    groundBallBonus: 3,
   },
 };
 
@@ -57,16 +57,16 @@ const FOCUS_MODIFIERS: Record<PracticeFocus, TeamGameplayModifiers> = {
 export const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
   OFFENSE: 'Offense install',
   DEFENSE: 'Defense install',
-  CONDITIONING: 'Conditioning',
-  DISCIPLINE: 'Discipline',
+  CONDITIONING: 'Conditioning install',
+  DISCIPLINE: 'Discipline install',
 };
 
 /** What each install does, in the terms FOCUS_MODIFIERS and applyCoachWeekSettings use. */
 export const PRACTICE_FOCUS_DETAILS: Record<PracticeFocus, string> = {
-  OFFENSE: 'Attack edge and cleaner shots. Plays fast with late slides; defense dips a little.',
-  DEFENSE: 'Defense and goalie edge. Slides early and rides hard; offense dips a little.',
-  CONDITIONING: 'Faceoffs, loose balls, and a little defense. Recovers legs, halves the fatigue drag, and fades less late in games.',
-  DISCIPLINE: 'Fewer turnovers and flags. Clears conservatively; no direct scoring edge.',
+  OFFENSE: 'Attack edge and cleaner shots. Your defense slides late and dips a little.',
+  DEFENSE: 'Defense and goalie edge. Slides early and rides hard; your offense dips a little.',
+  CONDITIONING: 'Recovers legs, halves the fatigue drag, and fades less late in games. A small faceoff, loose-ball, and defense edge.',
+  DISCIPLINE: 'Fewer turnovers and flags. Clears conservatively, and your defense gambles less for takeaways.',
 };
 
 const ARCHETYPE_BONUSES: Record<CoachArchetype, Partial<TeamGameplayModifiers>> = {
@@ -160,7 +160,7 @@ function blankGameplayModifiers(): TeamGameplayModifiers {
 
 /** The install's scheme calls. They replace the base scheme for the week. */
 const INSTALL_TACTICS: Record<PracticeFocus, Partial<Tactics>> = {
-  OFFENSE: { tempo: 'fast', slideAggression: 'late' },
+  OFFENSE: { slideAggression: 'late' },
   DEFENSE: { slideAggression: 'early', rideClear: 'aggressive' },
   DISCIPLINE: { rideClear: 'conservative' },
   CONDITIONING: {},
@@ -358,11 +358,15 @@ export function summarizeCoachSkillImpacts(input: CoachSkillImpactInput): string
   const recruitingDeltaPct = Math.round((recruitingMultiplier - 1) * 100);
 
   const operationsFatigueControl = Math.round((1 - clamp(1 - operations * 0.03, 0.82, 1)) * 100);
+  const recruitingPrep = treeLevelEdge(recruiting);
   const developmentPrep = roundToThreeDecimals(treeLevelEdge(development) * 0.9);
   const operationsPrep = roundToThreeDecimals(treeLevelEdge(operations) * 0.6);
+  const recruitingGameDay = recruiting > 0
+    ? ` On game day, +${(recruitingPrep * 0.55).toFixed(1)} faceoffs and +${(recruitingPrep * 0.7).toFixed(1)} ground balls from the specialists it lands.`
+    : '';
 
   return [
-    `Current recruiting effectiveness: ${recruitingDeltaPct >= 0 ? '+' : ''}${recruitingDeltaPct}% weekly interest swing from archetype, Tree, NIL, and boosters.`,
+    `Recruiting: ${recruitingDeltaPct >= 0 ? '+' : ''}${recruitingDeltaPct}% weekly interest from your archetype, recruiting skill, NIL, and boosters.${recruitingGameDay}`,
     `Development prep: +${developmentPrep.toFixed(1)} discipline edge with facilities ${facilities} supporting long-term growth.`,
     `Operations control: +${operationsPrep.toFixed(1)} goalie prep and ${operationsFatigueControl}% fatigue reduction from weekly load.`,
   ];
@@ -377,8 +381,8 @@ export function advanceFatigue(
   const bounded = clamp(previousFatigue, 0, 100);
 
   const byFocus: Record<PracticeFocus, number> = {
-    OFFENSE: 8,
-    DEFENSE: 9,
+    OFFENSE: 7,
+    DEFENSE: 7,
     CONDITIONING: 3,
     DISCIPLINE: 5,
   };

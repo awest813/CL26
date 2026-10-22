@@ -59,6 +59,36 @@ export function coachSkillMultiplier(coachSkill: number): number {
   return 0.85 + ((boundedCoachSkill - 40) / 59) * 0.3;
 }
 
+export interface UserWeeklyGainInput {
+  recruit: Recruit;
+  hours: number;
+  pitch?: RecruitingPitch;
+  pitchGrade?: string;
+  /** Archetype, skill tree, NIL, and boosters (see `programRecruitingBonus`). */
+  gainMultiplier: number;
+  coachSkill: number;
+  /** The user's effective prestige; null leaves program pull out. */
+  programPrestige: number | null;
+  /** 0–3 points when the prospect plays a position the roster is short at. */
+  positionNeedBonus: number;
+  /** The week's random swing, -1 to +1. Zero gives the expected gain. */
+  swing?: number;
+}
+
+/**
+ * Interest the user's staff adds to one prospect in a week. Half a point an hour,
+ * a little more for a higher-rated prospect, scaled by the staff and the program's
+ * pull with this tier, then by the pitch, plus a position-need bump.
+ */
+export function userWeeklyGain(input: UserWeeklyGainInput): number {
+  if (input.hours <= 0) return 0;
+  const rawGain = input.hours * 0.5 + input.recruit.stars * 0.2 + (input.swing ?? 0);
+  const pull = input.programPrestige == null ? 1 : programPull(input.programPrestige, input.recruit.stars);
+  const baseGain = rawGain * input.gainMultiplier * coachSkillMultiplier(input.coachSkill) * pull;
+  const pitchBonus = baseGain * (pitchMultiplier(input.recruit, input.pitch, input.pitchGrade) - 1);
+  return Math.max(0, Math.round(baseGain + pitchBonus + input.positionNeedBonus));
+}
+
 /**
  * Average weekly interest a CPU staff adds for one prospect. Prestige and geography
  * do most of the work; a recruit who wants a winner or wants to stay home leans
@@ -148,19 +178,19 @@ export function simulateRecruitingWeek(
       let weeklyGain = 0;
 
       if (hours > 0) {
-        // Hours: 0.5 per hour (20 hours = 10 pts)
-        // Stars: 0.2 per star (5 stars = 1 pt)
-        // Random: -1 to +1
-        const rawGain = hours * 0.5 + recruit.stars * 0.2 + (rng() * 2 - 1);
-
-        // Archetype bonus (RECRUITER +15%, DEVELOPER -5%, TACTICIAN ±0%)
         const userProfile = teamProfilesByTeamId[selectedTeamId];
-        const pull = userProfile ? programPull(userProfile.prestige, recruit.stars) : 1;
-        const baseGain = rawGain * archetypeBonus * coachSkillMultiplier(coachSkill) * pull;
-        const pitchBonus = baseGain * (pitchMultiplier(recruit, activePitch, pitchGrade) - 1);
-
-        const positionNeedBonus = boardSet.has(recruit.id) ? positionNeedBonusByRecruitId[recruit.id] ?? 0 : 0;
-        weeklyGain = Math.max(0, Math.round(baseGain + pitchBonus + positionNeedBonus));
+        weeklyGain = userWeeklyGain({
+          recruit,
+          hours,
+          pitch: activePitch,
+          pitchGrade,
+          gainMultiplier: archetypeBonus,
+          coachSkill,
+          programPrestige: userProfile?.prestige ?? null,
+          positionNeedBonus: boardSet.has(recruit.id) ? positionNeedBonusByRecruitId[recruit.id] ?? 0 : 0,
+          // A visit that lands or falls flat: -1 to +1 before the multipliers.
+          swing: rng() * 2 - 1,
+        });
       }
 
       // Dealbreaker penalizes the week instead of wiping earned gains.

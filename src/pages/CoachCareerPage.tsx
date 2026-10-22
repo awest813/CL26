@@ -15,6 +15,8 @@ import {
   beginNextCareerSeason,
 } from '../features/coach/careerThunks';
 import TeamLogo from '../components/TeamLogo';
+import PrestigeStars from '../components/PrestigeStars';
+import { formatPrestige, prestigeCushion, prestigeStarText, prestigeToNextStar } from '../sim/prestige';
 import OffseasonMarket from './OffseasonMarket';
 import { selectTeamRecords } from '../features/season/seasonSlice';
 import {
@@ -39,6 +41,18 @@ const ARCHETYPE_BONUSES: Record<string, string[]> = {
   TACTICIAN: ['20% less fatigue build-up', 'Better practice-to-game translation', 'Scheme advantage in late possessions'],
   DEVELOPER: ['Signed players develop faster', 'Cleaner sticks and defensive growth', 'Recruiting pull 5% lower'],
 };
+
+/** Where the program sits between star lines: what earns the next half star, and how close the drop is. */
+function prestigeOutlook(prestige: number): string {
+  const next = prestigeToNextStar(prestige);
+  const cushion = prestigeCushion(prestige);
+  const parts: string[] = [];
+  if (next) parts.push(`${formatPrestige(next.points)} pts to ${prestigeStarText(next.stars)}`);
+  if (cushion != null && cushion < 2) parts.push(`${formatPrestige(cushion)} pts above a drop`);
+  return parts.length > 0 ? `· ${parts.join(' · ')}` : '· Top of the scale';
+}
+
+const PRESTIGE_HELP = 'Titles, playoff runs, and hitting the win target raise prestige; missing it badly lowers it. Earned prestige fades 10% a year.';
 
 function jobSecurityLabel(security: number): { label: string; color: string } {
   if (security >= 75) return { label: 'Strong Position', color: '#16a34a' };
@@ -102,6 +116,7 @@ function SeasonHistoryRow({ entry, index }: { entry: SeasonHistoryEntry; index: 
         )}
       </td>
       <td className="py-1.5 pr-3 text-gray-600">{entry.recruitsSigned} signed ({entry.avgRecruitStars.toFixed(1)}★)</td>
+      <td className="py-1.5 pr-3">{entry.prestigeEnd != null ? <PrestigeStars prestige={entry.prestigeEnd} /> : <span className="text-gray-400">—</span>}</td>
       <td className="py-1.5 text-right">
         <JobSecurityBar value={entry.jobSecurityEnd} />
       </td>
@@ -309,14 +324,14 @@ function CoachCareerPage() {
               </span>
             </div>
             {selectedTeam && effectivePrestige != null && (
-              <div className="text-xs text-gray-500 mt-1">
-                Effective prestige:{' '}
-                <span className="font-semibold text-gray-700">{effectivePrestige}</span>
+              <div className="text-xs text-gray-500 mt-1 programPrestigeLine" title={PRESTIGE_HELP}>
+                <PrestigeStars prestige={effectivePrestige} showTier showValue size="md" />
                 {coach.programPrestigeDrift !== 0 && (
                   <span className={coach.programPrestigeDrift > 0 ? 'text-green-600 font-semibold ml-1' : 'text-red-500 font-semibold ml-1'}>
-                    {coach.programPrestigeDrift > 0 ? `↑${coach.programPrestigeDrift}` : `↓${Math.abs(coach.programPrestigeDrift)}`} from base
+                    {coach.programPrestigeDrift > 0 ? '↑' : '↓'}{formatPrestige(Math.abs(coach.programPrestigeDrift))} earned
                   </span>
                 )}
+                <span className="ml-1">{prestigeOutlook(effectivePrestige)}</span>
               </div>
             )}
           </div>
@@ -405,6 +420,7 @@ function CoachCareerPage() {
                     <th scope="col" className="pb-1 pr-3">Record</th>
                     <th scope="col" className="pb-1 pr-3">Playoff</th>
                     <th scope="col" className="pb-1 pr-3">Recruiting</th>
+                    <th scope="col" className="pb-1 pr-3">Prestige</th>
                     <th scope="col" className="pb-1 text-right">Security</th>
                   </tr>
                 </thead>

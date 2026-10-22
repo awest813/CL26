@@ -1,13 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
+import PrestigeStars from '../components/PrestigeStars';
 import { selectConferenceBrowserRows } from '../features/league/leagueSlice';
+import { selectRankingTeams } from '../features/season/seasonSlice';
 import { useAppSelector } from '../store/hooks';
 import PageHeader from '../components/PageHeader';
 
 function ConferencesPage() {
   const conferenceRows = useAppSelector(selectConferenceBrowserRows);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
+  // Prestige as it stands now: base plus what each program has earned.
+  const currentTeams = useAppSelector(selectRankingTeams);
+  const prestigeByTeamId = useMemo(() => new Map(currentTeams.map((team) => [team.id, team.prestige])), [currentTeams]);
   const [regionFilter, setRegionFilter] = useState('all');
   const [searchText, setSearchText] = useState('');
   const userConferenceId = useMemo(() => {
@@ -137,7 +142,8 @@ function ConferencesPage() {
         </div>
       ) : null}
 
-      {orderedRows.map(({ conference, teams, rosterStrength, averagePrestige, teamCount }) => {
+      {orderedRows.map(({ conference, teams, rosterStrength, teamCount }) => {
+        const averagePrestige = teams.reduce((sum, team) => sum + (prestigeByTeamId.get(team.id) ?? team.prestige), 0) / Math.max(1, teams.length);
         const conferenceRegions = Array.from(new Set(teams.map((team) => team.region))).join(' · ');
         const isYourConference = conference.id === userConferenceId;
 
@@ -157,7 +163,7 @@ function ConferencesPage() {
             </div>
             <div className="conferenceBrowserMetrics" aria-label={`${conference.name} summary`}>
               <span className="conferenceMetricChip">Teams {teamCount}</span>
-              <span className="conferenceMetricChip">Avg prestige {averagePrestige}</span>
+              <span className="conferenceMetricChip">Avg <PrestigeStars prestige={averagePrestige} /></span>
               <span className="conferenceMetricChip">Roster {rosterStrength}</span>
             </div>
           </div>
@@ -179,7 +185,7 @@ function ConferencesPage() {
                 </div>
                 <div className="conferenceTeamMeta">
                   <span>{team.region}</span>
-                  <span>Prestige {team.prestige}</span>
+                  <PrestigeStars prestige={prestigeByTeamId.get(team.id) ?? team.prestige} />
                 </div>
               </Link>
               );

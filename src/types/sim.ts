@@ -384,6 +384,8 @@ export interface SeasonHistoryEntry {
   recruitsSigned: number;
   avgRecruitStars: number;
   jobSecurityEnd: number;
+  /** Program prestige after the season's drift. Missing on saves from before it was recorded. */
+  prestigeEnd?: number;
 }
 
 export interface CareerRecord {

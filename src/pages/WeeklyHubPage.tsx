@@ -3,6 +3,7 @@ import { Navigate, Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import RecruitingReportNote from '../components/RecruitingReportNote';
 import StaffRecruitingControls from '../components/StaffRecruitingControls';
+import LeagueWirePanel from '../components/LeagueWirePanel';
 import {
   selectRankTrends,
   selectTeamRecords,
@@ -41,8 +42,10 @@ import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/game
 import { buildPositionNeedByPosition } from '../sim/recruiting';
 import { careerOffseasonCapabilities } from '../sim/seasonPhase';
 import { buildWeeklyDesk } from '../sim/weeklyDesk';
+import { buildLeagueWire } from '../sim/leagueWire';
+import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { GameResult, Tactics } from '../types/sim';
+import { GameResult, Recruit, Tactics, TeamGameStats } from '../types/sim';
 import { tacticShortLabel, tacticValue } from '../lib/tacticLabels';
 import PageHeader from '../components/PageHeader';
 import { seasonPhaseLabel } from '../lib/seasonLabels';
@@ -94,6 +97,10 @@ function Scoreboard({
   userScore,
   oppScore,
   ledBy,
+  userStats,
+  oppStats,
+  keyEdge,
+  plays = [],
 }: {
   heading: string;
   won: boolean;
@@ -102,6 +109,13 @@ function Scoreboard({
   userScore: number;
   oppScore: number;
   ledBy?: string;
+  /** Box-score lines for the strip under the score, yours first. */
+  userStats?: TeamGameStats;
+  oppStats?: TeamGameStats;
+  /** The recap's one line on what decided it. */
+  keyEdge?: string;
+  /** A few plays from the game. */
+  plays?: string[];
 }) {
   return (
     <section id="week-result" className={`card matchupBoard resultBoard ${won ? 'resultBoard-win' : 'resultBoard-loss'}`} aria-label={won ? 'Win' : 'Loss'}>
@@ -137,10 +151,26 @@ function Scoreboard({
           </div>
         </div>
       </div>
+      {userStats && oppStats && (
+        <div className="resultStats" aria-label="Box score, yours first">
+          <div><span>Shots</span><strong>{userStats.shots}–{oppStats.shots}</strong></div>
+          <div><span>Saves</span><strong>{userStats.saves}–{oppStats.saves}</strong></div>
+          <div><span>Ground balls</span><strong>{userStats.groundBalls}–{oppStats.groundBalls}</strong></div>
+          <div><span>Faceoffs</span><strong>{userStats.faceoffPct}%</strong></div>
+          <div><span>Turnovers</span><strong>{userStats.turnovers}–{oppStats.turnovers}</strong></div>
+          <div><span>Man-up</span><strong>{userStats.extraManGoals ?? 0}/{userStats.extraManOpportunities ?? 0}</strong></div>
+        </div>
+      )}
       {ledBy && (
         <p className="resultLine">
           Led by <strong>{ledBy}</strong>
         </p>
+      )}
+      {keyEdge && <p className="resultLine text-sm text-gray-500">{keyEdge}</p>}
+      {plays.length > 0 && (
+        <ul className="resultPlays" aria-label="Plays from the game">
+          {plays.map((play) => <li key={play}>{play}</li>)}
+        </ul>
       )}
     </section>
   );
@@ -372,6 +402,8 @@ function WeeklyHubPage() {
   );
   const hoursRemaining = WEEKLY_HOURS_CAP - totalHours;
   const openBoardCount = boardRecruits.filter((r) => !r.committedTeamId).length;
+  // Once every recruiting period has run, hours would never apply.
+  const recruitingPeriodsDone = season.scheduleByWeek.length > 0 && coach.recruitingWeekIndex >= season.scheduleByWeek.length;
 
   function onHoursChange(recruitId: string, nextHours: number) {
     const current = coach.weeklyHoursByRecruitId[recruitId] ?? 0;
@@ -386,6 +418,43 @@ function WeeklyHubPage() {
 
   const top25 = useAppSelector(selectRankTrends);
   const pollRank = season.phase === 'PRE' ? null : top25.find((row) => row.teamId === selectedTeamId)?.rank ?? null;
+
+  const lastResultEdge = useMemo(() => {
+    if (!userLastResult || !selectedTeam) return null;
+    const opponentTeam = teams.find((team) => team.id === (userLastResult.teamAId === selectedTeamId ? userLastResult.teamBId : userLastResult.teamAId));
+    // The recap reads side A as home; names follow the stored sides.
+    const nameA = userLastResult.teamAId === selectedTeamId ? selectedTeam.schoolName : opponentTeam?.schoolName ?? 'Opponent';
+    const nameB = userLastResult.teamAId === selectedTeamId ? opponentTeam?.schoolName ?? 'Opponent' : selectedTeam.schoolName;
+    return buildGameRecap(gameResultToSummary(userLastResult), nameB, nameA).keyEdge;
+  }, [selectedTeam, selectedTeamId, teams, userLastResult]);
+
+  // Around the league: the regular-season week just played, while the poll snapshot still describes it.
+  const wireWeekIndex = season.phase === 'REGULAR'
+    ? season.currentWeekIndex - 1
+    : season.phase === 'PLAYOFF' && season.playoffs == null
+      ? season.completedWeeks - 1
+      : -1;
+  const leagueWire = useMemo(() => {
+    if (wireWeekIndex < 0) return null;
+    const teamById = new Map(teams.map((team) => [team.id, team]));
+    return buildLeagueWire({
+      results: season.gameResults.filter((result) => result.weekIndex === wireWeekIndex),
+      rankBefore: season.previousRankByTeamId,
+      rankAfter: Object.fromEntries(top25.map((row) => [row.teamId, row.rank])),
+      nextWeek: season.phase === 'REGULAR' ? season.scheduleByWeek[season.currentWeekIndex] ?? [] : [],
+      teamName: (teamId) => teamById.get(teamId)?.schoolName ?? 'Unknown',
+      userTeamId: selectedTeamId || null,
+      conferenceTeamIds: new Set(teams.filter((team) => team.conferenceId === selectedTeam?.conferenceId).map((team) => team.id)),
+    });
+  }, [season.currentWeekIndex, season.gameResults, season.phase, season.previousRankByTeamId, season.scheduleByWeek, selectedTeam?.conferenceId, selectedTeamId, teams, top25, wireWeekIndex]);
+  const blueChipCommits = useMemo(
+    () => (coach.recruitingReport?.commits ?? [])
+      .filter(({ teamId }) => teamId !== selectedTeamId)
+      .map(({ recruitId, teamId }) => ({ recruit: coach.recruitPool.find((recruit) => recruit.id === recruitId), teamId }))
+      .filter((row): row is { recruit: Recruit; teamId: string } => Boolean(row.recruit && row.recruit.stars >= 4))
+      .sort((a, b) => b.recruit.stars - a.recruit.stars || b.recruit.potential - a.recruit.potential),
+    [coach.recruitPool, coach.recruitingReport, selectedTeamId],
+  );
   const weeklyDesk = useMemo(
     () =>
       buildWeeklyDesk({
@@ -559,6 +628,8 @@ function WeeklyHubPage() {
           opponent={teams.find((team) => team.id === (playoffSpot.lastGame?.homeTeamId === selectedTeamId ? playoffSpot.lastGame.awayTeamId : playoffSpot.lastGame?.homeTeamId))}
           userScore={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.homeScore : playoffSpot.lastGame.result.awayScore}
           oppScore={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.awayScore : playoffSpot.lastGame.result.homeScore}
+          userStats={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.teamStatsHome : playoffSpot.lastGame.result.teamStatsAway}
+          oppStats={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.teamStatsAway : playoffSpot.lastGame.result.teamStatsHome}
         />
       ) : lastConferenceGame && (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') ? (
         <Scoreboard
@@ -578,6 +649,10 @@ function WeeklyHubPage() {
           userScore={userLastResult.teamAId === selectedTeamId ? userLastResult.scoreA : userLastResult.scoreB}
           oppScore={userLastResult.teamAId === selectedTeamId ? userLastResult.scoreB : userLastResult.scoreA}
           ledBy={regularLedBy(userLastResult, selectedTeamId)}
+          userStats={userLastResult.teamAId === selectedTeamId ? userLastResult.statsA : userLastResult.statsB}
+          oppStats={userLastResult.teamAId === selectedTeamId ? userLastResult.statsB : userLastResult.statsA}
+          keyEdge={lastResultEdge ?? undefined}
+          plays={userLastResult.highlights.slice(0, 4)}
         />
       ) : null}
 
@@ -743,12 +818,23 @@ function WeeklyHubPage() {
         </ul>
       </section>
 
+      {leagueWire && (
+        <LeagueWirePanel
+          wire={leagueWire}
+          weekIndex={wireWeekIndex}
+          teams={teams}
+          userTeamId={selectedTeamId || null}
+          conferenceName={userConference?.name ?? null}
+          blueChipCommits={blueChipCommits}
+        />
+      )}
+
       <div className={showInstall ? 'grid2' : undefined}>
         {showInstall && (
         <section className="card" id="week-practice" aria-labelledby="week-practice-title">
           <h3 id="week-practice-title" className="m-0 mb-1 text-base font-bold">Install</h3>
           <p className="text-xs text-gray-500 mt-0 mb-3">
-            The practice block for this week. It can override a base-scheme call for the game.
+            What practice works on this week: its game-day edge, the traits it grows, and its fatigue cost. An install can override a base-scheme call on game day.
           </p>
           <InstallPicker
             value={coach.practiceFocus}
@@ -865,7 +951,7 @@ function WeeklyHubPage() {
                           </span>
                         )}
                         <div className="text-xs text-gray-400">
-                          {'★'.repeat(recruit.stars)} {recruit.position} · {recruit.region}
+                          <span className="text-yellow-500" aria-label={`${recruit.stars} stars`}>{'★'.repeat(recruit.stars)}</span> {recruit.position} · {recruit.region}
                         </div>
                       </td>
                       <td className="py-1.5 pr-3">
@@ -890,7 +976,7 @@ function WeeklyHubPage() {
                           onChange={(e) =>
                             onHoursChange(recruit.id, Number(e.target.value) || 0)
                           }
-                          disabled={Boolean(recruit.committedTeamId)}
+                          disabled={Boolean(recruit.committedTeamId) || recruitingPeriodsDone}
                           className="w-12 p-1 border rounded text-center text-sm"
                           aria-label={`Recruiting hours for ${recruit.name}`}
                         />

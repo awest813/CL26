@@ -11,6 +11,7 @@ import {
     recruitingPeriodLabel,
 } from './recruiting.ts';
 import type { Team, Recruit, RecruitingPitch } from '../types/sim.ts';
+import leagueData from '../data/teams128.json' with { type: 'json' };
 
 describe('Recruiting Logic', () => {
     test('generateRecruitPool creates recruits with motivations', () => {
@@ -29,25 +30,29 @@ describe('Recruiting Logic', () => {
     });
 
     test('calculateTeamGrade returns correct grades', () => {
-        const team = {
-            prestige: 90,
-            academicQuality: 90,
-            facilities: 90,
-            marketSize: 0, // irrelevant for most
-            wins: 10, // irrelevant here
-        } as unknown as Team;
+        const team = { prestige: 90 } as unknown as Team;
 
-        // PRESTIGE
-        // >85 -> A+
+        // Five stars: the top prestige and championship grades.
         assert.strictEqual(calculateTeamGrade(team, 'PRESTIGE'), 'A+');
+        assert.strictEqual(calculateTeamGrade(team, 'CHAMPIONSHIP'), 'A+');
 
-        // ACADEMIC
-        // >80 -> A
+        // Without a school id, academics follow prestige and campus life is the league norm.
         assert.strictEqual(calculateTeamGrade(team, 'ACADEMIC'), 'A');
-
-        // CAMPUS_LIFE (facilities)
-        // >85 -> B+ (hardcoded)
         assert.strictEqual(calculateTeamGrade(team, 'CAMPUS_LIFE'), 'B+');
+    });
+
+    test('academics and campus life are school traits, not prestige', () => {
+        const teams = (leagueData.teams as Team[]);
+        const academic = new Set(teams.map((team) => calculateTeamGrade(team, 'ACADEMIC')));
+        const campus = new Set(teams.map((team) => calculateTeamGrade(team, 'CAMPUS_LIFE')));
+        assert.ok(academic.size >= 4, `academic grades: ${[...academic].join(',')}`);
+        assert.ok(campus.size >= 3, `campus grades: ${[...campus].join(',')}`);
+        // Same school, same grade, whatever its prestige drifts to.
+        const school = teams[0];
+        assert.strictEqual(
+            calculateTeamGrade({ ...school, prestige: school.prestige + 3 }, 'CAMPUS_LIFE'),
+            calculateTeamGrade(school, 'CAMPUS_LIFE'),
+        );
     });
 
     test('calculateTeamGrade falls back to C for unexpected pitch values', () => {

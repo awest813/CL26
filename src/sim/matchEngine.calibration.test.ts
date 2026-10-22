@@ -314,12 +314,12 @@ describe('fatigue and the late game', () => {
 });
 
 describe('weekly installs', () => {
-  test('no install is a clear best on game day', () => {
+  const installRates = (fatigue: number) => {
     const roster = generateRoster(alpha, 'installs');
     const starters = programStarters(roster);
     const opponents = (leagueData.teams as Team[]).slice(40, 70);
-    const rates = (['OFFENSE', 'DEFENSE', 'CONDITIONING', 'DISCIPLINE'] as const).map((focus) => {
-      const plan = buildCoachGamePlan({ baseTactics: DEFAULT_TACTICS, practiceFocus: focus, fatigue: 30, archetype: 'RECRUITER', coachSkill: 72 });
+    return (['OFFENSE', 'DEFENSE', 'CONDITIONING', 'DISCIPLINE'] as const).map((focus) => {
+      const plan = buildCoachGamePlan({ baseTactics: DEFAULT_TACTICS, practiceFocus: focus, fatigue, archetype: 'RECRUITER', coachSkill: 72 });
       let wins = 0;
       let games = 0;
       for (const opponent of opponents) {
@@ -340,8 +340,21 @@ describe('weekly installs', () => {
       }
       return { focus, rate: wins / games };
     });
+  };
+
+  test('no install is a clear best on game day', () => {
+    const rates = installRates(30);
     const spread = Math.max(...rates.map((row) => row.rate)) - Math.min(...rates.map((row) => row.rate));
     assert.ok(spread <= 0.06, `installs span ${(spread * 100).toFixed(1)} pp: ${JSON.stringify(rates)}`);
+  });
+
+  test('with fresh legs, each working install outplays a conditioning week', () => {
+    // Conditioning is the recovery week: running it every week should not be the best plan.
+    const rates = installRates(20);
+    const conditioning = rates.find((row) => row.focus === 'CONDITIONING')!.rate;
+    rates
+      .filter((row) => row.focus !== 'CONDITIONING')
+      .forEach((row) => assert.ok(row.rate > conditioning, `${row.focus} ${row.rate} vs conditioning ${conditioning}`));
   });
 });
 

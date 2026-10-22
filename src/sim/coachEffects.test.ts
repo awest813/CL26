@@ -18,9 +18,9 @@ const base = {
 };
 
 describe('coach effects', () => {
-  test('offense focus pushes tempo and late slides', () => {
+  test('offense install slides late and keeps the base tempo', () => {
     const next = applyCoachWeekSettings({ baseTactics: base, practiceFocus: 'OFFENSE', fatigue: 20 });
-    assert.strictEqual(next.tempo, 'fast');
+    assert.strictEqual(next.tempo, 'normal');
     assert.strictEqual(next.slideAggression, 'late');
   });
 
@@ -35,10 +35,10 @@ describe('coach effects', () => {
   });
 
   test('game-day changes name the install as the cause of its own calls', () => {
-    const changes = gameDayTacticChanges({ baseTactics: base, practiceFocus: 'OFFENSE', fatigue: 20 });
+    const changes = gameDayTacticChanges({ baseTactics: base, practiceFocus: 'DEFENSE', fatigue: 20 });
     assert.deepStrictEqual(changes, [
-      { key: 'tempo', from: 'normal', to: 'fast', cause: 'install' },
-      { key: 'slideAggression', from: 'normal', to: 'late', cause: 'install' },
+      { key: 'rideClear', from: 'balanced', to: 'aggressive', cause: 'install' },
+      { key: 'slideAggression', from: 'normal', to: 'early', cause: 'install' },
     ]);
   });
 

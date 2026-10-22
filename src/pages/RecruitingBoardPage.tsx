@@ -10,25 +10,56 @@ import {
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
   selectUserEffectivePrestige,
+  programRecruitingBonus,
 } from '../features/coach/coachSlice';
 import { selectSeasonSummary } from '../features/season/seasonSlice';
 import {
   buildPositionNeedByPosition,
+  dealbreakerConflict,
   estimateRecruitFit,
   getTeamPitchGrade,
   isRecruitingPitch,
+  pitchGradesFor,
   PITCH_LABELS,
   recruitingPeriodLabel,
   RECRUITING_POSITION_FILTERS,
 } from '../sim/recruiting';
+import { programPull, userWeeklyGain } from '../sim/recruitingWeek';
+import { PROGRAM_PULL_LABELS, programPullBand } from '../sim/prestige';
+import PrestigeStars from '../components/PrestigeStars';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import RecruitingReportNote from '../components/RecruitingReportNote';
 import StaffRecruitingControls from '../components/StaffRecruitingControls';
 import { boardStartingInterest, RECRUITING_BOARD_LIMIT } from '../sim/autoRecruit';
-import { RecruitingPitch, RecruitMotivation } from '../types/sim';
+import { Recruit, RecruitingPitch, RecruitMotivation } from '../types/sim';
 import PageHeader from '../components/PageHeader';
 
 type PositionFilterValue = (typeof RECRUITING_POSITION_FILTERS)[number];
+type StarFilterValue = 'ALL' | '5' | '4' | '3' | '2';
+type PoolSort = 'fit' | 'stars' | 'interest';
+
+/** Interest a dealbreaker costs each week the program cannot meet it (see `simulateRecruitingWeek`). */
+const DEALBREAKER_WEEKLY_COST = 5;
+
+const IMPORTANCE_MARK: Record<RecruitMotivation['importance'], string> = {
+  HIGH: '★★★',
+  MEDIUM: '★★',
+  LOW: '★',
+};
+
+function PullTag({ prestige, recruit }: { prestige: number | null; recruit: Recruit }) {
+  if (prestige == null) return null;
+  const pull = programPull(prestige, recruit.stars);
+  const band = programPullBand(pull);
+  return (
+    <span
+      className={`pullTag pullTag-${band}`}
+      title={`How a ${recruit.stars}-star prospect sees your program: hours go ${Math.round(pull * 100)}% as far.`}
+    >
+      {PROGRAM_PULL_LABELS[band]}
+    </span>
+  );
+}
 
 function cappedInterest(value: number) {
   return Math.min(100, value);
@@ -71,6 +102,9 @@ function RecruitingBoardPage() {
 
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState<PositionFilterValue>('ALL');
+  const [starFilter, setStarFilter] = useState<StarFilterValue>('ALL');
+  const [hideTaken, setHideTaken] = useState(true);
+  const [poolSort, setPoolSort] = useState<PoolSort>('fit');
   const isCoachReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const baseTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
@@ -87,6 +121,23 @@ function RecruitingBoardPage() {
     () => buildPositionNeedByPosition(coach.managedRoster),
     [coach.managedRoster],
   );
+
+  const gainMultiplier = programRecruitingBonus(coach);
+  const coachSkill = coach.profile?.skill ?? 72;
+  /** What this week's hours add, before the random swing; the same formula the recruiting week plays. */
+  const projectedGain = (recruit: Recruit, hours: number, pitch: RecruitingPitch | undefined, pitchGrade: string | undefined, dealbreaker: boolean) => {
+    const gain = userWeeklyGain({
+      recruit,
+      hours,
+      pitch,
+      pitchGrade,
+      gainMultiplier,
+      coachSkill,
+      programPrestige: effectivePrestige,
+      positionNeedBonus: Math.max(0, Math.min(3, positionNeedByPosition[recruit.position] ?? 0)),
+    });
+    return gain - (dealbreaker ? DEALBREAKER_WEEKLY_COST : 0);
+  };
 
   const boardRecruits = useMemo(
     () =>
@@ -127,14 +178,10 @@ function RecruitingBoardPage() {
             score: Math.round(score),
           }));
 
-        const dealbreakerWarning =
-          selectedTeam && recruit.dealbreaker
-            ? ['D', 'F'].includes(
-                getTeamPitchGrade(selectedTeam, recruit.dealbreaker, recruit, positionNeedByPosition),
-              )
-            : false;
+        const dealbreaker = selectedTeam ? dealbreakerConflict(selectedTeam, recruit, positionNeedByPosition) : null;
+        const pitchOptions = selectedTeam ? pitchGradesFor(selectedTeam, recruit, positionNeedByPosition) : [];
 
-        return { recruit, fit, hours, interest, activePitch, pitchGrade, dealbreakerWarning, topSuitors };
+        return { recruit, fit, hours, interest, activePitch, pitchGrade, dealbreaker, topSuitors, pitchOptions };
       })
       .sort((a, b) => b.interest - a.interest);
   }, [boardRecruits, coach.weeklyHoursByRecruitId, coach.activePitchesByRecruitId, selectedTeam, selectedTeamId, teamNameById, positionNeedByPosition]);
@@ -142,8 +189,10 @@ function RecruitingBoardPage() {
   const filteredRecruits = useMemo(() => {
     return coach.recruitPool
       .filter((r) => (positionFilter === 'ALL' ? true : r.position === positionFilter))
+      .filter((r) => (starFilter === 'ALL' ? true : starFilter === '2' ? r.stars <= 2 : r.stars === Number(starFilter)))
+      .filter((r) => !hideTaken || !r.committedTeamId || r.committedTeamId === selectedTeamId)
       .filter((r) => r.name.toLowerCase().includes(search.toLowerCase()))
-  }, [coach.recruitPool, positionFilter, search]);
+  }, [coach.recruitPool, hideTaken, positionFilter, search, selectedTeamId, starFilter]);
 
   const visibleRecruits = useMemo(() => {
     return filteredRecruits
@@ -165,15 +214,18 @@ function RecruitingBoardPage() {
         const bOnBoard = boardSet.has(b.recruit.id) ? 1 : 0;
         if (bOnBoard !== aOnBoard) return bOnBoard - aOnBoard;
 
+        if (poolSort === 'stars' && b.recruit.stars !== a.recruit.stars) return b.recruit.stars - a.recruit.stars;
+        if (poolSort === 'stars' && b.recruit.potential !== a.recruit.potential) return b.recruit.potential - a.recruit.potential;
         if (b.interest !== a.interest) return b.interest - a.interest;
-        if (b.fit !== a.fit) return b.fit - a.fit;
+        if (poolSort !== 'interest' && b.fit !== a.fit) return b.fit - a.fit;
 
         if (b.recruit.stars !== a.recruit.stars) return b.recruit.stars - a.recruit.stars;
+        if (b.fit !== a.fit) return b.fit - a.fit;
         return b.recruit.potential - a.recruit.potential;
       })
       .map(({ recruit }) => recruit)
       .slice(0, 75);
-  }, [boardSet, filteredRecruits, selectedTeam, selectedTeamId]);
+  }, [boardSet, filteredRecruits, poolSort, selectedTeam, selectedTeamId]);
 
   const committedToUserCount = coach.recruitPool.filter(
     (r) => r.committedTeamId === selectedTeamId,
@@ -248,6 +300,7 @@ function RecruitingBoardPage() {
           <>
             {recruitingPeriodLabel(season.phase, coach.recruitingWeekIndex, scheduleLength)}{' '}
             · {season.year} class ·{' '}
+            {effectivePrestige != null && <><PrestigeStars prestige={effectivePrestige} /> program ·{' '}</>}
             {committedToUserCount} committed · {coach.scholarshipsAvailable} scholarships available
             {committedToUserCount > coach.scholarshipsAvailable
               ? ' · Signing day will keep only the best fits up to your scholarship cap'
@@ -336,13 +389,22 @@ function RecruitingBoardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {boardRows.map(({ recruit, interest, activePitch, pitchGrade, dealbreakerWarning, topSuitors }) => (
+                  {boardRows.map(({ recruit, interest, hours, activePitch, pitchGrade, dealbreaker, topSuitors, pitchOptions }) => {
+                    const open = !recruit.committedTeamId && !periodsDone;
+                    const gain = open ? projectedGain(recruit, hours, activePitch, activePitch ? pitchGrade : undefined, Boolean(dealbreaker)) : 0;
+                    const periodsToCommit = gain > 0 ? Math.ceil((100 - Math.min(100, interest)) / gain) : null;
+                    return (
                     <tr key={recruit.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="py-2 pr-2 targetRecruit targetCell-recruit">
                         <div className="font-semibold flex items-center gap-1">
                           {recruit.name}
-                          {dealbreakerWarning && (
-                            <span title="Dealbreaker Warning" className="text-red-500 cursor-help">⚠</span>
+                          {dealbreaker && (
+                            <span
+                              title={`Dealbreaker: ${PITCH_LABELS[dealbreaker.pitch]} grades ${dealbreaker.grade} here. Costs ${DEALBREAKER_WEEKLY_COST} interest every period.`}
+                              className="text-red-500 cursor-help"
+                            >
+                              ⚠<span className="sr-only">Dealbreaker: {PITCH_LABELS[dealbreaker.pitch]} grades {dealbreaker.grade}</span>
+                            </span>
                           )}
                           {recruit.committedTeamId === selectedTeamId && (
                             <span className="text-xs text-green-600 font-bold">✓</span>
@@ -355,8 +417,14 @@ function RecruitingBoardPage() {
                         )}
                         <div className="text-xs text-gray-500 nowrap">
                           <span className="text-yellow-500" aria-label={`${recruit.stars} stars`}>{'★'.repeat(recruit.stars)}</span>{' '}
-                          {recruit.position} · {recruit.region}
+                          {recruit.position} · {recruit.region}{' '}
+                          {!recruit.committedTeamId && <PullTag prestige={effectivePrestige} recruit={recruit} />}
                         </div>
+                        {dealbreaker && !recruit.committedTeamId && (
+                          <div className="text-xs text-red-500">
+                            Dealbreaker: {PITCH_LABELS[dealbreaker.pitch]} ({dealbreaker.grade}), −{DEALBREAKER_WEEKLY_COST} a period
+                          </div>
+                        )}
                         <div className="flex mt-0.5">
                           {recruit.motivations?.map((m, i) => (
                             <MotivationIcon key={i} motivation={m} />
@@ -388,9 +456,9 @@ function RecruitingBoardPage() {
                           aria-label={`Recruiting pitch for ${recruit.name}`}
                         >
                           <option value="">No pitch</option>
-                          {Object.entries(PITCH_LABELS).map(([key, label]) => (
-                            <option key={key} value={key}>
-                              {label}
+                          {pitchOptions.map(({ pitch, grade, importance }) => (
+                            <option key={pitch} value={pitch}>
+                              {PITCH_LABELS[pitch]} ({grade}){importance ? ` ${IMPORTANCE_MARK[importance]}` : ''}
                             </option>
                           ))}
                         </select>
@@ -420,6 +488,15 @@ function RecruitingBoardPage() {
                           <span style={{ width: `${cappedInterest(interest)}%` }} />
                         </div>
                         <div className="text-xs text-center text-gray-500">{cappedInterest(interest)}%</div>
+                        {open && (
+                          <div
+                            className={`text-xs text-center ${gain > 0 ? 'text-green-600' : 'text-gray-400'}`}
+                            title="This period's hours, pitch, and position need, before the weekly swing of about a point either way"
+                          >
+                            {gain > 0 ? `+${gain}` : gain < 0 ? `${gain}` : '+0'}/wk
+                            {periodsToCommit != null && <span className="text-gray-500"> · ~{periodsToCommit} to commit</span>}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 text-right targetCell-hours">
                         <input
@@ -445,7 +522,8 @@ function RecruitingBoardPage() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -464,7 +542,7 @@ function RecruitingBoardPage() {
             <button
               type="button"
               className="textButton"
-              onClick={() => { setSearch(''); setPositionFilter('ALL'); }}
+              onClick={() => { setSearch(''); setPositionFilter('ALL'); setStarFilter('ALL'); setHideTaken(true); setPoolSort('fit'); }}
             >
               Reset filters
             </button>
@@ -494,7 +572,37 @@ function RecruitingBoardPage() {
                 ))}
               </select>
             </label>
+            <label className="text-sm">
+              Stars
+              <select
+                value={starFilter}
+                onChange={(e) => setStarFilter(e.target.value as StarFilterValue)}
+                className="block p-1.5 text-sm border rounded w-20 mt-0.5"
+              >
+                <option value="ALL">All</option>
+                <option value="5">5★</option>
+                <option value="4">4★</option>
+                <option value="3">3★</option>
+                <option value="2">2★</option>
+              </select>
+            </label>
+            <label className="text-sm">
+              Sort
+              <select
+                value={poolSort}
+                onChange={(e) => setPoolSort(e.target.value as PoolSort)}
+                className="block p-1.5 text-sm border rounded mt-0.5"
+              >
+                <option value="fit">Best fit</option>
+                <option value="stars">Stars</option>
+                <option value="interest">Interest</option>
+              </select>
+            </label>
             </div>
+          <label className="text-xs text-gray-500 flex items-center gap-1 mb-2">
+            <input type="checkbox" checked={hideTaken} onChange={(e) => setHideTaken(e.target.checked)} />
+            Hide prospects committed elsewhere
+          </label>
 
           <div className="overflow-y-auto" style={{ maxHeight: '560px' }}>
             <table className="w-full text-sm">
@@ -525,7 +633,8 @@ function RecruitingBoardPage() {
                       <td className="p-2">
                         <div className="font-semibold">{recruit.name}</div>
                         <div className="text-xs text-gray-500">
-                          {recruit.position} · {recruit.region}
+                          {recruit.position} · {recruit.region}{' '}
+                          {!recruit.committedTeamId && <PullTag prestige={effectivePrestige} recruit={recruit} />}
                         </div>
                         {selectedTeam && (
                           <div className="text-xs text-gray-400">
@@ -559,6 +668,11 @@ function RecruitingBoardPage() {
                               className="chipAdd"
                               onClick={() => onAdd(recruit.id)}
                               disabled={boardSet.size >= RECRUITING_BOARD_LIMIT || periodsDone}
+                              title={periodsDone
+                                ? 'The recruiting periods are over'
+                                : boardSet.size >= RECRUITING_BOARD_LIMIT
+                                  ? `The board holds ${RECRUITING_BOARD_LIMIT}. Remove a target first.`
+                                  : undefined}
                             >
                               Add
                             </button>

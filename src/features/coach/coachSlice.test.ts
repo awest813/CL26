@@ -78,6 +78,10 @@ describe('coach recruiting reducer', () => {
       committedToUserIds: [mine],
       lostTargets: [{ recruitId: lost, teamId: 'team-2' }],
       totalCommits: 2,
+      commits: [
+        { recruitId: mine, teamId: 'team-1' },
+        { recruitId: lost, teamId: 'team-2' },
+      ],
     });
     assert.strictEqual(state.weeklyHoursByRecruitId[mine], 0);
     assert.strictEqual(state.weeklyHoursByRecruitId[lost], 0);

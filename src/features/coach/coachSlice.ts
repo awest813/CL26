@@ -2,7 +2,7 @@ import { createSelector, createSlice, PayloadAction, createAsyncThunk } from '@r
 import type { Employment } from '../../sim/jobOffers';
 import { CareerRecord, CoachArchetype, JobOffer, Player, PracticeFocus, Recruit, RecruitingPitch, SeasonHistoryEntry, SignedRecruit, Tactics, Team } from '../../types/sim';
 
-import { buildPositionNeedByPosition, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
+import { buildPositionNeedByPosition, dealbreakerConflict, generateRecruitPool, generateSuitors, getTeamPitchGrade } from '../../sim/recruiting';
 import { simulateRecruitingWeek, type CpuRecruitingProfile } from '../../sim/recruitingWeek';
 import { RECRUITING_BOARD_LIMIT, type AutoRecruitPlan } from '../../sim/autoRecruit';
 import { resolveSigningDay } from '../../sim/offseason';
@@ -10,15 +10,13 @@ import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
-import { ledgerEntry, withLeaguePrestige } from '../../sim/programLedger';
+import { ledgerEntry, MAX_PRESTIGE_DRIFT, MIN_PRESTIGE_DRIFT, nextPrestigeDrift, withLeaguePrestige } from '../../sim/programLedger';
 import { redshirtBlocker } from '../../sim/redshirts';
 import { setProgramLedgerEntry } from '../season/seasonSlice';
 
 export const WEEKLY_HOURS_CAP = 120;
 export const MAX_HOURS_PER_RECRUIT = 20;
 const AD_PRESSURE_DIVISOR = 60;
-const MIN_PRESTIGE_DRIFT = -20;
-const MAX_PRESTIGE_DRIFT = 30;
 const JOB_SECURITY_DECLINE_BONUS = 3;
 
 function clamp(value: number, min: number, max: number): number {
@@ -78,6 +76,8 @@ export interface RecruitingReport {
   lostTargets: { recruitId: string; teamId: string }[];
   /** Commits anywhere in the class this period, the user's included. */
   totalCommits: number;
+  /** Every commit this period, in the order they landed. Missing on reports from older saves. */
+  commits?: { recruitId: string; teamId: string }[];
 }
 
 export interface CoachState {
@@ -383,8 +383,9 @@ const coachSlice = createSlice({
     setAdPressure: (state, action: PayloadAction<number>) => {
         state.adPressure = Math.max(0, Math.min(100, action.payload));
     },
+    /** One season's prestige change. Earned prestige fades the way it does for every CPU program. */
     applyPrestigeDrift: (state, action: PayloadAction<number>) => {
-        state.programPrestigeDrift = clamp(state.programPrestigeDrift + action.payload, MIN_PRESTIGE_DRIFT, MAX_PRESTIGE_DRIFT);
+        state.programPrestigeDrift = nextPrestigeDrift(state.programPrestigeDrift ?? 0, action.payload);
     },
     setPendingJobOffers: (state, action: PayloadAction<JobOffer[]>) => {
         state.pendingJobOffers = action.payload;
@@ -488,12 +489,14 @@ const coachSlice = createSlice({
             committedToUserIds: [],
             lostTargets: [],
             totalCommits: 0,
+            commits: [],
         };
         action.payload.commitments.forEach(({ recruitId, teamId }) => {
             const recruit = state.recruitPool.find(r => r.id === recruitId);
             if (!recruit || recruit.committedTeamId) return;
             recruit.committedTeamId = teamId;
             report.totalCommits += 1;
+            report.commits?.push({ recruitId, teamId });
             if (teamId === state.selectedTeamId) {
                 report.committedToUserIds.push(recruitId);
             } else if (boardSet.has(recruitId)) {
@@ -723,14 +726,9 @@ export const advanceRecruitingWeek = createAsyncThunk(
                  pitchGradesByRecruitId[recruitId] = getTeamPitchGrade(selectedTeam, activePitch, recruit, positionNeedByPosition);
               }
 
-             // Check dealbreaker
-              if (recruit.dealbreaker) {
-                 const grade = getTeamPitchGrade(selectedTeam, recruit.dealbreaker, recruit, positionNeedByPosition);
-                  // If grade is D or F, it's a violation
-                  if (grade === 'D' || grade === 'F') {
-                      dealbreakerViolationsByRecruitId[recruitId] = true;
-                  }
-              }
+             if (dealbreakerConflict(selectedTeam, recruit, positionNeedByPosition)) {
+                 dealbreakerViolationsByRecruitId[recruitId] = true;
+             }
         });
 
         const recruitingBonus = programRecruitingBonus(coach);

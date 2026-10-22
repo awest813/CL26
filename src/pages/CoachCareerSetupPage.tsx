@@ -1,5 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PrestigeStars from '../components/PrestigeStars';
+import { prestigeStars, prestigeStarText } from '../sim/prestige';
 import TeamLogo from '../components/TeamLogo';
 import { careerSetupFromPrestige, completeCareerSetup, setCoachProfile } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
@@ -206,7 +208,7 @@ function CoachCareerSetupPage() {
             <option value="">Select a team</option>
             {teamOptions.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.schoolName} {t.nickname} ({conferenceById.get(t.conferenceId) ?? t.conferenceId}) · Prestige {t.prestige}
+                {t.schoolName} {t.nickname} ({conferenceById.get(t.conferenceId) ?? t.conferenceId}) · {prestigeStarText(prestigeStars(t.prestige))} {t.prestige}
               </option>
             ))}
           </select>
@@ -217,7 +219,7 @@ function CoachCareerSetupPage() {
             <p className="programLockup">
               <TeamLogo team={team} />
               <span>
-                <strong>{team.schoolName} {team.nickname}</strong> &bull; Prestige {team.prestige} &bull; {team.region}
+                <strong>{team.schoolName} {team.nickname}</strong> &bull; <PrestigeStars prestige={team.prestige} showTier showValue /> &bull; {team.region}
               </span>
             </p>
             <p className="mutedText">Tier: <strong>{teamExpectations.careerTier}</strong></p>
