@@ -131,6 +131,12 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
     `${seasonLabel} recruiting weeks should track season weeks`,
   );
 
+  assert.ok(Object.keys(afterRegular.season.playerSeasonStats ?? {}).length > 1000, `${seasonLabel} season stats should cover the league`);
+  assert.strictEqual(
+    afterRegular.season.awardHistory?.[afterRegular.season.year]?.length,
+    5,
+    `${seasonLabel} the five national awards should be named after week 12`,
+  );
   const validationDuringBracketGap = validateSeasonState(afterRegular.season, afterRegular.league.teams);
   assert.strictEqual(
     validationDuringBracketGap.isValid,

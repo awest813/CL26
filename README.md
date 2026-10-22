@@ -67,6 +67,7 @@ src/
 | `/schedule` | Redirects to `/season` |
 | `/season/week/:n` | Week game results |
 | `/season/standings` | Conference + overall standings |
+| `/season/leaders` | Regular-season stat leaders and national awards |
 | `/rankings` | Top 25 + Top 12 projection |
 | `/playoffs` | Playoff bracket |
 | `/settings` | Confirmations, the matchup estimate, and reset |

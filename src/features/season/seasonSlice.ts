@@ -11,6 +11,7 @@ import { buildPlayoffField, buildPlayoffState, firstTeamsOut, selectPlayoffField
 import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { compareConferenceStanding, compareOverallStanding, conferenceLeaders } from '../../sim/standings';
 import { programRoster, programStarters, withLeaguePrestige } from '../../sim/programLedger';
+import { addGamesToSeasonStats, seasonAwards, storedGameResult } from '../../sim/seasonStats';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { rosterForAvailability, weeklyScratches } from '../../sim/injuries';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
@@ -52,6 +53,8 @@ const initialState: SeasonState = {
   programLedger: {},
   programLedgerYear: null,
   trophyHolders: {},
+  playerSeasonStats: {},
+  awardHistory: {},
 };
 
 // Async thunk to start a new season — only PRE (year 1) or OFFSEASON (next year).
@@ -98,6 +101,7 @@ export const simCurrentWeek = createAsyncThunk(
 
     const gamesToPlay = scheduleByWeek[currentWeekIndex];
     const results: GameResult[] = [];
+    const yearByPlayerId = new Map<string, 1 | 2 | 3 | 4>();
 
     // CPU programs: this season's roster from the ledger, the staff's depth chart, and this week's scratches.
     const rosterSeed = leagueSeasonRosterSeed(seasonSeed);
@@ -185,10 +189,18 @@ export const simCurrentWeek = createAsyncThunk(
       result.id = game.id;
       result.weekIndex = currentWeekIndex;
 
+      for (const player of [...homeLineup.roster, ...awayLineup.roster]) yearByPlayerId.set(player.id, player.year);
       results.push(result);
     });
 
-    return { results, previousRankByTeamId };
+    // Fold the box scores into season totals, then keep only what the save needs.
+    const playerSeasonStats = addGamesToSeasonStats(state.season.playerSeasonStats, results, yearByPlayerId);
+    const storedResults = results.map((result) => storedGameResult(
+      result,
+      result.teamAId === coachState.selectedTeamId || result.teamBId === coachState.selectedTeamId,
+    ));
+
+    return { results: storedResults, previousRankByTeamId, playerSeasonStats };
   }
 );
 
@@ -333,6 +345,7 @@ const seasonSlice = createSlice({
         programLedger: state.programLedger ?? {},
         programLedgerYear: state.programLedgerYear ?? null,
         trophyHolders: state.trophyHolders ?? {},
+        awardHistory: state.awardHistory ?? {},
       };
     },
     /** Fold a finished season into the ledger. Ignored if that season was already counted. */
@@ -366,6 +379,7 @@ const seasonSlice = createSlice({
         state.playoffs = null;
         state.previousRankByTeamId = {};
         state.lastAppliedWeekSimId = null;
+        state.playerSeasonStats = {};
       })
       .addCase(simCurrentWeek.fulfilled, (state, action) => {
         if (state.phase !== 'REGULAR') return;
@@ -379,6 +393,7 @@ const seasonSlice = createSlice({
         state.lastAppliedWeekSimId = action.meta.requestId;
         state.previousRankByTeamId = action.payload.previousRankByTeamId;
         state.gameResults.push(...results);
+        state.playerSeasonStats = action.payload.playerSeasonStats;
 
         // A rivalry winner takes (or keeps) the trophy.
         for (const game of state.scheduleByWeek[weekIndex] ?? []) {
@@ -393,6 +408,8 @@ const seasonSlice = createSlice({
 
         if (state.currentWeekIndex >= state.scheduleByWeek.length) {
             state.phase = 'PLAYOFF'; // Ready for playoffs (bracket pending)
+            // The regular season is over: name the national awards.
+            state.awardHistory = { ...(state.awardHistory ?? {}), [state.year]: seasonAwards(state.playerSeasonStats) };
         }
       })
       .addCase(startPlayoffs.fulfilled, (state, action) => {

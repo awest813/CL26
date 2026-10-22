@@ -100,7 +100,7 @@ const FACEOFF_EDGE_WEIGHT = 0.12;
 const FACEOFF_FORM_VARIANCE = 0.04;
 const FACEOFF_MIN_CHANCE = 0.3;
 const FACEOFF_MAX_CHANCE = 0.7;
-const FACEOFF_WINNER_GROUND_BALL_CHANCE = 0.7;
+const FACEOFF_WINNER_GROUND_BALL_CHANCE = 0.6;
 const FACEOFF_FAST_BREAK_CHANCE = 0.12;
 
 // Shots: on-cage rate is driven by the shooter, goal rate by the shooter against the goalie.
@@ -139,7 +139,7 @@ const MAX_PLAY_HIGHLIGHTS = 20;
 
 const SHOOTER_ROLE: Record<Position, number> = { A: 1.35, M: 1, LSM: 0.1, D: 0.03, FO: 0.06, G: 0 };
 const FEEDER_ROLE: Record<Position, number> = { A: 1.4, M: 1, LSM: 0.15, D: 0.1, FO: 0.05, G: 0.02 };
-const SCRAPPER_ROLE: Record<Position, number> = { A: 0.6, M: 1, LSM: 1.4, D: 0.9, FO: 0.8, G: 0.15 };
+const SCRAPPER_ROLE: Record<Position, number> = { A: 0.6, M: 1, LSM: 1.4, D: 0.9, FO: 0.3, G: 0.15 };
 const DEFENDER_ROLE: Record<Position, number> = { A: 0.1, M: 0.6, LSM: 1.3, D: 1.4, FO: 0.2, G: 0.1 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -545,6 +545,14 @@ export function simulateGame(
     sideA.stats.faceoffsTaken = (sideA.stats.faceoffsTaken ?? 0) + 1;
     sideB.stats.faceoffsTaken = (sideB.stats.faceoffsTaken ?? 0) + 1;
     winSide.stats.faceoffWins = (winSide.stats.faceoffWins ?? 0) + 1;
+    // The faceoff man takes every draw; credit both specialists.
+    for (const side of [sideA, sideB]) {
+      const man = side.ratings.faceoffPlayer;
+      if (!man) continue;
+      const row = ensurePlayerStats(side, man);
+      row.faceoffsTaken = (row.faceoffsTaken ?? 0) + 1;
+      if (side === winSide) row.faceoffWins = (row.faceoffWins ?? 0) + 1;
+    }
     if (rng() < FACEOFF_WINNER_GROUND_BALL_CHANCE) {
       creditGroundBall(winSide, winSide.ratings.faceoffPlayer ?? undefined);
     } else {
@@ -831,6 +839,10 @@ export function simulateGame(
     .filter((play) => (play.marker ? true : keep.has(otherIndex++)))
     .map((play) => play.line);
 
+  // The goalie in net is charged with every goal the other side scored.
+  ensurePlayerStats(sideA, sideA.ratings.goaliePlayer).goalsAllowed = sideB.stats.goals;
+  ensurePlayerStats(sideB, sideB.ratings.goaliePlayer).goalsAllowed = sideA.stats.goals;
+
   const impact = (row: PlayerGameStats) => row.goals + row.assists + row.saves;
   const topA = [...sideA.playerStats.values()].filter((row) => impact(row) > 0).sort((a, b) => impact(b) - impact(a)).slice(0, 5);
   const topB = [...sideB.playerStats.values()].filter((row) => impact(row) > 0).sort((a, b) => impact(b) - impact(a)).slice(0, 5);
@@ -848,5 +860,7 @@ export function simulateGame(
     topPlayersA: topA,
     topPlayersB: topB,
     highlights: [...priorityHighlights, ...playHighlights],
+    boxScoreA: [...sideA.playerStats.values()],
+    boxScoreB: [...sideB.playerStats.values()],
   };
 }

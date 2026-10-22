@@ -65,6 +65,7 @@ function LeftNavBar({ isMenuOpen, onNavigate, onClose }: LeftNavBarProps) {
         },
         { to: '/season/standings', label: 'Standings', hint: 'Conference race' },
         { to: '/rankings', label: 'Top 25', hint: 'Poll and projected field' },
+        { to: '/season/leaders', label: 'Leaders', hint: 'Stats and awards' },
         { to: '/playoffs', label: 'Playoffs', hint: '12-team bracket' },
       ],
     },

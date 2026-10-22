@@ -140,6 +140,10 @@ export interface PlayerGameStats {
   shots?: number;
   groundBalls?: number;
   causedTurnovers?: number;
+  faceoffWins?: number;
+  faceoffsTaken?: number;
+  /** For the goalie in net: goals the other side scored. */
+  goalsAllowed?: number;
 }
 
 export type TopPerformer = PlayerGameStats;
@@ -159,6 +163,37 @@ export interface GameResult {
   topPlayersA: PlayerGameStats[];
   topPlayersB: PlayerGameStats[];
   highlights: string[];
+  /** Every player who recorded a stat. Returned by the engine for season totals; not kept in the save. */
+  boxScoreA?: PlayerGameStats[];
+  boxScoreB?: PlayerGameStats[];
+}
+
+/** One player's regular-season totals. */
+export interface PlayerSeasonLine {
+  playerId: string;
+  name: string;
+  teamId: string;
+  position: Position;
+  year: Player['year'];
+  goals: number;
+  assists: number;
+  shots: number;
+  groundBalls: number;
+  causedTurnovers: number;
+  saves: number;
+  goalsAllowed: number;
+  faceoffWins: number;
+  faceoffsTaken: number;
+}
+
+export interface SeasonAward {
+  award: string;
+  playerId: string;
+  name: string;
+  teamId: string;
+  position: Position;
+  /** e.g. "38 G, 21 A". */
+  statLine: string;
 }
 
 export interface GameSummary {
@@ -274,6 +309,10 @@ export interface SeasonState {
   programLedgerYear?: number | null;
   /** Who holds each rivalry trophy, by trophy name. Carries across seasons. */
   trophyHolders?: Record<string, string>;
+  /** This regular season's player totals, by player id. Cleared each new season. */
+  playerSeasonStats?: Record<string, PlayerSeasonLine>;
+  /** National awards by season year, named when each regular season ends. */
+  awardHistory?: Record<number, SeasonAward[]>;
 }
 
 /** How a program has moved away from its base rating in the league file. */

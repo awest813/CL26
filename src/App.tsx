@@ -10,6 +10,7 @@ import CoachCareerSetupPage from './pages/CoachCareerSetupPage';
 import CoachCareerPage from './pages/CoachCareerPage';
 import SeasonPage from './pages/SeasonPage';
 import SeasonStandingsPage from './pages/SeasonStandingsPage';
+import LeadersPage from './pages/LeadersPage';
 import SeasonWeekPage from './pages/SeasonWeekPage';
 import PlayoffsPage from './pages/PlayoffsPage';
 import AlphaStagePage from './pages/AlphaStagePage';
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
       { path: 'season', element: <SeasonPage /> },
       { path: 'schedule', element: <Navigate to="/season" replace /> },
       { path: 'season/standings', element: <SeasonStandingsPage /> },
+      { path: 'season/leaders', element: <LeadersPage /> },
       { path: 'season/week/:weekIndex', element: <SeasonWeekPage /> },
       { path: 'playoffs', element: <PlayoffsPage /> },
       { path: 'alpha', element: <AlphaStagePage /> },
