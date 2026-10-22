@@ -100,13 +100,15 @@ const FACEOFF_WING_WEIGHT = 0.2;
 const NO_SPECIALIST_FACEOFF = 55;
 const FACEOFF_EDGE_WEIGHT = 0.12;
 const FACEOFF_FORM_VARIANCE = 0.04;
+/** Scale of a side's form for one game (about a third of this is a typical swing either way). */
+const GAME_FORM_VARIANCE = 10;
 const FACEOFF_MIN_CHANCE = 0.3;
 const FACEOFF_MAX_CHANCE = 0.7;
 const FACEOFF_WINNER_GROUND_BALL_CHANCE = 0.6;
 const FACEOFF_FAST_BREAK_CHANCE = 0.12;
 
 // Shots: on-cage rate is driven by the shooter, goal rate by the shooter against the goalie.
-const SHOT_QUALITY_POWER_DIVISOR = 150;
+const SHOT_QUALITY_POWER_DIVISOR = 260;
 const SHOT_QUALITY_VARIANCE = 0.06;
 const ON_GOAL_BASE_CHANCE = 0.6;
 const ON_GOAL_MIN_CHANCE = 0.42;
@@ -130,7 +132,7 @@ const FACEOFF_SECONDS = 4;
 const TRANSITION_SECONDS = 7;
 
 // In-game fatigue: rating points a team has lost by the final horn at a wear rate of 1.
-const IN_GAME_FATIGUE_MAX = 7;
+const IN_GAME_FATIGUE_MAX = 10;
 const SHALLOW_ROTATION_WEAR = 1.15;
 const ROTATION_RELIEF = 0.3;
 
@@ -379,8 +381,8 @@ export function resolveDeadlockWinner(
  */
 export function fatigueWear(elapsed: number, wearRate: number, tactics: Tactics): number {
   let load = 1;
-  if (tactics.tempo === 'fast') load *= 1.2;
-  if (tactics.tempo === 'slow') load *= 0.85;
+  if (tactics.tempo === 'fast') load *= 1.12;
+  if (tactics.tempo === 'slow') load *= 0.93;
   if (tactics.defensePackage === 'pressure') load *= 1.1;
   if (tactics.rideClear === 'aggressive') load *= 1.08;
   return (Math.max(0, elapsed) / REGULATION_SECONDS) ** 1.5 * IN_GAME_FATIGUE_MAX * wearRate * load;
@@ -434,6 +436,8 @@ interface SideState {
   stats: TeamGameStats;
   playerStats: Map<string, PlayerGameStats>;
   faceoffForm: number;
+  /** How well the side plays today, in rating points on offense and defense. Good teams have off nights. */
+  gameForm: number;
 }
 
 /**
@@ -492,6 +496,7 @@ export function simulateGame(
     stats: blankStats(teamA, modifiersA, tacticsA),
     playerStats: new Map(),
     faceoffForm: normalish(rng) * FACEOFF_FORM_VARIANCE,
+    gameForm: normalish(rng) * GAME_FORM_VARIANCE,
   };
   const sideB: SideState = {
     input: teamB,
@@ -501,6 +506,7 @@ export function simulateGame(
     stats: blankStats(teamB, modifiersB, tacticsB),
     playerStats: new Map(),
     faceoffForm: normalish(rng) * FACEOFF_FORM_VARIANCE,
+    gameForm: normalish(rng) * GAME_FORM_VARIANCE,
   };
   const sides: Record<Side, SideState> = { A: sideA, B: sideB };
   const other = (side: Side): Side => (side === 'A' ? 'B' : 'A');
@@ -727,8 +733,10 @@ export function simulateGame(
 
     // Both sides lose legs as the game goes on; the fresher team gains an edge late.
     const played = secondsPlayed();
-    const offensePower = offense.ratings.offense + offense.mods.offense - fatigueWear(played, offense.ratings.wearRate, offense.tactics);
-    const defensePower = defense.ratings.defense + defense.mods.defense - fatigueWear(played, defense.ratings.wearRate, defense.tactics);
+    const offensePower = offense.ratings.offense + offense.mods.offense + offense.gameForm
+      - fatigueWear(played, offense.ratings.wearRate, offense.tactics);
+    const defensePower = defense.ratings.defense + defense.mods.defense + defense.gameForm
+      - fatigueWear(played, defense.ratings.wearRate, defense.tactics);
     const quality = (offensePower - defensePower) / SHOT_QUALITY_POWER_DIVISOR + offense.mods.shotQuality
       + schemeShotQualityEdge(offense.tactics, defense.tactics) + (transition ? TRANSITION_QUALITY_BOOST : 0)
       - (manDownAtStart ? MAN_DOWN_QUALITY_COST : 0) + late.qualityDelta
@@ -791,7 +799,7 @@ export function simulateGame(
       offense.stats.shotsOnGoal = (offense.stats.shotsOnGoal ?? 0) + 1;
       const manUpNow = hasManUp(offenseSide);
       const goalChance = clamp(
-        GOAL_BASE_CHANCE + (offensePower - goalieRating) / 400 + (shooterSkill(shooter) - SHOOTER_SKILL_PIVOT) / 300 + quality * 0.35 + (manUpNow ? MAN_UP_GOAL_BOOST : 0),
+        GOAL_BASE_CHANCE + (offensePower - goalieRating) / 600 + (shooterSkill(shooter) - SHOOTER_SKILL_PIVOT) / 300 + quality * 0.35 + (manUpNow ? MAN_UP_GOAL_BOOST : 0),
         GOAL_MIN_CHANCE,
         GOAL_MAX_CHANCE,
       );

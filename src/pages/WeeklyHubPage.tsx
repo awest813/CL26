@@ -14,7 +14,6 @@ import {
   setPracticeFocus,
   setRecruitHours,
   selectIsCareerReady,
-  selectUserEffectivePrestige,
   processSigningDay,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
@@ -30,11 +29,11 @@ import {
 } from '../sim/coachEffects';
 import { GameDayEdge, GameDayScheme, InstallPicker, ScoutingReport } from '../components/GamePlan';
 import { programTactics } from '../sim/schemeMatchups';
-import { effectiveProgram, programRoster } from '../sim/programLedger';
-import { availabilityWeekKey, injuryTimeline, weeklyScratches } from '../sim/injuries';
+import { programRoster, programStarters } from '../sim/programLedger';
+import { availabilityWeekKey, injuryTimeline, rosterForAvailability, weeklyScratches } from '../sim/injuries';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import { estimateWinChance } from '../sim/winEstimate';
-import { tacticRatingShift } from '../sim/matchEngine';
+import { isNeutralSiteRound } from '../sim/playoffs';
 import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
 import { buildPositionNeedByPosition } from '../sim/recruiting';
@@ -170,7 +169,6 @@ function WeeklyHubPage() {
   const records = useAppSelector(selectTeamRecords);
   const userUpcomingGame = useAppSelector(selectUserUpcomingGame);
   const userLastResult = useAppSelector(selectUserLastResult);
-  const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
   const isCoachReady = useAppSelector(selectIsCareerReady);
   const confirmPlay = useAppSelector((state) => state.settings.confirmPlay);
   const showWinChance = useAppSelector((state) => state.settings.showWinChance);
@@ -257,38 +255,43 @@ function WeeklyHubPage() {
     return weeklyScratches(coach.managedRoster, season.seasonSeed, weekKey, selectedTeamId);
   }, [coach.managedRoster, season.seasonSeed, selectedTeamId, weekKey]);
 
-  // Estimate blends both rosters, the install and scheme, fatigue, and home field. It does not play the game.
+  // The estimate plays this exact matchup through the engine: both rosters and depth charts,
+  // this week's scratches, both schemes, the install and fatigue, and home field.
   const winProb = useMemo(() => {
-    if (!selectedTeam || !featuredOpponent) return null;
-    const scratchIds = new Set(scratches.map((scratch) => scratch.playerId));
-    const userRoster = (coach.managedRoster ?? []).filter((player) => !scratchIds.has(player.id));
-    const schemeShift = tacticRatingShift(gamePlan.tactics, opponentScheme);
+    if (!selectedTeam || !featuredOpponent || !opponentScheme) return null;
+    const roster = coach.managedRoster ?? [];
+    if (roster.length === 0) return null;
+    const userLineup = rosterForAvailability(roster, coach.starterIds, scratches);
+    const opponentRoster = programRoster(featuredOpponent, season.programLedger, leagueSeasonRosterSeed(season.seasonSeed));
+    const opponentLineup = rosterForAvailability(
+      opponentRoster,
+      programStarters(opponentRoster),
+      weekKey ? weeklyScratches(opponentRoster, season.seasonSeed, weekKey, featuredOpponent.id) : [],
+    );
     return estimateWinChance({
-      userPrestige: effectivePrestige ?? selectedTeam.prestige,
-      userRoster,
-      opponentPrestige: effectiveProgram(featuredOpponent, season.programLedger).prestige,
-      opponentRoster: programRoster(featuredOpponent, season.programLedger, leagueSeasonRosterSeed(season.seasonSeed)),
-      offense: gamePlan.modifiers.offense + schemeShift.offense,
-      defense: gamePlan.modifiers.defense + schemeShift.defense,
-      faceoff: gamePlan.modifiers.faceoff,
-      fatigue: coach.teamFatigue,
+      user: { team: selectedTeam, roster: userLineup.roster, starterIds: userLineup.starterIds, gameplan: gamePlan.modifiers },
+      userTactics: gamePlan.tactics,
+      opponent: { team: featuredOpponent, roster: opponentLineup.roster, starterIds: opponentLineup.starterIds },
+      opponentTactics: opponentScheme,
       isHome: featuredIsHome,
+      neutral: season.phase === 'PLAYOFF' && season.playoffs != null && isNeutralSiteRound(season.playoffs.currentRound),
+      seedKey: `${season.seasonSeed}:${weekKey ?? 'none'}:${selectedTeam.id}:${featuredOpponent.id}`,
     });
   }, [
     coach.managedRoster,
-    coach.teamFatigue,
-    effectivePrestige,
-    gamePlan.modifiers.defense,
-    gamePlan.modifiers.faceoff,
-    gamePlan.modifiers.offense,
+    coach.starterIds,
+    gamePlan.modifiers,
     gamePlan.tactics,
     opponentScheme,
     featuredIsHome,
     featuredOpponent,
     scratches,
+    season.phase,
+    season.playoffs,
     season.programLedger,
     season.seasonSeed,
     selectedTeam,
+    weekKey,
   ]);
 
   const skillImpactNotes = useMemo(

@@ -56,7 +56,7 @@ function SettingsPage() {
             />
             <span>
               <span className="settingTitle">Show the matchup estimate</span>
-              <span className="settingDetail">An estimate sits on the hub matchup and uses both rosters. The sim result is the final score.</span>
+              <span className="settingDetail">The hub plays the matchup 160 times through the game engine and shows how often you win. The real game is played once.</span>
             </span>
           </label>
         </div>

@@ -45,8 +45,8 @@ export function schemeShotQualityEdge(offense: Tactics, defense: Tactics): numbe
   const slides = SLIDE_VS_SET[defense.slideAggression] ?? SLIDE_VS_SET.normal;
   let edge = SET_VS_PACKAGE[set][pkg] + slides[set];
   // Patience buys better looks; pace trades them for volume.
-  if (offense.tempo === 'slow') edge += 0.01;
-  if (offense.tempo === 'fast') edge -= 0.01;
+  if (offense.tempo === 'slow') edge += 0.006;
+  if (offense.tempo === 'fast') edge -= 0.006;
   return edge;
 }
 
@@ -55,8 +55,7 @@ export function schemeTurnoverEdge(offense: Tactics, defense: Tactics): number {
   let edge = 0;
   if (offense.offenseSet === 'invert') edge += 0.012;
   if (offense.offenseSet === 'motion') edge += 0.006;
-  if (offense.tempo === 'fast') edge += 0.012;
-  if (offense.tempo === 'slow') edge -= 0.008;
+  if (offense.tempo === 'fast') edge += 0.006;
   if (defense.defensePackage === 'pressure') edge += defense.slideAggression === 'early' ? 0.03 : 0.022;
   if (defense.defensePackage === 'zone') edge -= 0.01;
   return edge;

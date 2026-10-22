@@ -1,30 +1,37 @@
-import type { Player } from '../types/sim';
+import type { Tactics, TeamSimInput } from '../types/sim';
+import { simulateGame } from './matchEngine.ts';
+import { seedToNumber } from './rng.ts';
 
-function averageOverall(roster: Player[]): number {
-  if (roster.length === 0) return 72;
-  return roster.reduce((sum, player) => sum + player.overall, 0) / roster.length;
-}
+/** Games the estimate plays. Enough to land within a few points; small enough to run on every change. */
+export const ESTIMATE_SAMPLES = 160;
 
 /**
- * Hub matchup estimate. It is not the match engine: both roster averages,
- * practice, fatigue, and home field move the number, and the game seed is unused.
+ * Hub matchup estimate: the real engine plays the game `samples` times with both rosters,
+ * depth charts, schemes, the install, and home field, and reports how often the user wins.
+ * Seeds come from `seedKey`, so the same matchup always gives the same number.
  */
 export function estimateWinChance(input: {
-  userPrestige: number;
-  userRoster: Player[];
-  opponentPrestige: number;
-  opponentRoster: Player[];
-  offense: number;
-  defense: number;
-  faceoff: number;
-  fatigue: number;
+  user: TeamSimInput;
+  userTactics: Tactics;
+  opponent: TeamSimInput;
+  opponentTactics: Tactics;
   isHome: boolean;
+  /** A neutral site (the semifinals and championship): nobody gets home field. */
+  neutral?: boolean;
+  seedKey: string;
+  samples?: number;
 }): number {
-  const rosterEdge = averageOverall(input.userRoster) - 72;
-  const modEdge = input.offense + input.defense + input.faceoff * 0.5;
-  const fatiguePenalty = input.fatigue * 0.08;
-  const homeEdge = input.isHome ? 3 : -1;
-  const userStrength = Math.max(20, input.userPrestige + rosterEdge + modEdge + homeEdge - fatiguePenalty);
-  const oppStrength = Math.max(20, input.opponentPrestige + (averageOverall(input.opponentRoster) - 72));
-  return Math.round((userStrength / (userStrength + oppStrength)) * 100);
+  const samples = Math.max(1, input.samples ?? ESTIMATE_SAMPLES);
+  const base = seedToNumber(`estimate:${input.seedKey}`);
+  let wins = 0;
+  for (let i = 0; i < samples; i += 1) {
+    const seed = (base + i * 7919) >>> 0;
+    // The engine's home team is side A.
+    const result = input.isHome
+      ? simulateGame(input.user, input.opponent, input.userTactics, input.opponentTactics, seed, { homeAdvantageForA: !input.neutral })
+      : simulateGame(input.opponent, input.user, input.opponentTactics, input.userTactics, seed, { homeAdvantageForA: !input.neutral });
+    const userWon = input.isHome ? result.scoreA > result.scoreB : result.scoreB > result.scoreA;
+    if (userWon) wins += 1;
+  }
+  return Math.round((wins / samples) * 100);
 }
