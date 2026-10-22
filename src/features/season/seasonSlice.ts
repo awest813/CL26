@@ -1,5 +1,5 @@
 import { createSelector, createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { SeasonState, TeamRecord, GameResult } from '../../types/sim';
+import { SeasonState, TeamRecord, GameResult, ProgramLedger, ProgramLedgerEntry } from '../../types/sim';
 import { RootState } from '../../store/store';
 import { generateSeasonSchedule } from '../../sim/schedule';
 import { simulateGame } from '../../sim/matchEngine';
@@ -8,7 +8,8 @@ import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
-import { computeAllSOS, computePlayoffProjection, computeRankings, withProgramPrestige } from '../../sim/rankings';
+import { computeAllSOS, computePlayoffProjection, computeRankings } from '../../sim/rankings';
+import { programRoster, programStarters, withLeaguePrestige } from '../../sim/programLedger';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { rosterForAvailability, weeklyScratches } from '../../sim/injuries';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
@@ -48,6 +49,8 @@ const initialState: SeasonState = {
   playoffs: null,
   previousRankByTeamId: {},
   lastAppliedWeekSimId: null,
+  programLedger: {},
+  programLedgerYear: null,
 };
 
 // Async thunk to start a new season — only PRE (year 1) or OFFSEASON (next year).
@@ -77,8 +80,10 @@ export const simCurrentWeek = createAsyncThunk(
     const { currentWeekIndex, scheduleByWeek, seasonSeed, gameResults: existingResults } = state.season;
     const coachState = state.coach;
     const teams = selectTeams(state);
-    const rankingTeams = withProgramPrestige(
+    const ledger = state.season.programLedger;
+    const rankingTeams = withLeaguePrestige(
       teams,
+      ledger,
       coachState.selectedTeamId,
       coachState.programPrestigeDrift ?? 0,
     );
@@ -94,15 +99,18 @@ export const simCurrentWeek = createAsyncThunk(
     const gamesToPlay = scheduleByWeek[currentWeekIndex];
     const results: GameResult[] = [];
 
-    // Helper to get roster — uses managed roster for the coached team if available
-    const getRoster = (teamId: string) => {
+    // CPU programs: this season's roster from the ledger, the staff's depth chart, and this week's scratches.
+    const rosterSeed = leagueSeasonRosterSeed(seasonSeed);
+    const cpuLineup = (teamId: string) => {
         const team = teams.find(t => t.id === teamId);
         if (!team) throw new Error(`Team ${teamId} not found`);
-        if (teamId === coachState.selectedTeamId && coachState.managedRoster && coachState.managedRoster.length > 0) {
-            return coachState.managedRoster;
-        }
-        return generateRoster(team, leagueSeasonRosterSeed(seasonSeed));
-    }
+        const roster = programRoster(team, ledger, rosterSeed);
+        return rosterForAvailability(
+          roster,
+          programStarters(roster),
+          weeklyScratches(roster, seasonSeed, `w${currentWeekIndex}`, teamId),
+        );
+    };
 
     // Helper to get team
     const getTeam = (teamId: string) => {
@@ -140,12 +148,12 @@ export const simCurrentWeek = createAsyncThunk(
     gamesToPlay.forEach(game => {
       const homeTeam = getTeam(game.homeTeamId);
       const awayTeam = getTeam(game.awayTeamId);
-      const homeRoster = game.homeTeamId === coachState.selectedTeamId && userAvailability
-        ? userAvailability.roster
-        : getRoster(game.homeTeamId);
-      const awayRoster = game.awayTeamId === coachState.selectedTeamId && userAvailability
-        ? userAvailability.roster
-        : getRoster(game.awayTeamId);
+      const homeLineup = game.homeTeamId === coachState.selectedTeamId
+        ? userAvailability ?? { roster: generateRoster(homeTeam, rosterSeed), starterIds: [] }
+        : cpuLineup(game.homeTeamId);
+      const awayLineup = game.awayTeamId === coachState.selectedTeamId
+        ? userAvailability ?? { roster: generateRoster(awayTeam, rosterSeed), starterIds: [] }
+        : cpuLineup(game.awayTeamId);
 
       // Every CPU program runs its own staff's scheme.
       const homeTactics = game.homeTeamId === coachState.selectedTeamId ? coachTeamTactics : programTactics(homeTeam);
@@ -159,22 +167,17 @@ export const simCurrentWeek = createAsyncThunk(
         game.awayTeamId,
       );
 
-      const homeStarterIds = game.homeTeamId === coachState.selectedTeamId && userAvailability
-        ? userAvailability.starterIds
-        : [];
-      const awayStarterIds = game.awayTeamId === coachState.selectedTeamId && userAvailability
-        ? userAvailability.starterIds
-        : [];
-      const homeInput = game.homeTeamId === coachState.selectedTeamId
-        ? homeStarterIds.length > 0
-          ? { team: homeTeam, roster: homeRoster, starterIds: homeStarterIds, gameplan: coachGamePlan?.modifiers }
-          : { team: homeTeam, roster: homeRoster, gameplan: coachGamePlan?.modifiers }
-        : { team: homeTeam, roster: homeRoster };
-      const awayInput = game.awayTeamId === coachState.selectedTeamId
-        ? awayStarterIds.length > 0
-          ? { team: awayTeam, roster: awayRoster, starterIds: awayStarterIds, gameplan: coachGamePlan?.modifiers }
-          : { team: awayTeam, roster: awayRoster, gameplan: coachGamePlan?.modifiers }
-        : { team: awayTeam, roster: awayRoster };
+      const lineupInput = (team: typeof homeTeam, lineup: { roster: typeof homeLineup.roster; starterIds: string[] }) => {
+        const isCoach = team.id === coachState.selectedTeamId;
+        return {
+          team,
+          roster: lineup.roster,
+          ...(lineup.starterIds.length > 0 ? { starterIds: lineup.starterIds } : {}),
+          ...(isCoach ? { gameplan: coachGamePlan?.modifiers } : {}),
+        };
+      };
+      const homeInput = lineupInput(homeTeam, homeLineup);
+      const awayInput = lineupInput(awayTeam, awayLineup);
 
       const result = simulateGame(homeInput, awayInput, homeTactics, awayTactics, gameSeed);
 
@@ -214,8 +217,9 @@ export const startPlayoffs = createAsyncThunk(
         assertCanInitializePlayoffs(state.season);
 
         const teams = selectTeams(state);
-        const rankingTeams = withProgramPrestige(
+        const rankingTeams = withLeaguePrestige(
           teams,
+          state.season.programLedger,
           state.coach.selectedTeamId,
           state.coach.programPrestigeDrift ?? 0,
         );
@@ -295,6 +299,7 @@ export const simNextPlayoffRound = createAsyncThunk(
           baseSeed,
           rosterSeed,
           coachPlay,
+          { ledger: state.season.programLedger, seasonSeed: state.season.seasonSeed },
         );
 
         return nextState;
@@ -319,7 +324,19 @@ const seasonSlice = createSlice({
         assertCanSoftResetSeason(state.phase);
       }
       const year = action?.payload?.preserveYear ? state.year : initialState.year;
-      return { ...initialState, year };
+      // A new game starts the league over; restarting the current season keeps how programs stand.
+      if (force) return { ...initialState, year };
+      return { ...initialState, year, programLedger: state.programLedger ?? {}, programLedgerYear: state.programLedgerYear ?? null };
+    },
+    /** Fold a finished season into the ledger. Ignored if that season was already counted. */
+    applyProgramLedger: (state, action: PayloadAction<{ ledger: ProgramLedger; year: number }>) => {
+      if (state.programLedgerYear === action.payload.year) return;
+      state.programLedger = action.payload.ledger;
+      state.programLedgerYear = action.payload.year;
+    },
+    /** Write one program's standing, e.g. the prestige a coach built before leaving for another job. */
+    setProgramLedgerEntry: (state, action: PayloadAction<{ teamId: string; entry: ProgramLedgerEntry }>) => {
+      state.programLedger = { ...(state.programLedger ?? {}), [action.payload.teamId]: action.payload.entry };
     },
   },
   extraReducers: (builder) => {
@@ -378,7 +395,7 @@ const seasonSlice = createSlice({
   },
 });
 
-export const { resetSeason } = seasonSlice.actions;
+export const { resetSeason, applyProgramLedger, setProgramLedgerEntry } = seasonSlice.actions;
 export const seasonReducer = seasonSlice.reducer;
 
 // Selectors
@@ -497,15 +514,18 @@ export const selectOverallStandings = createSelector(
     }
 );
 
-/** League teams with the coached program's career prestige drift applied. */
+/** League teams at their current prestige: ledger drift for CPU programs, career drift for the coached one. */
 export const selectRankingTeams = createSelector(
   [
     selectTeams,
+    (state: RootState) => state.season.programLedger,
     (state: RootState) => state.coach.selectedTeamId,
     (state: RootState) => state.coach.programPrestigeDrift,
   ],
-  (teams, teamId, drift) => withProgramPrestige(teams, teamId, drift ?? 0),
+  (teams, ledger, teamId, drift) => withLeaguePrestige(teams, ledger, teamId, drift ?? 0),
 );
+
+export const selectProgramLedger = (state: RootState): ProgramLedger => state.season.programLedger ?? {};
 
 export const selectTop25Rankings = createSelector(
   [selectRankingTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],

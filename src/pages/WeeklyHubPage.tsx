@@ -30,7 +30,7 @@ import {
 } from '../sim/coachEffects';
 import { GameDayEdge, GameDayScheme, InstallPicker, ScoutingReport } from '../components/GamePlan';
 import { programTactics } from '../sim/schemeMatchups';
-import { generateRoster } from '../sim/generateRoster';
+import { effectiveProgram, programRoster } from '../sim/programLedger';
 import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import { estimateWinChance } from '../sim/winEstimate';
@@ -266,8 +266,8 @@ function WeeklyHubPage() {
     return estimateWinChance({
       userPrestige: effectivePrestige ?? selectedTeam.prestige,
       userRoster,
-      opponentPrestige: featuredOpponent.prestige,
-      opponentRoster: generateRoster(featuredOpponent, leagueSeasonRosterSeed(season.seasonSeed)),
+      opponentPrestige: effectiveProgram(featuredOpponent, season.programLedger).prestige,
+      opponentRoster: programRoster(featuredOpponent, season.programLedger, leagueSeasonRosterSeed(season.seasonSeed)),
       offense: gamePlan.modifiers.offense + schemeShift.offense,
       defense: gamePlan.modifiers.defense + schemeShift.defense,
       faceoff: gamePlan.modifiers.faceoff,
@@ -286,6 +286,7 @@ function WeeklyHubPage() {
     featuredIsHome,
     featuredOpponent,
     scratches,
+    season.programLedger,
     season.seasonSeed,
     selectedTeam,
   ]);

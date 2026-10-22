@@ -3,6 +3,7 @@ import { POSITION_ORDER } from '../types/sim.ts';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng.ts';
 import namesData from '../data/names.json' with { type: 'json' };
 import { LEAGUE_REGIONS } from './leagueDataValidation.ts';
+import { ROSTER_POSITION_TARGETS } from './generateRoster.ts';
 
 const REGIONS = [...LEAGUE_REGIONS];
 const PITCHES: RecruitingPitch[] = ['PLAYING_TIME', 'PROXIMITY', 'ACADEMIC', 'PRESTIGE', 'CHAMPIONSHIP', 'CAMPUS_LIFE'];
@@ -54,14 +55,7 @@ export function proximityPitchGrade(teamRegion: string, recruitRegion: string): 
 export function isRecruitingPitch(value: string): value is RecruitingPitch {
   return value in PITCH_LABELS;
 }
-const POSITION_TARGETS: Record<Position, number> = {
-  A: 5,
-  M: 7,
-  D: 7,
-  LSM: 2,
-  FO: 1,
-  G: 2,
-};
+const POSITION_TARGETS: Record<Position, number> = ROSTER_POSITION_TARGETS;
 
 function shuffleInPlace<T>(rng: () => number, values: T[]): T[] {
   for (let i = values.length - 1; i > 0; i -= 1) {

@@ -1,8 +1,9 @@
-import { generateRoster } from './generateRoster';
+import { programRoster, programStarters } from './programLedger';
+import { rosterForAvailability, weeklyScratches } from './injuries';
 import { simulateGame } from './matchEngine';
 import { programTactics } from './schemeMatchups';
 import { seedToNumber } from './rng';
-import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, RankingRow, TeamGameplayModifiers, Tactics, Team, TeamSimInput } from '../types/sim';
+import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, ProgramLedger, RankingRow, TeamGameplayModifiers, Tactics, Team, TeamSimInput } from '../types/sim';
 
 function composePlayoffGameSeed(
   baseSeed: number,
@@ -244,6 +245,8 @@ export function simulatePlayoffRound(
   baseSeed: number,
   rosterSeed = 'league-roster-v1',
   coach: PlayoffCoachContext | null = null,
+  /** CPU programs play at their ledger standing; with a season seed they also lose players to injury. */
+  options: { ledger?: ProgramLedger | null; seasonSeed?: number } = {},
 ): PlayoffState {
   if (state.championTeamId) {
     throw new Error('Playoffs already complete.');
@@ -272,21 +275,20 @@ export function simulatePlayoffRound(
     const homeIsCoach = coach && game.homeTeamId === coach.teamId;
     const awayIsCoach = coach && game.awayTeamId === coach.teamId;
 
-    const homeRoster = homeIsCoach ? coach.roster : generateRoster(homeTeam, rosterSeed);
-    const awayRoster = awayIsCoach ? coach.roster : generateRoster(awayTeam, rosterSeed);
+    const cpuInput = (team: Team): TeamSimInput => {
+      const roster = programRoster(team, options.ledger, rosterSeed);
+      const lineup = options.seasonSeed == null
+        ? { roster, starterIds: programStarters(roster) }
+        : rosterForAvailability(roster, programStarters(roster), weeklyScratches(roster, options.seasonSeed, round, team.id));
+      return { team, roster: lineup.roster, starterIds: lineup.starterIds };
+    };
+    const coachInput = (team: Team, context: PlayoffCoachContext): TeamSimInput =>
+      context.starterIds.length > 0
+        ? { team, roster: context.roster, starterIds: context.starterIds, gameplan: context.modifiers }
+        : { team, roster: context.roster, gameplan: context.modifiers };
 
-    const homeInput: TeamSimInput =
-      homeIsCoach && coach.starterIds.length > 0
-        ? { team: homeTeam, roster: homeRoster, starterIds: coach.starterIds, gameplan: coach.modifiers }
-        : homeIsCoach
-          ? { team: homeTeam, roster: homeRoster, gameplan: coach.modifiers }
-          : { team: homeTeam, roster: homeRoster };
-    const awayInput: TeamSimInput =
-      awayIsCoach && coach.starterIds.length > 0
-        ? { team: awayTeam, roster: awayRoster, starterIds: coach.starterIds, gameplan: coach.modifiers }
-        : awayIsCoach
-          ? { team: awayTeam, roster: awayRoster, gameplan: coach.modifiers }
-          : { team: awayTeam, roster: awayRoster };
+    const homeInput = homeIsCoach ? coachInput(homeTeam, coach) : cpuInput(homeTeam);
+    const awayInput = awayIsCoach ? coachInput(awayTeam, coach) : cpuInput(awayTeam);
 
     const homeTactics = homeIsCoach ? coach.tactics : programTactics(homeTeam);
     const awayTactics = awayIsCoach ? coach.tactics : programTactics(awayTeam);

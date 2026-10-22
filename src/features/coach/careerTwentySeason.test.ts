@@ -30,9 +30,22 @@ import {
 import { exhibitionReducer } from '../exhibition/exhibitionSlice.ts';
 import { validateSeasonState } from '../../sim/seasonValidation.ts';
 import type { RootState } from '../../store/store.ts';
-import type { CoachSkillTree, Position } from '../../types/sim.ts';
+import type { CoachSkillTree, Position, ProgramLedger, Team } from '../../types/sim.ts';
+import { programRoster, withLeaguePrestige } from '../../sim/programLedger.ts';
+import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed.ts';
 
 const REGULAR_WEEKS = 12;
+
+const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+
+/** The ten CPU programs with the highest current prestige. */
+function topTenByPrestige(teams: Team[], ledger: ProgramLedger | undefined, userTeamId: string | null): string[] {
+  return withLeaguePrestige(teams, ledger)
+    .filter((team) => team.id !== userTeamId)
+    .sort((a, b) => b.prestige - a.prestige || a.id.localeCompare(b.id))
+    .slice(0, 10)
+    .map((team) => team.id);
+}
 const GAMES_PER_WEEK = 64;
 
 function createCareerStore() {
@@ -157,6 +170,11 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
   assert.ok((afterFinalize.coach.programPrestigeDrift ?? 0) >= -20);
   assert.ok((afterFinalize.coach.programPrestigeDrift ?? 0) <= 30);
   assert.strictEqual(afterFinalize.coach.recruitPool.length, 0, `${seasonLabel} recruiting cleared after finalize`);
+  assert.strictEqual(afterFinalize.season.programLedgerYear, afterPlayoffs.season.year, `${seasonLabel} ledger should fold in the season`);
+  assert.ok(
+    Object.keys(afterFinalize.season.programLedger ?? {}).length >= 127,
+    `${seasonLabel} every CPU program should have a ledger entry`,
+  );
   assert.strictEqual(afterFinalize.coach.scholarshipsAvailable, 12);
   assert.ok(afterFinalize.coach.programExpectations, `${seasonLabel} expectations should remain set`);
   assert.ok(afterFinalize.coach.careerTier, `${seasonLabel} career tier should remain set`);
@@ -185,7 +203,7 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
 
     const roster = store.getState().coach.managedRoster;
     const starters = new Set(store.getState().coach.starterIds);
-    assert.ok(roster && roster.length >= 20 && roster.length <= 24, `${seasonLabel} roster size ${roster?.length}`);
+    assert.ok(roster && roster.length >= 28 && roster.length <= 32, `${seasonLabel} roster size ${roster?.length}`);
     assert.strictEqual(new Set(roster!.map((player) => player.id)).size, roster!.length, `${seasonLabel} duplicate player ids`);
     assert.ok(roster!.every((player) => player.year >= 1 && player.year <= 4), `${seasonLabel} invalid class years`);
     assert.ok(
@@ -198,14 +216,27 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
 
     const positionCounts: Record<Position, number> = { A: 0, M: 0, D: 0, LSM: 0, FO: 0, G: 0 };
     for (const player of roster!) positionCounts[player.position] += 1;
-    assert.ok(positionCounts.G >= 1, `${seasonLabel} roster missing goalie`);
-    assert.ok(positionCounts.FO >= 1, `${seasonLabel} roster missing faceoff`);
-    assert.ok(positionCounts.LSM >= 1, `${seasonLabel} roster missing LSM`);
-    assert.ok(positionCounts.A >= 3, `${seasonLabel} roster cannot field attack (${positionCounts.A})`);
-    assert.ok(positionCounts.M >= 3, `${seasonLabel} roster cannot field midfield (${positionCounts.M})`);
-    assert.ok(positionCounts.D >= 3, `${seasonLabel} roster cannot field defense (${positionCounts.D})`);
+    // Two deep behind every starting spot.
+    assert.ok(positionCounts.G >= 2, `${seasonLabel} roster needs two goalies (${positionCounts.G})`);
+    assert.ok(positionCounts.FO >= 2, `${seasonLabel} roster needs two faceoff men (${positionCounts.FO})`);
+    assert.ok(positionCounts.LSM >= 2, `${seasonLabel} roster needs two long poles (${positionCounts.LSM})`);
+    assert.ok(positionCounts.A >= 6, `${seasonLabel} roster cannot field attack two deep (${positionCounts.A})`);
+    assert.ok(positionCounts.M >= 6, `${seasonLabel} roster cannot field two midfield lines (${positionCounts.M})`);
+    assert.ok(positionCounts.D >= 6, `${seasonLabel} roster cannot field defense two deep (${positionCounts.D})`);
 
     const next = store.getState();
+
+    // The user's roster keeps pace with the league's best, but does not run away from it.
+    const rosterSeed = leagueSeasonRosterSeed(next.season.seasonSeed);
+    const cpuAverages = next.league.teams
+      .filter((cpu) => cpu.id !== next.coach.selectedTeamId)
+      .map((cpu) => average(programRoster(cpu, next.season.programLedger, rosterSeed).map((player) => player.overall)))
+      .sort((a, b) => b - a);
+    const topTenAverage = average(cpuAverages.slice(0, 10));
+    assert.ok(
+      avgOverall <= topTenAverage + 8,
+      `${seasonLabel} user roster ${avgOverall.toFixed(1)} ran away from the top CPU programs (${topTenAverage.toFixed(1)})`,
+    );
     assert.strictEqual(next.season.year, yearBefore + 1, `${seasonLabel} year should increment`);
     assert.strictEqual(next.season.phase, 'REGULAR');
     assert.strictEqual(next.season.seasonSeed, nextSeed);
@@ -245,6 +276,7 @@ async function runDynasty(seasonCount: number) {
 
   const seed = 2026;
   await store.dispatch(beginFirstSeason({ seed }));
+  const startingTopTen = topTenByPrestige(teams, store.getState().season.programLedger, team.id);
 
   assert.ok(store.getState().coach.managedRoster?.length);
   assert.ok(store.getState().coach.recruitPool.length > 0);
@@ -313,6 +345,16 @@ async function runDynasty(seasonCount: number) {
 
   const signedYears = Object.keys(finalState.coach.signedRecruitsByYear).map(Number).sort((a, b) => a - b);
   assert.deepStrictEqual(signedYears, historyYears);
+
+  // The league moved: programs earned and lost prestige, and the top ten is not the same ten.
+  const ledgerEntries = Object.values(finalState.season.programLedger ?? {});
+  assert.ok(ledgerEntries.some((entry) => entry.prestigeDrift >= 4), 'no CPU program rose');
+  assert.ok(ledgerEntries.some((entry) => entry.prestigeDrift <= -4), 'no CPU program fell');
+  const finalTopTen = new Set(topTenByPrestige(teams, finalState.season.programLedger, finalState.coach.selectedTeamId));
+  const newcomers = startingTopTen.filter((id) => !finalTopTen.has(id)).length;
+  assert.ok(newcomers >= 2, `only ${newcomers} programs left the top ten in ${seasonCount} seasons`);
+  const winPcts = finalState.coach.seasonHistory.map((entry) => Math.round((entry.wins / REGULAR_WEEKS) * 100));
+  console.log(`${seasonCount}-season career win % by year: ${winPcts.join(' ')} (top-ten turnover: ${newcomers})`);
 
   const validation = validateSeasonState(finalState.season, finalState.league.teams);
   assert.strictEqual(validation.isValid, true, validation.error ?? 'final season invalid');

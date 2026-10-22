@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import { useAppSelector } from '../store/hooks';
 import { selectRankingTeams, selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary, selectTop16Rankings } from '../features/season/seasonSlice';
-import { computeAllSOS, computeRankingBreakdown, RANKING_WEIGHTS } from '../sim/rankings';
+import { computeAllSOS, computeRankingBreakdown, PRESTIGE_FADE_GAMES, RANKING_WEIGHTS } from '../sim/rankings';
 import { seasonRankingsWeekLabel } from '../lib/seasonLabels';
 import PageHeader from '../components/PageHeader';
 
@@ -242,7 +242,9 @@ function RankingsPage() {
       <section className="card pollExplainer">
         <h3 className="m-0 text-base">How a team is scored</h3>
         <p className="text-sm text-gray-500 mt-2 mb-0">
-          Each line is a season number times its weight. Your program’s prestige includes career drift.
+          Each line is a season number times its weight. Prestige carries the preseason poll and fades out
+          by game {PRESTIGE_FADE_GAMES}; after that only results count. Prestige includes what each program has earned
+          over the years, and your program’s includes career drift.
           Ties on the rounded total break by wins, point differential, prestige, then school name.
         </p>
         <div className="weightList">
@@ -250,7 +252,7 @@ function RankingsPage() {
             ['Overall win %', RANKING_WEIGHTS.overallWinPct],
             ['Conference win %', RANKING_WEIGHTS.conferenceWinPct],
             ['Point differential', RANKING_WEIGHTS.pointDifferential],
-            ['Program prestige', RANKING_WEIGHTS.prestige],
+            [`Program prestige (fades by game ${PRESTIGE_FADE_GAMES})`, RANKING_WEIGHTS.prestige],
             ['Scoring volume', RANKING_WEIGHTS.scoringVolume],
             ['Strength of schedule', RANKING_WEIGHTS.strengthOfSchedule],
           ].map(([label, weight]) => (

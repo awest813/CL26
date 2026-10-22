@@ -55,8 +55,9 @@ function OffseasonMarket() {
       year: season.year,
       userTeamId: selectedTeam?.id ?? null,
       userRoster: coach.managedRoster,
+      ledger: season.programLedger,
     }),
-    [coach.managedRoster, season.seasonSeed, season.year, selectedTeam?.id, teams],
+    [coach.managedRoster, season.programLedger, season.seasonSeed, season.year, selectedTeam?.id, teams],
   );
   const yourPicks = selectedTeam ? proDraft.filter((pick) => pick.collegeId === selectedTeam.id) : [];
   const yourPickById = new Map(yourPicks.map((pick) => [pick.playerId, pick]));

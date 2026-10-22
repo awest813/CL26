@@ -29,7 +29,8 @@ import { GameDayEdge, GameDayScheme, InstallPicker, TacticSelects } from '../com
 import { recruitingPeriodLabel } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName, SeasonHistoryEntry } from '../types/sim';
-import { computeAllSOS, computeRankings, withProgramPrestige } from '../sim/rankings';
+import { computeAllSOS, computeRankings } from '../sim/rankings';
+import { withLeaguePrestige } from '../sim/programLedger';
 import { careerOffseasonCapabilities, hasSeasonHistoryForYear } from '../sim/seasonPhase';
 import PageHeader from '../components/PageHeader';
 
@@ -174,13 +175,13 @@ function CoachCareerPage() {
     if (!coach.selectedTeamId || season.phase === 'PRE') return null;
     const sos = computeAllSOS(gameResults, recordsByTeamId);
     const table = computeRankings(
-      withProgramPrestige(teams, coach.selectedTeamId, coach.programPrestigeDrift ?? 0),
+      withLeaguePrestige(teams, season.programLedger, coach.selectedTeamId, coach.programPrestigeDrift ?? 0),
       recordsByTeamId,
       128,
       sos,
     );
     return table.find((r) => r.teamId === coach.selectedTeamId)?.rank ?? null;
-  }, [coach.selectedTeamId, coach.programPrestigeDrift, season.phase, teams, recordsByTeamId, gameResults]);
+  }, [coach.selectedTeamId, coach.programPrestigeDrift, season.phase, season.programLedger, teams, recordsByTeamId, gameResults]);
 
   const coachGamePlan = useMemo(
     () =>

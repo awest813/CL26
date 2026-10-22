@@ -148,13 +148,13 @@ describe('match engine gameplay modifiers', () => {
     assert.ok(cleanMistakes < sloppyMistakes);
   });
 
-  test('motion offense creates more attacking volume than balanced against a zone', () => {
+  test('motion offense scores more than balanced against a zone over a seed sample', () => {
     const rosterA = generateRoster(teamA, 'strategy-offense-test');
     const rosterB = generateRoster(teamB, 'strategy-offense-test');
-    let balancedShots = 0;
-    let motionShots = 0;
+    let balancedGoals = 0;
+    let motionGoals = 0;
 
-    for (let seed = 110; seed < 170; seed += 1) {
+    for (let seed = 110; seed < 410; seed += 1) {
       const balanced = simulateGame(
         { team: teamA, roster: rosterA },
         { team: teamB, roster: rosterB },
@@ -169,11 +169,11 @@ describe('match engine gameplay modifiers', () => {
         { ...tactics, defensePackage: 'zone' },
         seed,
       );
-      balancedShots += balanced.statsA.shots;
-      motionShots += motion.statsA.shots;
+      balancedGoals += balanced.scoreA;
+      motionGoals += motion.scoreA;
     }
 
-    assert.ok(motionShots > balancedShots);
+    assert.ok(motionGoals > balancedGoals, `motion ${motionGoals} vs balanced ${balancedGoals}`);
   });
 
   test('pressure defense package creates more loose-ball production than zone over a seed sample', () => {

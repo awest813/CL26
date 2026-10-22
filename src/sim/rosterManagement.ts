@@ -2,6 +2,7 @@ import { Player, Position, SignedRecruit, Team } from '../types/sim';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
 import { faceoffRating, growSpecialty, rollSpecialties, savingRating } from './playerSpecialty';
+import { ROSTER_POSITION_ORDER, ROSTER_SIZE } from './generateRoster';
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
 const FACILITIES_BONUS_DIVISOR = 22;
@@ -207,15 +208,16 @@ export function applyWeeklyTraitGrowth(
   return mutable;
 }
 
-const POSITION_FILL_ORDER: Position[] = ['A', 'A', 'A', 'M', 'M', 'M', 'M', 'D', 'D', 'D', 'LSM', 'FO', 'G', 'A', 'M', 'D', 'M', 'D', 'A', 'M', 'D', 'LSM', 'M', 'D', 'A'];
-const ROSTER_TARGET_SIZE = 24;
+const POSITION_FILL_ORDER: Position[] = ROSTER_POSITION_ORDER;
+const ROSTER_TARGET_SIZE = ROSTER_SIZE;
+/** Two deep behind every starting spot. */
 const POSITION_MINIMUMS: Record<Position, number> = {
-  A: 3,
-  M: 3,
-  D: 3,
-  LSM: 1,
-  FO: 1,
-  G: 1,
+  A: 6,
+  M: 6,
+  D: 6,
+  LSM: 2,
+  FO: 2,
+  G: 2,
 };
 
 /**
@@ -453,9 +455,12 @@ export function buildDefaultStarters(roster: Player[]): string[] {
 
   const starters: string[] = [];
   for (const [pos, count] of Object.entries(starterCounts) as [Position, number][]) {
+    // A faceoff man and a goalie start on their specialty; everyone else on overall.
+    const startingRating = (p: Player) =>
+      pos === 'FO' ? faceoffRating(p) : pos === 'G' ? savingRating(p) : p.overall;
     const posPlayers = roster
       .filter((p) => p.position === pos)
-      .sort((a, b) => b.overall - a.overall)
+      .sort((a, b) => startingRating(b) - startingRating(a) || b.overall - a.overall)
       .slice(0, count);
     starters.push(...posPlayers.map((p) => p.id));
   }

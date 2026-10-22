@@ -66,7 +66,8 @@ test('resolveSigningDay factors positional roster needs into team-building', () 
     makeRecruit('solid-faceoff', 4, 84, 'FO'),
   ];
 
-  const roster = Array.from({ length: 7 }, (_, i) => makePlayer(`m-${i}`, 'M'));
+  // A full midfield: ten middies is the roster target.
+  const roster = Array.from({ length: 10 }, (_, i) => makePlayer(`m-${i}`, 'M'));
 
   const result = resolveSigningDay(classPool, 2, roster);
   assert.ok(result.signedRecruitIds.includes('solid-goalie'));

@@ -2,7 +2,7 @@ import { createSelector, createSlice } from '@reduxjs/toolkit';
 import teamsData from '../../data/teams128.json';
 import { Conference, LeagueData, Team } from '../../types/sim';
 import { RootState } from '../../store/store';
-import { generateRoster } from '../../sim/generateRoster';
+import { programRoster } from '../../sim/programLedger';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { assertValidLeagueData } from '../../sim/leagueDataValidation';
 import { buildRosterSummary } from '../../sim/rosterSummary';
@@ -44,11 +44,12 @@ export const selectTeamWithRosterSummary = createSelector(
     (state: RootState, teamId: string) => selectTeamById(state, teamId),
     (_state: RootState, teamId: string) => teamId,
     (state: RootState) => state.season.seasonSeed,
+    (state: RootState) => state.season.programLedger,
   ],
-  (team, teamId, seasonSeed) => {
+  (team, teamId, seasonSeed, ledger) => {
     if (!team) return null;
 
-    const roster = generateRoster(team, leagueSeasonRosterSeed(seasonSeed));
+    const roster = programRoster(team, ledger, leagueSeasonRosterSeed(seasonSeed));
 
     return {
       teamId,
@@ -61,14 +62,14 @@ export const selectTeamWithRosterSummary = createSelector(
 );
 
 export const selectConferenceBrowserRows = createSelector(
-  [selectConferences, selectTeams, (state: RootState) => state.season.seasonSeed],
-  (conferences, teams, seasonSeed) => {
+  [selectConferences, selectTeams, (state: RootState) => state.season.seasonSeed, (state: RootState) => state.season.programLedger],
+  (conferences, teams, seasonSeed, ledger) => {
     const rosterKey = leagueSeasonRosterSeed(seasonSeed);
     return conferences.map((conference) => {
     const conferenceTeams = teams.filter((team) => team.conferenceId === conference.id);
     const conferenceRosterStrength = Math.round(
       conferenceTeams.reduce((sum, team) => {
-        const roster = generateRoster(team, rosterKey);
+        const roster = programRoster(team, ledger, rosterKey);
         const rosterOverall = roster.reduce((rosterSum, player) => rosterSum + player.overall, 0) / roster.length;
         return sum + rosterOverall;
       }, 0) / conferenceTeams.length,

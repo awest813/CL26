@@ -3,7 +3,8 @@ import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
 import { rollSpecialties } from './playerSpecialty';
 
-const POSITION_DISTRIBUTION: Position[] = [
+/** Positions in the order a generated roster fills them. */
+export const ROSTER_POSITION_ORDER: Position[] = [
   'A', 'A', 'A',
   'M', 'M', 'M', 'M',
   'D', 'D', 'D',
@@ -12,15 +13,30 @@ const POSITION_DISTRIBUTION: Position[] = [
   'G',
   'A', 'M', 'D', 'M', 'D', 'A', 'M', 'D',
   'LSM', 'M', 'D', 'A',
+  // Second string: two deep at every position, about 32 players. Appended so the first 25 keep their ratings.
+  'A', 'M', 'M', 'LSM', 'FO', 'G', 'G',
 ];
+
+/** Players a full roster carries. */
+export const ROSTER_SIZE = ROSTER_POSITION_ORDER.length;
+
+/** How many of each position a full roster carries. */
+export const ROSTER_POSITION_TARGETS: Record<Position, number> = ROSTER_POSITION_ORDER.reduce(
+  (counts, position) => ({ ...counts, [position]: counts[position] + 1 }),
+  { A: 0, M: 0, D: 0, LSM: 0, FO: 0, G: 0 } as Record<Position, number>,
+);
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
 
-export function generateRoster(team: Team, seed: string): Player[] {
+/**
+ * A program's roster for one season. `talentOffset` (rating points) moves the whole
+ * roster up or down from what the program's prestige alone would give.
+ */
+export function generateRoster(team: Team, seed: string, talentOffset = 0): Player[] {
   const rng = makeRng(seedToNumber(`${seed}:${team.id}`));
-  const baseline = 45 + team.prestige * 0.4;
+  const baseline = 45 + team.prestige * 0.4 + talentOffset;
 
-  return POSITION_DISTRIBUTION.map((position, index) => {
+  return ROSTER_POSITION_ORDER.map((position, index) => {
     const year = randInt(rng, 1, 4) as 1 | 2 | 3 | 4;
     const age = 17 + year + randInt(rng, 0, 1);
     const variance = randInt(rng, -12, 12);

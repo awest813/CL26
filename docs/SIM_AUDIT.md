@@ -87,11 +87,11 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 
 | # | Sev | Gap | Where | Notes |
 |---|---|---|---|---|
-| L1 | P0 | **CPU strength is fixed by static prestige.** CPU rosters are `generateRoster(team, seasonSeed)` each year, with baseline `45 + prestige × 0.4`. CPU recruiting commits, portal departures, and the pro draft never change a CPU roster. Prestige drift applies only to the user's program (`withProgramPrestige`). The result: a top program is always a top program, and favorites win 89% of games. | `generateRoster.ts` L20, `seasonSlice.ts` ~L103, `rankings.ts` L62 | Give CPU programs persistent rosters (or a lightweight talent ledger per team: an incoming-class average and departures) that ingest CPU commits from `recruitingWeek.ts`, and add CPU prestige drift from results. This is the biggest gap in how the league plays out over a long career. |
+| L1 | ✅ | **Done in Phase 3** (`programLedger.ts`). Was: CPU strength fixed by static prestige. CPU rosters are `generateRoster(team, seasonSeed)` each year, with baseline `45 + prestige × 0.4`. CPU recruiting commits, portal departures, and the pro draft never change a CPU roster. Prestige drift applies only to the user's program (`withProgramPrestige`). The result: a top program is always a top program, and favorites win 89% of games. | `generateRoster.ts` L20, `seasonSlice.ts` ~L103, `rankings.ts` L62 | Give CPU programs persistent rosters (or a lightweight talent ledger per team: an incoming-class average and departures) that ingest CPU commits from `recruitingWeek.ts`, and add CPU prestige drift from results. This is the biggest gap in how the league plays out over a long career. |
 | L2 | ✅ | **Done in Phase 2.** Each program has a fixed scheme identity, and the Weekly Hub scouts it. A per-game adjustment by CPU staff is still open. Was: every CPU team played default tactics. No CPU coach identity, and no per-opponent scouting. | `seasonSlice.ts` L149–150, `playoffs.ts` L291 | Give each program a deterministic scheme from seed and roster, with an optional per-game adjustment. Needed so E4 counters matter, and so scouting the opponent becomes a weekly decision. |
-| L3 | P1 | **CPU teams never get injured or tired.** `weeklyScratches` and fatigue only touch the user's roster. | `seasonSlice.ts` L130 | Run the same scratch roll for every team (it is already seeded per team), or a cheap equivalent. |
-| L4 | P1 | **Roster size is 25 against a 48 cap.** There is no depth at most positions (one FO, one G, one LSM in the primary set), so a single injury at FO or G is decisive. | `POSITION_DISTRIBUTION`; `gameRules.ts` `MEN_ROSTER_MAX` | Generate a 2-deep chart at FO and G at minimum. Decide whether the sim should model about 40-man rosters with a gameday 10 plus lines. |
-| L5 | P1 | **Prestige range is narrow (48–90),** and rankings add prestige points directly. The poll favors brand over results early in the season. | `teams128.json`; `RANKING_WEIGHTS.prestige` | Taper prestige's weight in the poll toward 0 as weeks go by, the way a preseason poll fades. |
+| L3 | ✅ | **Injuries done in Phase 3**; CPU fatigue is still open. Was: CPU teams never got injured or tired. `weeklyScratches` and fatigue only touch the user's roster. | `seasonSlice.ts` L130 | Run the same scratch roll for every team (it is already seeded per team), or a cheap equivalent. |
+| L4 | ✅ | **Done in Phase 3:** 32-man rosters, two deep at every position. Was: roster size was 25 against a 48 cap. There is no depth at most positions (one FO, one G, one LSM in the primary set), so a single injury at FO or G is decisive. | `POSITION_DISTRIBUTION`; `gameRules.ts` `MEN_ROSTER_MAX` | Generate a 2-deep chart at FO and G at minimum. Decide whether the sim should model about 40-man rosters with a gameday 10 plus lines. |
+| L5 | ✅ | **Done in Phase 3:** prestige fades out of the poll by game 10. Was: prestige range was narrow (48–90), and rankings add prestige points directly. The poll favors brand over results early in the season. | `teams128.json`; `RANKING_WEIGHTS.prestige` | Taper prestige's weight in the poll toward 0 as weeks go by, the way a preseason poll fades. |
 
 ### C. Season, rankings, playoffs
 
@@ -109,7 +109,8 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 |---|---|---|---|---|
 | D1 | P1 | **Potential stops mattering after signing day.** `developPlayers` growth depends on year and coach bonuses only. A 5-star with a 95 ceiling develops like a 2-star. | `rosterManagement.ts` ~L104 | Store `potential` on `Player` and scale growth by the room to potential. Add slight regression for seniors. |
 | D2 | P1 | **Injuries are one week only.** Each week is a fresh roll with no carry-over, no severity, and no season-ending injuries, so the injured-reserve and redshirt flags in `gameRules.ts` have nothing to act on. | `injuries.ts` L34 | Add duration (1–6 weeks, rare season-ending) and keep active injuries in `coachSlice`. Redshirts can follow later. |
-| D3 | P1 | **User roster against CPU rosters has never been measured over a long career.** The user's roster develops and recruits while the CPU stays static (L1). The 20-season harness only asserts an average overall below 94. | `careerTwentySeason.test.ts` | Add an assertion that the user's roster average stays within a band of the top CPU programs, and log the user's win % per season so drift is visible. |
+| D3 | ✅ | **Done in Phase 3:** the career harness checks the user's roster against the top ten CPU rosters each season and logs win % by year. Was: user roster against CPU rosters had never been measured over a long career. The user's roster develops and recruits while the CPU stays static (L1). The 20-season harness only asserts an average overall below 94. | `careerTwentySeason.test.ts` | Add an assertion that the user's roster average stays within a band of the top CPU programs, and log the user's win % per season so drift is visible. |
+| D5 | P1 | **Late careers turn into dynasties.** In the 100-season harness, the user's program wins 83–100% of its regular-season games from about year 20 on (a 58–83% band before that). The roster stays inside the top-ten band, so the edge comes from the maxed coach skill tree, archetype bonuses, and program resources stacking on game day, not from roster talent. | `coachEffects.ts` `buildCoachGamePlan`; `careerThunks.ts` | Cap the combined game-day modifiers, or make coach skill gains taper. Then add a harness check on late-career win %. |
 | D4 | P2 | **Depth-chart lines.** Starters are a flat set. There are no first and second midfield lines, no short-stick D-middies, and no faceoff wing assignment. | `buildDefaultStarters` | Comes with E8 (line fatigue). |
 
 ### E. Tooling and tests
@@ -118,7 +119,7 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 |---|---|---|---|
 | T1 | ✅ | **Done in Phase 1** (`matchEngine.calibration.test.ts`). No calibration guard. The engine can drift silently. | `scripts/calibrate-engine.ts` (added with this audit) prints the tables above. Next: a fast `matchEngine.calibration.test.ts` that asserts bands (for example, shots 30–40, shooting 26–34%, home win 52–60%) on about 1,000 games. |
 | T2 | ✅ | **Done in Phase 1.** `timeUtils.test.ts` is not in `test:regression`. | Add it to the script. |
-| T3 | P2 | Season and playoff sims build every roster with `generateRoster` inside the loop, so each roster is regenerated many times per week. | Memoize per (team, seed) or keep it in the league ledger from L1. This matters once rosters become persistent. |
+| T3 | ✅ | **Done in Phase 3:** `programRoster` caches each CPU roster per season and standing. Was: season and playoff sims built every roster with `generateRoster` inside the loop, so each roster is regenerated many times per week. | Memoize per (team, seed) or keep it in the league ledger from L1. This matters once rosters become persistent. |
 
 ---
 
@@ -175,6 +176,21 @@ Original plan:
 ### Phase 3: a living league (L1, L3, L4, L5, D3, T3)
 
 Decided: CPU programs get a talent ledger, not full rosters. Generated rosters move to about 32 players, two deep at every position.
+
+**✅ Done.** Shipped:
+- **Program ledger.** `season.programLedger` is saved with the season. For each CPU program it holds:
+  - `prestigeDrift`: results against the wins its prestige rank predicts. A title is +4, a bracket +2, meeting expectations +1, and a big miss −2 or −3. It keeps 90% each year and is clamped to −20…+30, the same as the user's drift.
+  - `talent`: each class's stars against what programs of that prestige signed this year, at 0.3 rating points per star. Each early pro departure is −0.8. It keeps 70% each year and is clamped to ±8.
+  - `lastClass`, for display.
+  `processSeasonEnd` folds each season in once (guarded by `programLedgerYear`).
+- **Rosters from the ledger.** CPU rosters come from `programRoster`: base prestige plus drift, plus talent as a rating offset, cached per season. CPU programs start a staff depth chart (`programStarters`) and lose players to the same weekly injury roll the user's program does, in the regular season and the bracket. Rising programs also recruit at their current prestige.
+- **Job changes.** Prestige stays with the program. Taking a job inherits the new school's earned prestige, and the old school keeps what the coach built there.
+- **Rosters of 32.** Two deep everywhere: A 7, M 10, D 7, LSM 3, FO 2, G 3. The first 25 generated players keep their old ratings. Offseason turnover, signing-day needs, and recruiting needs all use the same targets. The default depth chart starts the best faceoff man and goalie by their specialist ratings.
+- **Poll.** Prestige fades out of the poll by game 10, and the Rankings page says so.
+- **Team page.** Shows a CPU program's earned prestige, recruiting talent, and last class.
+- **Tests.** `programLedger.test.ts` (drift, fading, class talent, early pros, bounds, the user's program left alone, and a program with three straight top classes beating its old peer more than 60% of the time). The career harness now checks the ledger every season, the two-deep roster, the user's roster against the top ten CPU rosters, and that by the end some programs rose, some fell, and at least two left the top ten.
+
+Measured: across 20 seasons, 3 of the starting top ten dropped out; across 100, 4 did. The box score held at 12.3 goals on 38.8 shots per team, with every CPU side fielding a depth chart. Within a single season, favorites still win about 88% of games against teams 10+ prestige points lower. Programs now move over years, but a given season is still chalky. Phase 4's poll work and a narrower prestige-to-rating slope are the next levers.
 
 1. A CPU talent ledger persisted in `season` (it is gameplay state, so it fits the whitelist): per-team rating offsets updated at signing day from CPU commits, departures, and draft picks. `generateRoster` takes the offset. This keeps storage small and avoids persisting 127 full rosters.
 2. CPU prestige drift from results, with the same clamp as the user's program.

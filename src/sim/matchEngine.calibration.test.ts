@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import { simulateGame } from './matchEngine.ts';
 import { generateRoster } from './generateRoster.ts';
+import { programStarters } from './programLedger.ts';
 import { DEFAULT_TACTICS } from './tactics.ts';
 import leagueData from '../data/teams128.json' with { type: 'json' };
 import type { Player, Tactics, Team } from '../types/sim.ts';
@@ -37,9 +38,12 @@ function playLeagueSample(): Totals {
     const away = teams[(i * 53 + 11) % teams.length];
     if (home.id === away.id) continue;
     const rosterSeed = `calibration-${i % 4}`;
+    // The league fields every CPU program with its staff's depth chart.
+    const homeRoster = generateRoster(home, rosterSeed);
+    const awayRoster = generateRoster(away, rosterSeed);
     const result = simulateGame(
-      { team: home, roster: generateRoster(home, rosterSeed) },
-      { team: away, roster: generateRoster(away, rosterSeed) },
+      { team: home, roster: homeRoster, starterIds: programStarters(homeRoster) },
+      { team: away, roster: awayRoster, starterIds: programStarters(awayRoster) },
       DEFAULT_TACTICS,
       DEFAULT_TACTICS,
       i * 7919 + 3,

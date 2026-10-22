@@ -5,12 +5,14 @@ import { selectConferenceById, selectTeamWithRosterSummary } from '../features/l
 import { buildRosterSummary, playerYearLabel } from '../sim/rosterSummary';
 import { useAppSelector } from '../store/hooks';
 import PageHeader from '../components/PageHeader';
+import { effectiveProgram, ledgerEntry } from '../sim/programLedger';
 
 function TeamPage() {
   const { id } = useParams();
   const generatedSummary = useAppSelector((state) => (id ? selectTeamWithRosterSummary(state, id) : null));
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
   const prestigeDrift = useAppSelector((state) => state.coach.programPrestigeDrift ?? 0);
+  const programLedger = useAppSelector((state) => state.season.programLedger);
   const managedRoster = useAppSelector((state) => state.coach.managedRoster);
   const isOwnTeam = Boolean(id && selectedTeamId === id);
   const ownRoster = isOwnTeam && managedRoster && managedRoster.length > 0 ? managedRoster : null;
@@ -64,9 +66,11 @@ function TeamPage() {
         )
       : 0;
   const isManagedRoster = teamSummary.rosterSource === 'managed';
+  const standing = ledgerEntry(programLedger, teamSummary.team.id);
   const displayedPrestige = isOwnTeam
     ? Math.max(1, Math.min(100, teamSummary.team.prestige + prestigeDrift))
-    : teamSummary.team.prestige;
+    : effectiveProgram(teamSummary.team, programLedger).prestige;
+  const signed = (value: number) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value)}`;
 
   return (
     <div className="pageStack">
@@ -122,6 +126,27 @@ function TeamPage() {
                 <strong>
                   {prestigeDrift > 0 ? '+' : ''}
                   {prestigeDrift} (base {teamSummary.team.prestige})
+                </strong>
+              </div>
+            )}
+            {!isOwnTeam && standing.prestigeDrift !== 0 && (
+              <div className="teamInfoRow">
+                <span className="teamInfoLabel">Earned prestige</span>
+                <strong>{signed(standing.prestigeDrift)} (base {teamSummary.team.prestige})</strong>
+              </div>
+            )}
+            {!isOwnTeam && standing.talent !== 0 && (
+              <div className="teamInfoRow">
+                <span className="teamInfoLabel">Recruiting talent</span>
+                <strong>{signed(standing.talent)} roster rating</strong>
+              </div>
+            )}
+            {!isOwnTeam && standing.lastClass && (
+              <div className="teamInfoRow">
+                <span className="teamInfoLabel">{standing.lastClass.year} class</span>
+                <strong>
+                  {standing.lastClass.commits} {standing.lastClass.commits === 1 ? 'commit' : 'commits'}
+                  {standing.lastClass.commits > 0 ? ` · ${standing.lastClass.averageStars.toFixed(1)}★ average` : ''}
                 </strong>
               </div>
             )}

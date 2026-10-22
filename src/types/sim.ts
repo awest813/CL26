@@ -251,7 +251,23 @@ export interface SeasonState {
   previousRankByTeamId: Record<string, number>;
   /** Request id of the week sim the reducer actually applied. Duplicate in-flight sims are ignored. */
   lastAppliedWeekSimId?: string | null;
+  /** Each CPU program's earned prestige and roster talent. Missing on saves from before programs could rise and fall. */
+  programLedger?: ProgramLedger;
+  /** The last season year folded into the ledger, so a season is never counted twice. */
+  programLedgerYear?: number | null;
 }
+
+/** How a program has moved away from its base rating in the league file. */
+export interface ProgramLedgerEntry {
+  /** Prestige earned or lost through results, added to the base prestige. Fades 10% a year back toward zero. */
+  prestigeDrift: number;
+  /** Roster talent from recent recruiting classes and early pro departures, in rating points. */
+  talent: number;
+  /** The class the program signed most recently. */
+  lastClass?: { year: number; commits: number; averageStars: number };
+}
+
+export type ProgramLedger = Record<string, ProgramLedgerEntry>;
 
 export interface LeagueData {
   conferences: Conference[];

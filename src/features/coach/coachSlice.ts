@@ -10,6 +10,8 @@ import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
+import { ledgerEntry, withLeaguePrestige } from '../../sim/programLedger';
+import { setProgramLedgerEntry } from '../season/seasonSlice';
 
 export const WEEKLY_HOURS_CAP = 120;
 export const MAX_HOURS_PER_RECRUIT = 20;
@@ -397,13 +399,15 @@ const coachSlice = createSlice({
     applyJobOfferAcceptance: (state, action: PayloadAction<{
         teamId: string;
         seasonYear: number;
+        /** Prestige the new program already earned before the coach arrived. */
+        prestigeDrift?: number;
         careerTier: NonNullable<CoachState['careerTier']>;
         programExpectations: ProgramExpectations;
     }>) => {
         state.selectedTeamId = action.payload.teamId;
         state.careerTier = action.payload.careerTier;
         state.programExpectations = action.payload.programExpectations;
-        state.programPrestigeDrift = 0;
+        state.programPrestigeDrift = clamp(action.payload.prestigeDrift ?? 0, MIN_PRESTIGE_DRIFT, MAX_PRESTIGE_DRIFT);
         state.pendingJobOffers = [];
         state.employment = 'ACTIVE';
         state.recruitPool = [];
@@ -627,10 +631,22 @@ export const acceptJobOffer = createAsyncThunk(
         const team = state.league.teams.find((t) => t.id === teamId);
         if (!team) return;
 
+        // Prestige stays with the program, not the coach: leave behind what was built, take over what the new school has.
+        const ledger = state.season.programLedger;
+        const previousTeamId = state.coach.selectedTeamId;
+        if (previousTeamId && previousTeamId !== teamId) {
+            dispatch(setProgramLedgerEntry({
+                teamId: previousTeamId,
+                entry: { ...ledgerEntry(ledger, previousTeamId), prestigeDrift: state.coach.programPrestigeDrift ?? 0 },
+            }));
+        }
+        const inheritedDrift = ledgerEntry(ledger, teamId).prestigeDrift;
+
         dispatch(applyJobOfferAcceptance({
             teamId,
             seasonYear: state.season.year,
-            ...careerSetupFromPrestige(team.prestige),
+            prestigeDrift: inheritedDrift,
+            ...careerSetupFromPrestige(clamp(team.prestige + inheritedDrift, 1, 100)),
         }));
     },
 );
@@ -698,7 +714,9 @@ export const advanceRecruitingWeek = createAsyncThunk(
         const recruitingBonus = programRecruitingBonus(coach);
         const coachSkill = coach.profile?.skill ?? 72;
         const teamProfilesByTeamId: Record<string, CpuRecruitingProfile> = {};
-        teams.forEach((team) => {
+        // CPU programs recruit at their current standing, so a program on the rise pulls better classes.
+        const currentTeams = withLeaguePrestige(teams, state.season.programLedger);
+        currentTeams.forEach((team) => {
             teamProfilesByTeamId[team.id] = team.id === selectedTeam.id
                 ? { prestige: selectedTeam.prestige, region: selectedTeam.region }
                 : { prestige: team.prestige, region: team.region };

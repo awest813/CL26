@@ -1,6 +1,6 @@
-import type { Player, Position, Team } from '../types/sim';
+import type { Player, Position, ProgramLedger, Team } from '../types/sim';
 import namesData from '../data/names.json' with { type: 'json' };
-import { generateRoster } from './generateRoster';
+import { programRoster } from './programLedger';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 
 export const PORTAL_CLAIM_CAP = 3;
@@ -56,6 +56,8 @@ export interface ProDraftInput {
   year: number;
   userTeamId: string | null;
   userRoster: Player[] | null;
+  /** CPU rosters at their ledger standing. Without it, programs play at base prestige. */
+  ledger?: ProgramLedger | null;
 }
 
 export interface StaffCoach {
@@ -119,7 +121,7 @@ function rosterForDraft(team: Team, input: ProDraftInput): Player[] {
   if (team.id === input.userTeamId && input.userRoster && input.userRoster.length > 0) {
     return input.userRoster;
   }
-  return generateRoster(team, input.rosterSeed);
+  return programRoster(team, input.ledger, input.rosterSeed);
 }
 
 /** Seniors are always eligible. A junior at 80 or better can turn pro. */

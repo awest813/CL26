@@ -10,6 +10,7 @@
  */
 import { simulateGame } from '../src/sim/matchEngine.ts';
 import { generateRoster } from '../src/sim/generateRoster.ts';
+import { programStarters } from '../src/sim/programLedger.ts';
 import { DEFAULT_TACTICS } from '../src/sim/tactics.ts';
 import leagueData from '../src/data/teams128.json' with { type: 'json' };
 import type { Player, Tactics, Team } from '../src/types/sim.ts';
@@ -53,9 +54,12 @@ function leagueAverages(): void {
     const away = teams[(i * 53 + 11) % teams.length];
     if (home.id === away.id) continue;
     const rosterSeed = `calibrate-${i % 5}`;
+    // Field each side the way the league does: the full roster with its staff's depth chart.
+    const homeRoster = generateRoster(home, rosterSeed);
+    const awayRoster = generateRoster(away, rosterSeed);
     const result = simulateGame(
-      { team: home, roster: generateRoster(home, rosterSeed) },
-      { team: away, roster: generateRoster(away, rosterSeed) },
+      { team: home, roster: homeRoster, starterIds: programStarters(homeRoster) },
+      { team: away, roster: awayRoster, starterIds: programStarters(awayRoster) },
       DEFAULT_TACTICS,
       DEFAULT_TACTICS,
       i * 7919,

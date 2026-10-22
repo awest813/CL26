@@ -147,15 +147,16 @@ describe('roster management progression systems', () => {
     const next = applyRosterTurnover(roster, signed, team, 2027);
     const ids = new Set(next.map((player) => player.id));
     const count = (position: Position) => next.filter((player) => player.position === position).length;
-    assert.ok(next.length <= 24, `roster grew to ${next.length}`);
+    assert.ok(next.length <= 32, `roster grew to ${next.length}`);
     assert.ok(next.length >= 12, `roster shrank to ${next.length}`);
     assert.strictEqual(ids.size, next.length, 'roster has duplicate player ids');
-    assert.ok(count('G') >= 1, 'graduated goalie was not replaced');
-    assert.ok(count('M') >= 3, `midfield depth ${count('M')} cannot field a line`);
-    assert.ok(count('A') >= 3);
-    assert.ok(count('D') >= 3);
-    assert.ok(count('LSM') >= 1);
-    assert.ok(count('FO') >= 1);
+    // Two deep behind every starting spot.
+    assert.ok(count('G') >= 2, 'graduated goalie was not replaced two deep');
+    assert.ok(count('M') >= 6, `midfield depth ${count('M')} cannot field two lines`);
+    assert.ok(count('A') >= 6);
+    assert.ok(count('D') >= 6);
+    assert.ok(count('LSM') >= 2);
+    assert.ok(count('FO') >= 2);
   });
 
   test('portal additions do not change who leaves', () => {

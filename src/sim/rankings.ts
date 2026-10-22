@@ -19,6 +19,14 @@ export const RANKING_WEIGHTS = {
   strengthOfSchedule: 120,
 } as const;
 
+/** Games after which program prestige no longer counts in the poll. Brand carries the preseason, results carry the rest. */
+export const PRESTIGE_FADE_GAMES = 10;
+
+/** Share of the prestige weight a team still gets after this many games: 1 in the preseason, 0 from game 10 on. */
+export function prestigeWeightShare(gamesPlayed: number): number {
+  return Math.max(0, 1 - gamesPlayed / PRESTIGE_FADE_GAMES);
+}
+
 /**
  * Compute the average opponent win percentage (Strength of Schedule) for every team
  * that has played at least one game this season.
@@ -80,7 +88,7 @@ export function computeRankingBreakdown(team: Team, record: TeamRecord, sos = 0)
   const conferenceWinPctPoints = winPct(record.confWins, record.confLosses) * RANKING_WEIGHTS.conferenceWinPct;
   const pointDifferentialPoints =
     (record.pointsFor - record.pointsAgainst) * RANKING_WEIGHTS.pointDifferential;
-  const prestigePoints = team.prestige * RANKING_WEIGHTS.prestige;
+  const prestigePoints = team.prestige * RANKING_WEIGHTS.prestige * prestigeWeightShare(record.wins + record.losses);
   const scoringVolumePoints = record.pointsFor * RANKING_WEIGHTS.scoringVolume;
   const strengthOfSchedulePoints = sos * RANKING_WEIGHTS.strengthOfSchedule;
   const totalPoints =

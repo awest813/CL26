@@ -37,14 +37,15 @@ import {
   buildProDraft,
   entrantToPlayer,
 } from '../../sim/offseasonMarket';
-import { computeAllSOS, computeRankings, withProgramPrestige } from '../../sim/rankings';
+import { computeAllSOS, computeRankings } from '../../sim/rankings';
+import { advanceProgramLedger, prestigeDriftForSeason, programRoster, withLeaguePrestige } from '../../sim/programLedger';
 import { buildSeasonJobMarket } from '../../sim/jobOffers';
 import {
   canSimRegularWeek,
   careerOffseasonCapabilities,
   hasSeasonHistoryForYear,
 } from '../../sim/seasonPhase';
-import { startNewSeason } from '../season/seasonSlice';
+import { applyProgramLedger, startNewSeason } from '../season/seasonSlice';
 
 const BASE_WEEKLY_XP = 8;
 const WINNING_WEEK_XP_BONUS = 3;
@@ -56,11 +57,6 @@ const FACILITY_PRESSURE_RELIEF_DIVISOR = 6;
 const SECURITY_PENALTY_NEUTRAL_PRESSURE = 50;
 const SECURITY_PENALTY_DIVISOR = 6;
 const TOTAL_TEAMS = 128;
-const CHAMPION_PRESTIGE_DRIFT = 4;
-const PLAYOFF_PRESTIGE_DRIFT = 2;
-const TARGET_MET_PRESTIGE_DRIFT = 1;
-const MODERATE_MISS_PRESTIGE_DRIFT = -2;
-const SEVERE_MISS_PRESTIGE_DRIFT = -3;
 
 export function userWonResult(result: GameResult | undefined, teamId: string | null | undefined): boolean {
   if (!result || !teamId) return false;
@@ -71,15 +67,6 @@ export function userWonResult(result: GameResult | undefined, teamId: string | n
 
 export function computeWeeklyCoachXp(wonThisWeek: boolean, operationsSkill: number): number {
   return BASE_WEEKLY_XP + (wonThisWeek ? WINNING_WEEK_XP_BONUS : 0) + Math.max(0, operationsSkill);
-}
-
-function computePrestigeDriftDelta(champion: boolean, madePlayoffs: boolean, winDiff: number): number {
-  if (champion) return CHAMPION_PRESTIGE_DRIFT;
-  if (madePlayoffs) return PLAYOFF_PRESTIGE_DRIFT;
-  if (winDiff >= 0) return TARGET_MET_PRESTIGE_DRIFT;
-  if (winDiff <= -4) return SEVERE_MISS_PRESTIGE_DRIFT;
-  if (winDiff <= -2) return MODERATE_MISS_PRESTIGE_DRIFT;
-  return 0;
 }
 
 /**
@@ -240,12 +227,8 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const losses = userRecord.losses;
 
     const sos = computeAllSOS(season.gameResults, records);
-    const rankingsTable = computeRankings(
-      withProgramPrestige(teams, coach.selectedTeamId, coach.programPrestigeDrift ?? 0),
-      records,
-      128,
-      sos,
-    );
+    const leagueTeams = withLeaguePrestige(teams, season.programLedger, coach.selectedTeamId, coach.programPrestigeDrift ?? 0);
+    const rankingsTable = computeRankings(leagueTeams, records, 128, sos);
     const userPollRow = rankingsTable.find((r) => r.teamId === coach.selectedTeamId);
     const pollRank = userPollRow?.rank ?? TOTAL_TEAMS;
     const rankTarget = coach.programExpectations.rankTarget;
@@ -297,7 +280,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     );
 
     const newJobSecurity = Math.max(0, Math.min(100, coach.jobSecurity + securityDelta - pressurePenalty));
-    const prestigeDriftDelta = computePrestigeDriftDelta(champion, madePlayoffs, winDiff);
+    const prestigeDriftDelta = prestigeDriftForSeason(champion, madePlayoffs, winDiff);
     const currentTeam = teams.find((team) => team.id === coach.selectedTeamId);
     const currentEffectivePrestige = Math.max(
       1,
@@ -334,7 +317,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     dispatch(updateProgramStanding(standing));
 
     const market = buildSeasonJobMarket({
-      teams,
+      teams: leagueTeams,
       userTeamId: coach.selectedTeamId,
       seasonSeed: season.seasonSeed,
       year: season.year,
@@ -344,6 +327,43 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     });
     dispatch(setPendingJobOffers(market.offers));
     dispatch(setEmployment(market.employment));
+
+    // The rest of the league: results move each CPU program's prestige, and the class it
+    // signed and the players it lost early to the pros move its talent. Read the CPU
+    // classes before the recruit pool is cleared for next year.
+    const classStarsByTeamId: Record<string, number[]> = {};
+    for (const recruit of coach.recruitPool) {
+      if (!recruit.committedTeamId || recruit.committedTeamId === coach.selectedTeamId) continue;
+      (classStarsByTeamId[recruit.committedTeamId] ??= []).push(recruit.stars);
+    }
+    const earlyEntrantsByTeamId: Record<string, number> = {};
+    for (const pick of buildProDraft({
+      teams,
+      rosterSeed: leagueSeasonRosterSeed(season.seasonSeed),
+      seasonSeed: season.seasonSeed,
+      year: season.year,
+      userTeamId: coach.selectedTeamId,
+      userRoster: coach.managedRoster,
+      ledger: season.programLedger,
+    })) {
+      if (pick.early && pick.collegeId !== coach.selectedTeamId) {
+        earlyEntrantsByTeamId[pick.collegeId] = (earlyEntrantsByTeamId[pick.collegeId] ?? 0) + 1;
+      }
+    }
+    dispatch(applyProgramLedger({
+      year: season.year,
+      ledger: advanceProgramLedger({
+        ledger: season.programLedger,
+        teams,
+        recordsByTeamId: records,
+        playoffs: season.playoffs,
+        classStarsByTeamId,
+        earlyEntrantsByTeamId,
+        userTeamId: coach.selectedTeamId,
+        year: season.year,
+      }),
+    }));
+
     dispatch(resetRecruitingForNewSeason());
   },
 );
@@ -363,8 +383,9 @@ export const initializeManagedRoster = createAsyncThunk<void, void, { state: Roo
     const team = teams.find((t) => t.id === coach.selectedTeamId);
     if (!team) return;
 
+    // The program as the coach finds it: its current standing in the league. Copied, since the CPU roster is shared.
     const rosterSeed = leagueSeasonRosterSeed(state.season.seasonSeed);
-    const roster = generateRoster(team, rosterSeed);
+    const roster = programRoster(team, state.season.programLedger, rosterSeed).map((player) => ({ ...player }));
     const starters = buildDefaultStarters(roster);
     dispatch(setManagedRoster(roster));
     dispatch(setStarterIds(starters));
@@ -394,7 +415,7 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
     const signedRecruits = coach.signedRecruitsByYear[state.season.year] ?? [];
     const room = Math.max(0, coach.scholarshipsAvailable ?? 0);
     const portalClaims = new Set(coach.portalClaimIds ?? []);
-    const portalPlayers = buildPortalBoard(teams, team.id, newSeed, state.season.year)
+    const portalPlayers = buildPortalBoard(withLeaguePrestige(teams, state.season.programLedger), team.id, newSeed, state.season.year)
       .filter((entrant) => portalClaims.has(entrant.id))
       .slice(0, Math.min(3, room))
       .map(entrantToPlayer);
@@ -405,6 +426,7 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
       year: state.season.year,
       userTeamId: team.id,
       userRoster: currentRoster,
+      ledger: state.season.programLedger,
     })
       .filter((pick) => pick.early && pick.collegeId === team.id)
       .map((pick) => pick.playerId);
@@ -451,11 +473,12 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
     await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed }));
     await dispatch(startNewSeason({ seed: nextSeed })).unwrap();
 
-    const drift = getState().coach.programPrestigeDrift ?? 0;
-    const recruitingTeams = league.teams.map((team) =>
-      team.id === coach.selectedTeamId
-        ? { ...team, prestige: Math.max(1, Math.min(100, team.prestige + drift)) }
-        : team,
+    const after = getState();
+    const recruitingTeams = withLeaguePrestige(
+      league.teams,
+      after.season.programLedger,
+      coach.selectedTeamId,
+      after.coach.programPrestigeDrift ?? 0,
     );
     dispatch(initializeRecruitingBoard({ seed: nextSeed, teams: recruitingTeams }));
     return nextSeed;
@@ -484,11 +507,11 @@ export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { sta
     const after = getState();
     if (after.coach.selectedTeamId && after.coach.onboardingStep === 'READY') {
       await dispatch(initializeManagedRoster());
-      const drift = after.coach.programPrestigeDrift ?? 0;
-      const recruitingTeams = after.league.teams.map((team) =>
-        team.id === after.coach.selectedTeamId
-          ? { ...team, prestige: Math.max(1, Math.min(100, team.prestige + drift)) }
-          : team,
+      const recruitingTeams = withLeaguePrestige(
+        after.league.teams,
+        after.season.programLedger,
+        after.coach.selectedTeamId,
+        after.coach.programPrestigeDrift ?? 0,
       );
       dispatch(initializeRecruitingBoard({ seed, teams: recruitingTeams }));
     }
