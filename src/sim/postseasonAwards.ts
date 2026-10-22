@@ -15,6 +15,8 @@ const ROUND_BONUS: Record<PlayoffRoundName, number> = {
   FINAL: 2.5,
 };
 const CHAMPION_BONUS = 3.5;
+/** Voters favor a coach whose team played in the bracket. */
+const MISSED_FIELD_PENALTY = 1.5;
 
 /** The best field player in each conference, by points; ties go to goals, then id. */
 export function conferencePlayersOfYear(
@@ -82,10 +84,11 @@ export function coachOfTheYear(input: {
   let top: { teamId: string; score: number; overExpected: number } | null = null;
   for (const team of input.teams) {
     const record = input.records[team.id];
-    if (!record) continue;
+    // A losing or .500 team does not win Coach of the Year, however far it beat expectations.
+    if (!record || record.wins <= record.losses) continue;
     const overExpected = record.wins - (expected.get(team.id) ?? 6);
     const run = runs.get(team.id);
-    const score = overExpected + (run ? (run.champion ? CHAMPION_BONUS : ROUND_BONUS[run.round]) : 0);
+    const score = overExpected + (run ? (run.champion ? CHAMPION_BONUS : ROUND_BONUS[run.round]) : -MISSED_FIELD_PENALTY);
     if (!top || score > top.score || (score === top.score && team.id < top.teamId)) {
       top = { teamId: team.id, score, overExpected };
     }

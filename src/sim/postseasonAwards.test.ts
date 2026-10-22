@@ -53,6 +53,18 @@ describe('postseason awards', () => {
     assert.match(winner?.detail ?? '', /reached the championship/);
   });
 
+  test('a turnaround that missed the field loses to a playoff team, and a losing team never wins', () => {
+    // c: +4 over expectation but out of the field; d: +1.7 and a quarterfinal run.
+    const records = { a: record(8, 4), b: record(5, 7), c: record(6, 6), d: record(9, 3) };
+    const playoffs: PlayoffState = {
+      seeds: [], currentRound: 'FINAL', championTeamId: 'a',
+      rounds: { ROUND1: [], QUARTERFINAL: [game('q', 'QUARTERFINAL', 'd', 'x', 'x', [])], SEMIFINAL: [], FINAL: [] },
+    };
+    const winner = coachOfTheYear({ teams, records, playoffs, coachNameByTeamId: (id) => id });
+    assert.notStrictEqual(winner?.teamId, 'c', '.500 is not enough');
+    assert.strictEqual(winner?.teamId, 'd');
+  });
+
   test('the most outstanding player comes from the semifinals and final', () => {
     const top = (playerId: string, teamId: string, goals: number) => ({ playerId, teamId, name: playerId, position: 'A' as const, goals, assists: 0, saves: 0 });
     const playoffs: PlayoffState = {

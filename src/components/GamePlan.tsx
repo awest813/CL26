@@ -85,7 +85,7 @@ export function InstallPicker({ value, onChange, archetype, operationsSkill, sta
             <span className="choiceChipHead">
               <span className="font-semibold">{PRACTICE_FOCUS_LABELS[focus]}</span>
               <span className={`installLoad ${change > 0 ? 'installLoad-up' : 'installLoad-down'}`}>
-                {change > 0 ? '+' : '−'}{Math.abs(change)} fatigue
+                {change > 0 ? '+' : '−'}{Math.abs(change) >= 1 ? Math.round(Math.abs(change)) : Math.abs(change)} fatigue
               </span>
             </span>
             <span className="choiceChipHelp">{PRACTICE_FOCUS_DETAILS[focus]}</span>
