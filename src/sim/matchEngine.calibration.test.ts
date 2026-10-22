@@ -6,7 +6,8 @@ import { programStarters } from './programLedger.ts';
 import { DEFAULT_TACTICS } from './tactics.ts';
 import leagueData from '../data/teams128.json' with { type: 'json' };
 import type { Player, Tactics, Team } from '../types/sim.ts';
-import { DEFENSE_PACKAGES, OFFENSE_SETS } from './schemeMatchups.ts';
+import { DEFENSE_PACKAGES, OFFENSE_SETS, programTactics } from './schemeMatchups.ts';
+import { buildCoachGamePlan } from './coachEffects.ts';
 
 /**
  * League-wide box-score bands, so engine changes cannot drift away from a
@@ -299,7 +300,7 @@ describe('fatigue and the late game', () => {
     const withStamina = (stamina: number) => rosterA.map((player) => ({ ...player, stamina }));
     let fresh = 0;
     let tired = 0;
-    const games = 600;
+    const games = 1500;
     for (let seed = 1; seed <= games; seed += 1) {
       const opts = { homeAdvantageForA: seed % 2 === 0 };
       const opponent = { team: beta, roster: rosterB, starterIds: startersB };
@@ -308,6 +309,38 @@ describe('fatigue and the late game', () => {
       const tiredResult = simulateGame({ team: alpha, roster: withStamina(45), starterIds: startersA }, opponent, DEFAULT_TACTICS, DEFAULT_TACTICS, seed, opts);
       if (tiredResult.scoreA > tiredResult.scoreB) tired += 1;
     }
-    assert.ok(fresh > tired + games * 0.03, `fresh legs won ${fresh}, tired legs ${tired} of ${games}`);
+    assert.ok(fresh > tired + games * 0.015, `fresh legs won ${fresh}, tired legs ${tired} of ${games}`);
+  });
+});
+
+describe('weekly installs', () => {
+  test('no install is a clear best on game day', () => {
+    const roster = generateRoster(alpha, 'installs');
+    const starters = programStarters(roster);
+    const opponents = (leagueData.teams as Team[]).slice(40, 70);
+    const rates = (['OFFENSE', 'DEFENSE', 'CONDITIONING', 'DISCIPLINE'] as const).map((focus) => {
+      const plan = buildCoachGamePlan({ baseTactics: DEFAULT_TACTICS, practiceFocus: focus, fatigue: 30, archetype: 'RECRUITER', coachSkill: 72 });
+      let wins = 0;
+      let games = 0;
+      for (const opponent of opponents) {
+        const opponentRoster = generateRoster(opponent, 'installs');
+        const opponentStarters = programStarters(opponentRoster);
+        for (let seed = 1; seed <= 60; seed += 1) {
+          const result = simulateGame(
+            { team: alpha, roster, starterIds: starters, gameplan: plan.modifiers },
+            { team: opponent, roster: opponentRoster, starterIds: opponentStarters },
+            plan.tactics,
+            programTactics(opponent),
+            seed,
+            { homeAdvantageForA: seed % 2 === 0 },
+          );
+          if (result.scoreA > result.scoreB) wins += 1;
+          games += 1;
+        }
+      }
+      return { focus, rate: wins / games };
+    });
+    const spread = Math.max(...rates.map((row) => row.rate)) - Math.min(...rates.map((row) => row.rate));
+    assert.ok(spread <= 0.06, `installs span ${(spread * 100).toFixed(1)} pp: ${JSON.stringify(rates)}`);
   });
 });

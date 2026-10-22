@@ -34,10 +34,10 @@ const FOCUS_MODIFIERS: Record<PracticeFocus, TeamGameplayModifiers> = {
     defense: 0,
     goalie: 0,
     faceoff: 0,
-    discipline: 7,
+    discipline: 4,
     shotQuality: 0,
-    turnoverAvoidance: 0.05,
-    penaltyAvoidance: 0.04,
+    turnoverAvoidance: 0.015,
+    penaltyAvoidance: 0.03,
     groundBallBonus: 0,
   },
   CONDITIONING: {
@@ -65,7 +65,7 @@ export const PRACTICE_FOCUS_LABELS: Record<PracticeFocus, string> = {
 export const PRACTICE_FOCUS_DETAILS: Record<PracticeFocus, string> = {
   OFFENSE: 'Attack edge and cleaner shots. Plays fast with late slides; defense dips a little.',
   DEFENSE: 'Defense and goalie edge. Slides early and rides hard; offense dips a little.',
-  CONDITIONING: 'Faceoffs, ground balls, and a little defense. Recovers legs and halves the fatigue drag.',
+  CONDITIONING: 'Faceoffs, loose balls, and a little defense. Recovers legs, halves the fatigue drag, and fades less late in games.',
   DISCIPLINE: 'Fewer turnovers and flags. Clears conservatively; no direct scoring edge.',
 };
 
@@ -94,6 +94,8 @@ const DEFAULT_COACH_ARCHETYPE: CoachArchetype = 'RECRUITER';
 const SHOT_QUALITY_MIN = -0.08;
 const SHOT_QUALITY_MAX = 0.08;
 const TURNOVER_AVOIDANCE_MAX = 0.12;
+/** Share of in-game wear a week of conditioning takes off. */
+const CONDITIONING_WEAR_RELIEF = 0.25;
 const PENALTY_AVOIDANCE_MAX = 0.1;
 const FATIGUE_PENALTIES: Pick<TeamGameplayModifiers, 'offense' | 'defense' | 'goalie' | 'faceoff' | 'discipline' | 'shotQuality' | 'groundBallBonus'> = {
   offense: 5.2,
@@ -221,6 +223,16 @@ function focusLabelFor(focus: PracticeFocus): string {
   return PRACTICE_FOCUS_LABELS[focus];
 }
 
+/**
+ * Game-day value of a skill-tree level, with diminishing returns: each level adds less
+ * than the one before, so level 5 is worth what three full levels would be. A maxed tree
+ * helps on game day without carrying a program by itself.
+ */
+export function treeLevelEdge(level: number): number {
+  const bounded = clamp(level, 0, 5);
+  return bounded * (1 - bounded * 0.08);
+}
+
 export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   const fatigue = clamp(settings.fatigue, 0, 100);
   const archetype = settings.archetype ?? DEFAULT_COACH_ARCHETYPE;
@@ -242,6 +254,8 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   modifiers.turnoverAvoidance += focusModifiers.turnoverAvoidance * focusTranslation;
   modifiers.penaltyAvoidance += focusModifiers.penaltyAvoidance * focusTranslation;
   modifiers.groundBallBonus += focusModifiers.groundBallBonus * focusTranslation;
+  // Conditioning also keeps legs under the team late in games.
+  const wearRelief = settings.practiceFocus === 'CONDITIONING' ? clamp(CONDITIONING_WEAR_RELIEF * focusTranslation, 0, 0.35) : 0;
 
   const archetypeBonus = ARCHETYPE_BONUSES[archetype];
   modifiers.offense += archetypeBonus.offense ?? 0;
@@ -253,12 +267,15 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   const coachSkillEdge = (coachSkill - 70) / 50;
   modifiers.offense += coachSkillEdge;
   modifiers.defense += coachSkillEdge * 0.85;
-  modifiers.faceoff += recruitingSkill * 0.55;
-  modifiers.groundBallBonus += recruitingSkill * 0.7;
-  modifiers.discipline += developmentSkill * 0.9;
-  modifiers.turnoverAvoidance += developmentSkill * 0.008;
-  modifiers.goalie += operationsSkill * 0.6;
-  modifiers.penaltyAvoidance += operationsSkill * 0.008;
+  const recruitingEdge = treeLevelEdge(recruitingSkill);
+  const developmentEdge = treeLevelEdge(developmentSkill);
+  const operationsEdge = treeLevelEdge(operationsSkill);
+  modifiers.faceoff += recruitingEdge * 0.55;
+  modifiers.groundBallBonus += recruitingEdge * 0.7;
+  modifiers.discipline += developmentEdge * 0.9;
+  modifiers.turnoverAvoidance += developmentEdge * 0.008;
+  modifiers.goalie += operationsEdge * 0.6;
+  modifiers.penaltyAvoidance += operationsEdge * 0.008;
 
   const fatiguePenaltyBase = clamp((fatigue - FATIGUE_PENALTY_START) / FATIGUE_PENALTY_RANGE, 0, 1);
   let fatiguePenaltyScale = settings.practiceFocus === 'CONDITIONING' ? CONDITIONING_FATIGUE_REDUCTION : 1;
@@ -287,6 +304,7 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
       turnoverAvoidance: roundToThreeDecimals(clamp(modifiers.turnoverAvoidance, 0, TURNOVER_AVOIDANCE_MAX)),
       penaltyAvoidance: roundToThreeDecimals(clamp(modifiers.penaltyAvoidance, 0, PENALTY_AVOIDANCE_MAX)),
       groundBallBonus: roundToThreeDecimals(modifiers.groundBallBonus),
+      wearRelief: roundToThreeDecimals(wearRelief),
     },
     fatigueLabel: fatigueLabelFor(fatigue),
     focusLabel: focusLabelFor(settings.practiceFocus),
@@ -340,8 +358,8 @@ export function summarizeCoachSkillImpacts(input: CoachSkillImpactInput): string
   const recruitingDeltaPct = Math.round((recruitingMultiplier - 1) * 100);
 
   const operationsFatigueControl = Math.round((1 - clamp(1 - operations * 0.03, 0.82, 1)) * 100);
-  const developmentPrep = roundToThreeDecimals(development * 0.9);
-  const operationsPrep = roundToThreeDecimals(operations * 0.6);
+  const developmentPrep = roundToThreeDecimals(treeLevelEdge(development) * 0.9);
+  const operationsPrep = roundToThreeDecimals(treeLevelEdge(operations) * 0.6);
 
   return [
     `Current recruiting effectiveness: ${recruitingDeltaPct >= 0 ? '+' : ''}${recruitingDeltaPct}% weekly interest swing from archetype, Tree, NIL, and boosters.`,

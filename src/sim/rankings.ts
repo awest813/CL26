@@ -32,6 +32,9 @@ export const BAD_LOSS_PENALTY = 40;
 /** Games after which program prestige no longer counts in the poll. Brand carries the preseason, results carry the rest. */
 export const PRESTIGE_FADE_GAMES = 10;
 
+/** Two teams this close in poll points are ordered by their head-to-head result instead. */
+export const HEAD_TO_HEAD_WINDOW = 25;
+
 /** Share of the prestige weight a team still gets after this many games: 1 in the preseason, 0 from game 10 on. */
 export function prestigeWeightShare(gamesPlayed: number): number {
   return Math.max(0, 1 - gamesPlayed / PRESTIGE_FADE_GAMES);
@@ -79,6 +82,8 @@ export interface TeamPollInputs {
   qualityResults: number;
   qualityWins: number;
   badLosses: number;
+  /** Opponents this team beat, for the head-to-head tiebreak. */
+  beat?: string[];
 }
 
 export type PollInputs = Record<string, TeamPollInputs>;
@@ -120,6 +125,7 @@ export function computePollInputs(
 
     if (result.scoreA === result.scoreB) continue;
     const [winner, loser] = result.scoreA > result.scoreB ? [a, b] : [b, a];
+    (entry(winner).beat ??= []).push(loser);
     const bonus = qualityWinPoints(recordPct(loser));
     if (bonus > 0) {
       entry(winner).qualityResults += bonus;
@@ -169,7 +175,7 @@ export function computeRankings(
   topN = 25,
   inputs?: PollInputs,
 ): RankingRow[] {
-  return teams
+  const sorted = teams
     .map((team) => {
       const record = recordsByTeamId[team.id] ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0, pointsFor: 0, pointsAgainst: 0 };
       return { team, record, score: computeRankingBreakdown(team, record, teamPollInputs(inputs, team.id)).totalPoints };
@@ -184,7 +190,23 @@ export function computeRankings(
       const nameCompare = a.team.schoolName.localeCompare(b.team.schoolName);
       if (nameCompare !== 0) return nameCompare;
       return a.team.id.localeCompare(b.team.id);
-    })
+    });
+
+  // Head to head: one pass from the top, so a team that beat the team just above it, and
+  // is close to it on points, moves ahead of it. A single pass cannot loop on a cycle.
+  for (let index = 0; index < sorted.length - 1; index += 1) {
+    const upper = sorted[index];
+    const lower = sorted[index + 1];
+    if (upper.score - lower.score > HEAD_TO_HEAD_WINDOW) continue;
+    const lowerBeatUpper = teamPollInputs(inputs, lower.team.id).beat?.filter((id) => id === upper.team.id).length ?? 0;
+    const upperBeatLower = teamPollInputs(inputs, upper.team.id).beat?.filter((id) => id === lower.team.id).length ?? 0;
+    if (lowerBeatUpper > upperBeatLower) {
+      sorted[index] = lower;
+      sorted[index + 1] = upper;
+    }
+  }
+
+  return sorted
     .slice(0, topN)
     .map((row, index) => ({
       rank: index + 1,

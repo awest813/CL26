@@ -26,6 +26,7 @@ function PlayerCell({ name, team, isUser, detail }: { name: string; team: Team |
 function LeadersPage() {
   const stats = useAppSelector((state) => state.season.playerSeasonStats);
   const awardHistory = useAppSelector((state) => state.season.awardHistory);
+  const allAmericanHistory = useAppSelector((state) => state.season.allAmericanHistory);
   const year = useAppSelector((state) => state.season.year);
   const phase = useAppSelector((state) => state.season.phase);
   const teams = useAppSelector((state) => state.league.teams);
@@ -42,6 +43,7 @@ function LeadersPage() {
   const awardsYear = awardYears[0] ?? null;
   const awards = awardsYear != null ? awardHistory?.[awardsYear] ?? [] : [];
   const awardsAreThisYear = awardsYear === year;
+  const allAmericans = awardsYear != null ? allAmericanHistory?.[awardsYear] : undefined;
 
   return (
     <div className="pageStack">
@@ -93,6 +95,39 @@ function LeadersPage() {
           <p className="text-sm m-0">No awards yet. The first are named when this regular season ends.</p>
         )}
       </section>
+
+      {allAmericans && allAmericans.first.length > 0 && (
+        <div className="grid2">
+          {([['First team', allAmericans.first], ['Second team', allAmericans.second]] as const).map(([label, rows]) => (
+            <section key={label} className="card">
+              <h3 className="m-0">{awardsYear} All-Americans: {label.toLowerCase()}</h3>
+              <div className="dataTableWrap">
+                <table>
+                  <caption className="sr-only">{awardsYear} All-American {label.toLowerCase()}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Spot</th>
+                      <th scope="col">Player</th>
+                      <th scope="col">Season</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr key={row.playerId} className={row.teamId === selectedTeamId ? 'youRow' : undefined}>
+                        <td className="text-xs text-gray-500">{row.award}</td>
+                        <td>
+                          <PlayerCell name={row.name} team={teamById.get(row.teamId)} isUser={row.teamId === selectedTeamId} detail="" />
+                        </td>
+                        <td className="text-sm">{row.statLine}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
 
       {!hasStats ? (
         <section className="card">

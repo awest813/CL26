@@ -44,6 +44,7 @@ interface EffectiveGameplayModifiers extends TeamGameplayModifiers {
   turnoverAvoidance: number;
   penaltyAvoidance: number;
   groundBallBonus: number;
+  wearRelief: number;
 }
 
 const ZERO_GAMEPLAN: EffectiveGameplayModifiers = {
@@ -56,6 +57,7 @@ const ZERO_GAMEPLAN: EffectiveGameplayModifiers = {
   turnoverAvoidance: 0,
   penaltyAvoidance: 0,
   groundBallBonus: 0,
+  wearRelief: 0,
 };
 
 // Settled-offense mistakes: a forced turnover the defense earns, plus an unforced one when the offense cannot get a shot off.
@@ -64,6 +66,10 @@ const TURNOVER_MIN_CHANCE = 0.05;
 const TURNOVER_MAX_CHANCE = 0.3;
 const RETAINED_POSSESSION_TURNOVER_SCALE = 0.45;
 const DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR = 900;
+/** Discipline points per extra point of forced-turnover chance: a sloppy team gives the ball away more. */
+const DISCIPLINE_TURNOVER_DIVISOR = 200;
+/** Ground-ball edge points per point of chance to win a loose ball after a miss or a rebound. */
+const LOOSE_BALL_EDGE_DIVISOR = 150;
 const SHOT_ATTEMPT_BASE_CHANCE = 0.9;
 const SHOT_ATTEMPT_MIN_CHANCE = 0.72;
 const SHOT_ATTEMPT_MAX_CHANCE = 0.97;
@@ -360,6 +366,7 @@ function resolveGameplayModifiers(input: TeamSimInput): EffectiveGameplayModifie
     turnoverAvoidance: input.gameplan.turnoverAvoidance ?? 0,
     penaltyAvoidance: input.gameplan.penaltyAvoidance ?? 0,
     groundBallBonus: input.gameplan.groundBallBonus ?? 0,
+    wearRelief: input.gameplan.wearRelief ?? 0,
   };
 }
 
@@ -722,7 +729,7 @@ export function simulateGame(
 
     const manUpAtStart = hasManUp(offenseSide);
     const manDownAtStart = hasManUp(defenseSide);
-    const disciplineGap = (DISCIPLINE_PIVOT - adjustedOffenseDiscipline) / 140;
+    const disciplineGap = (DISCIPLINE_PIVOT - adjustedOffenseDiscipline) / DISCIPLINE_TURNOVER_DIVISOR;
     const forcedTurnoverChance = clamp(
       TURNOVER_BASE_CHANCE + disciplineGap - offense.mods.turnoverAvoidance
         - defense.mods.discipline / DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR
@@ -734,9 +741,9 @@ export function simulateGame(
     // Both sides lose legs as the game goes on; the fresher team gains an edge late.
     const played = secondsPlayed();
     const offensePower = offense.ratings.offense + offense.mods.offense + offense.gameForm
-      - fatigueWear(played, offense.ratings.wearRate, offense.tactics);
+      - fatigueWear(played, offense.ratings.wearRate * (1 - offense.mods.wearRelief), offense.tactics);
     const defensePower = defense.ratings.defense + defense.mods.defense + defense.gameForm
-      - fatigueWear(played, defense.ratings.wearRate, defense.tactics);
+      - fatigueWear(played, defense.ratings.wearRate * (1 - defense.mods.wearRelief), defense.tactics);
     const quality = (offensePower - defensePower) / SHOT_QUALITY_POWER_DIVISOR + offense.mods.shotQuality
       + schemeShotQualityEdge(offense.tactics, defense.tactics) + (transition ? TRANSITION_QUALITY_BOOST : 0)
       - (manDownAtStart ? MAN_DOWN_QUALITY_COST : 0) + late.qualityDelta
@@ -747,6 +754,13 @@ export function simulateGame(
       SHOT_ATTEMPT_MAX_CHANCE,
     );
     const goalieRating = defense.ratings.goalie + defense.mods.goalie;
+    // The side that gets to more loose balls wins more of the chases after a miss or a rebound.
+    const looseBallEdge = clamp(
+      (offense.mods.groundBallBonus + schemeGroundBallEdge(offense.tactics) - defense.mods.groundBallBonus - schemeGroundBallEdge(defense.tactics))
+        / LOOSE_BALL_EDGE_DIVISOR,
+      -0.1,
+      0.1,
+    );
 
     // A man-up offense attacks inside its penalty window instead of running its usual sets.
     let shotClockUsed = transition
@@ -785,7 +799,7 @@ export function simulateGame(
       const onGoalChance = clamp(ON_GOAL_BASE_CHANCE + shooterEdge + quality * 0.3, ON_GOAL_MIN_CHANCE, ON_GOAL_MAX_CHANCE);
       if (rng() >= onGoalChance) {
         // Off target. The team closest to the ball when it leaves play keeps it.
-        if (rng() < MISS_BACKUP_CHANCE + (hasManUp(offenseSide) ? MAN_UP_BACKUP_BONUS : 0)) {
+        if (rng() < MISS_BACKUP_CHANCE + looseBallEdge + (hasManUp(offenseSide) ? MAN_UP_BACKUP_BONUS : 0)) {
           if (rng() < 0.3) creditGroundBall(offense);
           const reset = randInt(rng, RESET_SECONDS_MIN, RESET_SECONDS_MAX);
           shotClockUsed += reset;
@@ -810,7 +824,7 @@ export function simulateGame(
         if (rng() < 0.08) addPlay(`${defense.ratings.goaliePlayer.name} robs ${shooter.name} from point-blank range.`);
         if (rng() < SAVE_REBOUND_CHANCE) {
           // Rebound spills loose: a ground-ball battle in front of the cage.
-          if (rng() < LOOSE_BALL_GROUND_BALL_CHANCE) {
+          if (rng() < LOOSE_BALL_GROUND_BALL_CHANCE + looseBallEdge) {
             creditGroundBall(offense);
             // A shot on cage resets the shot clock.
             const reset = randInt(rng, RESET_SECONDS_MIN, RESET_SECONDS_MAX);

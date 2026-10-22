@@ -11,7 +11,7 @@ import { buildPlayoffField, buildPlayoffState, firstTeamsOut, selectPlayoffField
 import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { compareConferenceStanding, compareOverallStanding, conferenceLeaders } from '../../sim/standings';
 import { programRoster, programStarters, withLeaguePrestige } from '../../sim/programLedger';
-import { addGamesToSeasonStats, seasonAwards, storedGameResult } from '../../sim/seasonStats';
+import { addGamesToSeasonStats, allAmericanTeams, seasonAwards, storedGameResult } from '../../sim/seasonStats';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { rosterForAvailability, weeklyScratches } from '../../sim/injuries';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
@@ -55,6 +55,7 @@ const initialState: SeasonState = {
   trophyHolders: {},
   playerSeasonStats: {},
   awardHistory: {},
+  allAmericanHistory: {},
 };
 
 // Async thunk to start a new season — only PRE (year 1) or OFFSEASON (next year).
@@ -346,6 +347,7 @@ const seasonSlice = createSlice({
         programLedgerYear: state.programLedgerYear ?? null,
         trophyHolders: state.trophyHolders ?? {},
         awardHistory: state.awardHistory ?? {},
+        allAmericanHistory: state.allAmericanHistory ?? {},
       };
     },
     /** Fold a finished season into the ledger. Ignored if that season was already counted. */
@@ -410,6 +412,7 @@ const seasonSlice = createSlice({
             state.phase = 'PLAYOFF'; // Ready for playoffs (bracket pending)
             // The regular season is over: name the national awards.
             state.awardHistory = { ...(state.awardHistory ?? {}), [state.year]: seasonAwards(state.playerSeasonStats) };
+            state.allAmericanHistory = { ...(state.allAmericanHistory ?? {}), [state.year]: allAmericanTeams(state.playerSeasonStats) };
         }
       })
       .addCase(startPlayoffs.fulfilled, (state, action) => {

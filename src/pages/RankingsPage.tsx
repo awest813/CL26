@@ -5,7 +5,7 @@ import TeamLogo from '../components/TeamLogo';
 import { useAppSelector } from '../store/hooks';
 import { selectConferenceLeaders, selectFirstFourOut, selectPollInputs, selectRankingTeams, selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary } from '../features/season/seasonSlice';
 import { selectConferences } from '../features/league/leagueSlice';
-import { BAD_LOSS_PENALTY, computeRankingBreakdown, MARGIN_CAP_PER_GAME, PRESTIGE_FADE_GAMES, QUALITY_WIN_TIERS, RANKING_WEIGHTS, teamPollInputs } from '../sim/rankings';
+import { BAD_LOSS_PENALTY, computeRankingBreakdown, HEAD_TO_HEAD_WINDOW, MARGIN_CAP_PER_GAME, PRESTIGE_FADE_GAMES, QUALITY_WIN_TIERS, RANKING_WEIGHTS, teamPollInputs } from '../sim/rankings';
 import { PLAYOFF_AUTO_BIDS } from '../sim/playoffs';
 import type { RankingScoreBreakdown } from '../types/sim';
 import { seasonRankingsWeekLabel } from '../lib/seasonLabels';
@@ -269,7 +269,8 @@ function RankingsPage() {
           so a blowout is worth no more than a five-goal win. Strength of schedule is two parts your opponents’ win %
           and one part their opponents’. A win over a {QUALITY_WIN_TIERS[0].minOpponentWinPct.toFixed(3).slice(1)}+ team
           adds {QUALITY_WIN_TIERS[0].points}, over a .500+ team {QUALITY_WIN_TIERS[1].points}; a loss to a team under .333
-          costs {BAD_LOSS_PENALTY}. Ties on the rounded total break by wins, point differential, prestige, then school name.
+          costs {BAD_LOSS_PENALTY}. Two teams within {HEAD_TO_HEAD_WINDOW} points of each other are ordered by their head-to-head
+          result. Ties on the rounded total break by wins, point differential, prestige, then school name.
         </p>
         <div className="weightList">
           {[

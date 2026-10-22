@@ -137,6 +137,11 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
     5,
     `${seasonLabel} the five national awards should be named after week 12`,
   );
+  assert.strictEqual(
+    afterRegular.season.allAmericanHistory?.[afterRegular.season.year]?.first.length,
+    12,
+    `${seasonLabel} the first All-American team should fill all twelve spots`,
+  );
   const validationDuringBracketGap = validateSeasonState(afterRegular.season, afterRegular.league.teams);
   assert.strictEqual(
     validationDuringBracketGap.isValid,

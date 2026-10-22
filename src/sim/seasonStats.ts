@@ -161,3 +161,66 @@ export function seasonAwards(stats: SeasonStats | null | undefined): SeasonAward
       line.position === 'G' ? `${line.saves} saves` : `${line.goals} G, ${line.assists} A, ${line.groundBalls} GB`),
   ];
 }
+
+export interface AllAmericanTeams {
+  first: SeasonAward[];
+  second: SeasonAward[];
+}
+
+/** The lineup an All-American team fills: a starting ten plus the two specialists. */
+const ALL_AMERICAN_SLOTS: Array<{ position: PlayerSeasonLine['position']; count: number; label: string }> = [
+  { position: 'A', count: 3, label: 'Attack' },
+  { position: 'M', count: 3, label: 'Midfield' },
+  { position: 'D', count: 3, label: 'Defense' },
+  { position: 'LSM', count: 1, label: 'Long-stick midfield' },
+  { position: 'FO', count: 1, label: 'Faceoff' },
+  { position: 'G', count: 1, label: 'Goalie' },
+];
+
+function allAmericanScore(line: PlayerSeasonLine): number {
+  switch (line.position) {
+    case 'A':
+      return points(line) + line.groundBalls * 0.2;
+    case 'M':
+      return points(line) + line.groundBalls * 0.3 + line.causedTurnovers * 0.6;
+    case 'D':
+      return line.causedTurnovers * 2 + line.groundBalls;
+    case 'LSM':
+      return line.causedTurnovers * 2 + line.groundBalls + points(line) * 0.5;
+    case 'FO':
+      return line.faceoffsTaken >= MIN_FACEOFFS ? faceoffPct(line) * 1000 + line.groundBalls * 0.5 : -Infinity;
+    case 'G':
+      return shotsFaced(line) >= MIN_SHOTS_FACED ? savePct(line) * 1000 + line.saves * 0.1 : -Infinity;
+    default:
+      return 0;
+  }
+}
+
+function allAmericanStatLine(line: PlayerSeasonLine): string {
+  if (line.position === 'G') return `${pct(savePct(line))} save %, ${line.saves} saves`;
+  if (line.position === 'FO') return `${pct(faceoffPct(line))} on draws, ${line.groundBalls} GB`;
+  if (line.position === 'D' || line.position === 'LSM') return `${line.causedTurnovers} CT, ${line.groundBalls} GB`;
+  return `${line.goals} G, ${line.assists} A`;
+}
+
+/** First and second All-American teams for a finished regular season. */
+export function allAmericanTeams(stats: SeasonStats | null | undefined): AllAmericanTeams {
+  const lines = Object.values(stats ?? {});
+  const teams: AllAmericanTeams = { first: [], second: [] };
+  for (const slot of ALL_AMERICAN_SLOTS) {
+    const ranked = lines
+      .filter((line) => line.position === slot.position && Number.isFinite(allAmericanScore(line)))
+      .sort((a, b) => allAmericanScore(b) - allAmericanScore(a) || a.playerId.localeCompare(b.playerId));
+    const pick = (line: PlayerSeasonLine): SeasonAward => ({
+      award: slot.label,
+      playerId: line.playerId,
+      name: line.name,
+      teamId: line.teamId,
+      position: line.position,
+      statLine: allAmericanStatLine(line),
+    });
+    teams.first.push(...ranked.slice(0, slot.count).map(pick));
+    teams.second.push(...ranked.slice(slot.count, slot.count * 2).map(pick));
+  }
+  return teams;
+}

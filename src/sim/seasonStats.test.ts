@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import {
   addGamesToSeasonStats,
+  allAmericanTeams,
   LEADER_CATEGORIES,
   MIN_SHOTS_FACED,
   seasonAwards,
@@ -112,5 +113,31 @@ describe('leaders and awards', () => {
 
   test('an empty season names no one', () => {
     assert.deepStrictEqual(seasonAwards({}), []);
+  });
+});
+
+describe('All-Americans', () => {
+  test('fill a lineup on each team, best players first', () => {
+    const results = Array.from({ length: 12 }, (_, i) => game(i + 1));
+    const stats = addGamesToSeasonStats({}, results, years);
+    // Two teams of 12 games cannot qualify a goalie or faceoff man on volume alone, so pad the qualifiers.
+    const padded = Object.fromEntries(Object.entries(stats).map(([id, line]) => [
+      id,
+      line.position === 'G' ? { ...line, saves: line.saves + 200, goalsAllowed: line.goalsAllowed + 150 }
+        : line.position === 'FO' ? { ...line, faceoffWins: line.faceoffWins + 100, faceoffsTaken: line.faceoffsTaken + 180 }
+        : line,
+    ]));
+    const teams = allAmericanTeams(padded);
+    const count = (rows: typeof teams.first, position: string) => rows.filter((row) => row.position === position).length;
+    assert.strictEqual(count(teams.first, 'A'), 3);
+    assert.strictEqual(count(teams.first, 'M'), 3);
+    assert.strictEqual(count(teams.first, 'D'), 3);
+    assert.strictEqual(count(teams.first, 'G'), 1);
+    const firstIds = new Set(teams.first.map((row) => row.playerId));
+    assert.ok(teams.second.every((row) => !firstIds.has(row.playerId)), 'nobody makes both teams');
+    const attackPoints = (id: string) => (padded[id].goals + padded[id].assists);
+    const worstFirstAttack = Math.min(...teams.first.filter((row) => row.position === 'A').map((row) => attackPoints(row.playerId)));
+    const bestSecondAttack = Math.max(...teams.second.filter((row) => row.position === 'A').map((row) => attackPoints(row.playerId)));
+    assert.ok(worstFirstAttack >= bestSecondAttack - 2, 'first-team attack should out-produce the second team');
   });
 });

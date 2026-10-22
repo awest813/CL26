@@ -37,6 +37,8 @@ export interface TeamGameplayModifiers {
   turnoverAvoidance: number;
   penaltyAvoidance: number;
   groundBallBonus: number;
+  /** Share of in-game wear taken off (0–0.35), from a week of conditioning. */
+  wearRelief?: number;
 }
 
 export type CoachArchetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
@@ -313,6 +315,8 @@ export interface SeasonState {
   playerSeasonStats?: Record<string, PlayerSeasonLine>;
   /** National awards by season year, named when each regular season ends. */
   awardHistory?: Record<number, SeasonAward[]>;
+  /** First and second All-American teams by season year. */
+  allAmericanHistory?: Record<number, { first: SeasonAward[]; second: SeasonAward[] }>;
 }
 
 /** How a program has moved away from its base rating in the league file. */

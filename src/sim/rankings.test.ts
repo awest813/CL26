@@ -201,3 +201,31 @@ describe('computeRankings with poll inputs', () => {
     expect(ranked[1].teamId).toBe('a');
   });
 });
+
+describe('head to head', () => {
+  test('a close pair is ordered by who won their game', () => {
+    const a = makeTeam('a', 70);
+    const b = makeTeam('b', 70);
+    const records = { a: makeRecord(9, 3, 120, 100), b: makeRecord(9, 3, 118, 100) };
+    const base = { sos: 0.5, cappedMargin: 10, qualityResults: 0, qualityWins: 0, badLosses: 0 };
+    const withoutGame = computeRankings([a, b], records, 2, { a: { ...base, cappedMargin: 12 }, b: base });
+    expect(withoutGame[0].teamId).toBe('a');
+    const bWon = computeRankings([a, b], records, 2, { a: { ...base, cappedMargin: 12 }, b: { ...base, beat: ['a'] } });
+    expect(bWon[0].teamId).toBe('b');
+  });
+
+  test('a big gap in points is not overturned by one game', () => {
+    const a = makeTeam('a', 70);
+    const b = makeTeam('b', 70);
+    const records = { a: makeRecord(11, 1), b: makeRecord(7, 5) };
+    const base = { sos: 0.5, cappedMargin: 0, qualityResults: 0, qualityWins: 0, badLosses: 0 };
+    const ranked = computeRankings([a, b], records, 2, { a: base, b: { ...base, beat: ['a'] } });
+    expect(ranked[0].teamId).toBe('a');
+  });
+
+  test('poll inputs record who beat whom', () => {
+    const inputs = computePollInputs([makeGameResult('x', 'y', 9, 7)], { x: makeRecord(1, 0), y: makeRecord(0, 1) });
+    expect(inputs.x.beat).toEqual(['y']);
+    expect(inputs.y.beat).toBeUndefined();
+  });
+});

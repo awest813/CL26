@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import {
   applyCoachWeekSettings,
+  treeLevelEdge,
   advanceFatigue,
   playoffRoundFatigue,
   buildCoachGamePlan,
@@ -147,5 +148,19 @@ describe('coach effects', () => {
     assert.ok(skilledPlan.modifiers.faceoff > basePlan.modifiers.faceoff);
     assert.ok(skilledPlan.modifiers.groundBallBonus > basePlan.modifiers.groundBallBonus);
     assert.ok(skilledPlan.modifiers.penaltyAvoidance > basePlan.modifiers.penaltyAvoidance);
+  });
+});
+
+describe('skill tree game-day value', () => {
+  test('each level adds less than the last, and level 5 is worth three', () => {
+    const values = [0, 1, 2, 3, 4, 5].map(treeLevelEdge);
+    for (let level = 1; level <= 5; level += 1) {
+      assert.ok(values[level] > values[level - 1], `level ${level} should still help`);
+    }
+    for (let level = 2; level <= 5; level += 1) {
+      assert.ok(values[level] - values[level - 1] < values[level - 1] - values[level - 2], `level ${level} should add less`);
+    }
+    assert.strictEqual(treeLevelEdge(5), 3);
+    assert.strictEqual(treeLevelEdge(9), 3, 'levels past the cap add nothing');
   });
 });
