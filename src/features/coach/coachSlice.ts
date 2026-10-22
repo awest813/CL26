@@ -548,7 +548,14 @@ const coachSlice = createSlice({
         if (action.payload.redshirt) {
             if (redshirtBlocker(player, roster)) return;
             player.redshirt = true;
-            state.starterIds = state.starterIds.filter((id) => id !== player.id);
+            if (state.starterIds.includes(player.id)) {
+                // The best healthy backup at his position takes the starting spot.
+                const starters = new Set(state.starterIds);
+                const backup = roster
+                    .filter((row) => row.position === player.position && !row.redshirt && !starters.has(row.id))
+                    .sort((a, b) => b.overall - a.overall || a.id.localeCompare(b.id))[0];
+                state.starterIds = state.starterIds.map((id) => (id === player.id ? backup?.id : id)).filter((id): id is string => Boolean(id));
+            }
         } else {
             player.redshirt = false;
         }

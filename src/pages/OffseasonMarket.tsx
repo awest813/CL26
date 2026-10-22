@@ -11,6 +11,7 @@ import {
   type StaffCoach,
 } from '../sim/offseasonMarket';
 import { previewOffseasonDepartures } from '../sim/rosterManagement';
+import { draftLedger } from '../sim/programLedger';
 import { playerYearLabel } from '../sim/rosterSummary';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
@@ -47,6 +48,7 @@ function OffseasonMarket() {
     () => (selectedTeam ? buildPortalBoard(teams, selectedTeam.id, nextSeed, season.year) : []),
     [nextSeed, season.year, selectedTeam, teams],
   );
+  const proDraftLedger = draftLedger(season);
   const proDraft = useMemo(
     () => buildProDraft({
       teams,
@@ -55,9 +57,9 @@ function OffseasonMarket() {
       year: season.year,
       userTeamId: selectedTeam?.id ?? null,
       userRoster: coach.managedRoster,
-      ledger: season.programLedger,
+      ledger: proDraftLedger,
     }),
-    [coach.managedRoster, season.programLedger, season.seasonSeed, season.year, selectedTeam?.id, teams],
+    [coach.managedRoster, proDraftLedger, season.seasonSeed, season.year, selectedTeam?.id, teams],
   );
   const yourPicks = selectedTeam ? proDraft.filter((pick) => pick.collegeId === selectedTeam.id) : [];
   const yourPickById = new Map(yourPicks.map((pick) => [pick.playerId, pick]));

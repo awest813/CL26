@@ -1,6 +1,7 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import {
+  draftLedger,
   advanceProgramLedger,
   MAX_PRESTIGE_DRIFT,
   MAX_TALENT,
@@ -162,5 +163,15 @@ describe('advancing the ledger', () => {
     }
     // Before the classes, the climber was the weaker of the two (prestige 58 against 60).
     assert.ok(wins / games > 0.6, `climber won ${wins} of ${games}`);
+  });
+});
+
+describe('the pro draft ledger', () => {
+  test('stays on the pre-season ledger once the season is folded in', () => {
+    const before: ProgramLedger = { a: { prestigeDrift: 1, talent: 60 } } as unknown as ProgramLedger;
+    const after: ProgramLedger = { a: { prestigeDrift: 5, talent: 64 } } as unknown as ProgramLedger;
+    assert.strictEqual(draftLedger({ year: 2026, programLedger: before, programLedgerYear: 2025 }), before);
+    assert.strictEqual(draftLedger({ year: 2026, programLedger: after, programLedgerYear: 2026, programLedgerBefore: before }), before);
+    assert.strictEqual(draftLedger({ year: 2027, programLedger: after, programLedgerYear: 2026, programLedgerBefore: before }), after);
   });
 });

@@ -13,9 +13,11 @@ import {
   initializeRecruitingBoard,
   setRecruitHours,
   setRecruitPitch,
+  setPlayerRedshirt,
   setSelectedTeam,
   togglePortalClaim,
 } from './coachSlice.ts';
+import { generateRoster } from '../../sim/generateRoster.ts';
 
 const mockTeams: Team[] = [
   {
@@ -214,5 +216,24 @@ describe('weekly coach xp', () => {
     assert.strictEqual(userWonResult(win, 'us'), true);
     assert.strictEqual(userWonResult(loss, 'us'), false);
     assert.strictEqual(userWonResult(undefined, 'us'), false);
+  });
+});
+
+describe('redshirting a starter', () => {
+  test('the best backup at his position takes the spot', () => {
+    const team: Team = { id: 'rs', schoolName: 'Redshirt U', nickname: 'Reds', conferenceId: 'c1', region: 'East', prestige: 70 };
+    const roster = generateRoster(team, 'redshirt-starter');
+    const midfield = roster.filter((player) => player.position === 'M').sort((a, b) => b.overall - a.overall);
+    const starter = midfield.find((player) => player.year < 4 && !player.redshirtUsed);
+    assert.ok(starter, 'a midfielder who can redshirt');
+    const starterIds = midfield.slice(0, 3).map((player) => player.id);
+    if (!starterIds.includes(starter.id)) starterIds[0] = starter.id;
+    const base = { ...coachReducer(undefined, { type: 'init' }), managedRoster: roster, starterIds };
+
+    const state = coachReducer(base, setPlayerRedshirt({ playerId: starter.id, redshirt: true }));
+    assert.ok(!state.starterIds.includes(starter.id));
+    assert.strictEqual(state.starterIds.length, starterIds.length, 'the spot is filled');
+    const backup = midfield.find((player) => !starterIds.includes(player.id));
+    assert.ok(backup && state.starterIds.includes(backup.id));
   });
 });

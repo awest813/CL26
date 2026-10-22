@@ -421,6 +421,8 @@ const seasonSlice = createSlice({
     /** Fold a finished season into the ledger. Ignored if that season was already counted. */
     applyProgramLedger: (state, action: PayloadAction<{ ledger: ProgramLedger; year: number }>) => {
       if (state.programLedgerYear === action.payload.year) return;
+      // Kept so this year's pro draft reads the same numbers before and after the ledger moves.
+      state.programLedgerBefore = state.programLedger ?? {};
       state.programLedger = action.payload.ledger;
       state.programLedgerYear = action.payload.year;
     },

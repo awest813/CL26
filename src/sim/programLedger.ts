@@ -193,3 +193,11 @@ export function advanceProgramLedger(season: ProgramLedgerSeason): ProgramLedger
   }
   return next;
 }
+
+/**
+ * The ledger a year's pro draft is built from: the one before that season was added,
+ * so the draft does not change when the season is finalized.
+ */
+export function draftLedger(season: { year: number; programLedger?: ProgramLedger; programLedgerYear?: number | null; programLedgerBefore?: ProgramLedger }): ProgramLedger | undefined {
+  return season.programLedgerYear === season.year && season.programLedgerBefore ? season.programLedgerBefore : season.programLedger;
+}

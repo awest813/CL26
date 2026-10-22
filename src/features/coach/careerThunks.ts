@@ -38,7 +38,7 @@ import {
   entrantToPlayer,
 } from '../../sim/offseasonMarket';
 import { computePollInputs, computeRankings } from '../../sim/rankings';
-import { advanceProgramLedger, prestigeDriftForSeason, programRoster, withLeaguePrestige } from '../../sim/programLedger';
+import { advanceProgramLedger, draftLedger, prestigeDriftForSeason, programRoster, withLeaguePrestige } from '../../sim/programLedger';
 import { buildSeasonJobMarket } from '../../sim/jobOffers';
 import {
   canSimRegularWeek,
@@ -317,18 +317,6 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const standing = careerSetupFromPrestige(currentEffectivePrestige);
     dispatch(updateProgramStanding(standing));
 
-    const market = buildSeasonJobMarket({
-      teams: leagueTeams,
-      userTeamId: coach.selectedTeamId,
-      seasonSeed: season.seasonSeed,
-      year: season.year,
-      jobSecurity: newJobSecurity,
-      champion,
-      effectivePrestige: currentEffectivePrestige,
-    });
-    dispatch(setPendingJobOffers(market.offers));
-    dispatch(setEmployment(market.employment));
-
     // The rest of the league: results move each CPU program's prestige, and the class it
     // signed and the players it lost early to the pros move its talent. Read the CPU
     // classes before the recruit pool is cleared for next year.
@@ -364,6 +352,20 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
         year: season.year,
       }),
     }));
+
+    // Offers read prestige after this season is on the ledger, the same numbers accepting a job uses.
+    const updated = getState();
+    const market = buildSeasonJobMarket({
+      teams: withLeaguePrestige(teams, updated.season.programLedger, coach.selectedTeamId, updated.coach.programPrestigeDrift ?? 0),
+      userTeamId: coach.selectedTeamId,
+      seasonSeed: season.seasonSeed,
+      year: season.year,
+      jobSecurity: newJobSecurity,
+      champion,
+      effectivePrestige: currentEffectivePrestige,
+    });
+    dispatch(setPendingJobOffers(market.offers));
+    dispatch(setEmployment(market.employment));
 
     dispatch(resetRecruitingForNewSeason());
   },
@@ -428,7 +430,7 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
       year: state.season.year,
       userTeamId: team.id,
       userRoster: currentRoster,
-      ledger: state.season.programLedger,
+      ledger: draftLedger(state.season),
     })
       .filter((pick) => pick.early && pick.collegeId === team.id)
       .map((pick) => pick.playerId);

@@ -286,3 +286,19 @@ Fixed in this pass:
 Known and left as is:
 - A soft reset keeps rivalry trophy holders. No failing case found.
 - The Rankings page recomputes the tournament field rather than reading the saved seeds.
+
+## Second audit pass
+
+Fixed:
+- **Pro draft.** The draft no longer changes when you finalize the season. It reads the ledger from before that season was added (`season.programLedgerBefore`).
+- **Job offers.** Offers are built after the ledger update, so an offered school's tier matches the expectations you get when you accept.
+- **Redshirts.** Redshirting a starter promotes the best backup at his position instead of leaving the spot empty.
+- **UI.**
+  - The hub's last-result card shows a conference championship game when that was your last game.
+  - The offseason text no longer repeats itself.
+  - The playoff seeds panel and the Top 25 field have more room.
+  - The header leaves out the conference place until a game is played.
+
+Known and left as is:
+- **Old saves and awards.** A save from before season stats existed names that year's awards from part of the season. This affects one season only.
+- **Home field.** The home-field edge uses each program's base prestige, not its earned prestige. Switching it would move every calibration band, so it waits for the next engine tuning pass.

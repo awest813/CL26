@@ -313,6 +313,8 @@ export interface SeasonState {
   programLedger?: ProgramLedger;
   /** The last season year folded into the ledger, so a season is never counted twice. */
   programLedgerYear?: number | null;
+  /** The ledger before `programLedgerYear`'s season was added: that year's pro draft is built from it. */
+  programLedgerBefore?: ProgramLedger;
   /** Who holds each rivalry trophy, by trophy name. Carries across seasons. */
   trophyHolders?: Record<string, string>;
   /** This regular season's player totals, by player id. Cleared each new season. */
