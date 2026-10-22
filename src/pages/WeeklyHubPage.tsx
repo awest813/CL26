@@ -31,7 +31,7 @@ import {
 import { GameDayEdge, GameDayScheme, InstallPicker, ScoutingReport } from '../components/GamePlan';
 import { programTactics } from '../sim/schemeMatchups';
 import { effectiveProgram, programRoster } from '../sim/programLedger';
-import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
+import { availabilityWeekKey, injuryTimeline, weeklyScratches } from '../sim/injuries';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import { estimateWinChance } from '../sim/winEstimate';
 import { tacticRatingShift } from '../sim/matchEngine';
@@ -604,7 +604,9 @@ function WeeklyHubPage() {
         )}
         {scratches.length > 0 && (
           <p className="text-sm text-red-600 mt-3 mb-0">
-            Out this week: {scratches.map((scratch) => `${scratch.name} (${scratch.position})`).join(', ')}
+            Out this week: {scratches
+              .map((scratch) => `${scratch.name} (${scratch.position}, ${scratch.injury.toLowerCase()}, ${injuryTimeline(scratch)})`)
+              .join('; ')}
           </p>
         )}
         <div className="loopActions">

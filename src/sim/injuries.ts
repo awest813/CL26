@@ -6,6 +6,10 @@ export interface WeekScratch {
   playerId: string;
   name: string;
   position: Position;
+  /** What he is out with, e.g. "Ankle sprain". */
+  injury: string;
+  /** Games he will miss counting this one, or null when he is out for the season. */
+  weeksLeft: number | null;
 }
 
 const MIN_AVAILABLE: Record<Position, number> = {
@@ -17,9 +21,92 @@ const MIN_AVAILABLE: Record<Position, number> = {
   G: 1,
 };
 
+/** The 12 regular-season weeks, then the four bracket rounds, as one timeline. */
+const PLAYOFF_SLOTS: Record<string, number> = { ROUND1: 12, QUARTERFINAL: 13, SEMIFINAL: 14, FINAL: 15 };
+const SEASON_SLOTS = 16;
+/** Out for the rest of the year. */
+const SEASON_ENDING = SEASON_SLOTS;
+
+const INJURY_TYPES: Array<{ injury: string; weeks: [number, number]; weight: number }> = [
+  { injury: 'Ankle sprain', weeks: [1, 1], weight: 30 },
+  { injury: 'Hamstring strain', weeks: [1, 2], weight: 22 },
+  { injury: 'Concussion protocol', weeks: [1, 2], weight: 12 },
+  { injury: 'Shoulder separation', weeks: [2, 4], weight: 14 },
+  { injury: 'Broken hand', weeks: [3, 5], weight: 10 },
+  { injury: 'High ankle sprain', weeks: [4, 6], weight: 9 },
+  { injury: 'Torn ACL', weeks: [SEASON_ENDING, SEASON_ENDING], weight: 3 },
+];
+const INJURY_WEIGHT_TOTAL = INJURY_TYPES.reduce((sum, type) => sum + type.weight, 0);
+
+/** "back next week", "3 more weeks", or "out for the season". */
+export function injuryTimeline(scratch: Pick<WeekScratch, 'weeksLeft'>): string {
+  if (scratch.weeksLeft == null) return 'out for the season';
+  if (scratch.weeksLeft <= 1) return 'back next week';
+  return `out ${scratch.weeksLeft} weeks`;
+}
+
+/** Where a week key falls on the season timeline: `w0`…`w11`, then the playoff rounds. */
+export function availabilitySlot(weekKey: string): number | null {
+  if (weekKey in PLAYOFF_SLOTS) return PLAYOFF_SLOTS[weekKey];
+  const match = /^w(\d+)$/.exec(weekKey);
+  return match ? Number(match[1]) : null;
+}
+
+function slotKey(slot: number): string {
+  return Object.entries(PLAYOFF_SLOTS).find(([, value]) => value === slot)?.[0] ?? `w${slot}`;
+}
+
+interface ActiveInjury {
+  player: Player;
+  injury: string;
+  /** Last slot he misses (inclusive). */
+  until: number;
+}
+
+/** New injuries on one slot of the timeline, never taking a position below a playable lineup. */
+function rollNewInjuries(
+  roster: Player[],
+  seasonSeed: number,
+  slot: number,
+  teamId: string,
+  active: Map<string, ActiveInjury>,
+): void {
+  const rng = makeRng(seedToNumber(`${seasonSeed}:${slotKey(slot)}:${teamId}:injuries`));
+  const roll = rng();
+  const target = roll < 0.08 ? 2 : roll < 0.38 ? 1 : 0;
+  if (target === 0) return;
+
+  const healthyAtPosition = new Map<Position, number>();
+  for (const player of roster) {
+    if (active.has(player.id)) continue;
+    healthyAtPosition.set(player.position, (healthyAtPosition.get(player.position) ?? 0) + 1);
+  }
+
+  const available = roster.filter(
+    (player) => !active.has(player.id) && (healthyAtPosition.get(player.position) ?? 0) > MIN_AVAILABLE[player.position],
+  );
+  let added = 0;
+  while (added < target && available.length > 0) {
+    const index = Math.floor(rng() * available.length);
+    const [player] = available.splice(index, 1);
+    const left = (healthyAtPosition.get(player.position) ?? 0) - 1;
+    if (left < MIN_AVAILABLE[player.position]) continue;
+    healthyAtPosition.set(player.position, left);
+
+    let pick = rng() * INJURY_WEIGHT_TOTAL;
+    const type = INJURY_TYPES.find((candidate) => (pick -= candidate.weight) <= 0) ?? INJURY_TYPES[0];
+    const [low, high] = type.weeks;
+    const weeks = low + Math.floor(rng() * (high - low + 1));
+    active.set(player.id, { player, injury: type.injury, until: slot + weeks - 1 });
+    added += 1;
+  }
+}
+
 /**
- * This week's scratches for one roster. The seed is separate from the match
- * engine, so an empty list leaves the game RNG and the starter list untouched.
+ * Who is out this week, and for how long. Stateless: an injury from an earlier week
+ * is found again by replaying the season so far, so the same roster and week always
+ * give the same answer. The seed is separate from the match engine, so an empty list
+ * leaves the game RNG and the starter list untouched.
  */
 export function weeklyScratches(
   roster: Player[],
@@ -28,33 +115,24 @@ export function weeklyScratches(
   teamId: string,
 ): WeekScratch[] {
   if (roster.length === 0) return [];
+  const slot = availabilitySlot(weekKey);
+  if (slot == null) return [];
 
-  const rng = makeRng(seedToNumber(`${seasonSeed}:${weekKey}:${teamId}:injuries`));
-  const roll = rng();
-  const target = roll < 0.12 ? 2 : roll < 0.46 ? 1 : 0;
-  if (target === 0) return [];
-
-  const remainingAtPosition = new Map<Position, number>();
-  for (const player of roster) {
-    remainingAtPosition.set(player.position, (remainingAtPosition.get(player.position) ?? 0) + 1);
+  const active = new Map<string, ActiveInjury>();
+  for (let current = 0; current <= slot; current += 1) {
+    for (const [id, injury] of active) {
+      if (injury.until < current) active.delete(id);
+    }
+    rollNewInjuries(roster, seasonSeed, current, teamId, active);
   }
 
-  const pool = roster.filter(
-    (player) => (remainingAtPosition.get(player.position) ?? 0) > MIN_AVAILABLE[player.position],
-  );
-  const scratches: WeekScratch[] = [];
-  const available = [...pool];
-
-  while (scratches.length < target && available.length > 0) {
-    const index = Math.floor(rng() * available.length);
-    const [player] = available.splice(index, 1);
-    const left = (remainingAtPosition.get(player.position) ?? 0) - 1;
-    if (left < MIN_AVAILABLE[player.position]) continue;
-    remainingAtPosition.set(player.position, left);
-    scratches.push({ playerId: player.id, name: player.name, position: player.position });
-  }
-
-  return scratches;
+  return [...active.values()].map(({ player, injury, until }) => ({
+    playerId: player.id,
+    name: player.name,
+    position: player.position,
+    injury,
+    weeksLeft: until >= SEASON_ENDING ? null : until - slot + 1,
+  }));
 }
 
 export function availabilityWeekKey(

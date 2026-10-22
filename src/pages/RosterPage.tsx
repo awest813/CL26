@@ -3,9 +3,9 @@ import { Link, Navigate } from 'react-router-dom';
 import { toggleStarter } from '../features/coach/coachSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position, POSITION_ORDER } from '../types/sim';
-import { availabilityWeekKey, weeklyScratches } from '../sim/injuries';
+import { availabilityWeekKey, injuryTimeline, weeklyScratches, type WeekScratch } from '../sim/injuries';
 import { getRosterDepthSummary } from '../sim/rosterManagement';
-import { faceoffRating, savingRating } from '../sim/playerSpecialty';
+import { faceoffRating, playerPotential, savingRating } from '../sim/playerSpecialty';
 import { playerYearLabel } from '../sim/rosterSummary';
 import PageHeader from '../components/PageHeader';
 
@@ -62,14 +62,15 @@ function StarDisplay({ count }: { count: number }) {
 function PlayerRow({
   player,
   isStarter,
-  isOut,
+  injury,
   starterCountForPos,
   currentStartersForPos,
   onToggle,
 }: {
   player: Player;
   isStarter: boolean;
-  isOut: boolean;
+  /** This week's injury, when he is out. */
+  injury: WeekScratch | null;
   starterCountForPos: number;
   currentStartersForPos: number;
   onToggle: (id: string) => void;
@@ -83,12 +84,16 @@ function PlayerRow({
         <span className={`starterBadge ${isStarter ? 'starterBadge-on' : 'starterBadge-off'}`}>
           {isStarter ? 'Starter' : 'Backup'}
         </span>
-        {isOut && <span className="starterBadge starterBadge-out">Out</span>}
+        {injury && (
+          <span className="starterBadge starterBadge-out" title={`${injury.injury}, ${injuryTimeline(injury)}`}>
+            {injury.weeksLeft == null ? 'Out for year' : `Out ${injury.weeksLeft} wk`}
+          </span>
+        )}
       </td>
       <td className="font-medium rosterName">{player.name}</td>
       <td className="num text-gray-500 text-xs">{playerYearLabel(player.year)}</td>
       <td className="num text-gray-500 text-xs">{player.age}</td>
-      <td className={`num font-bold ${ratingClass(player.overall)}`}>{player.overall}</td>
+      <td className={`num font-bold ${ratingClass(player.overall)}`} title={`Potential ${playerPotential(player)}`}>{player.overall}</td>
       <td className="num text-xs text-gray-500">{player.shooting}</td>
       <td className="num text-xs text-gray-500">{player.passing}</td>
       <td className="num text-xs text-gray-500">{player.speed}</td>
@@ -130,7 +135,7 @@ function RosterPage() {
     if (!weekKey || !coach.selectedTeamId || roster.length === 0) return [];
     return weeklyScratches(roster, season.seasonSeed, weekKey, coach.selectedTeamId);
   }, [coach.selectedTeamId, roster, season.currentWeekIndex, season.phase, season.playoffs?.currentRound, season.seasonSeed]);
-  const scratchIds = useMemo(() => new Set(scratches.map((scratch) => scratch.playerId)), [scratches]);
+  const scratchById = useMemo(() => new Map(scratches.map((scratch) => [scratch.playerId, scratch])), [scratches]);
 
   const byPosition = useMemo(() => {
     const map: Record<Position, Player[]> = { A: [], M: [], D: [], LSM: [], FO: [], G: [] };
@@ -334,7 +339,7 @@ function RosterPage() {
                       key={player.id}
                       player={player}
                       isStarter={starterSet.has(player.id)}
-                      isOut={scratchIds.has(player.id)}
+                      injury={scratchById.get(player.id) ?? null}
                       starterCountForPos={starterTarget}
                       currentStartersForPos={currentStarters}
                       onToggle={onToggle}

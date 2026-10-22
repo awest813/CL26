@@ -75,6 +75,16 @@ describe('roster management progression systems', () => {
     assert.ok(highOverallGain >= lowOverallGain);
   });
 
+  test('a player with room under his potential outgrows one already at his ceiling', () => {
+    const support = { coachArchetype: 'DEVELOPER' as const, developmentSkill: 3, facilitiesLevel: 70, operationsSkill: 2, boostersLevel: 70 };
+    const roster = (potential: number) => Array.from({ length: 30 }, (_, i) => ({ ...basePlayer(`pot-${potential}-${i}`), year: 1 as const, potential }));
+    const capped = developPlayers(roster(70), makeRng(333), support);
+    const roomy = developPlayers(roster(88), makeRng(333), support);
+    const gain = (players: typeof capped) => players.reduce((sum, p) => sum + (p.overall - 70), 0);
+    assert.equal(gain(capped), 0, 'a player at his ceiling should not grow');
+    assert.ok(gain(roomy) > 30, `players with room grew only ${gain(roomy)} in total`);
+  });
+
   test('offseason development soft-caps elite attributes', () => {
     const roster = Array.from({ length: 6 }, (_, i) => ({
       ...basePlayer(`cap-${i}`),

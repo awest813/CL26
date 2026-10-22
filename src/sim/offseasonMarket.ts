@@ -214,6 +214,7 @@ function playerFromRatings(
     overall: rating,
     faceoff: position === 'FO' ? rating : clampRating(rating - 18),
     saving: position === 'G' ? rating : 40,
+    potential: clampRating(rating + (4 - year) * 2),
   };
 }
 

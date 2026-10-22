@@ -63,6 +63,8 @@ export interface Player extends PlayerRatings {
   faceoff?: number;
   /** Goalkeeping rating. Missing on players saved before it existed; see `savingRating`. */
   saving?: number;
+  /** The overall he can grow to. Missing on players saved before it existed; see `playerPotential`. */
+  potential?: number;
 }
 
 export interface Recruit {

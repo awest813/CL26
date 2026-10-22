@@ -39,3 +39,17 @@ export function growSpecialty(value: number, growth: number, rng: () => number):
   const room = value >= 86 ? 1 : 92 - value;
   return clamp(value + randInt(rng, 0, Math.min(growth, room)));
 }
+
+/**
+ * The overall a player can grow to. Older saved players fall back to a ceiling that
+ * leaves younger players more room: about three points per year of eligibility left.
+ */
+export function playerPotential(player: Player): number {
+  if (player.potential != null) return player.potential;
+  return clamp(player.overall + (5 - player.year) * 3);
+}
+
+/** A new player's ceiling: younger players have more room, and some outgrow their rating. */
+export function rollPotential(overall: number, year: Player['year'], rng: () => number): number {
+  return clamp(overall + (4 - year) * 3 + randInt(rng, -2, 10));
+}

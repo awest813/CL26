@@ -1,7 +1,7 @@
 import { Player, Position, SignedRecruit, Team } from '../types/sim';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
-import { faceoffRating, growSpecialty, rollSpecialties, savingRating } from './playerSpecialty';
+import { faceoffRating, growSpecialty, playerPotential, rollPotential, rollSpecialties, savingRating } from './playerSpecialty';
 import { ROSTER_POSITION_ORDER, ROSTER_SIZE } from './generateRoster';
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
@@ -14,6 +14,10 @@ const DEVELOPMENT_SOFT_CAP = 86;
 const DEVELOPMENT_HARD_CAP = 92;
 const WEEKLY_GROWTH_SOFT_OVERALL = 86;
 const WEEKLY_GROWTH_HARD_OVERALL = 92;
+/** Points of room under his potential at which a player grows at the full rate for his class. */
+const POTENTIAL_ROOM_FOR_FULL_GROWTH = 8;
+const POTENTIAL_SCALE_MAX = 1.25;
+const clampPotential = (value: number) => Math.max(40, Math.min(99, Math.round(value)));
 
 type CoachArchetype = 'RECRUITER' | 'TACTICIAN' | 'DEVELOPER';
 type PracticeFocus = 'OFFENSE' | 'DEFENSE' | 'CONDITIONING' | 'DISCIPLINE';
@@ -83,6 +87,8 @@ export function convertRecruitToPlayer(
     discipline,
     overall,
     ...rollSpecialties(position, baseline, makeRng(seedToNumber(`${team.id}:${signedRecruit.recruitId}:specialty`))),
+    // The scouting ceiling, read as the overall he can reach by his senior year.
+    potential: clampPotential(Math.max(overall + 2, 40 + ((signedRecruit.potential ?? 52 + signedRecruit.stars * 9) - 40) * 0.85)),
   };
 }
 
@@ -103,10 +109,12 @@ export function developPlayers(
   const totalBonus = devBonus + developmentSkillBonus + facilitiesBonus + operationsSkillBonus + boostersModifier;
 
   return roster.map((player) => {
-    // Freshmen and sophomores develop more
+    // Freshmen and sophomores develop more, and a player near his ceiling hardly at all.
     const growthCeiling =
       (player.year === 1 ? 4 : player.year === 2 ? 3 : player.year === 3 ? 2 : 1) + totalBonus;
-    const growth = randInt(rng, 0, Math.min(6, growthCeiling));
+    const roomToPotential = playerPotential(player) - player.overall;
+    const potentialScale = Math.max(0, Math.min(POTENTIAL_SCALE_MAX, roomToPotential / POTENTIAL_ROOM_FOR_FULL_GROWTH));
+    const growth = randInt(rng, 0, Math.min(6, Math.round(growthCeiling * potentialScale)));
     if (growth === 0) return player;
 
     const bump = (base: number) => {
@@ -322,6 +330,7 @@ export function applyRosterTurnover(
     const variance = randInt(rng, -12, 8);
     const overall = clamp(Math.round(baseline + variance - overallPenalty));
     const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
+    const walkOnRng = makeRng(seedToNumber(`${team.id}:${tag}:${newSeed}:${walkOnSerial}:specialty`));
     combined.push({
       id: `${team.id}-${tag}-${pos}-${newSeed}-${walkOnSerial}`,
       name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
@@ -337,7 +346,8 @@ export function applyRosterTurnover(
       stamina: clamp(Math.round(baseline + randInt(rng, -6, 6))),
       discipline: clamp(Math.round(baseline + randInt(rng, -5, 7))),
       overall,
-      ...rollSpecialties(pos, baseline - overallPenalty, makeRng(seedToNumber(`${team.id}:${tag}:${newSeed}:${walkOnSerial}:specialty`))),
+      ...rollSpecialties(pos, baseline - overallPenalty, walkOnRng),
+      potential: rollPotential(overall, 1, walkOnRng),
     });
   };
 
