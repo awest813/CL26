@@ -15,6 +15,7 @@ import { conferenceChampions, playConferenceTournaments, type TournamentSide } f
 import { addGamesToSeasonStats, allAmericanTeams, seasonAwards, storedGameResult } from '../../sim/seasonStats';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { rosterForAvailability, weeklyScratches } from '../../sim/injuries';
+import { activeRoster } from '../../sim/redshirts';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { seedToNumber } from '../../sim/rng';
 import {
@@ -138,13 +139,15 @@ export const simCurrentWeek = createAsyncThunk(
         })
       : null;
     const coachTeamTactics = coachGamePlan?.tactics ?? DEFAULT_TACTICS;
+    // Redshirts sit out every game; injuries come from the players who suit up.
+    const userRoster = coachState.managedRoster ? activeRoster(coachState.managedRoster) : null;
     const userAvailability =
-      coachState.selectedTeamId && coachState.managedRoster && coachState.managedRoster.length > 0
+      coachState.selectedTeamId && userRoster && userRoster.length > 0
         ? rosterForAvailability(
-            coachState.managedRoster,
+            userRoster,
             coachState.starterIds,
             weeklyScratches(
-              coachState.managedRoster,
+              userRoster,
               seasonSeed,
               `w${currentWeekIndex}`,
               coachState.selectedTeamId,
@@ -251,7 +254,7 @@ function conferenceTournamentSides(state: RootState): (teamId: string, weekKey: 
     const team = teams.find((row) => row.id === teamId);
     if (!team) throw new Error(`Team ${teamId} not found`);
     if (teamId === coach.selectedTeamId) {
-      const roster = coach.managedRoster && coach.managedRoster.length > 0 ? coach.managedRoster : generateRoster(team, rosterSeed);
+      const roster = coach.managedRoster && coach.managedRoster.length > 0 ? activeRoster(coach.managedRoster) : generateRoster(team, rosterSeed);
       const lineup = rosterForAvailability(roster, coach.starterIds, weeklyScratches(roster, season.seasonSeed, weekKey, teamId));
       return {
         input: { team, roster: lineup.roster, ...(lineup.starterIds.length > 0 ? { starterIds: lineup.starterIds } : {}), gameplan: plan?.modifiers },
@@ -352,7 +355,7 @@ export const simNextPlayoffRound = createAsyncThunk(
           const coachTeam = teams.find((t) => t.id === coach.selectedTeamId);
           const roster =
             coach.managedRoster && coach.managedRoster.length > 0
-              ? coach.managedRoster
+              ? activeRoster(coach.managedRoster)
               : coachTeam
                 ? generateRoster(coachTeam, rosterSeed)
                 : [];

@@ -8,8 +8,9 @@ const YEAR_LABELS = {
   4: 'Sr',
 } as const;
 
-export function playerYearLabel(year: number): string {
-  return YEAR_LABELS[year as keyof typeof YEAR_LABELS] ?? `Yr${year}`;
+export function playerYearLabel(year: number, redshirtUsed = false): string {
+  const label = YEAR_LABELS[year as keyof typeof YEAR_LABELS] ?? `Yr${year}`;
+  return redshirtUsed ? `RS ${label}` : label;
 }
 
 const SENIOR_EXPERIENCE_WEIGHT = 100;

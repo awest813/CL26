@@ -67,6 +67,10 @@ export interface Player extends PlayerRatings {
   saving?: number;
   /** The overall he can grow to. Missing on players saved before it existed; see `playerPotential`. */
   potential?: number;
+  /** Sitting out this season to keep a year of eligibility. */
+  redshirt?: boolean;
+  /** Has already taken his one redshirt year. */
+  redshirtUsed?: boolean;
 }
 
 export interface Recruit {

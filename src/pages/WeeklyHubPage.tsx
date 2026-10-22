@@ -30,6 +30,7 @@ import {
 import { GameDayEdge, GameDayScheme, InstallPicker, ScoutingReport } from '../components/GamePlan';
 import { gameDayProgramTactics, programTactics } from '../sim/schemeMatchups';
 import { programRoster, programStarters } from '../sim/programLedger';
+import { activeRoster } from '../sim/redshirts';
 import { availabilityWeekKey, injuryTimeline, rosterForAvailability, weeklyScratches } from '../sim/injuries';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import { estimateWinChance } from '../sim/winEstimate';
@@ -283,14 +284,14 @@ function WeeklyHubPage() {
     : availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? null);
   const scratches = useMemo(() => {
     if (!weekKey || !selectedTeamId || !coach.managedRoster?.length) return [];
-    return weeklyScratches(coach.managedRoster, season.seasonSeed, weekKey, selectedTeamId);
+    return weeklyScratches(activeRoster(coach.managedRoster), season.seasonSeed, weekKey, selectedTeamId);
   }, [coach.managedRoster, season.seasonSeed, selectedTeamId, weekKey]);
 
   // The estimate plays this exact matchup through the engine: both rosters and depth charts,
   // this week's scratches, both schemes, the install and fatigue, and home field.
   const winProb = useMemo(() => {
     if (!selectedTeam || !featuredOpponent || !opponentScheme) return null;
-    const roster = coach.managedRoster ?? [];
+    const roster = activeRoster(coach.managedRoster ?? []);
     if (roster.length === 0) return null;
     const userLineup = rosterForAvailability(roster, coach.starterIds, scratches);
     const opponentRoster = programRoster(featuredOpponent, season.programLedger, leagueSeasonRosterSeed(season.seasonSeed));

@@ -3,6 +3,7 @@ import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
 import { faceoffRating, growSpecialty, playerPotential, rollPotential, rollSpecialties, savingRating } from './playerSpecialty';
 import { ROSTER_POSITION_ORDER, ROSTER_SIZE } from './generateRoster';
+import { advanceClassYear } from './redshirts';
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
 const FACILITIES_BONUS_DIVISOR = 22;
@@ -303,12 +304,8 @@ export function applyRosterTurnover(
   const turningPro = new Set(earlyProIds);
   const staying = returners.filter((player) => !turningPro.has(player.id));
 
-  // Step 3: Age returning players
-  const agedReturners: Player[] = staying.map((player) => ({
-    ...player,
-    year: (player.year + 1) as 1 | 2 | 3 | 4,
-    age: player.age + 1,
-  }));
+  // Step 3: Age returning players. A redshirt keeps his class year.
+  const agedReturners: Player[] = staying.map(advanceClassYear);
 
   // Step 4: Convert signed recruits to freshmen
   const incomingFreshmen: Player[] = signedRecruits.map((sr) =>

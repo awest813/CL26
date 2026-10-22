@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { toggleStarter } from '../features/coach/coachSlice';
+import { setPlayerRedshirt, toggleStarter } from '../features/coach/coachSlice';
+import { activeRoster, canChangeRedshirts, redshirtBlocker } from '../sim/redshirts';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position, POSITION_ORDER } from '../types/sim';
 import { availabilityWeekKey, injuryTimeline, weeklyScratches, type WeekScratch } from '../sim/injuries';
@@ -66,6 +67,7 @@ function PlayerRow({
   starterCountForPos,
   currentStartersForPos,
   onToggle,
+  redshirtControl,
 }: {
   player: Player;
   isStarter: boolean;
@@ -74,16 +76,22 @@ function PlayerRow({
   starterCountForPos: number;
   currentStartersForPos: number;
   onToggle: (id: string) => void;
+  /** Shown before week 1: redshirt him, or take it back. */
+  redshirtControl: { label: string; blocker: string | null; onClick: () => void } | null;
 }) {
-  const canPromote = !isStarter && currentStartersForPos < starterCountForPos;
+  const canPromote = !player.redshirt && !isStarter && currentStartersForPos < starterCountForPos;
   const canDemote = isStarter;
 
   return (
     <tr className={`text-sm ${isStarter ? 'youRow' : ''}`}>
       <td>
-        <span className={`starterBadge ${isStarter ? 'starterBadge-on' : 'starterBadge-off'}`}>
-          {isStarter ? 'Starter' : 'Backup'}
-        </span>
+        {player.redshirt ? (
+          <span className="starterBadge starterBadge-off" title="Sitting out the season to keep a year of eligibility">Redshirt</span>
+        ) : (
+          <span className={`starterBadge ${isStarter ? 'starterBadge-on' : 'starterBadge-off'}`}>
+            {isStarter ? 'Starter' : 'Backup'}
+          </span>
+        )}
         {injury && (
           <span className="starterBadge starterBadge-out" title={`${injury.injury}, ${injuryTimeline(injury)}`}>
             {injury.weeksLeft == null ? 'Out for year' : `Out ${injury.weeksLeft} wk`}
@@ -91,7 +99,7 @@ function PlayerRow({
         )}
       </td>
       <td className="font-medium rosterName">{player.name}</td>
-      <td className="num text-gray-500 text-xs">{playerYearLabel(player.year)}</td>
+      <td className="num text-gray-500 text-xs">{playerYearLabel(player.year, player.redshirtUsed)}</td>
       <td className="num text-gray-500 text-xs">{player.age}</td>
       <td className={`num font-bold ${ratingClass(player.overall)}`} title={`Potential ${playerPotential(player)}`}>{player.overall}</td>
       <td className="num text-xs text-gray-500">{player.shooting}</td>
@@ -109,6 +117,18 @@ function PlayerRow({
             onClick={() => onToggle(player.id)}
           >
             {isStarter ? 'Bench' : 'Start'}
+          </button>
+        )}
+        {redshirtControl && (
+          <button
+            type="button"
+            className="lineupAction lineupAction-bench"
+            disabled={redshirtControl.blocker != null}
+            title={redshirtControl.blocker ?? undefined}
+            aria-label={`${redshirtControl.label}: ${player.name}`}
+            onClick={redshirtControl.onClick}
+          >
+            {redshirtControl.label}
           </button>
         )}
       </td>
@@ -130,10 +150,12 @@ function RosterPage() {
     () => getRosterDepthSummary(roster, coach.starterIds),
     [roster, coach.starterIds],
   );
+  const redshirtsOpen = canChangeRedshirts(season);
+  const redshirtCount = roster.filter((player) => player.redshirt).length;
   const scratches = useMemo(() => {
     const weekKey = availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? null);
     if (!weekKey || !coach.selectedTeamId || roster.length === 0) return [];
-    return weeklyScratches(roster, season.seasonSeed, weekKey, coach.selectedTeamId);
+    return weeklyScratches(activeRoster(roster), season.seasonSeed, weekKey, coach.selectedTeamId);
   }, [coach.selectedTeamId, roster, season.currentWeekIndex, season.phase, season.playoffs?.currentRound, season.seasonSeed]);
   const scratchById = useMemo(() => new Map(scratches.map((scratch) => [scratch.playerId, scratch])), [scratches]);
 
@@ -208,6 +230,13 @@ function RosterPage() {
       <div className="card">
         <p className="text-sm text-gray-600 m-0 max-w-2xl">
           Starters drive in-game ratings and who gets scoring chances. Bench players still contribute, but at a lower weight. Set your depth chart before big weeks and the postseason.
+        </p>
+        <p className="text-sm text-gray-600 mt-2 mb-0 max-w-2xl">
+          {redshirtsOpen
+            ? 'Before week 1 you can redshirt a player: he sits out the season, still develops, and keeps his class year. Each player gets one; seniors cannot.'
+            : redshirtCount > 0
+              ? `${redshirtCount} ${redshirtCount === 1 ? 'player is' : 'players are'} redshirting this season.`
+              : 'Redshirts are set before week 1 of each season.'}
         </p>
         {scratches.length > 0 && (
           <p className="text-sm text-red-600 mt-2 mb-0">
@@ -343,6 +372,13 @@ function RosterPage() {
                       starterCountForPos={starterTarget}
                       currentStartersForPos={currentStarters}
                       onToggle={onToggle}
+                      redshirtControl={redshirtsOpen && (player.redshirt || (!player.redshirtUsed && player.year < 4))
+                        ? {
+                            label: player.redshirt ? 'Undo redshirt' : 'Redshirt',
+                            blocker: player.redshirt ? null : redshirtBlocker(player, roster),
+                            onClick: () => dispatch(setPlayerRedshirt({ playerId: player.id, redshirt: !player.redshirt })),
+                          }
+                        : null}
                     />
                   ))}
                 </tbody>

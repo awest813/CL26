@@ -11,6 +11,7 @@ import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
 import { ledgerEntry, withLeaguePrestige } from '../../sim/programLedger';
+import { redshirtBlocker } from '../../sim/redshirts';
 import { setProgramLedgerEntry } from '../season/seasonSlice';
 
 export const WEEKLY_HOURS_CAP = 120;
@@ -539,6 +540,19 @@ const coachSlice = createSlice({
             state.starterIds.push(playerId);
         }
     },
+    /** Redshirt a player or take it back. Callers check the window (before week 1) with `canChangeRedshirts`. */
+    setPlayerRedshirt: (state, action: PayloadAction<{ playerId: string; redshirt: boolean }>) => {
+        const roster = state.managedRoster ?? [];
+        const player = roster.find((row) => row.id === action.payload.playerId);
+        if (!player) return;
+        if (action.payload.redshirt) {
+            if (redshirtBlocker(player, roster)) return;
+            player.redshirt = true;
+            state.starterIds = state.starterIds.filter((id) => id !== player.id);
+        } else {
+            player.redshirt = false;
+        }
+    },
     togglePortalClaim: (state, action: PayloadAction<string>) => {
         if (!Array.isArray(state.portalClaimIds)) state.portalClaimIds = [];
         const id = action.payload;
@@ -592,6 +606,7 @@ export const {
     setManagedRoster,
     setStarterIds,
     toggleStarter,
+    setPlayerRedshirt,
     togglePortalClaim,
     clearOffseasonMarket,
     resetCoach,
