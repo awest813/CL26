@@ -137,7 +137,7 @@ function RankingsPage() {
           : 'The poll and the projected 12-team field, updated after each week.'}
       />
 
-      <div className="grid2 grid2-lead">
+      <div className="grid2 grid2-poll">
       <section className="card">
         <h3 className="m-0">Poll <span className="pollWeek">{weekLabel}</span></h3>
         <p className="text-sm text-gray-500 mt-1 mb-2">

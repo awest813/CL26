@@ -59,7 +59,7 @@ function Header({ menuOpen, onToggleMenu, menuButtonRef }: HeaderProps) {
   const recordLine = record
     ? [
         `${record.wins}–${record.losses}`,
-        confStanding && seasonStarted ? `${ordinal(confStanding.place)} conf` : null,
+        confStanding && seasonStarted && record.wins + record.losses > 0 ? `${ordinal(confStanding.place)} conf` : null,
         seedLabel,
       ].filter(Boolean).join(' · ')
     : 'No games yet';

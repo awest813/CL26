@@ -248,6 +248,7 @@ function WeeklyHubPage() {
   const semifinalOpponentId = inConferenceChampionship ? conferenceSeeds[CONFERENCE_TOURNAMENT_SIZE - userConferenceSeed] : null;
   const semifinalOpponent = semifinalOpponentId ? teams.find((team) => team.id === semifinalOpponentId) ?? null : null;
   const tournamentRun = selectedTeamId ? tournamentRunFor(season.conferenceTournaments, selectedTeamId) : null;
+  const lastConferenceGame = tournamentRun?.games[tournamentRun.games.length - 1] ?? null;
 
   const featuredOpponent = season.phase === 'REGULAR' ? opponent : inConferenceChampionship ? semifinalOpponent : playoffOpponent;
   const featuredIsHome = season.phase === 'REGULAR'
@@ -559,6 +560,15 @@ function WeeklyHubPage() {
           userScore={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.homeScore : playoffSpot.lastGame.result.awayScore}
           oppScore={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.awayScore : playoffSpot.lastGame.result.homeScore}
         />
+      ) : lastConferenceGame && (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') ? (
+        <Scoreboard
+          heading={lastConferenceGame.round === 'FINAL' ? 'Conference final' : 'Conference semifinal'}
+          won={lastConferenceGame.winnerTeamId === selectedTeamId}
+          user={selectedTeam}
+          opponent={teams.find((team) => team.id === (lastConferenceGame.homeTeamId === selectedTeamId ? lastConferenceGame.awayTeamId : lastConferenceGame.homeTeamId))}
+          userScore={lastConferenceGame.homeTeamId === selectedTeamId ? lastConferenceGame.homeScore : lastConferenceGame.awayScore}
+          oppScore={lastConferenceGame.homeTeamId === selectedTeamId ? lastConferenceGame.awayScore : lastConferenceGame.homeScore}
+        />
       ) : userLastResult ? (
         <Scoreboard
           heading={`Week ${(userLastResult.weekIndex ?? 0) + 1} final`}
@@ -710,7 +720,7 @@ function WeeklyHubPage() {
                   ? 'Signing day and the season record are the next clicks. The portal can wait.'
                   : offseasonCaps.canFinalizeSeason
                     ? 'The class is signed. Record the season next.'
-                    : 'The year is recorded. Check the portal, the pro draft, and the roster, then begin the next season.'
+                    : 'Before the new year: check the portal, the pro draft, and the depth chart.'
               : 'Set the install and the board, then play the week.'}
         </p>
         <ul className="deskList">

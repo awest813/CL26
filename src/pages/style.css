@@ -1516,6 +1516,11 @@ abbr[title] {
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
 }
 
+/* The poll and the tournament field: the field's names need room too. */
+.grid2-poll {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+}
+
 .tacticGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
@@ -1553,7 +1558,7 @@ abbr[title] {
 
 .playoffLayoutGrid {
   display: grid;
-  grid-template-columns: minmax(270px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }

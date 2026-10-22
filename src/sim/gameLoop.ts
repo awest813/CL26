@@ -198,7 +198,7 @@ export function nextLoopStep(input: {
     return {
       action: 'begin-next-year',
       title: 'Next season',
-      detail: 'The year is on the career. Start the next slate when the roster looks right.',
+      detail: 'The year is recorded. Begin the next season once the roster looks right.',
       button: 'Begin next season',
     };
   }
