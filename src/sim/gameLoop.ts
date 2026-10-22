@@ -79,6 +79,7 @@ export function userPlayoffRun(playoffs: PlayoffState | null, teamId: string | n
 export type LoopAction =
   | 'play-week'
   | 'begin-season'
+  | 'conference-championships'
   | 'set-bracket'
   | 'play-round'
   | 'signing-day'
@@ -98,6 +99,10 @@ export function nextLoopStep(input: {
   weekNumber: number;
   canPlayWeek: boolean;
   canSetBracket: boolean;
+  /** The regular season is over and the conference championships have not been played. */
+  canPlayConferenceChampionships?: boolean;
+  /** "the No. 2 seed in the Great Lakes Union", when the user's program made its tournament. */
+  userConferenceSeedLabel?: string | null;
   canPlayRound: boolean;
   roundLabel: string | null;
   userPlaying: boolean;
@@ -124,6 +129,17 @@ export function nextLoopStep(input: {
       title: `Week ${input.weekNumber}`,
       detail: 'Plays every game this week, then updates recruiting and the roster.',
       button: `Play week ${input.weekNumber}`,
+    };
+  }
+
+  if (input.phase === 'PLAYOFF' && input.canPlayConferenceChampionships) {
+    return {
+      action: 'conference-championships',
+      title: 'Conference championships',
+      detail: input.userConferenceSeedLabel
+        ? `Your program is in as ${input.userConferenceSeedLabel}. The top four in every conference play a semifinal and a final for the automatic bids.`
+        : 'Your program missed its conference\u2019s top four. The top four in every conference play for the automatic bids.',
+      button: input.userConferenceSeedLabel ? 'Play the conference championship' : 'Sim the conference championships',
     };
   }
 

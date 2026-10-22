@@ -45,7 +45,8 @@ import {
   careerOffseasonCapabilities,
   hasSeasonHistoryForYear,
 } from '../../sim/seasonPhase';
-import { applyProgramLedger, startNewSeason } from '../season/seasonSlice';
+import { applyProgramLedger, simConferenceChampionships, startNewSeason } from '../season/seasonSlice';
+import { tournamentRunFor } from '../../sim/conferenceTournaments';
 
 const BASE_WEEKLY_XP = 8;
 const WINNING_WEEK_XP_BONUS = 3;
@@ -517,6 +518,25 @@ export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { sta
     }
 
     return seed;
+  },
+);
+
+/** The conference championships, with a week of load for each game the user's program plays (or rest if none). */
+export const simCareerConferenceChampionships = createAsyncThunk<void, void, { state: RootState }>(
+  'coach/simCareerConferenceChampionships',
+  async (_arg, { dispatch, getState }) => {
+    await dispatch(simConferenceChampionships()).unwrap();
+    const state = getState();
+    if (!state.coach.selectedTeamId) return;
+    const run = tournamentRunFor(state.season.conferenceTournaments, state.coach.selectedTeamId);
+    const gamesPlayed = run?.games.length ?? 0;
+    if (gamesPlayed === 0) {
+      dispatch(applyPlayoffRoundFatigue({ played: false }));
+      return;
+    }
+    for (let game = 0; game < gamesPlayed; game += 1) {
+      dispatch(applyPlayoffRoundFatigue({ played: true }));
+    }
   },
 );
 

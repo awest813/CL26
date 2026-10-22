@@ -18,7 +18,7 @@ import {
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
 } from '../features/coach/coachSlice';
-import { beginNextCareerSeason, processSeasonEnd, runCareerWeeklyCycle, simCareerPlayoffRound, simCareerToBracket } from '../features/coach/careerThunks';
+import { beginNextCareerSeason, processSeasonEnd, runCareerWeeklyCycle, simCareerConferenceChampionships, simCareerPlayoffRound, simCareerToBracket } from '../features/coach/careerThunks';
 import {
   advanceFatigue,
   buildCoachGamePlan,
@@ -34,6 +34,7 @@ import { availabilityWeekKey, injuryTimeline, rosterForAvailability, weeklyScrat
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import { estimateWinChance } from '../sim/winEstimate';
 import { isNeutralSiteRound } from '../sim/playoffs';
+import { CONFERENCE_SEMIFINAL_KEY, CONFERENCE_TOURNAMENT_SIZE, conferenceTournamentSeeds, tournamentRunFor } from '../sim/conferenceTournaments';
 import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
 import { buildPositionNeedByPosition } from '../sim/recruiting';
@@ -167,6 +168,7 @@ function WeeklyHubPage() {
   const season = useAppSelector((state) => state.season);
   const teams = useAppSelector((state) => state.league.teams);
   const records = useAppSelector(selectTeamRecords);
+  const conferences = useAppSelector((state) => state.league.conferences);
   const userUpcomingGame = useAppSelector(selectUserUpcomingGame);
   const userLastResult = useAppSelector(selectUserLastResult);
   const isCoachReady = useAppSelector(selectIsCareerReady);
@@ -228,10 +230,30 @@ function WeeklyHubPage() {
       : playoffSpot.currentGame.homeTeamId
     : null;
   const playoffOpponent = playoffOpponentId ? teams.find((team) => team.id === playoffOpponentId) ?? null : null;
-  const featuredOpponent = season.phase === 'REGULAR' ? opponent : playoffOpponent;
+  // Between week 12 and selection: the conference championships, with the user's seed and semifinal opponent.
+  const canPlayConferenceChampionships = season.phase === 'PLAYOFF'
+    && season.playoffs == null
+    && !season.conferenceTournaments
+    && season.completedWeeks >= season.scheduleByWeek.length;
+  const userConference = conferences.find((conference) => conference.id === selectedTeam?.conferenceId) ?? null;
+  const conferenceSeeds = useMemo(
+    () => (canPlayConferenceChampionships && selectedTeam
+      ? conferenceTournamentSeeds(teams.filter((team) => team.conferenceId === selectedTeam.conferenceId), records)
+      : []),
+    [canPlayConferenceChampionships, records, selectedTeam, teams],
+  );
+  const userConferenceSeed = selectedTeamId ? conferenceSeeds.indexOf(selectedTeamId) + 1 : 0;
+  const inConferenceChampionship = canPlayConferenceChampionships && userConferenceSeed > 0;
+  const semifinalOpponentId = inConferenceChampionship ? conferenceSeeds[CONFERENCE_TOURNAMENT_SIZE - userConferenceSeed] : null;
+  const semifinalOpponent = semifinalOpponentId ? teams.find((team) => team.id === semifinalOpponentId) ?? null : null;
+  const tournamentRun = selectedTeamId ? tournamentRunFor(season.conferenceTournaments, selectedTeamId) : null;
+
+  const featuredOpponent = season.phase === 'REGULAR' ? opponent : inConferenceChampionship ? semifinalOpponent : playoffOpponent;
   const featuredIsHome = season.phase === 'REGULAR'
     ? isHome
-    : playoffSpot.currentGame?.homeTeamId === selectedTeamId;
+    : inConferenceChampionship
+      ? userConferenceSeed <= 2
+      : playoffSpot.currentGame?.homeTeamId === selectedTeamId;
   // The opponent's staff runs the same scheme every week; the hub scouts it.
   const opponentScheme = useMemo(() => (featuredOpponent ? programTactics(featuredOpponent) : undefined), [featuredOpponent]);
   const featuredRecord = featuredOpponent
@@ -245,11 +267,9 @@ function WeeklyHubPage() {
       }
     : null;
 
-  const weekKey = availabilityWeekKey(
-    season.phase,
-    season.currentWeekIndex,
-    season.playoffs?.currentRound ?? null,
-  );
+  const weekKey = inConferenceChampionship
+    ? CONFERENCE_SEMIFINAL_KEY
+    : availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? null);
   const scratches = useMemo(() => {
     if (!weekKey || !selectedTeamId || !coach.managedRoster?.length) return [];
     return weeklyScratches(coach.managedRoster, season.seasonSeed, weekKey, selectedTeamId);
@@ -414,6 +434,8 @@ function WeeklyHubPage() {
     weekNumber: currentWeekDisplay,
     canPlayWeek: canAdvance,
     canSetBracket: season.phase === 'PLAYOFF' && season.playoffs == null,
+    canPlayConferenceChampionships,
+    userConferenceSeedLabel: inConferenceChampionship ? `the No. ${userConferenceSeed} seed in the ${userConference?.name ?? 'conference'}` : null,
     canPlayRound: season.phase === 'PLAYOFF' && season.playoffs != null && !season.playoffs.championTeamId,
     roundLabel: playoffRoundLabel,
     userPlaying: playoffSpot.currentGame != null,
@@ -426,7 +448,7 @@ function WeeklyHubPage() {
     fired: (coach.employment ?? 'ACTIVE') === 'FIRED',
   });
   const showPrep = season.phase === 'REGULAR' || season.phase === 'PRE';
-  const showInstall = showPrep || inBracket;
+  const showInstall = showPrep || inBracket || inConferenceChampionship;
 
   useEffect(() => {
     if (!pendingScroll.current) return;
@@ -436,7 +458,7 @@ function WeeklyHubPage() {
 
   async function runLoopStep() {
     if (advancing || !loopStep.button || loopStep.action === 'begin-season') return;
-    if (confirmPlay && (loopStep.action === 'play-week' || loopStep.action === 'play-round')) {
+    if (confirmPlay && (loopStep.action === 'play-week' || loopStep.action === 'play-round' || loopStep.action === 'conference-championships')) {
       const label = loopStep.action === 'play-week' ? `week ${currentWeekDisplay}` : (loopStep.button ?? 'This round');
       const kind = loopStep.action === 'play-week' ? 'week' : 'round';
       if (!window.confirm(confirmPlayCopy(kind, label))) return;
@@ -451,6 +473,8 @@ function WeeklyHubPage() {
           pendingScroll.current = false;
           setActionError('The week did not play. Stay on this hub and try again.');
         }
+      } else if (loopStep.action === 'conference-championships') {
+        await dispatch(simCareerConferenceChampionships()).unwrap();
       } else if (loopStep.action === 'set-bracket') {
         await dispatch(startPlayoffs()).unwrap();
       } else if (loopStep.action === 'play-round') {
@@ -555,6 +579,19 @@ function WeeklyHubPage() {
           )}
         </div>
         <p className="text-sm text-gray-500 mt-1 mb-0">{loopStep.detail}</p>
+        {tournamentRun && season.phase === 'PLAYOFF' && (
+          <p className="text-sm mt-1 mb-0">
+            <strong>{userConference?.name ?? 'Conference'} championship:</strong>{' '}
+            {tournamentRun.games.map((game) => {
+              const isHomeSide = game.homeTeamId === selectedTeamId;
+              const opponentName = teams.find((team) => team.id === (isHomeSide ? game.awayTeamId : game.homeTeamId))?.schoolName ?? 'Opponent';
+              const own = isHomeSide ? game.homeScore : game.awayScore;
+              const theirs = isHomeSide ? game.awayScore : game.homeScore;
+              return `${game.winnerTeamId === selectedTeamId ? 'beat' : 'lost to'} ${opponentName} ${own}–${theirs}${game.round === 'FINAL' ? ' in the final' : ' in the semifinal'}`;
+            }).join(', ')}
+            {tournamentRun.tournament.championTeamId === selectedTeamId ? '. Conference champions.' : '.'}
+          </p>
+        )}
         {featuredOpponent && featuredRecord && selectedTeam && (
           <div className="matchupSides">
             <div className="matchupSide">

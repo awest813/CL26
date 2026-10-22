@@ -11,6 +11,7 @@ import { buildPlayoffField, buildPlayoffState, firstTeamsOut, selectPlayoffField
 import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { compareConferenceStanding, compareOverallStanding, conferenceLeaders } from '../../sim/standings';
 import { programRoster, programStarters, withLeaguePrestige } from '../../sim/programLedger';
+import { conferenceChampions, playConferenceTournaments, type TournamentSide } from '../../sim/conferenceTournaments';
 import { addGamesToSeasonStats, allAmericanTeams, seasonAwards, storedGameResult } from '../../sim/seasonStats';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { rosterForAvailability, weeklyScratches } from '../../sim/injuries';
@@ -56,6 +57,7 @@ const initialState: SeasonState = {
   playerSeasonStats: {},
   awardHistory: {},
   allAmericanHistory: {},
+  conferenceTournaments: null,
 };
 
 // Async thunk to start a new season — only PRE (year 1) or OFFSEASON (next year).
@@ -223,11 +225,70 @@ export const simSeason = createAsyncThunk(
   }
 );
 
+/**
+ * Lineup and scheme for each side of a conference championship game: the coach's roster,
+ * depth chart, install, and scheme for the user's program; ledger rosters, staff depth
+ * charts, and schemes for CPU programs. Both lose players to that week's injuries.
+ */
+function conferenceTournamentSides(state: RootState): (teamId: string, weekKey: string) => TournamentSide {
+  const teams = selectTeams(state);
+  const { coach, season } = state;
+  const rosterSeed = leagueSeasonRosterSeed(season.seasonSeed);
+  const plan = coach.selectedTeamId
+    ? buildCoachGamePlan({
+        baseTactics: coach.tactics,
+        practiceFocus: coach.practiceFocus,
+        fatigue: coach.teamFatigue,
+        archetype: coach.profile?.archetype,
+        coachSkill: coach.profile?.skill,
+        skillTree: coach.skillTree,
+      })
+    : null;
+  return (teamId, weekKey) => {
+    const team = teams.find((row) => row.id === teamId);
+    if (!team) throw new Error(`Team ${teamId} not found`);
+    if (teamId === coach.selectedTeamId) {
+      const roster = coach.managedRoster && coach.managedRoster.length > 0 ? coach.managedRoster : generateRoster(team, rosterSeed);
+      const lineup = rosterForAvailability(roster, coach.starterIds, weeklyScratches(roster, season.seasonSeed, weekKey, teamId));
+      return {
+        input: { team, roster: lineup.roster, ...(lineup.starterIds.length > 0 ? { starterIds: lineup.starterIds } : {}), gameplan: plan?.modifiers },
+        tactics: plan?.tactics ?? DEFAULT_TACTICS,
+      };
+    }
+    const roster = programRoster(team, season.programLedger, rosterSeed);
+    const lineup = rosterForAvailability(roster, programStarters(roster), weeklyScratches(roster, season.seasonSeed, weekKey, teamId));
+    return { input: { team, roster: lineup.roster, starterIds: lineup.starterIds }, tactics: programTactics(team) };
+  };
+}
+
+function playTournaments(state: RootState) {
+  return playConferenceTournaments({
+    teams: selectTeams(state),
+    conferences: state.league.conferences,
+    recordsByTeamId: selectTeamRecords(state),
+    seasonSeed: state.season.seasonSeed,
+    sideFor: conferenceTournamentSides(state),
+  });
+}
+
+/** Between the regular season and selection: every conference's top four plays for its title. */
+export const simConferenceChampionships = createAsyncThunk(
+  'season/simConferenceChampionships',
+  async (_, { getState }) => {
+    const state = getState() as RootState;
+    assertCanInitializePlayoffs(state.season);
+    if (state.season.conferenceTournaments) throw new Error('The conference championships have already been played.');
+    return playTournaments(state);
+  },
+);
+
 export const startPlayoffs = createAsyncThunk(
     'season/startPlayoffs',
     async (_, { getState }) => {
         const state = getState() as RootState;
         assertCanInitializePlayoffs(state.season);
+        // Selection waits on the conference championships; play them now if nobody has.
+        const tournaments = state.season.conferenceTournaments ?? playTournaments(state);
 
         const teams = selectTeams(state);
         const rankingTeams = withLeaguePrestige(
@@ -242,9 +303,10 @@ export const startPlayoffs = createAsyncThunk(
         // Compute rankings to get top 12. Earned prestige drift is included for the coached program.
         const rankings = computeRankings(rankingTeams, records, rankingTeams.length, computePollInputs(state.season.gameResults, records));
         // The six highest-ranked conference champions are in; the other six spots are at-large.
-        const seeds = selectPlayoffField(rankings, Object.values(conferenceLeaders(teams, records)));
+        const champions = conferenceChampions(tournaments, conferenceLeaders(teams, records));
+        const seeds = selectPlayoffField(rankings, Object.values(champions));
 
-        return buildPlayoffState(seeds);
+        return { playoffs: buildPlayoffState(seeds), tournaments };
     }
 );
 
@@ -382,6 +444,7 @@ const seasonSlice = createSlice({
         state.previousRankByTeamId = {};
         state.lastAppliedWeekSimId = null;
         state.playerSeasonStats = {};
+        state.conferenceTournaments = null;
       })
       .addCase(simCurrentWeek.fulfilled, (state, action) => {
         if (state.phase !== 'REGULAR') return;
@@ -415,10 +478,15 @@ const seasonSlice = createSlice({
             state.allAmericanHistory = { ...(state.allAmericanHistory ?? {}), [state.year]: allAmericanTeams(state.playerSeasonStats) };
         }
       })
+      .addCase(simConferenceChampionships.fulfilled, (state, action) => {
+          if (state.phase !== 'PLAYOFF' || state.playoffs || state.conferenceTournaments) return;
+          state.conferenceTournaments = action.payload;
+      })
       .addCase(startPlayoffs.fulfilled, (state, action) => {
           // Idempotent: ignore duplicate fulfills once bracket exists.
           if (state.phase !== 'PLAYOFF' || state.playoffs) return;
-          state.playoffs = action.payload;
+          state.playoffs = action.payload.playoffs;
+          state.conferenceTournaments = state.conferenceTournaments ?? action.payload.tournaments;
       })
       .addCase(simNextPlayoffRound.fulfilled, (state, action) => {
           if (state.phase !== 'PLAYOFF') return;
@@ -576,10 +644,10 @@ export const selectFullRankings = createSelector(
 
 export const selectTop25Rankings = createSelector([selectFullRankings], (rankings) => rankings.slice(0, 25));
 
-/** Each conference's current leader: its champion once the regular season ends. */
+/** Each conference's champion: its tournament winner once the championships are played, else its table leader. */
 export const selectConferenceLeaders = createSelector(
-  [selectTeams, selectTeamRecords],
-  (teams, records) => conferenceLeaders(teams, records),
+  [selectTeams, selectTeamRecords, (state: RootState) => state.season.conferenceTournaments],
+  (teams, records, tournaments) => conferenceChampions(tournaments, conferenceLeaders(teams, records)),
 );
 
 /** The 12-team field if the season ended today: six auto bids for the best-ranked conference leaders, six at-large. */

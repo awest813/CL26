@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
-import { selectConferenceStandings, selectOverallStandings } from '../features/season/seasonSlice';
+import { selectConferenceStandings, selectOverallStandings, selectTeamRecords } from '../features/season/seasonSlice';
+import { conferenceTournamentSeeds } from '../sim/conferenceTournaments';
 import { useAppSelector } from '../store/hooks';
 import PageHeader from '../components/PageHeader';
 
@@ -28,6 +29,14 @@ function SeasonStandingsPage() {
   const userOverallIndex = selectedTeamId ? overall.findIndex((row) => row.team.id === selectedTeamId) : -1;
   const userOverall = userOverallIndex >= 0 ? overall[userOverallIndex] : null;
   const overallWrapRef = useRef<HTMLDivElement>(null);
+  const tournaments = useAppSelector((state) => state.season.conferenceTournaments);
+  const records = useAppSelector(selectTeamRecords);
+  const teamById = useMemo(() => new Map(teams.map((team) => [team.id, team])), [teams]);
+  const tournament = tournaments?.[conferenceId] ?? null;
+  const projectedSeeds = useMemo(
+    () => conferenceTournamentSeeds(teams.filter((team) => team.conferenceId === conferenceId), records),
+    [conferenceId, records, teams],
+  );
 
   function scrollToUserRow() {
     const wrap = overallWrapRef.current;
@@ -123,6 +132,33 @@ function SeasonStandingsPage() {
           </tbody>
         </table>
         </div>
+
+        <h4 className="m-0 mt-4 mb-1 text-sm font-bold">Conference championship</h4>
+        {tournament ? (
+          <ul className="text-sm m-0 pl-4">
+            {tournament.games.map((game) => {
+              const home = teamById.get(game.homeTeamId);
+              const away = teamById.get(game.awayTeamId);
+              const homeWon = game.winnerTeamId === game.homeTeamId;
+              return (
+                <li key={game.id}>
+                  {game.round === 'FINAL' ? 'Final' : 'Semifinal'}: <span className={homeWon ? 'font-semibold' : undefined}>#{game.homeSeed} {home?.schoolName}</span>{' '}
+                  {game.homeScore}–{game.awayScore}{' '}
+                  <span className={homeWon ? undefined : 'font-semibold'}>#{game.awaySeed} {away?.schoolName}</span>
+                </li>
+              );
+            })}
+            <li>
+              Champion: <strong>{teamById.get(tournament.championTeamId)?.schoolName}</strong>
+              {tournament.championTeamId === selectedTeamId && <span className="youMark ml-1">(You)</span>}
+            </li>
+          </ul>
+        ) : (
+          <p className="text-sm text-gray-600 m-0">
+            After week 12 the top four play for the title: {projectedSeeds.map((id, index) => `#${index + 1} ${teamById.get(id)?.schoolName ?? id}`).join(', ')}.
+            The six highest-ranked champions get automatic bids.
+          </p>
+        )}
       </div>
 
       <div className="card">

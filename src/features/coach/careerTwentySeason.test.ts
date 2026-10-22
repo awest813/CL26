@@ -26,6 +26,7 @@ import {
   beginFirstSeason,
   beginNextCareerSeason,
   simCareerPlayoffRound,
+  simCareerConferenceChampionships,
 } from './careerThunks.ts';
 import { exhibitionReducer } from '../exhibition/exhibitionSlice.ts';
 import { validateSeasonState } from '../../sim/seasonValidation.ts';
@@ -149,7 +150,15 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
     `${seasonLabel} PLAYOFF-without-bracket should validate: ${validationDuringBracketGap.error}`,
   );
 
+  await store.dispatch(simCareerConferenceChampionships());
+  const tournaments = store.getState().season.conferenceTournaments ?? {};
+  assert.strictEqual(Object.keys(tournaments).length, 16, `${seasonLabel} every conference should play its championship`);
   await store.dispatch(startPlayoffs());
+  const champions = new Set(Object.values(tournaments).map((tournament) => tournament.championTeamId));
+  assert.ok(
+    store.getState().season.playoffs?.seeds.filter((seed) => seed.autoBid).every((seed) => champions.has(seed.teamId)),
+    `${seasonLabel} every automatic bid should go to a conference tournament champion`,
+  );
   let playoffGuard = 0;
   while (!store.getState().season.playoffs?.championTeamId && playoffGuard < 8) {
     await store.dispatch(simCareerPlayoffRound());

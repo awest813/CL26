@@ -317,6 +317,29 @@ export interface SeasonState {
   awardHistory?: Record<number, SeasonAward[]>;
   /** First and second All-American teams by season year. */
   allAmericanHistory?: Record<number, { first: SeasonAward[]; second: SeasonAward[] }>;
+  /** This season's conference championships, by conference id; null until they are played. */
+  conferenceTournaments?: Record<string, ConferenceTournament> | null;
+}
+
+export interface ConferenceTournamentGame {
+  id: string;
+  round: 'SEMIFINAL' | 'FINAL';
+  homeTeamId: string;
+  awayTeamId: string;
+  homeSeed: number;
+  awaySeed: number;
+  homeScore: number;
+  awayScore: number;
+  winnerTeamId: string;
+}
+
+/** A four-team conference championship: two semifinals and a final. */
+export interface ConferenceTournament {
+  conferenceId: string;
+  /** Team ids in seed order, 1 to 4. */
+  seeds: string[];
+  games: ConferenceTournamentGame[];
+  championTeamId: string;
 }
 
 /** How a program has moved away from its base rating in the league file. */

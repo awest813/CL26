@@ -21,9 +21,9 @@ const MIN_AVAILABLE: Record<Position, number> = {
   G: 1,
 };
 
-/** The 12 regular-season weeks, then the four bracket rounds, as one timeline. */
-const PLAYOFF_SLOTS: Record<string, number> = { ROUND1: 12, QUARTERFINAL: 13, SEMIFINAL: 14, FINAL: 15 };
-const SEASON_SLOTS = 16;
+/** The 12 regular-season weeks, the conference championships, then the four bracket rounds, as one timeline. */
+const PLAYOFF_SLOTS: Record<string, number> = { CONF_SEMI: 12, CONF_FINAL: 13, ROUND1: 14, QUARTERFINAL: 15, SEMIFINAL: 16, FINAL: 17 };
+const SEASON_SLOTS = 18;
 /** Out for the rest of the year. */
 const SEASON_ENDING = SEASON_SLOTS;
 
