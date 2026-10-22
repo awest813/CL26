@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import { simulateGame } from './matchEngine.ts';
+import { fatigueWear, lateGameAdjustment, simulateGame } from './matchEngine.ts';
 import { generateRoster } from './generateRoster.ts';
 import { programStarters } from './programLedger.ts';
 import { DEFAULT_TACTICS } from './tactics.ts';
@@ -268,4 +268,46 @@ describe('no scheme to always run', () => {
       assert.ok(worst <= 0.05, `${name} beats default by at least ${(worst * 100).toFixed(1)} pp against every opponent`);
     });
   }
+});
+
+describe('fatigue and the late game', () => {
+  test('wear builds through the game and costs more at a fast pace', () => {
+    assert.strictEqual(fatigueWear(0, 1, DEFAULT_TACTICS), 0);
+    const half = fatigueWear(1800, 1, DEFAULT_TACTICS);
+    const full = fatigueWear(3600, 1, DEFAULT_TACTICS);
+    assert.ok(half > 0 && full > half * 2, 'wear should build faster late');
+    assert.ok(fatigueWear(3600, 1, { ...DEFAULT_TACTICS, tempo: 'fast' }) > full);
+    assert.ok(fatigueWear(3600, 1, { ...DEFAULT_TACTICS, tempo: 'slow' }) < full);
+    assert.ok(fatigueWear(3600, 0.6, DEFAULT_TACTICS) < full);
+  });
+
+  test('a lead late means stalling, a deficit late means hurrying, earlier nothing changes', () => {
+    const neutral = lateGameAdjustment(2, 900);
+    assert.strictEqual(neutral.setupScale, 1);
+    const ahead = lateGameAdjustment(2, 200);
+    const behind = lateGameAdjustment(-2, 200);
+    assert.ok(ahead.setupScale > 1 && ahead.shotAttemptDelta < 0);
+    assert.ok(behind.setupScale < 1 && behind.turnoverDelta > 0);
+    assert.strictEqual(lateGameAdjustment(0, 100).setupScale, 1);
+  });
+
+  test('a team with fresher legs and a real second line wins more', () => {
+    const rosterA = generateRoster(alpha, 'legs');
+    const rosterB = generateRoster(beta, 'legs');
+    const startersA = programStarters(rosterA);
+    const startersB = programStarters(rosterB);
+    const withStamina = (stamina: number) => rosterA.map((player) => ({ ...player, stamina }));
+    let fresh = 0;
+    let tired = 0;
+    const games = 600;
+    for (let seed = 1; seed <= games; seed += 1) {
+      const opts = { homeAdvantageForA: seed % 2 === 0 };
+      const opponent = { team: beta, roster: rosterB, starterIds: startersB };
+      const freshResult = simulateGame({ team: alpha, roster: withStamina(92), starterIds: startersA }, opponent, DEFAULT_TACTICS, DEFAULT_TACTICS, seed, opts);
+      if (freshResult.scoreA > freshResult.scoreB) fresh += 1;
+      const tiredResult = simulateGame({ team: alpha, roster: withStamina(45), starterIds: startersA }, opponent, DEFAULT_TACTICS, DEFAULT_TACTICS, seed, opts);
+      if (tiredResult.scoreA > tiredResult.scoreB) tired += 1;
+    }
+    assert.ok(fresh > tired + games * 0.03, `fresh legs won ${fresh}, tired legs ${tired} of ${games}`);
+  });
 });

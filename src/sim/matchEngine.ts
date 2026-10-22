@@ -31,6 +31,8 @@ interface TeamRatings {
   discipline: number;
   goaliePlayer: Player;
   faceoffPlayer: Player | null;
+  /** How fast the team wears down over a game: starter stamina, eased by a second midfield line that can rotate in. */
+  wearRate: number;
   shooters: WeightedPool;
   feeders: WeightedPool;
   scrappers: WeightedPool;
@@ -126,6 +128,11 @@ const RESET_SECONDS_MAX = 20;
 const CLEAR_SECONDS = 9;
 const FACEOFF_SECONDS = 4;
 const TRANSITION_SECONDS = 7;
+
+// In-game fatigue: rating points a team has lost by the final horn at a wear rate of 1.
+const IN_GAME_FATIGUE_MAX = 7;
+const SHALLOW_ROTATION_WEAR = 1.15;
+const ROTATION_RELIEF = 0.3;
 
 const MAX_OVERTIME_PERIODS = 30;
 const OVERTIME_BASE_WIN_CHANCE = 0.5;
@@ -242,6 +249,22 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
     }
   }
 
+  // Legs: the field players' stamina, weighted like the ratings, and how close the second midfield line is to the first.
+  let staminaWeighted = 0;
+  let staminaDenom = 0;
+  for (const p of roster) {
+    if (p.position === 'G') continue;
+    const w = playerDepthWeight(p.id, starterSet);
+    staminaWeighted += p.stamina * w;
+    staminaDenom += w;
+  }
+  const middies = roster.filter((p) => p.position === 'M').sort((a, b) => b.overall - a.overall);
+  const average = (players: Player[]) => (players.length > 0 ? players.reduce((sum, p) => sum + p.overall, 0) / players.length : 0);
+  const firstLine = average(middies.slice(0, 3));
+  const secondLineRatio = firstLine > 0 ? Math.min(1, average(middies.slice(3, 6)) / firstLine) : 0;
+  const wearRate = clamp(1 - (staminaWeighted / Math.max(staminaDenom, 1e-6) - 70) / 60, 0.5, 1.5)
+    * (SHALLOW_ROTATION_WEAR - ROTATION_RELIEF * secondLineRatio);
+
   const goalies = roster.filter((p) => p.position === 'G');
   const starterGoalie = starterSet ? goalies.find((g) => starterSet.has(g.id)) : undefined;
   const goaliePlayer = starterGoalie ?? goalies[0] ?? roster[0];
@@ -256,6 +279,7 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
     discipline: disWeighted / Math.max(disDenom, 1e-6),
     goaliePlayer,
     faceoffPlayer,
+    wearRate,
     shooters: buildPool(roster, (p) => depth(p) * SHOOTER_ROLE[p.position] * (shooterSkill(p) / SHOOTER_SKILL_PIVOT) ** 3),
     feeders: buildPool(roster, (p) => depth(p) * FEEDER_ROLE[p.position] * ((p.passing * 0.7 + p.IQ * 0.3) / SHOOTER_SKILL_PIVOT) ** 3),
     scrappers: buildPool(roster, (p) => depth(p) * SCRAPPER_ROLE[p.position] * ((p.speed * 0.5 + p.defense * 0.3 + p.IQ * 0.2) / SHOOTER_SKILL_PIVOT) ** 2),
@@ -347,6 +371,50 @@ export function resolveDeadlockWinner(
   const chanceA = clamp(OVERTIME_BASE_WIN_CHANCE + overtimeEdge / OVERTIME_EDGE_DIVISOR, OVERTIME_MIN_WIN_CHANCE, OVERTIME_MAX_WIN_CHANCE);
   return rng() < chanceA ? 'A' : 'B';
 }
+
+/**
+ * Rating points a side has lost to fatigue after `elapsed` seconds of play (overtime
+ * keeps counting). Wear builds slowly, then faster late; pace, pressure, and a hard ride
+ * all cost legs.
+ */
+export function fatigueWear(elapsed: number, wearRate: number, tactics: Tactics): number {
+  let load = 1;
+  if (tactics.tempo === 'fast') load *= 1.2;
+  if (tactics.tempo === 'slow') load *= 0.85;
+  if (tactics.defensePackage === 'pressure') load *= 1.1;
+  if (tactics.rideClear === 'aggressive') load *= 1.08;
+  return (Math.max(0, elapsed) / REGULATION_SECONDS) ** 1.5 * IN_GAME_FATIGUE_MAX * wearRate * load;
+}
+
+export interface LateGameAdjustment {
+  /** Multiplier on how long the offense holds the ball before its first look. */
+  setupScale: number;
+  shotAttemptDelta: number;
+  qualityDelta: number;
+  turnoverDelta: number;
+}
+
+const NEUTRAL_LATE_GAME: LateGameAdjustment = { setupScale: 1, shotAttemptDelta: 0, qualityDelta: 0, turnoverDelta: 0 };
+/** Seconds left in regulation when the game state starts to change how teams play. */
+export const LATE_GAME_SECONDS = 300;
+/** In the last two minutes a trailing defense gambles: harder rides and more fouls. */
+export const DESPERATION_SECONDS = 120;
+
+/**
+ * How the team with the ball plays the last five minutes, from its own margin.
+ * Ahead by one to four: stall and wait for a clean look. Behind by one to four: hurry.
+ * A big lead late just runs clock.
+ */
+export function lateGameAdjustment(margin: number, secondsLeft: number): LateGameAdjustment {
+  if (secondsLeft > LATE_GAME_SECONDS) return NEUTRAL_LATE_GAME;
+  if (margin >= 1 && margin <= 4) return { setupScale: 1.6, shotAttemptDelta: -0.06, qualityDelta: 0.015, turnoverDelta: -0.01 };
+  if (margin <= -1 && margin >= -4) return { setupScale: 0.55, shotAttemptDelta: 0.04, qualityDelta: -0.015, turnoverDelta: 0.02 };
+  if (Math.abs(margin) >= 5) return { ...NEUTRAL_LATE_GAME, setupScale: 1.2 };
+  return NEUTRAL_LATE_GAME;
+}
+
+const DESPERATION_RIDE_EDGE = 0.06;
+const DESPERATION_FOUL_EDGE = 0.02;
 
 const HOME_FIELD_OFFENSE = 2.6;
 const HOME_FIELD_DEFENSE = 2.2;
@@ -466,6 +534,21 @@ export function simulateGame(
     penaltyLeft.B = Math.max(0, penaltyLeft.B - seconds);
   }
 
+  /** Seconds played, counting overtime, for fatigue. */
+  function secondsPlayed(): number {
+    return overtimePeriod > 0 ? REGULATION_SECONDS + (overtimePeriod - 1) * OVERTIME_PERIOD_SECONDS + elapsed : elapsed;
+  }
+
+  /** Seconds left in regulation, or Infinity outside the fourth quarter and in overtime. */
+  function secondsLeftInRegulation(): number {
+    if (overtimePeriod > 0 || elapsed < REGULATION_SECONDS - PERIOD_LENGTH_SECONDS) return Infinity;
+    return Math.max(0, REGULATION_SECONDS - elapsed);
+  }
+
+  function marginFor(side: Side): number {
+    return side === 'A' ? sideA.stats.goals - sideB.stats.goals : sideB.stats.goals - sideA.stats.goals;
+  }
+
   /** True while `side` has the extra man: the other side is serving time and it is not. */
   function hasManUp(side: Side): boolean {
     return penaltyLeft[other(side)] > 0 && penaltyLeft[side] === 0;
@@ -575,12 +658,14 @@ export function simulateGame(
     if (start === 'clear') {
       offense.stats.clearAttempts = (offense.stats.clearAttempts ?? 0) + 1;
       advanceClock(CLEAR_SECONDS);
+      // A defense behind late throws everything at the ride.
+      const desperateRide = secondsLeftInRegulation() <= DESPERATION_SECONDS && marginFor(offenseSide) > 0;
       const cleared = rng() < clearChance(
         offense.tactics,
         defense.tactics,
         offense.ratings.discipline + offense.mods.discipline,
         hasManUp(other(offenseSide)),
-      );
+      ) - (desperateRide ? DESPERATION_RIDE_EDGE : 0);
       if (!cleared) {
         offense.stats.turnovers += 1;
         if (rng() < 0.5) creditCausedTurnover(defense);
@@ -599,9 +684,13 @@ export function simulateGame(
     const adjustedDefenseDiscipline = defense.ratings.discipline + defense.mods.discipline;
 
     const defenseSide = other(offenseSide);
+    const secondsLeft = secondsLeftInRegulation();
+    const late = lateGameAdjustment(marginFor(offenseSide), secondsLeft);
+    const desperateDefense = secondsLeft <= DESPERATION_SECONDS && marginFor(offenseSide) > 0;
     const defensiveFoulChance = clamp(
       DEFENSIVE_FOUL_BASE_CHANCE + schemeDefensiveFoulEdge(defense.tactics) - defense.mods.penaltyAvoidance
-        - (adjustedDefenseDiscipline - DISCIPLINE_PIVOT) / DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR,
+        - (adjustedDefenseDiscipline - DISCIPLINE_PIVOT) / DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR
+        + (desperateDefense ? DESPERATION_FOUL_EDGE : 0),
       PENALTY_MIN_CHANCE,
       PENALTY_MAX_CHANCE,
     );
@@ -631,19 +720,21 @@ export function simulateGame(
     const forcedTurnoverChance = clamp(
       TURNOVER_BASE_CHANCE + disciplineGap - offense.mods.turnoverAvoidance
         - defense.mods.discipline / DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR
-        + schemeTurnoverEdge(offense.tactics, defense.tactics),
+        + schemeTurnoverEdge(offense.tactics, defense.tactics) + late.turnoverDelta,
       TURNOVER_MIN_CHANCE,
       TURNOVER_MAX_CHANCE,
     ) * (manUpAtStart ? MAN_UP_TURNOVER_SCALE : 1);
 
-    const offensePower = offense.ratings.offense + offense.mods.offense;
-    const defensePower = defense.ratings.defense + defense.mods.defense;
+    // Both sides lose legs as the game goes on; the fresher team gains an edge late.
+    const played = secondsPlayed();
+    const offensePower = offense.ratings.offense + offense.mods.offense - fatigueWear(played, offense.ratings.wearRate, offense.tactics);
+    const defensePower = defense.ratings.defense + defense.mods.defense - fatigueWear(played, defense.ratings.wearRate, defense.tactics);
     const quality = (offensePower - defensePower) / SHOT_QUALITY_POWER_DIVISOR + offense.mods.shotQuality
       + schemeShotQualityEdge(offense.tactics, defense.tactics) + (transition ? TRANSITION_QUALITY_BOOST : 0)
-      - (manDownAtStart ? MAN_DOWN_QUALITY_COST : 0)
+      - (manDownAtStart ? MAN_DOWN_QUALITY_COST : 0) + late.qualityDelta
       + normalish(rng) * SHOT_QUALITY_VARIANCE;
     const shotAttemptChance = clamp(
-      SHOT_ATTEMPT_BASE_CHANCE + quality * 0.5 + (manUpAtStart ? MAN_UP_SHOT_BOOST : 0),
+      SHOT_ATTEMPT_BASE_CHANCE + quality * 0.5 + (manUpAtStart ? MAN_UP_SHOT_BOOST : 0) + late.shotAttemptDelta,
       SHOT_ATTEMPT_MIN_CHANCE,
       SHOT_ATTEMPT_MAX_CHANCE,
     );
@@ -654,7 +745,7 @@ export function simulateGame(
       ? TRANSITION_SECONDS
       : manUpAtStart
         ? randInt(rng, MAN_UP_SETUP_SECONDS_MIN, MAN_UP_SETUP_SECONDS_MAX)
-        : SETUP_SECONDS[offense.tactics.tempo] * (0.6 + rng() * 0.8);
+        : SETUP_SECONDS[offense.tactics.tempo] * (0.6 + rng() * 0.8) * late.setupScale;
     advanceClock(shotClockUsed);
 
     for (let attempt = 0; attempt < MAX_SHOTS_PER_POSSESSION; attempt += 1) {
