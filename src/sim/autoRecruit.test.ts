@@ -147,7 +147,7 @@ describe('auto recruiting plan', () => {
 describe('program pull', () => {
   test('a big name helps with blue chips, and a small one is a long shot', () => {
     assert.ok(programPull(90, 5) > programPull(50, 5));
-    assert.strictEqual(programPull(48, 5), 0.5);
+    assert.strictEqual(programPull(48, 5), 0.35);
     assert.ok(programPull(90, 2) <= 1.15);
     assert.ok(programPull(60, 2) > programPull(60, 5));
   });

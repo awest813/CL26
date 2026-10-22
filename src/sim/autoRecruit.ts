@@ -1,6 +1,6 @@
 import type { Position, Recruit, RecruitingPitch, Team } from '../types/sim.ts';
 import { estimateRecruitFit, getTeamPitchGrade } from './recruiting.ts';
-import { pitchMultiplier, programPull } from './recruitingWeek.ts';
+import { blueChipPace, INTEREST_PER_HOUR, pitchMultiplier, programPull } from './recruitingWeek.ts';
 
 export const RECRUITING_BOARD_LIMIT = 25;
 
@@ -40,10 +40,16 @@ interface ScoredTarget {
   interest: number;
 }
 
-/** Interest a prospect starts at when added to the board. */
+/**
+ * Interest a prospect starts at when added to the board. A prospect who sees the
+ * program as a reach starts cooler, and a blue chip is never more than lukewarm
+ * at first: 40 at most, 35 for a four-star, 30 for a five-star.
+ */
 export function boardStartingInterest(recruit: Recruit, team: Team): number {
   const fit = estimateRecruitFit(recruit, team);
-  return Math.min(40, Math.round(fit * 0.4 + recruit.stars * 2));
+  const pull = Math.min(1, programPull(team.prestige, recruit.stars));
+  const ceiling = 40 - Math.max(0, recruit.stars - 3) * 5;
+  return Math.min(ceiling, Math.round((fit * 0.4 + recruit.stars * 2) * pull));
 }
 
 function bestPitch(
@@ -71,7 +77,7 @@ function scoreTarget(input: AutoRecruitInput, recruit: Recruit, onBoard: boolean
   if (hasDealbreakerConflict(recruit, team, positionNeedByPosition)) return null;
 
   const { pitch, multiplier } = bestPitch(recruit, team, positionNeedByPosition);
-  const perHourGain = 0.5 * gainMultiplier * multiplier * programPull(team.prestige, recruit.stars);
+  const perHourGain = INTEREST_PER_HOUR * gainMultiplier * multiplier * programPull(team.prestige, recruit.stars) * blueChipPace(recruit.stars);
   const weeklyGain = perHourGain * maxHoursPerRecruit;
   const interest = Math.min(
     100,

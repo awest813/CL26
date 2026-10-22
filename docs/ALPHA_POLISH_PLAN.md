@@ -54,22 +54,44 @@ found and left open.
   conference's scores, next week's ranked games and rivalries, and blue-chip commits from the last
   recruiting period (`RecruitingReport.commits`).
 
+### Recruiting pace (follow-up, approved)
+Before: prestige barely mattered. On staff recruiting a 1.5★ program (57) signed 4.0–4.3★ classes
+with two to four 5★s, a 5★ program closed 5★s by week 3, and the CPU took only 22 of 90 five-stars
+across the test runs. A coach on staff recruiting at a 2.5★ program won 83–92% a year by year six.
+
+Changes (`recruitingWeek.ts`, `autoRecruit.ts`):
+- Pitch effects are scaled so the best pitch (A+ on a top motivation) is worth 1.6× instead of
+  2.25×. Every grade still counts; a hard cap would have flattened B through A+.
+- Program pull reads the star system: an N-star prospect expects an N-star program (expected
+  prestige 38 + 10 × stars, the middle of that tier), with a steeper slope (/40) and a 0.35 floor.
+- Blue chips decide slower: 8% less weekly gain per star above two.
+- Starting interest scales with pull and caps at 35 for a 4★ and 30 for a 5★.
+- One hour is worth 0.6 interest instead of 0.5, so programs can sign at their own tier.
+
+After (staff recruiting, three seeds each):
+
+| Program | Avg class | 5★ signed | 5★ commit week |
+|---|---|---|---|
+| 5★ (90) | 4.0–4.5★ | 2–7 | 4–6 |
+| 4.5★ (84) | 4.0–4.2★ | 0–2 | 6–7.5 |
+| 3★ (68) | 3.3–3.6★ | 0 | — |
+| 1.5★ (57) | 2.3–2.4★ | 0 | — |
+
+The CPU now takes 59 of 90 five-stars. A 2.5★ program on staff recruiting holds its prestige and
+wins about half its games over its first five years. The 20-season regression coach (who chases
+the highest stars regardless of fit) averages about 36%, close to the ~38% a program at its rank
+is expected to win.
+
 ## Open items, in priority order
 
-1. **Recruiting pace (balance; needs a decision).** A 4★ program closes 5★ "reach" prospects in
-   about 3 periods. A HIGH-importance pitch graded A+ multiplies gains by 2.25×, which swamps program
-   pull (0.87× for that case). Options: cap the pitch multiplier near 1.6×, or make pull apply after
-   the pitch bonus with a steeper curve for star gaps. Check against `autoRecruit.test.ts` and the
-   20-season career test, and aim for 5★ reaches taking 6–8 periods.
-2. **CPU recruiting reads the same pitches.** CPU pursuit uses prestige and region only; academics
+1. **CPU recruiting reads the same pitches.** CPU pursuit uses prestige and region only; academics
    and campus life now differ by school but only the user benefits. Fold the school traits into
    `cpuWeeklyPursuit`.
-3. **Install depth.** Installs are a weekly pick from four. Next step: a second slot (scheme
+2. **Install depth.** Installs are a weekly pick from four. Next step: a second slot (scheme
    install, such as "zone week") that sharpens one base-scheme call against this week's opponent,
    tied to the scouting report.
-4. **Prestige consequences.** Stars now drive pitch grades and are shown everywhere. Still to do:
-   recruit visits or interest floors gated by stars (a 1★ program cannot start a 5★ above 10%),
-   and stars in job-offer tiers (`jobOffers.ts` still compares raw prestige).
-5. **Hub wire in the bracket.** The wire covers regular-season weeks and the pause before
+3. **Prestige consequences.** Stars now drive pitch grades and are shown everywhere. Still to do:
+   stars in job-offer tiers (`jobOffers.ts` still compares raw prestige).
+4. **Hub wire in the bracket.** The wire covers regular-season weeks and the pause before
    selection. Add conference championship and playoff round results.
-6. **Responsive pass.** The recruiting target table and the wire panel are dense under 760px.
+5. **Responsive pass.** The recruiting target table and the wire panel are dense under 760px.

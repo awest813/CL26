@@ -36,21 +36,35 @@ function getImportanceMultiplier(importance?: 'HIGH' | 'MEDIUM' | 'LOW'): number
   return 0.7; // Pitching something they don't care about
 }
 
+/** What the best pitch (an A+ on what the prospect cares about most) is worth: it helps, it does not outweigh the program. */
+export const BEST_PITCH_MULTIPLIER = 1.6;
+const RAW_BEST_PITCH = 1.5 * 1.5;
+/** Every pitch effect, good or bad, is squeezed by the same share, so each grade still counts. */
+const PITCH_EFFECT_SCALE = (BEST_PITCH_MULTIPLIER - 1) / (RAW_BEST_PITCH - 1);
+
 /** How much a pitch scales the base weekly gain: what the prospect cares about times how well you sell it. */
 export function pitchMultiplier(recruit: Recruit, pitch: RecruitingPitch | undefined, grade: string | undefined): number {
   if (!pitch) return 1;
   const motivation = recruit.motivations.find(m => m.pitch === pitch);
-  return getImportanceMultiplier(motivation?.importance) * getGradeMultiplier(grade);
+  const raw = getImportanceMultiplier(motivation?.importance) * getGradeMultiplier(grade);
+  return 1 + (raw - 1) * PITCH_EFFECT_SCALE;
 }
 
 /**
- * How far a program's name carries with a prospect of this tier. A blue chip
- * expects a top program; a depth recruit is flattered by a big name calling.
- * 0.5x for a long shot up to 1.15x when the program outclasses the prospect.
+ * How far a program's name carries with a prospect of this tier. A prospect
+ * expects a program of his own star rating (the middle of that prestige tier:
+ * 88 for a five-star, 68 for a three-star); a depth recruit is flattered by a
+ * big name calling. 0.35x for a long shot up to 1.15x when the program
+ * outclasses the prospect.
  */
 export function programPull(prestige: number, stars: number): number {
-  const expectedPrestige = 45 + stars * 9;
-  return Math.max(0.5, Math.min(1.15, 1 + (prestige - expectedPrestige) / 60));
+  const expectedPrestige = 38 + stars * 10;
+  return Math.max(0.35, Math.min(1.15, 1 + (prestige - expectedPrestige) / 40));
+}
+
+/** Blue chips take longer to decide: each star above two slows the week's gain by 8%. */
+export function blueChipPace(stars: number): number {
+  return Math.min(1, 1 - 0.08 * (stars - 2));
 }
 
 /** Coach skill scales user gains from 0.85x at skill 40 to 1.15x at skill 99. */
@@ -58,6 +72,9 @@ export function coachSkillMultiplier(coachSkill: number): number {
   const boundedCoachSkill = Math.max(40, Math.min(99, coachSkill));
   return 0.85 + ((boundedCoachSkill - 40) / 59) * 0.3;
 }
+
+/** Interest one recruiting hour buys before any multiplier. */
+export const INTEREST_PER_HOUR = 0.6;
 
 export interface UserWeeklyGainInput {
   recruit: Recruit;
@@ -76,15 +93,16 @@ export interface UserWeeklyGainInput {
 }
 
 /**
- * Interest the user's staff adds to one prospect in a week. Half a point an hour,
- * a little more for a higher-rated prospect, scaled by the staff and the program's
- * pull with this tier, then by the pitch, plus a position-need bump.
+ * Interest the user's staff adds to one prospect in a week. A little over half a point an hour,
+ * a little more for a higher-rated prospect, scaled by the staff, the program's
+ * pull with this tier, and how slowly blue chips decide, then by the pitch, plus
+ * a position-need bump.
  */
 export function userWeeklyGain(input: UserWeeklyGainInput): number {
   if (input.hours <= 0) return 0;
-  const rawGain = input.hours * 0.5 + input.recruit.stars * 0.2 + (input.swing ?? 0);
+  const rawGain = input.hours * INTEREST_PER_HOUR + input.recruit.stars * 0.2 + (input.swing ?? 0);
   const pull = input.programPrestige == null ? 1 : programPull(input.programPrestige, input.recruit.stars);
-  const baseGain = rawGain * input.gainMultiplier * coachSkillMultiplier(input.coachSkill) * pull;
+  const baseGain = rawGain * input.gainMultiplier * coachSkillMultiplier(input.coachSkill) * pull * blueChipPace(input.recruit.stars);
   const pitchBonus = baseGain * (pitchMultiplier(input.recruit, input.pitch, input.pitchGrade) - 1);
   return Math.max(0, Math.round(baseGain + pitchBonus + input.positionNeedBonus));
 }

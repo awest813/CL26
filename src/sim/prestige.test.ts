@@ -56,7 +56,11 @@ describe('prestige stars', () => {
   });
 
   test('a prospect sees a program of his own caliber as a fit and a far smaller one as a long shot', () => {
-    assert.strictEqual(programPullBand(programPull(90, 5)), 'even');
+    // An N-star prospect expects an N-star program: the middle of that tier.
+    assert.strictEqual(programPull(88, 5), 1);
+    assert.strictEqual(programPull(68, 3), 1);
+    assert.strictEqual(prestigeStars(68), 3);
+    assert.strictEqual(programPullBand(programPull(88, 5)), 'even');
     assert.strictEqual(programPullBand(programPull(60, 5)), 'longShot');
     assert.strictEqual(programPullBand(programPull(90, 2)), 'strong');
     assert.strictEqual(programPullBand(programPull(74, 4)), 'reach');
