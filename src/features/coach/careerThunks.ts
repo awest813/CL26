@@ -297,6 +297,10 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
 
     dispatch(recordSeasonEnd({
       year: season.year,
+      teamId: coach.selectedTeamId,
+      winTarget: coach.programExpectations.winTarget,
+      rankTarget,
+      pollRank,
       wins,
       losses,
       madePlayoffs,
@@ -517,7 +521,9 @@ export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { sta
         after.coach.selectedTeamId,
         after.coach.programPrestigeDrift ?? 0,
       );
-      dispatch(initializeRecruitingBoard({ seed, teams: recruitingTeams }));
+      // A board built in the preseason, before any recruiting week ran, carries into the season.
+      const preseasonBoard = after.coach.recruitPool.length > 0 && after.coach.recruitingWeekIndex === 0;
+      if (!preseasonBoard) dispatch(initializeRecruitingBoard({ seed, teams: recruitingTeams }));
     }
 
     return seed;

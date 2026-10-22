@@ -37,7 +37,7 @@ import PageHeader from '../components/PageHeader';
 const ARCHETYPE_BONUSES: Record<string, string[]> = {
   RECRUITER: ['+15% weekly interest gain', 'Expanded recruit reach', 'Faster commitments on key needs'],
   TACTICIAN: ['20% less fatigue build-up', 'Better practice-to-game translation', 'Scheme advantage in late possessions'],
-  DEVELOPER: ['Prospects trust your system', 'Signed players develop faster', 'Cleaner sticks and defensive growth'],
+  DEVELOPER: ['Signed players develop faster', 'Cleaner sticks and defensive growth', 'Recruiting pull 5% lower'],
 };
 
 function jobSecurityLabel(security: number): { label: string; color: string } {
@@ -166,9 +166,7 @@ function CoachCareerPage() {
     ? recordsByTeamId[coach.selectedTeamId] ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0, pointsFor: 0, pointsAgainst: 0 }
     : { wins: 0, losses: 0, confWins: 0, confLosses: 0, pointsFor: 0, pointsAgainst: 0 };
 
-  const expectations = coach.programExpectations;
-  const winTarget = expectations?.winTarget ?? 0;
-  const rankTarget = expectations?.rankTarget ?? 99;
+
   const careerYear = coach.careerRecord.seasonsCompleted + 1;
 
   const pollRank = useMemo(() => {
@@ -274,6 +272,12 @@ function CoachCareerPage() {
     ? coach.seasonHistory[coach.seasonHistory.length - 1]
     : null;
   const recordedSeason = seasonEndProcessed && latestSeasonHistory?.year === season.year ? latestSeasonHistory : null;
+  // A recorded season is judged against the targets it was played under, even after a job change.
+  const expectations = coach.programExpectations;
+  const winTarget = recordedSeason?.winTarget ?? expectations?.winTarget ?? 0;
+  const rankTarget = recordedSeason?.rankTarget ?? expectations?.rankTarget ?? 99;
+  const movedSinceRecord = Boolean(recordedSeason?.teamId && recordedSeason.teamId !== coach.selectedTeamId);
+  const shownPollRank = recordedSeason?.pollRank ?? (movedSinceRecord ? null : pollRank);
   const displayedWins = recordedSeason?.wins ?? userRecord.wins;
   const displayedLosses = recordedSeason?.losses ?? userRecord.losses;
   const seasonStatusLabel = recordedSeason ? 'Final Season Record' : 'Season Performance';
@@ -347,10 +351,10 @@ function CoachCareerPage() {
             </div>
             <div className="text-xs text-gray-500 mt-1.5">
               Rank target: Top {rankTarget}
-              {pollRank != null && season.phase !== 'PRE' && (
+              {shownPollRank != null && season.phase !== 'PRE' && (
                 <span className="block mt-0.5 text-gray-600">
-                  Current poll: #{pollRank}
-                  {pollRank <= rankTarget ? ' (meeting target)' : ' (below target)'}
+                  {recordedSeason ? 'Final poll' : 'Current poll'}: #{shownPollRank}
+                  {shownPollRank <= rankTarget ? ' (meeting target)' : ' (below target)'}
                 </span>
               )}
             </div>
@@ -406,7 +410,7 @@ function CoachCareerPage() {
                 </thead>
                 <tbody>
                   {[...coach.seasonHistory].reverse().map((entry, i) => (
-                    <SeasonHistoryRow key={entry.year} entry={entry} index={i} />
+                    <SeasonHistoryRow key={entry.year} entry={entry} index={coach.seasonHistory.length - 1 - i} />
                   ))}
                 </tbody>
               </table>

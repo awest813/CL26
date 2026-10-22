@@ -2,7 +2,7 @@ import { createSelector, createSlice } from '@reduxjs/toolkit';
 import teamsData from '../../data/teams128.json';
 import { Conference, LeagueData, Team } from '../../types/sim';
 import { RootState } from '../../store/store';
-import { programRoster } from '../../sim/programLedger';
+import { programRoster, withLeaguePrestige } from '../../sim/programLedger';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { assertValidLeagueData } from '../../sim/leagueDataValidation';
 import { buildRosterSummary } from '../../sim/rosterSummary';
@@ -62,14 +62,24 @@ export const selectTeamWithRosterSummary = createSelector(
 );
 
 export const selectConferenceBrowserRows = createSelector(
-  [selectConferences, selectTeams, (state: RootState) => state.season.seasonSeed, (state: RootState) => state.season.programLedger],
-  (conferences, teams, seasonSeed, ledger) => {
+  [
+    selectConferences,
+    selectTeams,
+    (state: RootState) => state.season.seasonSeed,
+    (state: RootState) => state.season.programLedger,
+    (state: RootState) => state.coach.selectedTeamId,
+    (state: RootState) => state.coach.programPrestigeDrift,
+  ],
+  (conferences, teams, seasonSeed, ledger, userTeamId, userDrift) => {
     const rosterKey = leagueSeasonRosterSeed(seasonSeed);
+    // Prestige as it stands now, the same number the team page shows. Rosters build from the base team.
+    const currentTeams = withLeaguePrestige(teams, ledger, userTeamId, userDrift ?? 0);
+    const baseById = new Map(teams.map((team) => [team.id, team]));
     return conferences.map((conference) => {
-    const conferenceTeams = teams.filter((team) => team.conferenceId === conference.id);
+    const conferenceTeams = currentTeams.filter((team) => team.conferenceId === conference.id);
     const conferenceRosterStrength = Math.round(
       conferenceTeams.reduce((sum, team) => {
-        const roster = programRoster(team, ledger, rosterKey);
+        const roster = programRoster(baseById.get(team.id) ?? team, ledger, rosterKey);
         const rosterOverall = roster.reduce((rosterSum, player) => rosterSum + player.overall, 0) / roster.length;
         return sum + rosterOverall;
       }, 0) / conferenceTeams.length,

@@ -386,7 +386,9 @@ export function advanceFatigue(
   const recovery = focus === 'CONDITIONING' ? 6 : 2;
   const rawDelta = byFocus[focus] - recovery;
 
-  // TACTICIAN manages player loads better: 20% less net fatigue accumulation
+  // TACTICIAN manages player loads better: 20% less net fatigue accumulation.
+  // The reductions only cut build-up; a recovery week recovers in full.
+  if (rawDelta <= 0) return clamp(bounded + rawDelta, 0, 100);
   const archetypeReduction = archetype === 'TACTICIAN' ? 0.8 : 1.0;
   const operationsReduction = clamp(1 - operationsSkill * 0.03, 0.82, 1);
   return clamp(bounded + rawDelta * archetypeReduction * operationsReduction, 0, 100);

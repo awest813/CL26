@@ -367,6 +367,11 @@ export interface LeagueData {
 
 export interface SeasonHistoryEntry {
   year: number;
+  /** The program and the targets the season was judged against. Missing on older saves. */
+  teamId?: string;
+  winTarget?: number;
+  rankTarget?: number;
+  pollRank?: number;
   wins: number;
   losses: number;
   madePlayoffs: boolean;

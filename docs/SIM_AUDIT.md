@@ -302,3 +302,17 @@ Fixed:
 Known and left as is:
 - **Old saves and awards.** A save from before season stats existed names that year's awards from part of the season. This affects one season only.
 - **Home field.** The home-field edge uses each program's base prestige, not its earned prestige. Switching it would move every calibration band, so it waits for the next engine tuning pass.
+
+## Third audit pass
+
+Fixed:
+- **Preseason recruiting board.** A board built before the first season no longer gets wiped when the season begins.
+- **Recruiting page.** Pitch grades, dealbreakers and fit use your current prestige, the same number the recruiting week uses.
+- **Board edits after recruiting ends.** Once the last recruiting period has run, the board's Add, hours and pitch controls are disabled.
+- **Coach Office after a job change.** A recorded season is judged against the targets and final poll it was played under. These are now saved on the season history entry.
+- **Career history.** Year labels run oldest to newest.
+- **Fatigue.** The Tactician and Operations reductions only cut fatigue build-up; a Conditioning or rest week recovers in full.
+- **Conferences page.** It shows current prestige, matching the team page.
+- **Copy.**
+  - The Developer card now states its recruiting cost.
+  - The empty board no longer says "on the right", which was wrong on phones.

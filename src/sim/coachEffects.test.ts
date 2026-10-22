@@ -120,6 +120,11 @@ describe('coach effects', () => {
     assert.ok(skilledOps < baseline);
   });
 
+  test('load management never slows a recovery week', () => {
+    const plain = advanceFatigue(40, 'CONDITIONING', 'RECRUITER', 0);
+    assert.strictEqual(advanceFatigue(40, 'CONDITIONING', 'TACTICIAN', 5), plain);
+  });
+
   test('playoff round rest recovers fatigue; playing advances it', () => {
     const rested = playoffRoundFatigue(60, false, 'OFFENSE', 'RECRUITER', 0);
     const played = playoffRoundFatigue(60, true, 'OFFENSE', 'RECRUITER', 0);

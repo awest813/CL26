@@ -9,6 +9,7 @@ import {
   selectIsCareerReady,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
+  selectUserEffectivePrestige,
 } from '../features/coach/coachSlice';
 import { selectSeasonSummary } from '../features/season/seasonSlice';
 import {
@@ -65,12 +66,20 @@ function RecruitingBoardPage() {
   const teams = useAppSelector((state) => state.league.teams);
   const season = useAppSelector(selectSeasonSummary);
   const scheduleLength = useAppSelector((state) => state.season.scheduleByWeek.length);
+  // Once every recruiting period has run, board edits would never apply.
+  const periodsDone = scheduleLength > 0 && coach.recruitingWeekIndex >= scheduleLength;
 
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState<PositionFilterValue>('ALL');
   const isCoachReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = coach.selectedTeamId ?? '';
-  const selectedTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
+  const baseTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
+  const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
+  // Grades and fit read the prestige the recruiting week uses: base plus career drift.
+  const selectedTeam = useMemo(
+    () => (baseTeam && effectivePrestige != null ? { ...baseTeam, prestige: effectivePrestige } : baseTeam),
+    [baseTeam, effectivePrestige],
+  );
   const teamNameById = useMemo(() => new Map(teams.map((t) => [t.id, t.schoolName])), [teams]);
 
   const boardSet = useMemo(() => new Set(coach.boardRecruitIds), [coach.boardRecruitIds]);
@@ -312,7 +321,7 @@ function RecruitingBoardPage() {
           {boardRows.length === 0 ? (
             <div className="text-center py-8 text-gray-500 bg-gray-50 rounded">
               <p className="mb-1">Your board is empty.</p>
-              <p className="text-sm">Add prospects from the pool on the right.</p>
+              <p className="text-sm">Add prospects from the prospect pool.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -373,7 +382,7 @@ function RecruitingBoardPage() {
                         <select
                           id={`pitch-${recruit.id}`}
                           value={activePitch ?? ''}
-                          disabled={Boolean(recruit.committedTeamId)}
+                          disabled={Boolean(recruit.committedTeamId) || periodsDone}
                           onChange={(e) => onPitchChange(recruit.id, e.target.value)}
                           className="text-xs p-1 border rounded w-full mb-1 pitchSelect"
                           aria-label={`Recruiting pitch for ${recruit.name}`}
@@ -419,8 +428,8 @@ function RecruitingBoardPage() {
                           max={MAX_HOURS_PER_RECRUIT}
                           value={coach.weeklyHoursByRecruitId[recruit.id] ?? 0}
                           onChange={(e) => onHoursChange(recruit.id, Number(e.target.value) || 0)}
-                          disabled={Boolean(recruit.committedTeamId)}
-                          title={recruit.committedTeamId ? 'Committed prospects take no hours' : undefined}
+                          disabled={Boolean(recruit.committedTeamId) || periodsDone}
+                          title={recruit.committedTeamId ? 'Committed prospects take no hours' : periodsDone ? 'The recruiting periods are over' : undefined}
                           className="w-12 p-1 border rounded text-center text-sm"
                           aria-label={`Recruiting hours for ${recruit.name}`}
                         />
@@ -549,7 +558,7 @@ function RecruitingBoardPage() {
                               type="button"
                               className="chipAdd"
                               onClick={() => onAdd(recruit.id)}
-                              disabled={boardSet.size >= RECRUITING_BOARD_LIMIT}
+                              disabled={boardSet.size >= RECRUITING_BOARD_LIMIT || periodsDone}
                             >
                               Add
                             </button>
