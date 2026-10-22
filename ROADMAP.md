@@ -81,6 +81,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Schemes that counter each other, faceoff and save ratings, real penalty time and man-up stats, a scheme identity for every program, and opponent scouting on the Weekly Hub
 - [x] A living league: CPU programs rise and fall through results, recruiting classes, and early pro departures; 32-man rosters two deep; CPU injuries; prestige fades out of the poll by game 10
 - [x] NCAA-ish postseason: six automatic bids for the highest-ranked conference champions, neutral-site semifinals and final, a poll with capped margin, RPI-style schedule strength, and quality wins
+- [x] Depth: multi-week injuries, potential-driven development, player season stats with a Leaders page and five national awards, in-game fatigue and late-game behavior, and an engine-driven matchup estimate
 
 **Key files:** `src/sim/rng.ts`, `src/sim/matchEngine.ts`, `src/features/exhibition/exhibitionSlice.ts`, `src/pages/ExhibitionPage.tsx`
 
