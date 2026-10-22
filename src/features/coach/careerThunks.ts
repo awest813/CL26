@@ -416,7 +416,8 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
     const signedRecruits = coach.signedRecruitsByYear[state.season.year] ?? [];
     const room = Math.max(0, coach.scholarshipsAvailable ?? 0);
     const portalClaims = new Set(coach.portalClaimIds ?? []);
-    const portalPlayers = buildPortalBoard(withLeaguePrestige(teams, state.season.programLedger), team.id, newSeed, state.season.year)
+    // Built from the same team list the offseason market shows, so a claimed transfer arrives as listed.
+    const portalPlayers = buildPortalBoard(teams, team.id, newSeed, state.season.year)
       .filter((entrant) => portalClaims.has(entrant.id))
       .slice(0, Math.min(3, room))
       .map(entrantToPlayer);

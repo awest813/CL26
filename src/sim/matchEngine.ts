@@ -781,7 +781,8 @@ export function simulateGame(
       : manUpAtStart
         ? randInt(rng, MAN_UP_SETUP_SECONDS_MIN, MAN_UP_SETUP_SECONDS_MAX)
         : SETUP_SECONDS[offense.tactics.tempo] * (0.6 + rng() * 0.8) * late.setupScale;
-    advanceClock(shotClockUsed);
+    // The game clock never runs past the shot clock: a stall ends in a violation at 80 seconds.
+    advanceClock(Math.min(shotClockUsed, MEN_SHOT_CLOCK_SECONDS));
 
     for (let attempt = 0; attempt < MAX_SHOTS_PER_POSSESSION; attempt += 1) {
       const turnoverScale = attempt === 0 ? 1 : RETAINED_POSSESSION_TURNOVER_SCALE;
@@ -815,8 +816,8 @@ export function simulateGame(
         if (rng() < MISS_BACKUP_CHANCE + looseBallEdge + (hasManUp(offenseSide) ? MAN_UP_BACKUP_BONUS : 0)) {
           if (rng() < 0.3) creditGroundBall(offense);
           const reset = randInt(rng, RESET_SECONDS_MIN, RESET_SECONDS_MAX);
+          advanceClock(Math.max(0, Math.min(reset, MEN_SHOT_CLOCK_SECONDS - shotClockUsed)));
           shotClockUsed += reset;
-          advanceClock(reset);
           continue;
         }
         if (rng() < 0.3) creditGroundBall(defense);

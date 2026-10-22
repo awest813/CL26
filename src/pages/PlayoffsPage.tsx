@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
-import { simCareerPlayoffRound } from '../features/coach/careerThunks';
+import { simCareerConferenceChampionships, simCareerPlayoffRound } from '../features/coach/careerThunks';
 import { PLAYOFF_ROUND_LABELS, playoffRoundButton, userPlayoffSpot } from '../sim/gameLoop';
 import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { simNextPlayoffRound, selectPlayoffState, startPlayoffs, selectSeasonSummary, selectSeasonCapabilities, resetSeason } from '../features/season/seasonSlice';
@@ -39,6 +39,7 @@ function PlayoffsPage() {
   const canSim = capabilities.canSimPlayoffRound;
   const isComplete = !!playoffState?.championTeamId;
   const hasCareerTeam = Boolean(coach.selectedTeamId);
+  const conferenceTournamentsPlayed = useAppSelector((state) => Boolean(state.season.conferenceTournaments));
   const userTeamId = coach.selectedTeamId;
   const userSeed = userTeamId ? seedByTeamId.get(userTeamId) ?? null : null;
   const userMadeField = userSeed != null;
@@ -55,6 +56,10 @@ function PlayoffsPage() {
   const handleStartPlayoffs = async () => {
     setActionError(null);
     try {
+      // A career team plays its conference championship first, so it carries the same fatigue it would from the hub.
+      if (hasCareerTeam && !conferenceTournamentsPlayed) {
+        await dispatch(simCareerConferenceChampionships()).unwrap();
+      }
       await dispatch(startPlayoffs()).unwrap();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : String(err));
@@ -224,7 +229,7 @@ function PlayoffsPage() {
                                                   </div>
                                                   <div className="text-xs text-gray-500">
                                                     {team.nickname}
-                                                    {seed.autoBid && <span className="pollMeta"> · Auto bid</span>}
+                                                    {seed.autoBid && <span className="pollMeta nowrap"> · Auto bid</span>}
                                                   </div>
                                                 </span>
                                               </span>

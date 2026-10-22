@@ -5,6 +5,7 @@ import { activeRoster, canChangeRedshirts, redshirtBlocker } from '../sim/redshi
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position, POSITION_ORDER } from '../types/sim';
 import { availabilityWeekKey, injuryTimeline, weeklyScratches, type WeekScratch } from '../sim/injuries';
+import { CONFERENCE_SEMIFINAL_KEY } from '../sim/conferenceTournaments';
 import { getRosterDepthSummary } from '../sim/rosterManagement';
 import { faceoffRating, playerPotential, savingRating } from '../sim/playerSpecialty';
 import { playerYearLabel } from '../sim/rosterSummary';
@@ -153,10 +154,15 @@ function RosterPage() {
   const redshirtsOpen = canChangeRedshirts(season);
   const redshirtCount = roster.filter((player) => player.redshirt).length;
   const scratches = useMemo(() => {
-    const weekKey = availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? null);
+    // Conference championship week has no playoff round yet; read it the way the hub does.
+    const championshipWeek = season.phase === 'PLAYOFF' && season.playoffs == null && !season.conferenceTournaments
+      && season.completedWeeks >= season.scheduleByWeek.length;
+    const weekKey = championshipWeek
+      ? CONFERENCE_SEMIFINAL_KEY
+      : availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? null);
     if (!weekKey || !coach.selectedTeamId || roster.length === 0) return [];
     return weeklyScratches(activeRoster(roster), season.seasonSeed, weekKey, coach.selectedTeamId);
-  }, [coach.selectedTeamId, roster, season.currentWeekIndex, season.phase, season.playoffs?.currentRound, season.seasonSeed]);
+  }, [coach.selectedTeamId, roster, season.completedWeeks, season.conferenceTournaments, season.currentWeekIndex, season.phase, season.playoffs, season.scheduleByWeek.length, season.seasonSeed]);
   const scratchById = useMemo(() => new Map(scratches.map((scratch) => [scratch.playerId, scratch])), [scratches]);
 
   const byPosition = useMemo(() => {

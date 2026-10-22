@@ -61,6 +61,8 @@ interface ActiveInjury {
   injury: string;
   /** Last slot he misses (inclusive). */
   until: number;
+  /** Out for the rest of the season, however early it happened. */
+  seasonEnding: boolean;
 }
 
 /** New injuries on one slot of the timeline, never taking a position below a playable lineup. */
@@ -97,7 +99,7 @@ function rollNewInjuries(
     const type = INJURY_TYPES.find((candidate) => (pick -= candidate.weight) <= 0) ?? INJURY_TYPES[0];
     const [low, high] = type.weeks;
     const weeks = low + Math.floor(rng() * (high - low + 1));
-    active.set(player.id, { player, injury: type.injury, until: slot + weeks - 1 });
+    active.set(player.id, { player, injury: type.injury, until: slot + weeks - 1, seasonEnding: low >= SEASON_ENDING });
     added += 1;
   }
 }
@@ -126,12 +128,12 @@ export function weeklyScratches(
     rollNewInjuries(roster, seasonSeed, current, teamId, active);
   }
 
-  return [...active.values()].map(({ player, injury, until }) => ({
+  return [...active.values()].map(({ player, injury, until, seasonEnding }) => ({
     playerId: player.id,
     name: player.name,
     position: player.position,
     injury,
-    weeksLeft: until >= SEASON_ENDING ? null : until - slot + 1,
+    weeksLeft: seasonEnding || until >= SEASON_ENDING ? null : until - slot + 1,
   }));
 }
 

@@ -268,3 +268,21 @@ Player stat lines and season leaders, then awards and All-Americans. Line fatigu
 2. **Roster scale:** about 32 generated players, two deep at every position. This is built in Phase 3.
 3. **Men's or women's:** men's only through alpha. The women's constants stay in `gameRules.ts`, unused.
 4. **CPU rosters:** a small talent record per team, not 127 saved rosters. This is built in Phase 3.
+
+## Audit and polish pass
+
+Fixed in this pass:
+- **Transfer portal.** A claimed transfer now joins at the overall the offseason market listed. The market and the turnover step build the board from the same team list.
+- **Shot clock.** The game clock no longer runs past 80 seconds on a stalled possession; the violation happens at the clock.
+- **Playoffs page.** "Start playoffs" plays the career team's conference championship first, so its fatigue applies the same way as from the hub.
+- **Roster page.** Injuries show during conference championship week.
+- **Injuries.** A torn ACL in week 1 reads "out for the season" instead of "out 18 weeks".
+- **UI polish.**
+  - Hub copy for championship week and the wait for selection.
+  - The "Projected field" link before the bracket is set.
+  - Roster table widths on phones.
+  - Standings heading spacing.
+
+Known and left as is:
+- A soft reset keeps rivalry trophy holders. No failing case found.
+- The Rankings page recomputes the tournament field rather than reading the saved seeds.

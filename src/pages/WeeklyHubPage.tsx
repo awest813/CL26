@@ -404,7 +404,7 @@ function WeeklyHubPage() {
         pollRank,
         pollKnown: season.phase !== 'PRE',
         rankTarget: coach.programExpectations?.rankTarget ?? 99,
-        inBracket,
+        inBracket: inBracket || inConferenceChampionship,
         fatigue: coach.teamFatigue,
       }),
     [
@@ -417,6 +417,7 @@ function WeeklyHubPage() {
       coach.recruitPool.length,
       gamePlan.tactics,
       inBracket,
+      inConferenceChampionship,
       coach.teamFatigue,
       pollRank,
       season.phase,
@@ -682,9 +683,9 @@ function WeeklyHubPage() {
               Sim to the bracket
             </button>
           )}
-          {season.phase === 'PLAYOFF' && (
-            <Link to="/playoffs" className="btn">Full bracket</Link>
-          )}
+          {season.phase === 'PLAYOFF' && (season.playoffs
+            ? <Link to="/playoffs" className="btn">Full bracket</Link>
+            : <Link to="/rankings" className="btn">Projected field</Link>)}
           {season.phase === 'OFFSEASON' && (
             <Link to="/career" className="btn">Coach Office</Link>
           )}
@@ -697,11 +698,19 @@ function WeeklyHubPage() {
           {season.phase === 'PLAYOFF'
             ? inBracket
               ? 'The bracket is the job. Set the install for this round, then play it.'
-              : 'Your season is over. The install comes back next regular season.'
+              : inConferenceChampionship
+                ? 'Conference championship week. Set the install, then play your semifinal.'
+                : season.playoffs == null
+                  ? 'Selection is next. A program outside the automatic bids can still get in at-large.'
+                  : 'Your season is over. The install comes back next regular season.'
               : season.phase === 'OFFSEASON'
               ? (coach.employment ?? 'ACTIVE') === 'FIRED'
                 ? 'The AD let you go. Take a landing job on the office before the next year.'
-                : 'Signing day and the season record are the next clicks. The portal can wait.'
+                : offseasonCaps.canProcessSigningDay
+                  ? 'Signing day and the season record are the next clicks. The portal can wait.'
+                  : offseasonCaps.canFinalizeSeason
+                    ? 'The class is signed. Record the season next.'
+                    : 'The year is recorded. Check the portal, the pro draft, and the roster, then begin the next season.'
               : 'Set the install and the board, then play the week.'}
         </p>
         <ul className="deskList">

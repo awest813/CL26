@@ -92,9 +92,12 @@ export const store = configureStore({
   reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
+      // Dev-only checks. A season's results and stat ledger are large, so warn only on a real stall.
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        warnAfter: 200,
       },
+      immutableCheck: { warnAfter: 200 },
     }),
 });
 

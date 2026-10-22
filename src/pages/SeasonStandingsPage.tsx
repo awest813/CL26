@@ -33,6 +33,7 @@ function SeasonStandingsPage() {
   const records = useAppSelector(selectTeamRecords);
   const teamById = useMemo(() => new Map(teams.map((team) => [team.id, team])), [teams]);
   const tournament = tournaments?.[conferenceId] ?? null;
+  const regularSeasonDone = useAppSelector((state) => state.season.phase === 'PLAYOFF' || state.season.phase === 'OFFSEASON');
   const projectedSeeds = useMemo(
     () => conferenceTournamentSeeds(teams.filter((team) => team.conferenceId === conferenceId), records),
     [conferenceId, records, teams],
@@ -133,7 +134,7 @@ function SeasonStandingsPage() {
         </table>
         </div>
 
-        <h4 className="m-0 mt-4 mb-1 text-sm font-bold">Conference championship</h4>
+        <h4 className="m-0 mt-3 mb-1 pt-2 text-sm font-bold">Conference championship</h4>
         {tournament ? (
           <ul className="text-sm m-0 pl-4">
             {tournament.games.map((game) => {
@@ -155,7 +156,8 @@ function SeasonStandingsPage() {
           </ul>
         ) : (
           <p className="text-sm text-gray-600 m-0">
-            After week 12 the top four play for the title: {projectedSeeds.map((id, index) => `#${index + 1} ${teamById.get(id)?.schoolName ?? id}`).join(', ')}.
+            {regularSeasonDone ? 'The top four play for the title next: ' : 'After week 12 the top four play for the title. As it stands: '}
+            {projectedSeeds.map((id, index) => `#${index + 1} ${teamById.get(id)?.schoolName ?? id}`).join(', ')}.
             The six highest-ranked champions get automatic bids.
           </p>
         )}
