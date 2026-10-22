@@ -6,6 +6,7 @@ import { buildRosterSummary, playerYearLabel } from '../sim/rosterSummary';
 import { useAppSelector } from '../store/hooks';
 import PageHeader from '../components/PageHeader';
 import { effectiveProgram, ledgerEntry } from '../sim/programLedger';
+import { buildRivalries, rivalOf, rivalryFor } from '../sim/rivalries';
 
 function TeamPage() {
   const { id } = useParams();
@@ -13,6 +14,8 @@ function TeamPage() {
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
   const prestigeDrift = useAppSelector((state) => state.coach.programPrestigeDrift ?? 0);
   const programLedger = useAppSelector((state) => state.season.programLedger);
+  const leagueTeams = useAppSelector((state) => state.league.teams);
+  const trophyHolders = useAppSelector((state) => state.season.trophyHolders);
   const managedRoster = useAppSelector((state) => state.coach.managedRoster);
   const isOwnTeam = Boolean(id && selectedTeamId === id);
   const ownRoster = isOwnTeam && managedRoster && managedRoster.length > 0 ? managedRoster : null;
@@ -70,6 +73,9 @@ function TeamPage() {
   const displayedPrestige = isOwnTeam
     ? Math.max(1, Math.min(100, teamSummary.team.prestige + prestigeDrift))
     : effectiveProgram(teamSummary.team, programLedger).prestige;
+  const rivalry = rivalryFor(buildRivalries(leagueTeams), teamSummary.team.id);
+  const rival = rivalry ? leagueTeams.find((team) => team.id === rivalOf(rivalry, teamSummary.team.id)) : undefined;
+  const trophyHolder = rivalry ? leagueTeams.find((team) => team.id === trophyHolders?.[rivalry.trophy]) : undefined;
   const signed = (value: number) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value)}`;
 
   return (
@@ -126,6 +132,15 @@ function TeamPage() {
                 <strong>
                   {prestigeDrift > 0 ? '+' : ''}
                   {prestigeDrift} (base {teamSummary.team.prestige})
+                </strong>
+              </div>
+            )}
+            {rivalry && rival && (
+              <div className="teamInfoRow">
+                <span className="teamInfoLabel">Rival</span>
+                <strong>
+                  <Link to={`/team/${rival.id}`}>{rival.schoolName}</Link> · {rivalry.trophy}
+                  {trophyHolder ? ` (held by ${trophyHolder.schoolName})` : ''}
                 </strong>
               </div>
             )}

@@ -303,6 +303,14 @@ function WeeklyHubPage() {
 
   const fatigueClass = fatiguePillClass(gamePlan.fatigueLabel);
 
+  const trophyHolders = season.trophyHolders ?? {};
+  const trophyHolderLine = (trophy: string) => {
+    const holderId = trophyHolders[trophy];
+    if (!holderId) return 'up for grabs';
+    if (holderId === selectedTeamId) return 'you hold it';
+    return `${teams.find((team) => team.id === holderId)?.schoolName ?? 'they'} ${holderId === featuredOpponent?.id ? 'hold' : 'holds'} it`;
+  };
+
   // Projected fatigue after this week — uses the same formula as the actual weekly cycle
   const projectedFatigue = Math.round(
     advanceFatigue(
@@ -533,8 +541,13 @@ function WeeklyHubPage() {
             <p className="matchupKicker">
               {featuredIsHome ? 'Home' : 'Away'}
               {season.phase === 'REGULAR'
-                ? userUpcomingGame?.conferenceGame ? ' · Conference' : ' · Non-conference'
+                ? userUpcomingGame?.rivalryTrophy
+                  ? ` · Rivalry: ${userUpcomingGame.rivalryTrophy}`
+                  : userUpcomingGame?.conferenceGame ? ' · Conference' : ' · Non-conference'
                 : playoffRoundLabel ? ` · ${playoffRoundLabel}` : ''}
+              {season.phase === 'REGULAR' && userUpcomingGame?.rivalryTrophy && (
+                <> · {trophyHolderLine(userUpcomingGame.rivalryTrophy)}</>
+              )}
             </p>
           )}
         </div>

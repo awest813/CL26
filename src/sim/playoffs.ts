@@ -3,7 +3,7 @@ import { rosterForAvailability, weeklyScratches } from './injuries';
 import { simulateGame } from './matchEngine';
 import { programTactics } from './schemeMatchups';
 import { seedToNumber } from './rng';
-import { GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, ProgramLedger, RankingRow, TeamGameplayModifiers, Tactics, Team, TeamSimInput } from '../types/sim';
+import { FieldSeed, GameSummary, PlayoffGame, PlayoffRoundName, PlayoffSeed, PlayoffState, Player, ProgramLedger, RankingRow, TeamGameplayModifiers, Tactics, Team, TeamSimInput } from '../types/sim';
 
 function composePlayoffGameSeed(
   baseSeed: number,
@@ -28,15 +28,52 @@ function makeGameId(round: PlayoffRoundName, slot: number): string {
   return `playoff-${round.toLowerCase()}-${slot}`;
 }
 
-export function selectPlayoffField(top12: RankingRow[]): PlayoffSeed[] {
-  if (top12.length < 12) {
-    throw new Error(`Top 12 projection requires 12 teams, received ${top12.length}.`);
-  }
+export const PLAYOFF_FIELD_SIZE = 12;
+/** The highest-ranked conference champions each get a guaranteed spot. */
+export const PLAYOFF_AUTO_BIDS = 6;
 
-  return top12.slice(0, 12).map((row, index) => ({
-    seed: index + 1,
-    teamId: row.teamId,
-  }));
+/**
+ * The 12-team field from the full poll. The six highest-ranked conference champions get
+ * automatic bids; the other six spots go to the best-ranked teams left. Seeds follow the
+ * poll, so a champion ranked 20th still enters as a low seed.
+ * Without `championTeamIds`, the field is simply the top 12.
+ */
+export function buildPlayoffField(rankings: RankingRow[], championTeamIds?: Iterable<string>): FieldSeed[] {
+  if (rankings.length < PLAYOFF_FIELD_SIZE) {
+    throw new Error(`The playoff field needs at least ${PLAYOFF_FIELD_SIZE} ranked teams, received ${rankings.length}.`);
+  }
+  const ordered = [...rankings].sort((a, b) => a.rank - b.rank);
+  const champions = new Set(championTeamIds ?? []);
+  const autoBids = new Set(
+    ordered.filter((row) => champions.has(row.teamId)).slice(0, PLAYOFF_AUTO_BIDS).map((row) => row.teamId),
+  );
+  const atLarge = ordered
+    .filter((row) => !autoBids.has(row.teamId))
+    .slice(0, PLAYOFF_FIELD_SIZE - autoBids.size)
+    .map((row) => row.teamId);
+  const inField = new Set([...autoBids, ...atLarge]);
+
+  return ordered
+    .filter((row) => inField.has(row.teamId))
+    .map((row, index) => ({
+      seed: index + 1,
+      teamId: row.teamId,
+      pollRank: row.rank,
+      record: row.record,
+      points: row.points,
+      autoBid: autoBids.has(row.teamId),
+      conferenceChampion: champions.has(row.teamId),
+    }));
+}
+
+/** The best-ranked teams left out of the field: the bubble. */
+export function firstTeamsOut(rankings: RankingRow[], field: PlayoffSeed[], count = 4): RankingRow[] {
+  const inField = new Set(field.map((row) => row.teamId));
+  return [...rankings].sort((a, b) => a.rank - b.rank).filter((row) => !inField.has(row.teamId)).slice(0, count);
+}
+
+export function selectPlayoffField(rankings: RankingRow[], championTeamIds?: Iterable<string>): PlayoffSeed[] {
+  return buildPlayoffField(rankings, championTeamIds).map(({ seed, teamId, autoBid }) => ({ seed, teamId, autoBid }));
 }
 
 export function buildPlayoffState(seeds: PlayoffSeed[]): PlayoffState {
@@ -78,6 +115,11 @@ function toSummary(playoffGame: PlayoffGame, scoreA: number, scoreB: number, res
     teamStatsAway: result.statsB,
     topPerformers: [...result.topPlayersA.slice(0, 2), ...result.topPlayersB.slice(0, 2)],
   };
+}
+
+/** The semifinals and championship are played at a neutral site; the higher seed is only the listed home team. */
+export function isNeutralSiteRound(round: PlayoffRoundName): boolean {
+  return round === 'SEMIFINAL' || round === 'FINAL';
 }
 
 function nextRoundName(round: PlayoffRoundName): PlayoffRoundName | null {
@@ -299,6 +341,7 @@ export function simulatePlayoffRound(
       homeTactics,
       awayTactics,
       composePlayoffGameSeed(baseSeed + roundSeedOffset(round), round, game.id, game.homeTeamId, game.awayTeamId),
+      { homeAdvantageForA: !isNeutralSiteRound(round) },
     );
 
     const winnerTeamId = result.scoreA > result.scoreB

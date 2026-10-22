@@ -1,5 +1,6 @@
 import type { Conference, ScheduledGame, Team } from '../types/sim.ts';
 import { makeRng, randInt } from './rng.ts';
+import { buildRivalries, RIVALRY_WEEK_INDEX } from './rivalries.ts';
 
 const TOTAL_WEEKS = 12;
 
@@ -152,7 +153,15 @@ export function generateSeasonSchedule(teams: Team[], conferences: Conference[],
     });
   }
 
+  // Rivals meet in the last week, so the open non-conference weeks must not pair them first.
+  const rivalries = buildRivalries(teams);
+  rivalries.forEach(({ teamIds: [a, b] }) => {
+    playedOpponents.get(a)?.add(b);
+    playedOpponents.get(b)?.add(a);
+  });
+
   for (let week = 7; week < TOTAL_WEEKS; week += 1) {
+    if (week === RIVALRY_WEEK_INDEX) continue;
     let created: ScheduledGame[] | null = null;
 
     for (let attempt = 0; attempt < 80; attempt += 1) {
@@ -183,12 +192,50 @@ export function generateSeasonSchedule(teams: Team[], conferences: Conference[],
     weeks[week] = created;
   }
 
+  weeks[RIVALRY_WEEK_INDEX] = buildRivalryWeek(teams, rivalries, playedOpponents, homeCounts, rng);
+
   const errors = validateSchedule(weeks, teams);
   if (errors.length > 0) {
     throw new Error(`Generated invalid schedule:\n${errors.join('\n')}`);
   }
 
   return weeks;
+}
+
+/** Every rivalry game, plus random non-conference games for any program without a rival. */
+function buildRivalryWeek(
+  teams: Team[],
+  rivalries: ReturnType<typeof buildRivalries>,
+  playedOpponents: Map<string, Set<string>>,
+  homeCounts: Map<string, number>,
+  rng: () => number,
+): ScheduledGame[] {
+  const games: ScheduledGame[] = rivalries.map(({ teamIds: [a, b], trophy }) => {
+    // The program with fewer home games hosts; a tie goes to a coin flip.
+    const homeA = homeCounts.get(a) ?? 0;
+    const homeB = homeCounts.get(b) ?? 0;
+    const aHosts = homeA < homeB || (homeA === homeB && rng() < 0.5);
+    const homeTeamId = aHosts ? a : b;
+    const awayTeamId = aHosts ? b : a;
+    homeCounts.set(homeTeamId, (homeCounts.get(homeTeamId) ?? 0) + 1);
+    return {
+      id: gameId(RIVALRY_WEEK_INDEX, homeTeamId, awayTeamId),
+      weekIndex: RIVALRY_WEEK_INDEX,
+      homeTeamId,
+      awayTeamId,
+      conferenceGame: false,
+      rivalryTrophy: trophy,
+    };
+  });
+
+  const paired = new Set(rivalries.flatMap((rivalry) => rivalry.teamIds));
+  const unpaired = teams.filter((team) => !paired.has(team.id));
+  if (unpaired.length > 0) {
+    const extra = tryBuildWeekMatchups(RIVALRY_WEEK_INDEX, unpaired, playedOpponents, homeCounts, rng);
+    if (!extra) throw new Error('Unable to schedule the programs without a rival in rivalry week');
+    games.push(...extra);
+  }
+  return games;
 }
 
 export function validateSchedule(scheduleByWeek: ScheduledGame[][], teams: Team[]): string[] {

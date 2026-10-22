@@ -3,8 +3,11 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import { useAppSelector } from '../store/hooks';
-import { selectRankingTeams, selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary, selectTop16Rankings } from '../features/season/seasonSlice';
-import { computeAllSOS, computeRankingBreakdown, PRESTIGE_FADE_GAMES, RANKING_WEIGHTS } from '../sim/rankings';
+import { selectConferenceLeaders, selectFirstFourOut, selectPollInputs, selectRankingTeams, selectTeamRecords, selectTop12Projection, selectRankTrends, selectSeasonSummary } from '../features/season/seasonSlice';
+import { selectConferences } from '../features/league/leagueSlice';
+import { BAD_LOSS_PENALTY, computeRankingBreakdown, MARGIN_CAP_PER_GAME, PRESTIGE_FADE_GAMES, QUALITY_WIN_TIERS, RANKING_WEIGHTS, teamPollInputs } from '../sim/rankings';
+import { PLAYOFF_AUTO_BIDS } from '../sim/playoffs';
+import type { RankingScoreBreakdown } from '../types/sim';
 import { seasonRankingsWeekLabel } from '../lib/seasonLabels';
 import PageHeader from '../components/PageHeader';
 
@@ -39,6 +42,17 @@ function rankDeltaDisplay(delta: number | null): ReactNode {
   return <span className="text-gray-400 text-xs" aria-label="No change">–</span>;
 }
 
+function breakdownLines(breakdown: RankingScoreBreakdown): [string, number][] {
+  return [
+    ['Overall win %', breakdown.overallWinPctPoints],
+    ['Conference win %', breakdown.conferenceWinPctPoints],
+    ['Margin (capped)', breakdown.pointDifferentialPoints],
+    ['Prestige', breakdown.prestigePoints],
+    ['Strength of schedule', breakdown.strengthOfSchedulePoints],
+    ['Quality wins and bad losses', breakdown.qualityResultPoints],
+  ];
+}
+
 function ScoreLines({ lines, total }: { lines: [string, number][]; total: number }) {
   return (
     <div className="weightList">
@@ -59,12 +73,14 @@ function ScoreLines({ lines, total }: { lines: [string, number][]; total: number
 function RankingsPage() {
   const top25WithTrends = useAppSelector(selectRankTrends);
   const top12 = useAppSelector(selectTop12Projection);
-  const top16 = useAppSelector(selectTop16Rankings);
+  const bubbleTeams = useAppSelector(selectFirstFourOut);
+  const pollInputs = useAppSelector(selectPollInputs);
+  const leaders = useAppSelector(selectConferenceLeaders);
+  const conferences = useAppSelector(selectConferences);
   const teams = useAppSelector(selectRankingTeams);
   const prestigeDrift = useAppSelector((state) => state.coach.programPrestigeDrift ?? 0);
   const records = useAppSelector(selectTeamRecords);
   const summary = useAppSelector(selectSeasonSummary);
-  const gameResults = useAppSelector((state) => state.season.gameResults);
   const selectedTeamId = useAppSelector((state) => state.coach.selectedTeamId);
 
   const isPostseason = summary.phase === 'PLAYOFF' || summary.phase === 'OFFSEASON';
@@ -74,7 +90,10 @@ function RankingsPage() {
     return new Map(teams.map((team) => [team.id, team]));
   }, [teams]);
 
-  const sosByTeamId = useMemo(() => computeAllSOS(gameResults, records), [gameResults, records]);
+  const conferenceNameByLeader = useMemo(() => {
+    const nameById = new Map(conferences.map((conference) => [conference.id, conference.name]));
+    return new Map(Object.entries(leaders).map(([conferenceId, teamId]) => [teamId, nameById.get(conferenceId) ?? conferenceId]));
+  }, [conferences, leaders]);
 
   const topTeamBreakdown = useMemo(() => {
     const topTeamId = top25WithTrends[0]?.teamId;
@@ -86,9 +105,9 @@ function RankingsPage() {
 
     return {
       team,
-      breakdown: computeRankingBreakdown(team, record, sosByTeamId[topTeamId] ?? 0),
+      breakdown: computeRankingBreakdown(team, record, teamPollInputs(pollInputs, topTeamId)),
     };
-  }, [records, teamById, top25WithTrends, sosByTeamId]);
+  }, [records, teamById, top25WithTrends, pollInputs]);
 
   // User team score breakdown (even when unranked)
   const userTeamBreakdown = useMemo(() => {
@@ -99,13 +118,10 @@ function RankingsPage() {
     return {
       team,
       record,
-      breakdown: computeRankingBreakdown(team, record, sosByTeamId[selectedTeamId] ?? 0),
+      breakdown: computeRankingBreakdown(team, record, teamPollInputs(pollInputs, selectedTeamId)),
       rankRow: top25WithTrends.find((r) => r.teamId === selectedTeamId) ?? null,
     };
-  }, [selectedTeamId, teamById, records, sosByTeamId, top25WithTrends]);
-
-  // "Next 4 Out" bubble teams (#13–#16)
-  const bubbleTeams = useMemo(() => top16.slice(12, 16), [top16]);
+  }, [selectedTeamId, teamById, records, pollInputs, top25WithTrends]);
 
   const hasGamesPlayed = useMemo(() => {
     return Object.values(records).some((record) => record.wins + record.losses > 0);
@@ -175,8 +191,8 @@ function RankingsPage() {
         <h3 className="m-0">{isPostseason ? 'Tournament field' : 'Projected field'}</h3>
         <p className="text-sm text-gray-500 mt-1 mb-2">
           {isPostseason
-            ? 'The 12 seeds for the playoff. The top four have a bye.'
-            : 'The 12-team field if the season ended today. The top four would have a bye.'}
+            ? `The 12 seeds for the playoff. The ${PLAYOFF_AUTO_BIDS} highest-ranked conference champions got automatic bids; the rest are at-large. The top four have a bye.`
+            : `The 12-team field if the season ended today. The ${PLAYOFF_AUTO_BIDS} highest-ranked conference leaders get automatic bids; the rest are at-large. The top four would have a bye.`}
         </p>
 
         <div className="dataTableWrap">
@@ -193,17 +209,22 @@ function RankingsPage() {
           <tbody>
             {top12.map((row) => {
               const team = teamById.get(row.teamId);
-              const hasBye = row.rank <= 4;
+              const hasBye = row.seed <= 4;
               const isUser = row.teamId === selectedTeamId;
+              const autoBidTitle = `${conferenceNameByLeader.get(row.teamId) ?? 'Conference'} ${isPostseason ? 'champion' : 'leader'}`;
               return (
                 <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
-                  <td className="num font-bold">#{row.rank}</td>
+                  <td className="num font-bold">#{row.seed}</td>
                   <td>
                     <PollTeam team={team} isUser={isUser} fallbackId={row.teamId} />
                   </td>
                   <td className="num">{row.record}</td>
                   <td className="text-xs">
-                    {hasBye && <span className="youMark">Bye</span>}
+                    <div className="fieldNotes">
+                      {hasBye && <span className="youMark">Bye</span>}
+                      {row.autoBid && <abbr title={autoBidTitle} className="fieldNote">Auto bid</abbr>}
+                      {row.pollRank !== row.seed && <span className="fieldNote text-gray-500">No. {row.pollRank} in poll</span>}
+                    </div>
                   </td>
                 </tr>
               );
@@ -219,7 +240,7 @@ function RankingsPage() {
                 const isUser = row.teamId === selectedTeamId;
                 return (
                   <tr key={row.teamId} className={isUser ? 'youRow' : undefined}>
-                    <td className="num text-gray-500">#{row.rank}</td>
+                    <td className="num text-gray-500">No. {row.rank}</td>
                     <td>
                       <PollTeam team={team} isUser={isUser} fallbackId={row.teamId} />
                     </td>
@@ -244,17 +265,20 @@ function RankingsPage() {
         <p className="text-sm text-gray-500 mt-2 mb-0">
           Each line is a season number times its weight. Prestige carries the preseason poll and fades out
           by game {PRESTIGE_FADE_GAMES}; after that only results count. Prestige includes what each program has earned
-          over the years, and your program’s includes career drift.
-          Ties on the rounded total break by wins, point differential, prestige, then school name.
+          over the years, and your program’s includes career drift. Margin counts each game up to {MARGIN_CAP_PER_GAME} goals,
+          so a blowout is worth no more than a five-goal win. Strength of schedule is two parts your opponents’ win %
+          and one part their opponents’. A win over a {QUALITY_WIN_TIERS[0].minOpponentWinPct.toFixed(3).slice(1)}+ team
+          adds {QUALITY_WIN_TIERS[0].points}, over a .500+ team {QUALITY_WIN_TIERS[1].points}; a loss to a team under .333
+          costs {BAD_LOSS_PENALTY}. Ties on the rounded total break by wins, point differential, prestige, then school name.
         </p>
         <div className="weightList">
           {[
             ['Overall win %', RANKING_WEIGHTS.overallWinPct],
             ['Conference win %', RANKING_WEIGHTS.conferenceWinPct],
-            ['Point differential', RANKING_WEIGHTS.pointDifferential],
+            [`Margin per goal (capped at ${MARGIN_CAP_PER_GAME} a game)`, RANKING_WEIGHTS.pointDifferential],
             [`Program prestige (fades by game ${PRESTIGE_FADE_GAMES})`, RANKING_WEIGHTS.prestige],
-            ['Scoring volume', RANKING_WEIGHTS.scoringVolume],
             ['Strength of schedule', RANKING_WEIGHTS.strengthOfSchedule],
+            ['Quality wins and bad losses (points)', RANKING_WEIGHTS.qualityResults],
           ].map(([label, weight]) => (
             <div key={String(label)} className="weightRow">
               <span>{label}</span>
@@ -276,14 +300,7 @@ function RankingsPage() {
                 </span>
               </p>
               <ScoreLines
-                lines={[
-                  ['Overall win %', topTeamBreakdown.breakdown.overallWinPctPoints],
-                  ['Conference win %', topTeamBreakdown.breakdown.conferenceWinPctPoints],
-                  ['Point differential', topTeamBreakdown.breakdown.pointDifferentialPoints],
-                  ['Prestige', topTeamBreakdown.breakdown.prestigePoints],
-                  ['Scoring volume', topTeamBreakdown.breakdown.scoringVolumePoints],
-                  ['Strength of schedule', topTeamBreakdown.breakdown.strengthOfSchedulePoints],
-                ]}
+                lines={breakdownLines(topTeamBreakdown.breakdown)}
                 total={topTeamBreakdown.breakdown.totalPoints}
               />
             </div>
@@ -307,14 +324,7 @@ function RankingsPage() {
                 </p>
               )}
               <ScoreLines
-                lines={[
-                  ['Overall win %', userTeamBreakdown.breakdown.overallWinPctPoints],
-                  ['Conference win %', userTeamBreakdown.breakdown.conferenceWinPctPoints],
-                  ['Point differential', userTeamBreakdown.breakdown.pointDifferentialPoints],
-                  ['Prestige', userTeamBreakdown.breakdown.prestigePoints],
-                  ['Scoring volume', userTeamBreakdown.breakdown.scoringVolumePoints],
-                  ['Strength of schedule', userTeamBreakdown.breakdown.strengthOfSchedulePoints],
-                ]}
+                lines={breakdownLines(userTeamBreakdown.breakdown)}
                 total={userTeamBreakdown.breakdown.totalPoints}
               />
             </div>

@@ -1,10 +1,5 @@
 import { GameResult, RankingRow, RankingScoreBreakdown, Team, TeamRecord } from '../types/sim';
 
-interface RankingInputRow {
-  team: Team;
-  record: TeamRecord;
-}
-
 function winPct(wins: number, losses: number): number {
   const total = wins + losses;
   return total > 0 ? wins / total : 0;
@@ -13,11 +8,26 @@ function winPct(wins: number, losses: number): number {
 export const RANKING_WEIGHTS = {
   overallWinPct: 1000,
   conferenceWinPct: 300,
-  pointDifferential: 2,
+  /** Per goal of margin, with each game's margin capped at MARGIN_CAP_PER_GAME. */
+  pointDifferential: 3,
   prestige: 0.8,
-  scoringVolume: 0.15,
-  strengthOfSchedule: 120,
+  /** Applied to the RPI-style schedule strength, which runs about 0.35–0.65. */
+  strengthOfSchedule: 400,
+  /** Already in points: the sum of quality-win bonuses and bad-loss penalties. */
+  qualityResults: 1,
 } as const;
+
+/** A blowout counts the same as a five-goal win, so running up the score does not buy poll position. */
+export const MARGIN_CAP_PER_GAME = 5;
+
+/** Opponent win percentage that makes a win a quality win, and the bonuses for each tier. */
+export const QUALITY_WIN_TIERS = [
+  { minOpponentWinPct: 0.667, points: 40, label: 'Win over a .667+ team' },
+  { minOpponentWinPct: 0.5, points: 15, label: 'Win over a .500+ team' },
+] as const;
+/** A loss to a team under this win percentage is a bad loss. */
+export const BAD_LOSS_MAX_OPPONENT_WIN_PCT = 0.333;
+export const BAD_LOSS_PENALTY = 40;
 
 /** Games after which program prestige no longer counts in the poll. Brand carries the preseason, results carry the rest. */
 export const PRESTIGE_FADE_GAMES = 10;
@@ -59,54 +69,94 @@ export function computeAllSOS(
   return sosByTeamId;
 }
 
-const MIN_PROGRAM_PRESTIGE = 1;
-const MAX_PROGRAM_PRESTIGE = 100;
-
-/**
- * Copy of the league list with one program's prestige shifted by career drift.
- * Rankings and the playoff field use this so earned prestige shows up in the poll.
- * Returns the same array when there is nothing to apply.
- */
-export function withProgramPrestige(
-  teams: Team[],
-  teamId: string | null | undefined,
-  drift: number,
-): Team[] {
-  if (!teamId || !Number.isFinite(drift) || drift === 0) return teams;
-  const index = teams.findIndex((team) => team.id === teamId);
-  if (index < 0) return teams;
-  const team = teams[index];
-  const prestige = Math.max(MIN_PROGRAM_PRESTIGE, Math.min(MAX_PROGRAM_PRESTIGE, team.prestige + drift));
-  if (prestige === team.prestige) return teams;
-  const next = teams.slice();
-  next[index] = { ...team, prestige };
-  return next;
+/** Everything the poll reads from the games themselves, per team. */
+export interface TeamPollInputs {
+  /** RPI-style: two parts opponents' win %, one part their opponents' win %. */
+  sos: number;
+  /** Goal margin with each game capped at MARGIN_CAP_PER_GAME either way. */
+  cappedMargin: number;
+  /** Quality-win bonuses minus bad-loss penalties, in poll points. */
+  qualityResults: number;
+  qualityWins: number;
+  badLosses: number;
 }
 
-export function computeRankingBreakdown(team: Team, record: TeamRecord, sos = 0): RankingScoreBreakdown {
+export type PollInputs = Record<string, TeamPollInputs>;
+
+const EMPTY_POLL_INPUTS: TeamPollInputs = { sos: 0, cappedMargin: 0, qualityResults: 0, qualityWins: 0, badLosses: 0 };
+
+export function teamPollInputs(inputs: PollInputs | undefined, teamId: string): TeamPollInputs {
+  return inputs?.[teamId] ?? EMPTY_POLL_INPUTS;
+}
+
+/** Points for a win over an opponent with this win percentage: the best tier it reaches, or zero. */
+export function qualityWinPoints(opponentWinPct: number): number {
+  return QUALITY_WIN_TIERS.find((tier) => opponentWinPct >= tier.minOpponentWinPct)?.points ?? 0;
+}
+
+/** Strength of schedule, capped margins, and quality wins for every team that has played. */
+export function computePollInputs(
+  gameResults: GameResult[],
+  recordsByTeamId: Record<string, TeamRecord>,
+): PollInputs {
+  const owp = computeAllSOS(gameResults, recordsByTeamId);
+  const opponentsByTeamId: Record<string, string[]> = {};
+  const inputs: PollInputs = {};
+  const entry = (teamId: string) => (inputs[teamId] ??= { ...EMPTY_POLL_INPUTS });
+  const recordPct = (teamId: string) => {
+    const record = recordsByTeamId[teamId];
+    return record ? winPct(record.wins, record.losses) : 0;
+  };
+
+  for (const result of gameResults) {
+    const { teamAId: a, teamBId: b } = result;
+    if (!a || !b) continue;
+    (opponentsByTeamId[a] ??= []).push(b);
+    (opponentsByTeamId[b] ??= []).push(a);
+
+    const margin = Math.max(-MARGIN_CAP_PER_GAME, Math.min(MARGIN_CAP_PER_GAME, result.scoreA - result.scoreB));
+    entry(a).cappedMargin += margin;
+    entry(b).cappedMargin -= margin;
+
+    if (result.scoreA === result.scoreB) continue;
+    const [winner, loser] = result.scoreA > result.scoreB ? [a, b] : [b, a];
+    const bonus = qualityWinPoints(recordPct(loser));
+    if (bonus > 0) {
+      entry(winner).qualityResults += bonus;
+      entry(winner).qualityWins += 1;
+    }
+    if (recordPct(winner) < BAD_LOSS_MAX_OPPONENT_WIN_PCT) {
+      entry(loser).qualityResults -= BAD_LOSS_PENALTY;
+      entry(loser).badLosses += 1;
+    }
+  }
+
+  for (const [teamId, opponents] of Object.entries(opponentsByTeamId)) {
+    const oowp = opponents.reduce((sum, opponent) => sum + (owp[opponent] ?? 0), 0) / opponents.length;
+    entry(teamId).sos = (2 * (owp[teamId] ?? 0) + oowp) / 3;
+  }
+  return inputs;
+}
+
+export function computeRankingBreakdown(team: Team, record: TeamRecord, inputs: TeamPollInputs = EMPTY_POLL_INPUTS): RankingScoreBreakdown {
   const overallWinPctPoints = winPct(record.wins, record.losses) * RANKING_WEIGHTS.overallWinPct;
   const conferenceWinPctPoints = winPct(record.confWins, record.confLosses) * RANKING_WEIGHTS.conferenceWinPct;
-  const pointDifferentialPoints =
-    (record.pointsFor - record.pointsAgainst) * RANKING_WEIGHTS.pointDifferential;
+  const pointDifferentialPoints = inputs.cappedMargin * RANKING_WEIGHTS.pointDifferential;
   const prestigePoints = team.prestige * RANKING_WEIGHTS.prestige * prestigeWeightShare(record.wins + record.losses);
-  const scoringVolumePoints = record.pointsFor * RANKING_WEIGHTS.scoringVolume;
-  const strengthOfSchedulePoints = sos * RANKING_WEIGHTS.strengthOfSchedule;
+  const strengthOfSchedulePoints = inputs.sos * RANKING_WEIGHTS.strengthOfSchedule;
+  const qualityResultPoints = inputs.qualityResults * RANKING_WEIGHTS.qualityResults;
   const totalPoints =
-    overallWinPctPoints + conferenceWinPctPoints + pointDifferentialPoints + prestigePoints + scoringVolumePoints + strengthOfSchedulePoints;
+    overallWinPctPoints + conferenceWinPctPoints + pointDifferentialPoints + prestigePoints + strengthOfSchedulePoints + qualityResultPoints;
 
   return {
     overallWinPctPoints,
     conferenceWinPctPoints,
     pointDifferentialPoints,
     prestigePoints,
-    scoringVolumePoints,
     strengthOfSchedulePoints,
+    qualityResultPoints,
     totalPoints,
   };
-}
-
-function scoreTeam(row: RankingInputRow, sos: number): number {
-  return computeRankingBreakdown(row.team, row.record, sos).totalPoints;
 }
 
 function pointDifferential(record: TeamRecord): number {
@@ -117,13 +167,12 @@ export function computeRankings(
   teams: Team[],
   recordsByTeamId: Record<string, TeamRecord>,
   topN = 25,
-  sosByTeamId?: Record<string, number>,
+  inputs?: PollInputs,
 ): RankingRow[] {
   return teams
     .map((team) => {
       const record = recordsByTeamId[team.id] ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0, pointsFor: 0, pointsAgainst: 0 };
-      const sos = sosByTeamId?.[team.id] ?? 0;
-      return { team, record, score: scoreTeam({ team, record }, sos) };
+      return { team, record, score: computeRankingBreakdown(team, record, teamPollInputs(inputs, team.id)).totalPoints };
     })
     .sort((a, b) => {
       const roundedScoreDiff = Math.round(b.score - a.score);
@@ -143,12 +192,4 @@ export function computeRankings(
       points: Math.round(row.score),
       record: `${row.record.wins}-${row.record.losses}`,
     }));
-}
-
-export function computePlayoffProjection(
-  teams: Team[],
-  recordsByTeamId: Record<string, TeamRecord>,
-  sosByTeamId?: Record<string, number>,
-) {
-  return computeRankings(teams, recordsByTeamId, 12, sosByTeamId);
 }

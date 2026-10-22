@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { computeAllSOS, computeRankingBreakdown, computeRankings, RANKING_WEIGHTS, withProgramPrestige } from './rankings';
+import {
+  BAD_LOSS_PENALTY,
+  computeAllSOS,
+  computePollInputs,
+  computeRankingBreakdown,
+  computeRankings,
+  MARGIN_CAP_PER_GAME,
+  prestigeWeightShare,
+  RANKING_WEIGHTS,
+} from './rankings';
 import type { GameResult, Team, TeamRecord } from '../types/sim';
 
 function makeTeam(id: string, prestige = 70): Team {
@@ -86,92 +95,109 @@ describe('computeAllSOS', () => {
 });
 
 describe('computeRankingBreakdown', () => {
-  test('includes strengthOfSchedulePoints in total', () => {
+  test('total is the sum of its lines', () => {
     const team = makeTeam('t1', 80);
     const record = makeRecord(5, 0, 60, 30);
-    const sos = 0.6; // 60% avg opp win rate
+    const inputs = { sos: 0.6, cappedMargin: 18, qualityResults: 55, qualityWins: 2, badLosses: 0 };
 
-    const breakdown = computeRankingBreakdown(team, record, sos);
-    const expectedSosPoints = sos * RANKING_WEIGHTS.strengthOfSchedule;
-    expect(breakdown.strengthOfSchedulePoints).toBeCloseTo(expectedSosPoints, 5);
+    const breakdown = computeRankingBreakdown(team, record, inputs);
+    expect(breakdown.strengthOfSchedulePoints).toBeCloseTo(0.6 * RANKING_WEIGHTS.strengthOfSchedule, 5);
+    expect(breakdown.pointDifferentialPoints).toBeCloseTo(18 * RANKING_WEIGHTS.pointDifferential, 5);
+    expect(breakdown.qualityResultPoints).toBe(55);
     expect(breakdown.totalPoints).toBeCloseTo(
       breakdown.overallWinPctPoints +
         breakdown.conferenceWinPctPoints +
         breakdown.pointDifferentialPoints +
         breakdown.prestigePoints +
-        breakdown.scoringVolumePoints +
-        breakdown.strengthOfSchedulePoints,
+        breakdown.strengthOfSchedulePoints +
+        breakdown.qualityResultPoints,
       5,
     );
   });
 
-  test('SOS of 0 has no effect on ranking', () => {
+  test('prestige carries the preseason and is gone by game ten', () => {
     const team = makeTeam('t2', 75);
-    const record = makeRecord(3, 3, 40, 40);
-    const withSos = computeRankingBreakdown(team, record, 0);
-    const withoutSos = computeRankingBreakdown(team, record);
-    expect(withSos.totalPoints).toBe(withoutSos.totalPoints);
+    expect(computeRankingBreakdown(team, makeRecord(0, 0)).prestigePoints).toBeCloseTo(75 * RANKING_WEIGHTS.prestige, 5);
+    expect(computeRankingBreakdown(team, makeRecord(3, 2)).prestigePoints).toBeCloseTo(75 * RANKING_WEIGHTS.prestige * 0.5, 5);
+    expect(computeRankingBreakdown(team, makeRecord(6, 4)).prestigePoints).toBe(0);
+    expect(prestigeWeightShare(12)).toBe(0);
   });
 });
 
-describe('computeRankings with SOS', () => {
+describe('computePollInputs', () => {
+  test('caps each game margin, so a blowout counts like a five-goal win', () => {
+    const results = [makeGameResult('a', 'b', 20, 2), makeGameResult('a', 'c', 9, 8)];
+    const records = { a: makeRecord(2, 0), b: makeRecord(0, 1), c: makeRecord(0, 1) };
+    const inputs = computePollInputs(results, records);
+    expect(inputs.a.cappedMargin).toBe(MARGIN_CAP_PER_GAME + 1);
+    expect(inputs.b.cappedMargin).toBe(-MARGIN_CAP_PER_GAME);
+  });
+
+  test('rewards wins over good teams and punishes losses to bad ones', () => {
+    // g (3-1) beats s (strong, 3-1 after the loss). w (1-3) beats g: a bad loss for g.
+    const results = [makeGameResult('g', 's', 10, 8), makeGameResult('w', 'g', 9, 7)];
+    const records = {
+      g: makeRecord(3, 1),
+      s: makeRecord(3, 1),
+      w: makeRecord(1, 3),
+    };
+    const inputs = computePollInputs(results, records);
+    expect(inputs.g.qualityWins).toBe(1);
+    expect(inputs.g.badLosses).toBe(1);
+    expect(inputs.g.qualityResults).toBe(40 - BAD_LOSS_PENALTY);
+    expect(inputs.w.qualityWins).toBe(1);
+    expect(inputs.w.qualityResults).toBe(40);
+  });
+
+  test('strength of schedule counts opponents and their opponents', () => {
+    // x played y; y also played z. x's SOS blends y's record with y's own schedule.
+    const results = [makeGameResult('x', 'y', 8, 4), makeGameResult('y', 'z', 8, 4)];
+    const records = { x: makeRecord(1, 0), y: makeRecord(1, 1), z: makeRecord(0, 1) };
+    const inputs = computePollInputs(results, records);
+    const owp = computeAllSOS(results, records);
+    expect(inputs.x.sos).toBeCloseTo((2 * owp.x + owp.y) / 3, 5);
+  });
+});
+
+describe('computeRankings with poll inputs', () => {
   test('harder schedule raises a team rank over equal-record peer', () => {
-    const teamA = makeTeam('a', 70); // same prestige
+    const teamA = makeTeam('a', 70);
     const teamB = makeTeam('b', 70);
     const records = {
       'a': makeRecord(5, 5, 100, 100),
       'b': makeRecord(5, 5, 100, 100),
     };
-    // A played tougher opponents (avg 70%), B played weaker (avg 20%)
-    const sos = { 'a': 0.7, 'b': 0.2 };
-    const ranked = computeRankings([teamA, teamB], records, 2, sos);
+    const inputs = {
+      a: { sos: 0.7, cappedMargin: 0, qualityResults: 0, qualityWins: 0, badLosses: 0 },
+      b: { sos: 0.2, cappedMargin: 0, qualityResults: 0, qualityWins: 0, badLosses: 0 },
+    };
+    const ranked = computeRankings([teamA, teamB], records, 2, inputs);
     expect(ranked[0].teamId).toBe('a');
     expect(ranked[1].teamId).toBe('b');
   });
 
-  test('without SOS argument, behaves like SOS = 0 for all teams', () => {
-    const teams = [makeTeam('p', 80), makeTeam('q', 70)];
-    const records = {
-      'p': makeRecord(6, 0, 70, 30),
-      'q': makeRecord(4, 2, 50, 40),
+  test('running up the score does not jump a team with better wins', () => {
+    const bully = makeTeam('bully', 70);
+    const grinder = makeTeam('grinder', 70);
+    const records = { bully: makeRecord(10, 2), grinder: makeRecord(10, 2) };
+    const inputs = {
+      bully: { sos: 0.45, cappedMargin: 50, qualityResults: 0, qualityWins: 0, badLosses: 0 },
+      grinder: { sos: 0.5, cappedMargin: 25, qualityResults: 120, qualityWins: 3, badLosses: 0 },
     };
-    const withoutSos = computeRankings(teams, records, 2);
-    const withZeroSos = computeRankings(teams, records, 2, { 'p': 0, 'q': 0 });
-    expect(withoutSos[0].teamId).toBe(withZeroSos[0].teamId);
-    expect(withoutSos[0].points).toBe(withZeroSos[0].points);
+    expect(computeRankings([bully, grinder], records, 2, inputs)[0].teamId).toBe('grinder');
   });
 
   test('uses deterministic prestige tie-breaker when rounded ranking points match', () => {
     const lowerPrestige = makeTeam('a', 65);
     const higherPrestige = makeTeam('b', 75);
     const records = {
-      'a': makeRecord(3, 1, 44, 30),
-      'b': makeRecord(3, 1, 44, 30),
+      'a': makeRecord(6, 4, 44, 30),
+      'b': makeRecord(6, 4, 44, 30),
     };
 
     const ranked = computeRankings([lowerPrestige, higherPrestige], records, 2);
 
     expect(ranked[0].teamId).toBe('b');
     expect(ranked[1].teamId).toBe('a');
-  });
-});
-
-describe('withProgramPrestige', () => {
-  test('shifts only the coached program and can reorder a tied poll', () => {
-    const lower = makeTeam('a', 60);
-    const higher = makeTeam('b', 70);
-    const teams = [lower, higher];
-    const records = {
-      a: makeRecord(5, 1, 50, 40),
-      b: makeRecord(5, 1, 50, 40),
-    };
-
-    expect(computeRankings(teams, records, 2)[0].teamId).toBe('b');
-    expect(withProgramPrestige(teams, 'a', 0)).toBe(teams);
-
-    const adjusted = withProgramPrestige(teams, 'a', 20);
-    expect(adjusted[0].prestige).toBe(80);
-    expect(adjusted[1]).toBe(higher);
-    expect(computeRankings(adjusted, records, 2)[0].teamId).toBe('a');
   });
 });

@@ -7,14 +7,14 @@ import { programTactics } from '../../sim/schemeMatchups';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
-import { buildPlayoffState, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
-import { computeAllSOS, computePlayoffProjection, computeRankings } from '../../sim/rankings';
+import { buildPlayoffField, buildPlayoffState, firstTeamsOut, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
+import { computePollInputs, computeRankings } from '../../sim/rankings';
+import { compareConferenceStanding, compareOverallStanding, conferenceLeaders } from '../../sim/standings';
 import { programRoster, programStarters, withLeaguePrestige } from '../../sim/programLedger';
 import { buildCoachGamePlan } from '../../sim/coachEffects';
 import { rosterForAvailability, weeklyScratches } from '../../sim/injuries';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { seedToNumber } from '../../sim/rng';
-import { compareConferenceStanding, compareOverallStanding } from '../../sim/standings';
 import {
   assertCanInitializePlayoffs,
   assertCanSimRegularWeek,
@@ -51,6 +51,7 @@ const initialState: SeasonState = {
   lastAppliedWeekSimId: null,
   programLedger: {},
   programLedgerYear: null,
+  trophyHolders: {},
 };
 
 // Async thunk to start a new season — only PRE (year 1) or OFFSEASON (next year).
@@ -92,8 +93,7 @@ export const simCurrentWeek = createAsyncThunk(
 
     // Snapshot current rankings before this week's results so we can show rank movement.
     const prevRecords = selectTeamRecords(state);
-    const prevSos = computeAllSOS(existingResults, prevRecords);
-    const prevRankings = computeRankings(rankingTeams, prevRecords, 25, prevSos);
+    const prevRankings = computeRankings(rankingTeams, prevRecords, 25, computePollInputs(existingResults, prevRecords));
     const previousRankByTeamId = Object.fromEntries(prevRankings.map((r) => [r.teamId, r.rank]));
 
     const gamesToPlay = scheduleByWeek[currentWeekIndex];
@@ -224,11 +224,12 @@ export const startPlayoffs = createAsyncThunk(
           state.coach.programPrestigeDrift ?? 0,
         );
         const records = selectTeamRecords(state);
-        const sos = computeAllSOS(state.season.gameResults, records);
+
 
         // Compute rankings to get top 12. Earned prestige drift is included for the coached program.
-        const rankings = computeRankings(rankingTeams, records, 25, sos);
-        const seeds = selectPlayoffField(rankings);
+        const rankings = computeRankings(rankingTeams, records, rankingTeams.length, computePollInputs(state.season.gameResults, records));
+        // The six highest-ranked conference champions are in; the other six spots are at-large.
+        const seeds = selectPlayoffField(rankings, Object.values(conferenceLeaders(teams, records)));
 
         return buildPlayoffState(seeds);
     }
@@ -326,7 +327,13 @@ const seasonSlice = createSlice({
       const year = action?.payload?.preserveYear ? state.year : initialState.year;
       // A new game starts the league over; restarting the current season keeps how programs stand.
       if (force) return { ...initialState, year };
-      return { ...initialState, year, programLedger: state.programLedger ?? {}, programLedgerYear: state.programLedgerYear ?? null };
+      return {
+        ...initialState,
+        year,
+        programLedger: state.programLedger ?? {},
+        programLedgerYear: state.programLedgerYear ?? null,
+        trophyHolders: state.trophyHolders ?? {},
+      };
     },
     /** Fold a finished season into the ledger. Ignored if that season was already counted. */
     applyProgramLedger: (state, action: PayloadAction<{ ledger: ProgramLedger; year: number }>) => {
@@ -372,6 +379,15 @@ const seasonSlice = createSlice({
         state.lastAppliedWeekSimId = action.meta.requestId;
         state.previousRankByTeamId = action.payload.previousRankByTeamId;
         state.gameResults.push(...results);
+
+        // A rivalry winner takes (or keeps) the trophy.
+        for (const game of state.scheduleByWeek[weekIndex] ?? []) {
+          if (!game.rivalryTrophy) continue;
+          const result = results.find((row) => row.id === game.id);
+          if (!result || result.scoreA === result.scoreB) continue;
+          const winnerId = result.scoreA > result.scoreB ? result.teamAId : result.teamBId;
+          state.trophyHolders = { ...(state.trophyHolders ?? {}), [game.rivalryTrophy]: winnerId };
+        }
         state.completedWeeks += 1;
         state.currentWeekIndex += 1;
 
@@ -527,14 +543,35 @@ export const selectRankingTeams = createSelector(
 
 export const selectProgramLedger = (state: RootState): ProgramLedger => state.season.programLedger ?? {};
 
-export const selectTop25Rankings = createSelector(
-  [selectRankingTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
-  (teams, records, gameResults) => computeRankings(teams, records, 25, computeAllSOS(gameResults, records)),
+export const selectPollInputs = createSelector(
+  [selectTeamRecords, (state: RootState) => state.season.gameResults],
+  (records, gameResults) => computePollInputs(gameResults, records),
 );
 
+/** Every program in poll order. */
+export const selectFullRankings = createSelector(
+  [selectRankingTeams, selectTeamRecords, selectPollInputs],
+  (teams, records, pollInputs) => computeRankings(teams, records, teams.length, pollInputs),
+);
+
+export const selectTop25Rankings = createSelector([selectFullRankings], (rankings) => rankings.slice(0, 25));
+
+/** Each conference's current leader: its champion once the regular season ends. */
+export const selectConferenceLeaders = createSelector(
+  [selectTeams, selectTeamRecords],
+  (teams, records) => conferenceLeaders(teams, records),
+);
+
+/** The 12-team field if the season ended today: six auto bids for the best-ranked conference leaders, six at-large. */
 export const selectTop12Projection = createSelector(
-  [selectRankingTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
-  (teams, records, gameResults) => computePlayoffProjection(teams, records, computeAllSOS(gameResults, records)),
+  [selectFullRankings, selectConferenceLeaders],
+  (rankings, leaders) => buildPlayoffField(rankings, Object.values(leaders)),
+);
+
+/** The four best-ranked teams outside the projected field. */
+export const selectFirstFourOut = createSelector(
+  [selectFullRankings, selectTop12Projection],
+  (rankings, field) => firstTeamsOut(rankings, field, 4),
 );
 
 export const selectPlayoffState = (state: RootState) => state.season.playoffs;
@@ -550,11 +587,6 @@ export const selectRankTrends = createSelector(
     }),
 );
 
-/** Top 16 for rankings page — includes bubble teams (#13–#16). */
-export const selectTop16Rankings = createSelector(
-  [selectRankingTeams, selectTeamRecords, (state: RootState) => state.season.gameResults],
-  (teams, records, gameResults) => computeRankings(teams, records, 16, computeAllSOS(gameResults, records)),
-);
 
 const EMPTY_RECORD = { confWins: 0, confLosses: 0, wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0 } as const;
 

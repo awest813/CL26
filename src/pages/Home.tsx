@@ -47,7 +47,7 @@ function Home() {
     : null;
   const record = coach.selectedTeamId ? records[coach.selectedTeamId] : null;
   const projectedSeed = coach.selectedTeamId
-    ? top12.find((row) => row.teamId === coach.selectedTeamId)?.rank ?? null
+    ? top12.find((row) => row.teamId === coach.selectedTeamId)?.seed ?? null
     : null;
   const pollRank = seasonStarted && coach.selectedTeamId
     ? top25.find((row) => row.teamId === coach.selectedTeamId)?.rank ?? null

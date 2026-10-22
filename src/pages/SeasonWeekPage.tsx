@@ -29,10 +29,13 @@ function UserGameCard({
   result,
   selectedTeamId,
   teamById,
+  rivalryTrophy,
 }: {
   result: GameResult;
   selectedTeamId: string;
   teamById: Map<string, { id: string; schoolName: string; nickname: string }>;
+  /** The trophy at stake, when this was the rivalry game. */
+  rivalryTrophy?: string;
 }) {
   const isTeamA = result.teamAId === selectedTeamId;
   const userScore = isTeamA ? result.scoreA : result.scoreB;
@@ -95,6 +98,11 @@ function UserGameCard({
       </div>
       <p className="resultLine">{recap.summary}</p>
       <p className="resultLine">{recap.keyEdge}</p>
+      {rivalryTrophy && (
+        <p className="resultLine">
+          <strong>{won ? user?.schoolName ?? 'Your program' : opponent?.schoolName ?? 'Your rival'}</strong> takes home {rivalryTrophy}.
+        </p>
+      )}
       {(topPerformers.length > 0 || recap.mvp) && (
         <p className="resultLine">
           Led by{' '}
@@ -197,7 +205,9 @@ function SeasonWeekPage() {
       <PageHeader
         eyebrow="Season"
         title="Results"
-        subtitle={`Week ${displayWeek + 1} of ${totalWeeks}. Scores, team stats, and top performers from each matchup.`}
+        subtitle={rows.some(({ game }) => game.rivalryTrophy)
+          ? `Week ${displayWeek + 1} of ${totalWeeks}: rivalry week. Every program plays its rival for a trophy.`
+          : `Week ${displayWeek + 1} of ${totalWeeks}. Scores, team stats, and top performers from each matchup.`}
       />
 
       <div className="card seasonWeekControlCard">
@@ -247,7 +257,12 @@ function SeasonWeekPage() {
       </div>
 
       {selectedTeamId && userGameResult && (
-        <UserGameCard result={userGameResult} selectedTeamId={selectedTeamId} teamById={teamById} />
+        <UserGameCard
+          result={userGameResult}
+          selectedTeamId={selectedTeamId}
+          teamById={teamById}
+          rivalryTrophy={rows.find(({ game }) => game.id === userGameResult.id)?.game.rivalryTrophy}
+        />
       )}
 
       <div className="card p-0 overflow-hidden">
@@ -301,6 +316,7 @@ function SeasonWeekPage() {
                             >
                               {isFinal ? `${awayScore}–${homeScore}` : 'vs'}
                             </button>
+                            {game.rivalryTrophy && <span className="rivalryTag">{game.rivalryTrophy}</span>}
                         </td>
                         <td className={`p-2 ${homeScore > awayScore ? 'font-bold' : ''}`}>
                             <div className="seasonIdentity">

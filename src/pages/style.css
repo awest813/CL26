@@ -3175,3 +3175,23 @@ button.seasonScoreButton:hover:not(:disabled) {
     width: 100%;
   }
 }
+
+.rivalryTag {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent-strong);
+  white-space: nowrap;
+}
+
+.fieldNotes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+}
+
+.fieldNote {
+  white-space: nowrap;
+}

@@ -44,7 +44,7 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 
 ### Not Yet Started
 - [ ] News feed and weekly storyline flavor
-- [ ] Rivalry game tagging and trophy events
+- [x] Rivalry game tagging and trophy events (rivalry week, 64 trophies, holders tracked across seasons)
 - [ ] Accessibility pass (keyboard navigation, semantic HTML, contrast audit)
 - [ ] Sim speed, display density, and theme (confirmations and the matchup estimate are on the settings page)
 
@@ -80,6 +80,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Event-driven engine: faceoffs after goals, clears and rides, multiple shots per possession, 80-second shot clock, sudden-death overtime, skill-weighted shooters, box score calibrated to D-I (see `docs/SIM_AUDIT.md`)
 - [x] Schemes that counter each other, faceoff and save ratings, real penalty time and man-up stats, a scheme identity for every program, and opponent scouting on the Weekly Hub
 - [x] A living league: CPU programs rise and fall through results, recruiting classes, and early pro departures; 32-man rosters two deep; CPU injuries; prestige fades out of the poll by game 10
+- [x] NCAA-ish postseason: six automatic bids for the highest-ranked conference champions, neutral-site semifinals and final, a poll with capped margin, RPI-style schedule strength, and quality wins
 
 **Key files:** `src/sim/rng.ts`, `src/sim/matchEngine.ts`, `src/features/exhibition/exhibitionSlice.ts`, `src/pages/ExhibitionPage.tsx`
 
@@ -182,7 +183,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 
 ### M11 — Flavor Systems (Not Started)
 - [ ] News feed and weekly storyline text
-- [ ] Rivalry game tagging and trophy events
+- [x] Rivalry game tagging and trophy events (rivalry week, 64 trophies, holders tracked across seasons)
 - [ ] Press conference flavor hooks
 
 ---

@@ -100,6 +100,8 @@ export interface ScheduledGame {
   homeTeamId: string;
   awayTeamId: string;
   conferenceGame: boolean;
+  /** Set on an annual rivalry game: the trophy at stake. */
+  rivalryTrophy?: string;
 }
 
 export interface TeamGameStats {
@@ -181,8 +183,9 @@ export interface RankingScoreBreakdown {
   conferenceWinPctPoints: number;
   pointDifferentialPoints: number;
   prestigePoints: number;
-  scoringVolumePoints: number;
   strengthOfSchedulePoints: number;
+  /** Quality-win bonuses minus bad-loss penalties. */
+  qualityResultPoints: number;
   totalPoints: number;
 }
 
@@ -210,6 +213,18 @@ export type PlayoffRoundName = 'ROUND1' | 'QUARTERFINAL' | 'SEMIFINAL' | 'FINAL'
 export interface PlayoffSeed {
   seed: number;
   teamId: string;
+  /** In the field as one of the highest-ranked conference champions. Missing on brackets set before auto bids. */
+  autoBid?: boolean;
+}
+
+/** One line of the projected (or final) field: seed, poll rank, and how the team got in. */
+export interface FieldSeed extends PlayoffSeed {
+  pollRank: number;
+  record: string;
+  points: number;
+  autoBid: boolean;
+  /** Set when the team leads (or won) its conference. */
+  conferenceChampion: boolean;
 }
 
 export interface PlayoffGame {
@@ -255,6 +270,8 @@ export interface SeasonState {
   programLedger?: ProgramLedger;
   /** The last season year folded into the ledger, so a season is never counted twice. */
   programLedgerYear?: number | null;
+  /** Who holds each rivalry trophy, by trophy name. Carries across seasons. */
+  trophyHolders?: Record<string, string>;
 }
 
 /** How a program has moved away from its base rating in the league file. */

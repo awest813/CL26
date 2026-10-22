@@ -37,7 +37,7 @@ import {
   buildProDraft,
   entrantToPlayer,
 } from '../../sim/offseasonMarket';
-import { computeAllSOS, computeRankings } from '../../sim/rankings';
+import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { advanceProgramLedger, prestigeDriftForSeason, programRoster, withLeaguePrestige } from '../../sim/programLedger';
 import { buildSeasonJobMarket } from '../../sim/jobOffers';
 import {
@@ -226,9 +226,9 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const wins = userRecord.wins;
     const losses = userRecord.losses;
 
-    const sos = computeAllSOS(season.gameResults, records);
+    const pollInputs = computePollInputs(season.gameResults, records);
     const leagueTeams = withLeaguePrestige(teams, season.programLedger, coach.selectedTeamId, coach.programPrestigeDrift ?? 0);
-    const rankingsTable = computeRankings(leagueTeams, records, 128, sos);
+    const rankingsTable = computeRankings(leagueTeams, records, 128, pollInputs);
     const userPollRow = rankingsTable.find((r) => r.teamId === coach.selectedTeamId);
     const pollRank = userPollRow?.rank ?? TOTAL_TEAMS;
     const rankTarget = coach.programExpectations.rankTarget;

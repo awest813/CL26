@@ -171,6 +171,15 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
   assert.ok((afterFinalize.coach.programPrestigeDrift ?? 0) <= 30);
   assert.strictEqual(afterFinalize.coach.recruitPool.length, 0, `${seasonLabel} recruiting cleared after finalize`);
   assert.strictEqual(afterFinalize.season.programLedgerYear, afterPlayoffs.season.year, `${seasonLabel} ledger should fold in the season`);
+  assert.strictEqual(
+    Object.keys(afterFinalize.season.trophyHolders ?? {}).length,
+    64,
+    `${seasonLabel} every rivalry trophy should have a holder`,
+  );
+  assert.ok(
+    afterPlayoffs.season.playoffs?.seeds.filter((seed) => seed.autoBid).length === 6,
+    `${seasonLabel} the field should carry six automatic bids`,
+  );
   assert.ok(
     Object.keys(afterFinalize.season.programLedger ?? {}).length >= 127,
     `${seasonLabel} every CPU program should have a ledger entry`,

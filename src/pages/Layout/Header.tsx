@@ -46,7 +46,7 @@ function Header({ menuOpen, onToggleMenu, menuButtonRef }: HeaderProps) {
   const onContinuePage = pathname === continueAction.path;
   const phaseLabel = seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length);
   const record = selectedTeamId ? records[selectedTeamId] : null;
-  const projectedSeed = selectedTeamId ? top12.find((row) => row.teamId === selectedTeamId)?.rank ?? null : null;
+  const projectedSeed = selectedTeamId ? top12.find((row) => row.teamId === selectedTeamId)?.seed ?? null : null;
   // Once the bracket is set the seed is real; before that it is a projection.
   const bracketSeed = selectedTeamId
     ? season.playoffs?.seeds.find((row) => row.teamId === selectedTeamId)?.seed ?? null

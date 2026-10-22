@@ -2,7 +2,10 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateRoster } from './generateRoster.ts';
 import {
+  buildPlayoffField,
   buildPlayoffState,
+  firstTeamsOut,
+  isNeutralSiteRound,
   homeAwayByTournamentSeed,
   selectPlayoffField,
   simulatePlayoffRound,
@@ -36,8 +39,43 @@ describe('playoff loop', () => {
     const field = selectPlayoffField(createTop12Rankings());
 
     assert.equal(field.length, 12);
-    assert.deepEqual(field[0], { seed: 1, teamId: 'team-1' });
-    assert.deepEqual(field[11], { seed: 12, teamId: 'team-12' });
+    assert.deepEqual(field[0], { seed: 1, teamId: 'team-1', autoBid: false });
+    assert.deepEqual(field[11], { seed: 12, teamId: 'team-12', autoBid: false });
+  });
+
+  test('the six highest-ranked conference champions get in, and seeds follow the poll', () => {
+    const rankings: RankingRow[] = Array.from({ length: 40 }, (_, index) => ({
+      rank: index + 1,
+      teamId: `team-${index + 1}`,
+      points: 1000 - index,
+      record: '8-4',
+    }));
+    // Two champions inside the top 12, five ranked lower, and one more than the six bids.
+    const champions = ['team-2', 'team-9', 'team-15', 'team-22', 'team-30', 'team-33', 'team-38'];
+    const field = buildPlayoffField(rankings, champions);
+
+    assert.equal(field.length, 12);
+    const autoBids = field.filter((row) => row.autoBid).map((row) => row.teamId);
+    assert.deepEqual(autoBids, ['team-2', 'team-9', 'team-15', 'team-22', 'team-30', 'team-33']);
+    assert.ok(!field.some((row) => row.teamId === 'team-38'), 'only six champions get automatic bids');
+    // Six at-large spots go to the best teams left: 1, 3, 4, 5, 6, 7.
+    assert.deepEqual(
+      field.filter((row) => !row.autoBid).map((row) => row.teamId),
+      ['team-1', 'team-3', 'team-4', 'team-5', 'team-6', 'team-7'],
+    );
+    assert.deepEqual(field.map((row) => row.seed), Array.from({ length: 12 }, (_, i) => i + 1));
+    assert.equal(field.find((row) => row.teamId === 'team-33')?.seed, 12);
+    assert.equal(field.find((row) => row.teamId === 'team-33')?.pollRank, 33);
+
+    const bubble = firstTeamsOut(rankings, field, 4).map((row) => row.teamId);
+    assert.deepEqual(bubble, ['team-8', 'team-10', 'team-11', 'team-12']);
+  });
+
+  test('semifinals and the championship are at a neutral site', () => {
+    assert.equal(isNeutralSiteRound('ROUND1'), false);
+    assert.equal(isNeutralSiteRound('QUARTERFINAL'), false);
+    assert.equal(isNeutralSiteRound('SEMIFINAL'), true);
+    assert.equal(isNeutralSiteRound('FINAL'), true);
   });
 
   test('buildPlayoffState creates round-1 pairings and empty later rounds', () => {

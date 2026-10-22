@@ -13,8 +13,8 @@ import PageHeader from '../components/PageHeader';
 const ROUND_LABELS: Record<PlayoffRoundName, string> = {
   ROUND1: `${PLAYOFF_ROUND_LABELS.ROUND1} · seeds 5–12`,
   QUARTERFINAL: `${PLAYOFF_ROUND_LABELS.QUARTERFINAL} · the top four enter`,
-  SEMIFINAL: PLAYOFF_ROUND_LABELS.SEMIFINAL,
-  FINAL: PLAYOFF_ROUND_LABELS.FINAL,
+  SEMIFINAL: `${PLAYOFF_ROUND_LABELS.SEMIFINAL} · neutral site`,
+  FINAL: `${PLAYOFF_ROUND_LABELS.FINAL} · neutral site`,
 };
 
 function displaySeed(gameSeed: number, teamId: string, seedByTeamId: Map<string, number>): number | undefined {
@@ -222,7 +222,10 @@ function PlayoffsPage() {
                                                     <span className="seedsTeamName" title={team.schoolName}>{team.schoolName}</span>
                                                     {isUser && <span className="youMark">(You)</span>}
                                                   </div>
-                                                  <div className="text-xs text-gray-500">{team.nickname}</div>
+                                                  <div className="text-xs text-gray-500">
+                                                    {team.nickname}
+                                                    {seed.autoBid && <span className="pollMeta"> · Auto bid</span>}
+                                                  </div>
                                                 </span>
                                               </span>
                                             ) : seed.teamId}
@@ -253,7 +256,7 @@ function PlayoffsPage() {
                         <div key={round} className="card">
                             <h3 className="text-base font-bold border-b pb-2 mb-3">{ROUND_LABELS[round]}</h3>
                             {round === 'ROUND1' && (
-                              <p className="text-xs text-gray-500">Seeds 1–4 have automatic byes. Winners advance to seeded quarterfinal matchups.</p>
+                              <p className="text-xs text-gray-500">Seeds 1–4 have automatic byes. Winners advance to seeded quarterfinal matchups. The higher seed hosts through the quarterfinals; the semifinals and championship are at a neutral site.</p>
                             )}
                             <div className="grid2 gap-3">
                                 {games.map((game) => {

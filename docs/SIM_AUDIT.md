@@ -81,7 +81,7 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 | E11 | P1 | **Thin player stat lines.** Only goals, assists, and saves. No shots, ground balls, caused turnovers, turnovers, faceoffs won, or penalties per player. Only the top 5 per team are returned, and only 2 per team are stored in `GameSummary`. | `PlayerGameStats` in `types/sim.ts` | This blocks season stat leaders, awards, All-American teams, and draft logic based on production. |
 | E12 | ✅ | **Done in Phase 1.** Some highlights were made up. Filler lines (L582–594) are rolled at random times and do not describe events from the game. | L582 | Generate highlights only from real events. Fewer and accurate beats more and invented. |
 | E13 | P2 | **Partly done in Phase 1:** clears and rides are events now (clear %, failed clears, beaten rides turning into transition chances). Still missing: 20-second violations. Original gap: clears and rides were not events. `rideClear` only moves the offense's own turnover rate and offense boost. There are no failed clears, rides, or 20-second violations. | L392–396 | Add them as part of the E2 event loop. |
-| E14 | P2 | **Home field is a flat bump, applied in every game.** The playoff semifinals and final use it too (`simulateGame` defaults `homeAdvantageForA: true`), although those are neutral-site in the NCAA format. | L326; `playoffs.ts` L294 | Pass `homeAdvantageForA: false` for the semifinals and final. Optional: scale the bump by program or fan support. |
+| E14 | ✅ | **Neutral sites done in Phase 4**; scaling home field by program is still open. Was: home field was a flat bump, applied in every game. The playoff semifinals and final use it too (`simulateGame` defaults `homeAdvantageForA: true`), although those are neutral-site in the NCAA format. | L326; `playoffs.ts` L294 | Pass `homeAdvantageForA: false` for the semifinals and final. Optional: scale the bump by program or fan support. |
 
 ### B. League ecosystem: CPU programs
 
@@ -97,11 +97,11 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 
 | # | Sev | Gap | Where | Notes |
 |---|---|---|---|---|
-| S1 | P0 | **No conference automatic bids or conference tournaments.** The field is simply the top 12 of the poll. The product goal says "NCAA-ish", and auto bids are the core of NCAA-ish. | `selectPlayoffField` | At minimum, conference regular-season champions get priority, or the N highest-rated conference champions get auto bids. A one-weekend conference tournament (8 teams per conference fits neatly) is a bigger option. |
-| S2 | P1 | **The poll rewards running up the score.** Point differential is uncapped at 2 points per goal, and `scoringVolume` rewards raw goals scored. SOS is first-order only (opponents' win %). No head-to-head, no quality-win or bad-loss tiers, even though the README advertises "quality wins". | `rankings.ts` L13–20, L78–98 | Cap the margin per game (for example, 5), drop scoring volume, add opponents' opponents to SOS (RPI-style 25/50/25), and add quality-win bonuses by opponent rank. |
-| S3 | P1 | **No rivalry or trophy games, and the non-conference schedule is random.** No regional bias and no annual rivals. | `schedule.ts` | Lock 1–2 non-conference games to rivals and regional neighbors, seeded once per league. Ties into M11. |
+| S1 | ✅ | **Auto bids done in Phase 4**; conference tournaments are still open. Was: no conference automatic bids or conference tournaments. The field is simply the top 12 of the poll. The product goal says "NCAA-ish", and auto bids are the core of NCAA-ish. | `selectPlayoffField` | At minimum, conference regular-season champions get priority, or the N highest-rated conference champions get auto bids. A one-weekend conference tournament (8 teams per conference fits neatly) is a bigger option. |
+| S2 | ✅ | **Done in Phase 4.** Head-to-head is still open. Was: the poll rewarded running up the score. Point differential is uncapped at 2 points per goal, and `scoringVolume` rewards raw goals scored. SOS is first-order only (opponents' win %). No head-to-head, no quality-win or bad-loss tiers, even though the README advertises "quality wins". | `rankings.ts` L13–20, L78–98 | Cap the margin per game (for example, 5), drop scoring volume, add opponents' opponents to SOS (RPI-style 25/50/25), and add quality-win bonuses by opponent rank. |
+| S3 | ✅ | **Done in Phase 4:** one annual rival per program and a trophy for each pair. The other four non-conference games are still random. Was: no rivalry or trophy games, and the non-conference schedule was random. No regional bias and no annual rivals. | `schedule.ts` | Lock 1–2 non-conference games to rivals and regional neighbors, seeded once per league. Ties into M11. |
 | S4 | P2 | **The matchup estimate is not the engine.** `estimateWinChance` is a prestige-ratio formula, so it disagrees with the engine on faceoff and goalie edges and on tactics. | `winEstimate.ts` | After E1–E5, replace it with a cheap Monte Carlo (about 200 seeded engine runs) or a fitted logistic model from the calibration script. |
-| S5 | P2 | **The semifinals and final have home field.** See E14. | | |
+| S5 | ✅ | **Done in Phase 4.** Was: the semifinals and final had home field. See E14. | | |
 
 ### D. Coach, roster, and development loop
 
@@ -203,6 +203,24 @@ Measured: across 20 seasons, 3 of the starting top ten dropped out; across 100, 
 ### Phase 4: NCAA-ish postseason and poll (S1, S2, S3, E14)
 
 Decided: the 6 highest-ranked conference champions get guaranteed bids. The other 6 spots are at-large.
+
+**✅ Done.** Shipped:
+- **Automatic bids.** `buildPlayoffField` takes the full poll and the conference champions (`conferenceLeaders`, the top of each conference table). The 6 highest-ranked champions get in, then the 6 best-ranked teams left. Seeds follow the poll, so a champion ranked 33rd enters as the 12 seed. Seeds carry `autoBid`. The Rankings page shows the projected field with "Auto bid" (the conference is on hover), each seed's poll rank where it differs, and the first four teams out. The Playoffs page marks auto bids.
+- **Neutral sites.** The semifinals and championship are played with no home field (`isNeutralSiteRound`). The Playoffs page labels them.
+- **Poll.** `computePollInputs` replaces the bare SOS map:
+  - Margin is capped at 5 goals a game, at 3 points per goal.
+  - The scoring-volume term is gone.
+  - SOS is RPI-style: two parts opponents' win % and one part their opponents' win %, at weight 400.
+  - A win over a .667+ team adds 40 and over a .500+ team 15; a loss to a sub-.333 team costs 40.
+  The Rankings page explains each line, and the score breakdown shows "Margin (capped)" and "Quality wins and bad losses".
+- **Rivalries.** `src/sim/rivalries.ts` pairs every program, for good, with a school in its own region from another conference: 64 pairs, each with its own trophy ("The Iron Shield"). Week 12 is rivalry week, every game in it is a rivalry, and rivals never meet earlier. `season.trophyHolders` tracks who holds each trophy across seasons. Where it shows up:
+  - the Weekly Hub matchup line ("Rivalry: The Iron Shield · up for grabs")
+  - the week-12 results (subtitle and a trophy tag on every game)
+  - the user's result card ("… takes home The Iron Shield")
+  - the team page ("Rival: … · The Iron Shield (held by …)")
+- **Tests.** Field selection (six auto bids, at-large fill, poll-order seeds, first four out), neutral sites, margin cap, quality wins and bad losses, RPI SOS, "running up the score does not beat better wins", rivalry pairing (one rival each, same region, different conference, unique trophies, stable), and rivalry week on three seeds. The career harness checks six auto bids and 64 trophy holders every season.
+
+Existing saves: a bracket set before this phase has no `autoBid` flags. Its rivalry trophies start empty and fill in at the next rivalry week. Schedules already generated keep their old week 12.
 
 1. Neutral-site semifinals and final.
 2. Poll fixes: capped margin, no scoring-volume term, RPI-style SOS, quality-win tiers, and prestige weight that fades through the season. Update the methodology copy on the Rankings page.
