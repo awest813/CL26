@@ -75,7 +75,7 @@ function recruitingTask(input: WeeklyDeskInput): DeskTask {
     return {
       id: 'recruiting',
       title: 'Recruiting',
-      detail: 'The high school class is closed. The portal, the pro draft, and the coach pool are on the office.',
+      detail: 'The high school class is closed. The portal, the pro draft, head-coaching jobs, and assistant hires are on the office.',
       tone: 'open',
       action: 'Office',
       href: '/career',

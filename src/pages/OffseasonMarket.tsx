@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
 import TeamLogo from '../components/TeamLogo';
 import PrestigeStars from '../components/PrestigeStars';
-import { selectRankingTeams } from '../features/season/seasonSlice';
-import { acceptJobOffer, declineAllJobOffers, togglePortalClaim } from '../features/coach/coachSlice';
+import { selectRankingTeams, selectTeamRecords } from '../features/season/seasonSlice';
+import { hasSeasonHistoryForYear } from '../sim/seasonPhase';
+import { prestigeStars, prestigeStarText } from '../sim/prestige';
+import type { JobOffer } from '../types/sim';
+import { acceptJobOffer, careerSetupFromPrestige, declineAllJobOffers, togglePortalClaim } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import {
@@ -10,17 +13,16 @@ import {
   buildCoachPool,
   buildPortalBoard,
   buildProDraft,
-  type StaffCoach,
 } from '../sim/offseasonMarket';
 import { previewOffseasonDepartures } from '../sim/rosterManagement';
-import { draftLedger } from '../sim/programLedger';
+import { draftLedger, expectedWinsByTeamId } from '../sim/programLedger';
 import { playerYearLabel } from '../sim/rosterSummary';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
-const ARCHETYPE_LABEL: Record<StaffCoach['archetype'], string> = {
-  RECRUITER: 'Recruiter',
-  TACTICIAN: 'Tactician',
-  DEVELOPER: 'Developer',
+const JOB_TIER_LABEL: Record<JobOffer['tier'], string> = {
+  UPGRADE: 'Upgrade',
+  LATERAL: 'Lateral move',
+  STEP_DOWN: 'Step down',
 };
 
 function OffseasonMarket() {
@@ -31,6 +33,7 @@ function OffseasonMarket() {
   const conferences = useAppSelector((state) => state.league.conferences);
   // A job reads the program as it stands now, the prestige accepting it carries over.
   const currentTeams = useAppSelector(selectRankingTeams);
+  const records = useAppSelector(selectTeamRecords);
   const season = useAppSelector((state) => state.season);
   const selectedTeam = teams.find((team) => team.id === coach.selectedTeamId) ?? null;
   const claims = coach.portalClaimIds ?? [];
@@ -67,15 +70,36 @@ function OffseasonMarket() {
   );
   const yourPicks = selectedTeam ? proDraft.filter((pick) => pick.collegeId === selectedTeam.id) : [];
   const yourPickById = new Map(yourPicks.map((pick) => [pick.playerId, pick]));
+  // Openings are announced when the season is recorded; until then the market waits.
+  const seasonRecorded = hasSeasonHistoryForYear(coach.seasonHistory, season.year);
+  const openingIds = useMemo(
+    () => new Set(seasonRecorded ? coach.jobOpenings ?? [] : []),
+    [coach.jobOpenings, seasonRecorded],
+  );
   const coaches = useMemo(
-    () => (selectedTeam ? buildCoachPool(teams, season.seasonSeed, season.year, selectedTeam.id) : []),
-    [season.seasonSeed, season.year, selectedTeam, teams],
+    () => (selectedTeam ? buildCoachPool(teams, season.seasonSeed, season.year, selectedTeam.id, openingIds) : []),
+    [openingIds, season.seasonSeed, season.year, selectedTeam, teams],
   );
   const conferenceName = useMemo(() => new Map(conferences.map((conference) => [conference.id, conference.name])), [conferences]);
   const offerIds = new Set((coach.pendingJobOffers ?? []).map((offer) => offer.teamId));
+  const expectedWins = useMemo(() => expectedWinsByTeamId(currentTeams), [currentTeams]);
   const marketCoaches = coaches
     .filter((staff) => staff.hiring || offerIds.has(staff.teamId))
-    .sort((a, b) => Number(offerIds.has(b.teamId)) - Number(offerIds.has(a.teamId)) || b.skill - a.skill);
+    .map((staff) => ({ staff, prestige: currentTeams.find((team) => team.id === staff.teamId)?.prestige ?? 0 }))
+    .sort((a, b) => Number(offerIds.has(b.staff.teamId)) - Number(offerIds.has(a.staff.teamId)) || b.prestige - a.prestige);
+  const currentPrestige = currentTeams.find((team) => team.id === selectedTeam?.id)?.prestige ?? selectedTeam?.prestige ?? 0;
+  const committedHere = coach.recruitPool.filter((recruit) => recruit.committedTeamId === selectedTeam?.id).length
+    + (coach.signedRecruitsByYear[season.year]?.length ?? 0);
+
+  /** Why the seat is open: the old staff missed badly, or moved on. */
+  function openingReason(teamId: string, coachName: string): string {
+    const record = records[teamId];
+    if (!record) return `${coachName} moved on.`;
+    const shortfall = (expectedWins.get(teamId) ?? 6) - record.wins;
+    return shortfall >= 1.5
+      ? `${coachName} was let go after ${record.wins}–${record.losses}.`
+      : `${coachName} moved on after ${record.wins}–${record.losses}.`;
+  }
   const transfers = departures.filter((departure) => departure.reason === 'transfer');
   const graduates = departures.filter((departure) => departure.reason === 'graduate');
   const seatsThatFit = Math.min(claims.length, scholarships);
@@ -85,7 +109,14 @@ function OffseasonMarket() {
     return Boolean(pick?.early) && !departures.some((departure) => departure.player.id === player.id);
   });
 
-  async function onAcceptOffer(teamId: string) {
+  async function onAcceptOffer(teamId: string, prestige: number) {
+    const school = teams.find((team) => team.id === teamId)?.schoolName ?? 'the new program';
+    const leaving = [
+      committedHere > 0 ? `${committedHere} commit${committedHere === 1 ? '' : 's'}` : null,
+      'your assistants',
+      'the prestige you built',
+    ].filter(Boolean).join(', ');
+    if (!window.confirm(`Take the ${school} job (${prestigeStarText(prestigeStars(prestige))})? ${leaving} stay at ${selectedTeam?.schoolName ?? 'your program'}. You take over ${school}'s roster, staff, and standing.`)) return;
     setOfferError(null);
     try {
       await dispatch(acceptJobOffer(teamId)).unwrap();
@@ -235,45 +266,57 @@ function OffseasonMarket() {
 
       <div className="marketSection">
         <div className="weekActionBar">
-          <h4 className="marketHeading m-0">Coach pool</h4>
+          <h4 className="marketHeading m-0">Head-coaching jobs</h4>
           {coach.pendingJobOffers.length > 0 && (coach.employment ?? 'ACTIVE') !== 'FIRED' && (
             <button type="button" className="btn text-xs" onClick={() => dispatch(declineAllJobOffers())}>
-              Decline offers (+3 security)
+              Stay and decline (+3 security)
             </button>
           )}
         </div>
-        {(coach.employment ?? 'ACTIVE') === 'FIRED' && (
-          <p className="text-sm text-red-600 mt-2 mb-0">The AD let you go. One of these seats is the next job.</p>
-        )}
+        <p className="text-xs text-gray-500 mt-1 mb-0">
+          {!seasonRecorded
+            ? 'Jobs open when the season is recorded: staffs that missed badly are let go, and a few coaches move on.'
+            : (coach.employment ?? 'ACTIVE') === 'FIRED'
+              ? 'The AD let you go. The offer below is the seat that will have you.'
+              : coach.pendingJobOffers.length > 0
+                ? `${coach.pendingJobOffers.length} program${coach.pendingJobOffers.length === 1 ? '' : 's'} called. A title reaches furthest, then a playoff run, then hitting the win target.`
+                : 'No one called. Make the field, or win the title, to get a call from a bigger program.'}
+        </p>
         {offerError && <p className="text-xs text-red-600 mt-2 mb-0">{offerError}</p>}
-        {marketCoaches.length === 0 ? (
+        {seasonRecorded && marketCoaches.length === 0 && (
           <p className="text-sm text-gray-500 mt-2 mb-0">No program is searching. Your seat is the job.</p>
-        ) : (
+        )}
+        {marketCoaches.length > 0 && (
           <ul className="marketList mt-2">
-            {marketCoaches.map((staff) => {
+            {marketCoaches.map(({ staff, prestige }) => {
               const school = teams.find((team) => team.id === staff.teamId);
-              const schoolPrestige = currentTeams.find((team) => team.id === staff.teamId)?.prestige;
               const offer = coach.pendingJobOffers.find((item) => item.teamId === staff.teamId);
+              const expectations = careerSetupFromPrestige(prestige).programExpectations;
               return (
-                <li key={staff.id} className="marketRow">
+                <li key={staff.id} className={`marketRow jobRow${offer ? ' jobRow-offer' : ''}`}>
                   <span className="programLockup">
                     {school && <TeamLogo team={school} size="sm" />}
                     <span>
-                      <strong>{staff.name}</strong>
+                      <strong>{school?.schoolName ?? staff.teamId}</strong>{' '}
+                      {offer && <span className={`jobTier jobTier-${offer.tier}`}>{JOB_TIER_LABEL[offer.tier]}</span>}
                       <span className="pollNick">
-                        {ARCHETYPE_LABEL[staff.archetype]} · age {staff.age} · skill {staff.skill}
-                        {school ? ` · ${school.schoolName}` : ''}
-                        {school ? ` · ${conferenceName.get(school.conferenceId) ?? 'Independent'}` : ''}
+                        {school ? `${conferenceName.get(school.conferenceId) ?? 'Independent'} · ${school.region}` : ''}
+                        {' · '}Targets: {expectations.winTarget}+ wins, Top {expectations.rankTarget}
                       </span>
-                      {schoolPrestige != null && <PrestigeStars prestige={schoolPrestige} showTier />}
+                      <span className="jobMeta">
+                        <PrestigeStars prestige={prestige} showTier />
+                        <span className="pollNick">{openingReason(staff.teamId, staff.name)}</span>
+                      </span>
                     </span>
                   </span>
                   {offer ? (
-                    <button type="button" className="btn btn-primary text-xs" onClick={() => void onAcceptOffer(staff.teamId)}>
-                      {offer.tier === 'UPGRADE' ? 'Take upgrade' : offer.tier === 'STEP_DOWN' ? 'Take the job' : 'Take job'}
+                    <button type="button" className="btn btn-primary text-xs" onClick={() => void onAcceptOffer(staff.teamId, prestige)}>
+                      {offer.tier === 'UPGRADE' ? 'Take the upgrade' : 'Take the job'}
                     </button>
                   ) : (
-                    <span className="text-xs text-gray-500">Open search</span>
+                    <span className="text-xs text-gray-500" title={prestige > currentPrestige ? 'A bigger season gets this call' : undefined}>
+                      {prestige > currentPrestige ? 'Not calling yet' : 'Searching'}
+                    </span>
                   )}
                 </li>
               );

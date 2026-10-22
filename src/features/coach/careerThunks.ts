@@ -14,6 +14,9 @@ import {
   setStarterIds,
   applyPrestigeDrift,
   setPendingJobOffers,
+  setAssistants,
+  setStaffDepartures,
+  setJobOpenings,
   setEmployment,
   initializeRecruitingBoard,
   updateProgramStanding,
@@ -39,7 +42,8 @@ import {
 } from '../../sim/offseasonMarket';
 import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { advanceProgramLedger, draftLedger, nextPrestigeDrift, prestigeDriftForSeason, programRoster, withLeaguePrestige } from '../../sim/programLedger';
-import { buildSeasonJobMarket } from '../../sim/jobOffers';
+import { buildSeasonJobMarket, programOpenings } from '../../sim/jobOffers';
+import { advanceStaff, generateStaff } from '../../sim/assistants';
 import {
   canSimRegularWeek,
   careerOffseasonCapabilities,
@@ -121,6 +125,9 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
     if (!canSimRegularWeek(season)) {
       return 'skipped';
     }
+    // Saves from before assistants existed get the program's staff before the first game.
+    const staffTeam = state.league.teams.find((team) => team.id === coach.selectedTeamId);
+    if (!coach.assistants && staffTeam) dispatch(setAssistants(generateStaff(staffTeam, 'staff')));
 
     const simAction = await dispatch(simCurrentWeek());
     if (!simCurrentWeek.fulfilled.match(simAction)) {
@@ -360,17 +367,42 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
 
     // Offers read prestige after this season is on the ledger, the same numbers accepting a job uses.
     const updated = getState();
+    const marketTeams = withLeaguePrestige(teams, updated.season.programLedger, coach.selectedTeamId, updated.coach.programPrestigeDrift ?? 0);
+    // Head-coaching jobs open where CPU staffs missed badly; offers and poached assistants both come from them.
+    const openings = programOpenings({
+      teams: marketTeams,
+      records,
+      seasonSeed: season.seasonSeed,
+      year: season.year,
+      userTeamId: coach.selectedTeamId,
+    });
     const market = buildSeasonJobMarket({
-      teams: withLeaguePrestige(teams, updated.season.programLedger, coach.selectedTeamId, updated.coach.programPrestigeDrift ?? 0),
+      teams: marketTeams,
       userTeamId: coach.selectedTeamId,
       seasonSeed: season.seasonSeed,
       year: season.year,
       jobSecurity: newJobSecurity,
       champion,
+      madePlayoffs,
+      wins,
+      winTarget: coach.programExpectations.winTarget,
       effectivePrestige: currentEffectivePrestige,
+      openings,
     });
+    dispatch(setJobOpenings([...openings].sort()));
     dispatch(setPendingJobOffers(market.offers));
     dispatch(setEmployment(market.employment));
+
+    // The staff's offseason: a year older, some better, the best hired away, the oldest retired.
+    const staffYear = advanceStaff({
+      staff: updated.coach.assistants ?? generateStaff(currentTeam ?? marketTeams[0], 'staff'),
+      seed: season.seasonSeed,
+      year: season.year,
+      madePlayoffs,
+      openings: marketTeams.filter((team) => openings.has(team.id)),
+    });
+    dispatch(setAssistants(staffYear.staff));
+    dispatch(setStaffDepartures(staffYear.departures));
 
     dispatch(resetRecruitingForNewSeason());
   },

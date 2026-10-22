@@ -7,6 +7,7 @@ import { simulateRecruitingWeek, type CpuRecruitingProfile } from '../../sim/rec
 import { RECRUITING_BOARD_LIMIT, type AutoRecruitPlan } from '../../sim/autoRecruit';
 import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
+import { generateStaff, staffEffects, type AssistantCandidate, type AssistantCoach, type StaffDeparture } from '../../sim/assistants';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
@@ -120,6 +121,12 @@ export interface CoachState {
   // Roster management
   managedRoster: Player[] | null;
   starterIds: string[];
+  /** The four assistants. Missing on saves from before staffs existed; the next career step hires one. */
+  assistants?: AssistantCoach[];
+  /** Assistants who left after the last season, for the office and hub. */
+  staffDepartures?: StaffDeparture[];
+  /** Programs with an open head-coaching job after the last recorded season. */
+  jobOpenings?: string[];
 }
 
 const initialState: CoachState = {
@@ -173,6 +180,8 @@ const initialState: CoachState = {
   // Roster management
   managedRoster: null,
   starterIds: [],
+  assistants: undefined,
+  staffDepartures: [],
 };
 
 const coachSlice = createSlice({
@@ -193,8 +202,12 @@ const coachSlice = createSlice({
         seasonYear: number;
         careerTier: 'REBUILD' | 'STABLE' | 'CONTENDER';
         programExpectations: ProgramExpectations;
+        /** The staff the program has when the coach arrives. */
+        assistants?: AssistantCoach[];
     }>) => {
         state.selectedTeamId = action.payload.teamId;
+        if (action.payload.assistants) state.assistants = action.payload.assistants;
+        state.staffDepartures = [];
         state.careerTier = action.payload.careerTier;
         state.programExpectations = action.payload.programExpectations;
         state.onboardingStep = 'READY'; // Changed to READY as per component check
@@ -329,6 +342,7 @@ const coachSlice = createSlice({
             state.practiceFocus,
             state.profile?.archetype ?? 'RECRUITER',
             state.skillTree?.operations ?? 0,
+            staffEffects(state.assistants).fatigueScale,
         );
         const boostersLevel = state.programResources?.boosters ?? 50;
         state.adPressure = Math.max(
@@ -346,7 +360,25 @@ const coachSlice = createSlice({
             state.practiceFocus,
             state.profile?.archetype ?? 'RECRUITER',
             state.skillTree?.operations ?? 0,
+            staffEffects(state.assistants).fatigueScale,
         );
+    },
+    setAssistants: (state, action: PayloadAction<AssistantCoach[]>) => {
+        state.assistants = action.payload;
+    },
+    setStaffDepartures: (state, action: PayloadAction<StaffDeparture[]>) => {
+        state.staffDepartures = action.payload;
+    },
+    setJobOpenings: (state, action: PayloadAction<string[]>) => {
+        state.jobOpenings = action.payload;
+    },
+    /** Hire an assistant into his role, replacing whoever held it. Callers check the window and his prestige demand. */
+    hireAssistant: (state, action: PayloadAction<AssistantCandidate>) => {
+        // The demand is the hiring check's business; the staff keeps only the coach.
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { minPrestige, ...hire } = action.payload;
+        const staff = (state.assistants ?? []).filter((coach) => coach.role !== hire.role);
+        state.assistants = [...staff, { ...hire, tenure: 0 }];
     },
     updateJobSecurity: (state, action: PayloadAction<number>) => {
         state.jobSecurity = Math.max(0, Math.min(100, action.payload));
@@ -405,10 +437,14 @@ const coachSlice = createSlice({
         prestigeDrift?: number;
         careerTier: NonNullable<CoachState['careerTier']>;
         programExpectations: ProgramExpectations;
+        /** The new program's staff: assistants stay with their school. */
+        assistants?: AssistantCoach[];
     }>) => {
         state.selectedTeamId = action.payload.teamId;
         state.careerTier = action.payload.careerTier;
         state.programExpectations = action.payload.programExpectations;
+        if (action.payload.assistants) state.assistants = action.payload.assistants;
+        state.staffDepartures = [];
         state.programPrestigeDrift = clamp(action.payload.prestigeDrift ?? 0, MIN_PRESTIGE_DRIFT, MAX_PRESTIGE_DRIFT);
         state.pendingJobOffers = [];
         state.employment = 'ACTIVE';
@@ -620,6 +656,10 @@ export const {
     togglePortalClaim,
     clearOffseasonMarket,
     resetCoach,
+    setAssistants,
+    setStaffDepartures,
+    setJobOpenings,
+    hireAssistant,
 } = coachSlice.actions;
 
 export function careerTierFromPrestige(prestige: number): NonNullable<CoachState['careerTier']> {
@@ -671,14 +711,15 @@ export const acceptJobOffer = createAsyncThunk(
             teamId,
             seasonYear: state.season.year,
             prestigeDrift: inheritedDrift,
+            assistants: generateStaff({ ...team, prestige: clamp(team.prestige + inheritedDrift, 1, 100) }, `${state.season.year}`),
             ...careerSetupFromPrestige(clamp(team.prestige + inheritedDrift, 1, 100)),
         }));
     },
 );
 
 
-/** Archetype, recruiting skill, NIL, and boosters: how far one recruiting hour goes. */
-export function programRecruitingBonus(coach: Pick<CoachState, 'profile' | 'skillTree' | 'programResources'>): number {
+/** Archetype, recruiting skill, NIL, boosters, and the recruiting coordinator: how far one recruiting hour goes. */
+export function programRecruitingBonus(coach: Pick<CoachState, 'profile' | 'skillTree' | 'programResources'> & { assistants?: AssistantCoach[] }): number {
     const archetypeBonus =
         coach.profile?.archetype === 'RECRUITER' ? 1.15
         : coach.profile?.archetype === 'DEVELOPER' ? 0.95
@@ -689,7 +730,7 @@ export function programRecruitingBonus(coach: Pick<CoachState, 'profile' | 'skil
     const recruitingSkillBonus = 1 + recruitingSkill * 0.03;
     const nilBonus = 1 + (nilLevel - 50) / 300;
     const boostersBonus = 1 + (boostersLevel - 50) / 400;
-    return archetypeBonus * recruitingSkillBonus * nilBonus * boostersBonus;
+    return archetypeBonus * recruitingSkillBonus * nilBonus * boostersBonus * staffEffects(coach.assistants).recruitingMultiplier;
 }
 
 export const advanceRecruitingWeek = createAsyncThunk(

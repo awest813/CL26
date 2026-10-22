@@ -64,14 +64,16 @@ type InstallPickerProps = {
   onChange: (focus: PracticeFocus) => void;
   archetype?: CoachArchetype;
   operationsSkill?: number;
+  /** From the strength coach. */
+  staffFatigueScale?: number;
 };
 
 /** The four installs, each with what it does on game day, what it grows, and what a week of it costs in fatigue. */
-export function InstallPicker({ value, onChange, archetype, operationsSkill }: InstallPickerProps) {
+export function InstallPicker({ value, onChange, archetype, operationsSkill, staffFatigueScale }: InstallPickerProps) {
   return (
     <div className="choiceGrid installPicker" role="group" aria-label="This week's install">
       {INSTALL_ORDER.map((focus) => {
-        const change = weeklyFatigueChange(focus, archetype, operationsSkill);
+        const change = weeklyFatigueChange(focus, archetype, operationsSkill, staffFatigueScale);
         return (
           <button
             key={focus}

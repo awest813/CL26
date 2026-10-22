@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import TeamLogo from '../components/TeamLogo';
 import RecruitingReportNote from '../components/RecruitingReportNote';
 import StaffRecruitingControls from '../components/StaffRecruitingControls';
 import LeagueWirePanel from '../components/LeagueWirePanel';
+import GameLog from '../components/GameLog';
+import AwardsPanel from '../components/AwardsPanel';
 import {
   selectRankTrends,
   selectTeamRecords,
@@ -42,6 +44,7 @@ import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/game
 import { buildPositionNeedByPosition } from '../sim/recruiting';
 import { careerOffseasonCapabilities } from '../sim/seasonPhase';
 import { buildWeeklyDesk } from '../sim/weeklyDesk';
+import { ASSISTANT_ROLES, staffEffects, type AssistantRole } from '../sim/assistants';
 import { buildLeagueWire } from '../sim/leagueWire';
 import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -56,6 +59,13 @@ function schemeCall(tactics: Tactics): string {
 }
 
 const MAX_COACH_SKILL_LEVEL = 5;
+
+const ASSISTANT_SHORT_LABELS: Record<AssistantRole, string> = {
+  OFFENSE: 'OC',
+  DEFENSE: 'DC',
+  RECRUITING: 'Recruiting',
+  STRENGTH: 'S&C',
+};
 
 function fatiguePillClass(label: string): string {
   if (label === 'Drained') return 'fatigue-pill fatigue-pill-drained';
@@ -100,7 +110,7 @@ function Scoreboard({
   userStats,
   oppStats,
   keyEdge,
-  plays = [],
+  children,
 }: {
   heading: string;
   won: boolean;
@@ -114,8 +124,8 @@ function Scoreboard({
   oppStats?: TeamGameStats;
   /** The recap's one line on what decided it. */
   keyEdge?: string;
-  /** A few plays from the game. */
-  plays?: string[];
+  /** The game log under the score. */
+  children?: ReactNode;
 }) {
   return (
     <section id="week-result" className={`card matchupBoard resultBoard ${won ? 'resultBoard-win' : 'resultBoard-loss'}`} aria-label={won ? 'Win' : 'Loss'}>
@@ -167,11 +177,7 @@ function Scoreboard({
         </p>
       )}
       {keyEdge && <p className="resultLine text-sm text-gray-500">{keyEdge}</p>}
-      {plays.length > 0 && (
-        <ul className="resultPlays" aria-label="Plays from the game">
-          {plays.map((play) => <li key={play}>{play}</li>)}
-        </ul>
-      )}
+      {children}
     </section>
   );
 }
@@ -235,8 +241,9 @@ function WeeklyHubPage() {
         archetype: coach.profile?.archetype,
         coachSkill: coach.profile?.skill,
         skillTree: coach.skillTree,
+        staff: coach.assistants,
       }),
-    [coach.practiceFocus, coach.profile, coach.skillTree, coach.tactics, coach.teamFatigue],
+    [coach.assistants, coach.practiceFocus, coach.profile, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
   const gameDayChanges = useMemo(
     () =>
@@ -384,6 +391,7 @@ function WeeklyHubPage() {
       coach.practiceFocus,
       coach.profile?.archetype,
       coach.skillTree?.operations,
+      staffEffects(coach.assistants).fatigueScale,
     ),
   );
 
@@ -630,7 +638,15 @@ function WeeklyHubPage() {
           oppScore={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.awayScore : playoffSpot.lastGame.result.homeScore}
           userStats={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.teamStatsHome : playoffSpot.lastGame.result.teamStatsAway}
           oppStats={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.teamStatsAway : playoffSpot.lastGame.result.teamStatsHome}
-        />
+        >
+          <GameLog
+            plays={playoffSpot.lastGame.result.scoringPlays ?? []}
+            highlights={playoffSpot.lastGame.result.highlights ?? []}
+            teamA={{ id: playoffSpot.lastGame.homeTeamId, name: teams.find((team) => team.id === playoffSpot.lastGame?.homeTeamId)?.schoolName ?? 'Home' }}
+            teamB={{ id: playoffSpot.lastGame.awayTeamId, name: teams.find((team) => team.id === playoffSpot.lastGame?.awayTeamId)?.schoolName ?? 'Away' }}
+            userTeamId={selectedTeamId}
+          />
+        </Scoreboard>
       ) : lastConferenceGame && (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') ? (
         <Scoreboard
           heading={lastConferenceGame.round === 'FINAL' ? 'Conference final' : 'Conference semifinal'}
@@ -652,8 +668,15 @@ function WeeklyHubPage() {
           userStats={userLastResult.teamAId === selectedTeamId ? userLastResult.statsA : userLastResult.statsB}
           oppStats={userLastResult.teamAId === selectedTeamId ? userLastResult.statsB : userLastResult.statsA}
           keyEdge={lastResultEdge ?? undefined}
-          plays={userLastResult.highlights.slice(0, 4)}
-        />
+        >
+          <GameLog
+            plays={userLastResult.scoringPlays ?? []}
+            highlights={userLastResult.highlights}
+            teamA={{ id: userLastResult.teamAId, name: teams.find((team) => team.id === userLastResult.teamAId)?.schoolName ?? 'Home' }}
+            teamB={{ id: userLastResult.teamBId, name: teams.find((team) => team.id === userLastResult.teamBId)?.schoolName ?? 'Away' }}
+            userTeamId={selectedTeamId}
+          />
+        </Scoreboard>
       ) : null}
 
       <section className="card matchupBoard" aria-labelledby="loop-title">
@@ -794,8 +817,16 @@ function WeeklyHubPage() {
                 : offseasonCaps.canProcessSigningDay
                   ? 'Signing day and the season record are the next clicks. The portal can wait.'
                   : offseasonCaps.canFinalizeSeason
-                    ? 'The class is signed. Record the season next.'
-                    : 'Before the new year: check the portal, the pro draft, and the depth chart.'
+                    ? 'The class is signed. Record the season next: it opens the job market and the staff moves.'
+                    : [
+                        coach.pendingJobOffers.length > 0
+                          ? `${coach.pendingJobOffers.length} program${coach.pendingJobOffers.length === 1 ? '' : 's'} called about your job.`
+                          : null,
+                        (coach.staffDepartures ?? []).length > 0 || (coach.assistants && coach.assistants.length < 4)
+                          ? 'Your staff has an empty seat to fill.'
+                          : null,
+                        'Before the new year: check the portal, the pro draft, the staff, and the depth chart.',
+                      ].filter(Boolean).join(' ')
               : 'Set the install and the board, then play the week.'}
         </p>
         <ul className="deskList">
@@ -817,6 +848,19 @@ function WeeklyHubPage() {
           ))}
         </ul>
       </section>
+
+      {(season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') && (season.awardHistory?.[season.year]?.length ?? 0) > 0 && (
+        <AwardsPanel
+          year={season.year}
+          national={season.awardHistory?.[season.year] ?? []}
+          allAmericans={season.allAmericanHistory?.[season.year]}
+          postseason={season.postseasonAwardHistory?.[season.year]}
+          teams={teams}
+          conferences={conferences}
+          userTeamId={selectedTeamId}
+          userConferenceId={selectedTeam?.conferenceId ?? null}
+        />
+      )}
 
       {leagueWire && (
         <LeagueWirePanel
@@ -841,6 +885,7 @@ function WeeklyHubPage() {
             onChange={(focus) => dispatch(setPracticeFocus(focus))}
             archetype={coach.profile?.archetype}
             operationsSkill={coach.skillTree?.operations}
+            staffFatigueScale={staffEffects(coach.assistants).fatigueScale}
           />
           <div className="planReadout planReadout-pair mt-3">
             <div>
@@ -880,7 +925,15 @@ function WeeklyHubPage() {
         )}
 
         <div className="card">
-          <h3 className="m-0 mb-3 text-base font-bold">Coach skill snapshot</h3>
+          <h3 className="m-0 mb-3 text-base font-bold">Coach and staff</h3>
+          {coach.assistants && (
+            <div className="text-xs text-gray-500 mb-2">
+              Staff: {ASSISTANT_ROLES.map((role) => {
+                const assistant = coach.assistants?.find((row) => row.role === role);
+                return `${ASSISTANT_SHORT_LABELS[role]} ${assistant ? assistant.rating : 'vacant'}`;
+              }).join(' · ')}
+            </div>
+          )}
           <div className="text-xs text-gray-500 mb-2">
             Recruiting {coach.skillTree.recruiting}/{MAX_COACH_SKILL_LEVEL} · Development {coach.skillTree.development}/{MAX_COACH_SKILL_LEVEL} · Operations {coach.skillTree.operations}/{MAX_COACH_SKILL_LEVEL}
           </div>
@@ -891,7 +944,7 @@ function WeeklyHubPage() {
           </ul>
           <div className="mt-3">
             <Link to="/career" className="text-sm hover:underline">
-              Upgrade coach skills in the Coach Office
+              Upgrade skills and manage the staff in the Coach Office
             </Link>
           </div>
         </div>

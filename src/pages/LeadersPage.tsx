@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader';
 import { useAppSelector } from '../store/hooks';
 import { LEADER_CATEGORIES, MIN_FACEOFFS, MIN_SHOTS_FACED, seasonLeaders } from '../sim/seasonStats';
 import { playerYearLabel } from '../sim/rosterSummary';
-import type { Team } from '../types/sim';
+import type { SeasonAward, Team } from '../types/sim';
 
 function PlayerCell({ name, team, isUser, detail }: { name: string; team: Team | undefined; isUser: boolean; detail: string }) {
   return (
@@ -27,6 +27,7 @@ function LeadersPage() {
   const stats = useAppSelector((state) => state.season.playerSeasonStats);
   const awardHistory = useAppSelector((state) => state.season.awardHistory);
   const allAmericanHistory = useAppSelector((state) => state.season.allAmericanHistory);
+  const postseasonAwardHistory = useAppSelector((state) => state.season.postseasonAwardHistory);
   const year = useAppSelector((state) => state.season.year);
   const phase = useAppSelector((state) => state.season.phase);
   const teams = useAppSelector((state) => state.league.teams);
@@ -44,6 +45,25 @@ function LeadersPage() {
   const awards = awardsYear != null ? awardHistory?.[awardsYear] ?? [] : [];
   const awardsAreThisYear = awardsYear === year;
   const allAmericans = awardsYear != null ? allAmericanHistory?.[awardsYear] : undefined;
+  const postseason = awardsYear != null ? postseasonAwardHistory?.[awardsYear] : undefined;
+  const conferences = useAppSelector((state) => state.league.conferences);
+  const conferenceName = (conferenceId: string) => conferences.find((conference) => conference.id === conferenceId)?.name ?? conferenceId;
+  const postseasonRows: SeasonAward[] = [
+    ...(postseason?.coachOfTheYear
+      ? [{
+          award: 'Coach of the Year',
+          playerId: `coach-${postseason.coachOfTheYear.teamId}`,
+          name: postseason.coachOfTheYear.coachName,
+          teamId: postseason.coachOfTheYear.teamId,
+          position: 'A' as const,
+          statLine: `${postseason.coachOfTheYear.record}, ${postseason.coachOfTheYear.detail}`,
+        }]
+      : []),
+    ...(postseason?.mostOutstandingPlayer ? [postseason.mostOutstandingPlayer] : []),
+    ...Object.entries(postseason?.conferencePlayers ?? {})
+      .sort(([a], [b]) => conferenceName(a).localeCompare(conferenceName(b)))
+      .map(([conferenceId, award]) => ({ ...award, award: `${conferenceName(conferenceId)} Player of the Year` })),
+  ];
 
   return (
     <div className="pageStack">
@@ -95,6 +115,43 @@ function LeadersPage() {
           <p className="text-sm m-0">No awards yet. The first are named when this regular season ends.</p>
         )}
       </section>
+
+      {postseasonRows.length > 0 && (
+        <section className="card">
+          <h3 className="m-0">{awardsYear} postseason honors</h3>
+          <p className="text-sm text-gray-500 mt-1 mb-2">
+            Conference Players of the Year are named after week 12; Coach of the Year and the Most Outstanding Player after the championship.
+          </p>
+          <div className="dataTableWrap">
+            <table>
+              <caption className="sr-only">{awardsYear} postseason honors</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Award</th>
+                  <th scope="col">Winner</th>
+                  <th scope="col">Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                {postseasonRows.map((award) => (
+                  <tr key={award.award} className={award.teamId === selectedTeamId ? 'youRow' : undefined}>
+                    <td className="font-semibold">{award.award}</td>
+                    <td>
+                      <PlayerCell
+                        name={award.name}
+                        team={teamById.get(award.teamId)}
+                        isUser={award.teamId === selectedTeamId}
+                        detail={award.award === 'Coach of the Year' ? 'Head coach' : award.position}
+                      />
+                    </td>
+                    <td className="text-sm">{award.statLine}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {allAmericans && allAmericans.first.length > 0 && (
         <div className="grid2">

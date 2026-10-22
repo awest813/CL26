@@ -16,6 +16,7 @@ import {
 } from '../features/coach/careerThunks';
 import TeamLogo from '../components/TeamLogo';
 import PrestigeStars from '../components/PrestigeStars';
+import StaffPanel from '../components/StaffPanel';
 import { formatPrestige, prestigeCushion, prestigeStarText, prestigeToNextStar } from '../sim/prestige';
 import OffseasonMarket from './OffseasonMarket';
 import { selectTeamRecords } from '../features/season/seasonSlice';
@@ -28,6 +29,7 @@ import {
   summarizeCoachSkillImpacts,
 } from '../sim/coachEffects';
 import { GameDayEdge, GameDayScheme, InstallPicker, TacticSelects } from '../components/GamePlan';
+import { staffEffects } from '../sim/assistants';
 import { recruitingPeriodLabel } from '../sim/recruiting';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { PlayoffRoundName, SeasonHistoryEntry } from '../types/sim';
@@ -205,8 +207,9 @@ function CoachCareerPage() {
         archetype: coach.profile?.archetype,
         coachSkill: coach.profile?.skill,
         skillTree: coach.skillTree,
+        staff: coach.assistants,
       }),
-    [coach.practiceFocus, coach.profile?.archetype, coach.profile?.skill, coach.skillTree, coach.tactics, coach.teamFatigue],
+    [coach.assistants, coach.practiceFocus, coach.profile?.archetype, coach.profile?.skill, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
   const prepNotes = useMemo(() => summarizeCoachGamePlan(coachGamePlan), [coachGamePlan]);
   const gameDayChanges = useMemo(
@@ -219,7 +222,7 @@ function CoachCareerPage() {
     [coach.practiceFocus, coach.tactics, coach.teamFatigue],
   );
   const projectedFatigue = Math.round(
-    advanceFatigue(coach.teamFatigue, coach.practiceFocus, coach.profile?.archetype, coach.skillTree?.operations),
+    advanceFatigue(coach.teamFatigue, coach.practiceFocus, coach.profile?.archetype, coach.skillTree?.operations, staffEffects(coach.assistants).fatigueScale),
   );
   const skillImpactNotes = useMemo(
     () =>
@@ -384,7 +387,7 @@ function CoachCareerPage() {
             </div>
             <div className="text-xs text-gray-500 mt-1">
               {(coach.employment ?? 'ACTIVE') === 'FIRED'
-                ? 'The AD let you go. A landing job is in the coach pool.'
+                ? 'The AD let you go. A landing job is under head-coaching jobs.'
                 : coach.jobSecurity < 30
                 ? 'Meeting expectations is critical this season.'
                 : coach.jobSecurity >= 75
@@ -491,7 +494,7 @@ function CoachCareerPage() {
             {signingDayResolved && (
               <div className="text-xs text-gray-500 self-center">
                 {fired
-                  ? 'The AD let you go. Take a landing job in the coach pool. The next year waits on that.'
+                  ? 'The AD let you go. Take a landing job under head-coaching jobs. The next year waits on that.'
                   : !seasonEndProcessed
                   ? signedClassThisYear.length === 0
                     ? 'No signees this year — finalize to update career record and continue.'
@@ -595,6 +598,7 @@ function CoachCareerPage() {
           onChange={(focus) => dispatch(setPracticeFocus(focus))}
           archetype={coach.profile.archetype}
           operationsSkill={coach.skillTree?.operations}
+          staffFatigueScale={staffEffects(coach.assistants).fatigueScale}
         />
 
         <div className="planReadout">
@@ -617,6 +621,19 @@ function CoachCareerPage() {
           </div>
         </div>
       </section>
+
+      {selectedTeam && (
+        <StaffPanel
+          staff={coach.assistants}
+          departures={coach.staffDepartures ?? []}
+          canHire={season.phase === 'PRE' || seasonEndProcessed}
+          teamId={selectedTeam.id}
+          effectivePrestige={effectivePrestige ?? selectedTeam.prestige}
+          seasonSeed={season.seasonSeed}
+          year={season.year}
+          teams={teams}
+        />
+      )}
 
       <div className="card">
         <div className="cardHeadRow mb-3">

@@ -1,4 +1,5 @@
 import { CoachArchetype, PracticeFocus, Tactics, TeamGameplayModifiers } from '../types/sim';
+import { staffEffects, type AssistantCoach } from './assistants';
 
 const FOCUS_TRANSLATION_BY_ARCHETYPE: Record<CoachArchetype, number> = {
   RECRUITER: 1,
@@ -118,6 +119,8 @@ export interface CoachWeekSettings {
     development?: number;
     operations?: number;
   };
+  /** The head coach's assistants. Missing means no staff effect at all. */
+  staff?: AssistantCoach[] | null;
 }
 
 export interface CoachGamePlan {
@@ -242,7 +245,9 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   const operationsSkill = clamp(settings.skillTree?.operations ?? 0, 0, 5);
   const tactics = applyCoachWeekSettings(settings);
   const modifiers = blankGameplayModifiers();
-  const focusTranslation = FOCUS_TRANSLATION_BY_ARCHETYPE[archetype];
+  const staff = staffEffects(settings.staff);
+  // The coordinator who runs the install makes it hit harder (or softer, from an empty seat).
+  const focusTranslation = FOCUS_TRANSLATION_BY_ARCHETYPE[archetype] * staff.installBoost[settings.practiceFocus];
   const focusModifiers = FOCUS_MODIFIERS[settings.practiceFocus];
 
   modifiers.offense += focusModifiers.offense * focusTranslation;
@@ -255,7 +260,13 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   modifiers.penaltyAvoidance += focusModifiers.penaltyAvoidance * focusTranslation;
   modifiers.groundBallBonus += focusModifiers.groundBallBonus * focusTranslation;
   // Conditioning also keeps legs under the team late in games.
-  const wearRelief = settings.practiceFocus === 'CONDITIONING' ? clamp(CONDITIONING_WEAR_RELIEF * focusTranslation, 0, 0.35) : 0;
+  const installWearRelief = settings.practiceFocus === 'CONDITIONING' ? CONDITIONING_WEAR_RELIEF * focusTranslation : 0;
+  const wearRelief = clamp(installWearRelief + staff.wearRelief, 0, 0.35);
+
+  modifiers.offense += staff.offense;
+  modifiers.shotQuality += staff.shotQuality;
+  modifiers.defense += staff.defense;
+  modifiers.goalie += staff.goalie;
 
   const archetypeBonus = ARCHETYPE_BONUSES[archetype];
   modifiers.offense += archetypeBonus.offense ?? 0;
@@ -377,6 +388,8 @@ export function advanceFatigue(
   focus: PracticeFocus,
   archetype: CoachArchetype = DEFAULT_COACH_ARCHETYPE,
   operationsSkill = 0,
+  /** From the strength coach (`staffEffects`): below 1 builds less fatigue. */
+  staffFatigueScale = 1,
 ): number {
   const bounded = clamp(previousFatigue, 0, 100);
 
@@ -395,7 +408,7 @@ export function advanceFatigue(
   if (rawDelta <= 0) return clamp(bounded + rawDelta, 0, 100);
   const archetypeReduction = archetype === 'TACTICIAN' ? 0.8 : 1.0;
   const operationsReduction = clamp(1 - operationsSkill * 0.03, 0.82, 1);
-  return clamp(bounded + rawDelta * archetypeReduction * operationsReduction, 0, 100);
+  return clamp(bounded + rawDelta * archetypeReduction * operationsReduction * staffFatigueScale, 0, 100);
 }
 
 /** Net fatigue one week of this install adds (or, if negative, removes), before the 0–100 bounds. */
@@ -403,9 +416,10 @@ export function weeklyFatigueChange(
   focus: PracticeFocus,
   archetype: CoachArchetype = DEFAULT_COACH_ARCHETYPE,
   operationsSkill = 0,
+  staffFatigueScale = 1,
 ): number {
   const midpoint = 50;
-  return Math.round((advanceFatigue(midpoint, focus, archetype, operationsSkill) - midpoint) * 10) / 10;
+  return Math.round((advanceFatigue(midpoint, focus, archetype, operationsSkill, staffFatigueScale) - midpoint) * 10) / 10;
 }
 
 /** Between playoff rounds: playing teams take a week of load; resting/bye teams recover. */
@@ -415,10 +429,11 @@ export function playoffRoundFatigue(
   focus: PracticeFocus,
   archetype: CoachArchetype = DEFAULT_COACH_ARCHETYPE,
   operationsSkill = 0,
+  staffFatigueScale = 1,
 ): number {
   if (!played) {
     // Rest between rounds / unused bye — meaningful recovery toward fresh.
     return clamp(previousFatigue - 12, 10, 100);
   }
-  return advanceFatigue(previousFatigue, focus, archetype, operationsSkill);
+  return advanceFatigue(previousFatigue, focus, archetype, operationsSkill, staffFatigueScale);
 }

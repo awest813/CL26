@@ -1,4 +1,4 @@
-import { GameResult, Player, PlayerGameStats, Position, TeamGameplayModifiers, Tactics, TeamGameStats, TeamSimInput } from '../types/sim';
+import { GameResult, Player, PlayerGameStats, Position, ScoringPlay, TeamGameplayModifiers, Tactics, TeamGameStats, TeamSimInput } from '../types/sim';
 import { makeRng, normalish, pickOne, randInt } from './rng.ts';
 import { MEN_SHOT_CLOCK_SECONDS, PERIOD_LENGTH_SECONDS, PERIODS, REGULATION_SECONDS } from './gameRules.ts';
 import { clockAtElapsed, OVERTIME_PERIOD_SECONDS } from './timeUtils.ts';
@@ -576,10 +576,31 @@ export function simulateGame(
     return penaltyLeft[other(side)] > 0 && penaltyLeft[side] === 0;
   }
 
-  function clockLabel(): string {
+  function clockNow() {
     // Just short of the horn, so a play at the buzzer reads "Q1 0:00" rather than the next period's "15:00".
-    const c = clockAtElapsed(Math.min(elapsed, periodEndForClock - 0.4), overtimePeriod > 0 ? { overtimePeriod } : undefined);
+    return clockAtElapsed(Math.min(elapsed, periodEndForClock - 0.4), overtimePeriod > 0 ? { overtimePeriod } : undefined);
+  }
+
+  function clockLabel(): string {
+    const c = clockNow();
     return `${c.label} ${c.time}`;
+  }
+
+  /** Every goal in order, for the scoring summary and line score. Records only; draws nothing from the rng. */
+  const scoringPlays: ScoringPlay[] = [];
+  function recordGoal(side: SideState, scorer: string, assist: string | null, manUp: boolean): void {
+    const c = clockNow();
+    scoringPlays.push({
+      period: c.quarter,
+      periodLabel: c.label,
+      clock: c.time,
+      teamId: side.input.team.id,
+      scorer,
+      ...(assist ? { assist } : {}),
+      ...(manUp ? { manUp: true } : {}),
+      scoreA: sideA.stats.goals,
+      scoreB: sideB.stats.goals,
+    });
   }
 
   function addPlay(line: string): void {
@@ -880,6 +901,7 @@ export function simulateGame(
       const manUpNote = manUpNow ? ' on the man-up' : '';
       const assistNote = assistName ? ` (assist: ${assistName})` : '';
       addPlay(`${shooter.name}, ${offense.input.team.schoolName}, ${phrase}${manUpNote}${assistNote}.`);
+      recordGoal(offense, shooter.name, assistName, manUpNow);
       return { scored: true, next: 'faceoff' };
     }
 
@@ -934,6 +956,7 @@ export function simulateGame(
     const row = ensurePlayerStats(winner, shooter);
     row.goals += 1;
     row.shots = (row.shots ?? 0) + 1;
+    recordGoal(winner, shooter.name, null, false);
     priorityHighlights.push(`Final — ${shooter.name} scores the sudden-death winner for ${winner.input.team.schoolName}.`);
   }
 
@@ -987,6 +1010,7 @@ export function simulateGame(
     topPlayersA: topA,
     topPlayersB: topB,
     highlights: [...priorityHighlights, ...playHighlights],
+    scoringPlays,
     boxScoreA: [...sideA.playerStats.values()],
     boxScoreB: [...sideB.playerStats.values()],
   };

@@ -103,8 +103,9 @@ export function buildPlayoffState(seeds: PlayoffSeed[]): PlayoffState {
   };
 }
 
-function toSummary(playoffGame: PlayoffGame, scoreA: number, scoreB: number, result: ReturnType<typeof simulateGame>): GameSummary {
+function toSummary(playoffGame: PlayoffGame, scoreA: number, scoreB: number, result: ReturnType<typeof simulateGame>, keepPlays = false): GameSummary {
   return {
+    ...(keepPlays ? { scoringPlays: result.scoringPlays ?? [], highlights: result.highlights } : {}),
     id: playoffGame.id,
     weekIndex: -1,
     homeTeamId: playoffGame.homeTeamId,
@@ -357,7 +358,8 @@ export function simulatePlayoffRound(
     return {
       ...game,
       winnerTeamId,
-      result: toSummary(game, result.scoreA, result.scoreB, result),
+      // The coached program's games keep every goal and the plays for its game log.
+      result: toSummary(game, result.scoreA, result.scoreB, result, Boolean(homeIsCoach || awayIsCoach)),
     };
   });
 

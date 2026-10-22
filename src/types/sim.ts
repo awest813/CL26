@@ -154,6 +154,22 @@ export interface PlayerGameStats {
 
 export type TopPerformer = PlayerGameStats;
 
+/** One goal, in game order. Scores are after the goal, from the engine's side A (home) and side B. */
+export interface ScoringPlay {
+  /** 1–4 for regulation quarters, 5 and up for overtime periods. */
+  period: number;
+  /** "Q1" to "Q4", "OT", "OT2", ... */
+  periodLabel: string;
+  /** Time left in the period, e.g. "7:42". */
+  clock: string;
+  teamId: string;
+  scorer: string;
+  assist?: string;
+  manUp?: boolean;
+  scoreA: number;
+  scoreB: number;
+}
+
 export interface GameResult {
   id?: string;
   weekIndex?: number;
@@ -169,6 +185,8 @@ export interface GameResult {
   topPlayersA: PlayerGameStats[];
   topPlayersB: PlayerGameStats[];
   highlights: string[];
+  /** Every goal in order. Kept in the save for the user's games only; missing on older saves. */
+  scoringPlays?: ScoringPlay[];
   /** Every player who recorded a stat. Returned by the engine for season totals; not kept in the save. */
   boxScoreA?: PlayerGameStats[];
   boxScoreB?: PlayerGameStats[];
@@ -202,6 +220,23 @@ export interface SeasonAward {
   statLine: string;
 }
 
+export interface CoachOfTheYear {
+  teamId: string;
+  coachName: string;
+  record: string;
+  /** Why: wins against what the program was expected to win, and how far it went. */
+  detail: string;
+}
+
+/** Awards from the end of the regular season through the championship. */
+export interface PostseasonAwards {
+  /** Conference Player of the Year, by conference id. Named when the regular season ends. */
+  conferencePlayers: Record<string, SeasonAward>;
+  /** Named once the champion is crowned. */
+  coachOfTheYear?: CoachOfTheYear;
+  mostOutstandingPlayer?: SeasonAward;
+}
+
 export interface GameSummary {
   id: string;
   weekIndex: number;
@@ -212,6 +247,9 @@ export interface GameSummary {
   teamStatsHome: TeamGameStats;
   teamStatsAway: TeamGameStats;
   topPerformers?: PlayerGameStats[];
+  /** The user's playoff games keep their goals and plays; side A is the home team. */
+  scoringPlays?: ScoringPlay[];
+  highlights?: string[];
 }
 
 export interface RankingRow {
@@ -321,6 +359,8 @@ export interface SeasonState {
   playerSeasonStats?: Record<string, PlayerSeasonLine>;
   /** National awards by season year, named when each regular season ends. */
   awardHistory?: Record<number, SeasonAward[]>;
+  /** Conference players of the year, Coach of the Year, and the championship's top player, by season year. */
+  postseasonAwardHistory?: Record<number, PostseasonAwards>;
   /** First and second All-American teams by season year. */
   allAmericanHistory?: Record<number, { first: SeasonAward[]; second: SeasonAward[] }>;
   /** This season's conference championships, by conference id; null until they are played. */

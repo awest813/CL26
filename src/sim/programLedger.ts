@@ -120,7 +120,7 @@ export function programStarters(roster: Player[]): string[] {
 }
 
 /** Wins a program of this prestige rank is expected to get in 12 games: 10 for the top program, 2 for the bottom. */
-function expectedWinsByTeamId(teams: Team[]): Map<string, number> {
+export function expectedWinsByTeamId(teams: Team[]): Map<string, number> {
   const ordered = [...teams].sort((a, b) => b.prestige - a.prestige || a.id.localeCompare(b.id));
   const last = Math.max(1, ordered.length - 1);
   return new Map(ordered.map((team, rank) => [team.id, 10 - (8 * rank) / last]));

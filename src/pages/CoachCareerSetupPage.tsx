@@ -2,6 +2,7 @@ import { FormEvent, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PrestigeStars from '../components/PrestigeStars';
 import { prestigeStars, prestigeStarText } from '../sim/prestige';
+import { generateStaff } from '../sim/assistants';
 import TeamLogo from '../components/TeamLogo';
 import { careerSetupFromPrestige, completeCareerSetup, setCoachProfile } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
@@ -81,6 +82,7 @@ function CoachCareerSetupPage() {
         seasonYear: 1,
         careerTier: setup.careerTier,
         programExpectations: setup.programExpectations,
+        assistants: generateStaff(selectedTeam, 'staff'),
       }),
     );
     dispatch(initializeManagedRoster());

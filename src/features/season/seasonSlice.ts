@@ -8,6 +8,8 @@ import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffField, buildPlayoffState, firstTeamsOut, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
+import { coachOfTheYear, conferencePlayersOfYear, mostOutstandingPlayer } from '../../sim/postseasonAwards';
+import { buildCoachPool } from '../../sim/offseasonMarket';
 import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { compareConferenceStanding, compareOverallStanding, conferenceLeaders } from '../../sim/standings';
 import { programRoster, programStarters, withLeaguePrestige } from '../../sim/programLedger';
@@ -58,6 +60,7 @@ const initialState: SeasonState = {
   playerSeasonStats: {},
   awardHistory: {},
   allAmericanHistory: {},
+  postseasonAwardHistory: {},
   conferenceTournaments: null,
 };
 
@@ -136,6 +139,7 @@ export const simCurrentWeek = createAsyncThunk(
           archetype: coachState.profile?.archetype,
           coachSkill: coachState.profile?.skill,
           skillTree: coachState.skillTree,
+          staff: coachState.assistants,
         })
       : null;
     const coachTeamTactics = coachGamePlan?.tactics ?? DEFAULT_TACTICS;
@@ -209,7 +213,11 @@ export const simCurrentWeek = createAsyncThunk(
       result.teamAId === coachState.selectedTeamId || result.teamBId === coachState.selectedTeamId,
     ));
 
-    return { results: storedResults, previousRankByTeamId, playerSeasonStats };
+    // After the last week, each conference names its Player of the Year.
+    const lastWeek = currentWeekIndex === scheduleByWeek.length - 1;
+    const conferencePlayers = lastWeek ? conferencePlayersOfYear(playerSeasonStats, teams) : undefined;
+
+    return { results: storedResults, previousRankByTeamId, playerSeasonStats, conferencePlayers };
   }
 );
 
@@ -248,6 +256,7 @@ function conferenceTournamentSides(state: RootState): (teamId: string, weekKey: 
         archetype: coach.profile?.archetype,
         coachSkill: coach.profile?.skill,
         skillTree: coach.skillTree,
+        staff: coach.assistants,
       })
     : null;
   return (teamId, weekKey) => {
@@ -338,6 +347,7 @@ export const simNextPlayoffRound = createAsyncThunk(
               archetype: coach.profile?.archetype,
               coachSkill: coach.profile?.skill,
               skillTree: coach.skillTree,
+              staff: coach.assistants,
             })
           : null;
 
@@ -384,7 +394,25 @@ export const simNextPlayoffRound = createAsyncThunk(
           { ledger: state.season.programLedger, seasonSeed: state.season.seasonSeed },
         );
 
-        return nextState;
+        if (!nextState.championTeamId) return { playoffs: nextState };
+
+        // The champion is crowned: Coach of the Year and the championship's top player.
+        const records = selectTeamRecords(state);
+        const staffNames = new Map(
+          buildCoachPool(teams, state.season.seasonSeed, state.season.year, coach.selectedTeamId ?? '')
+            .map((staff) => [staff.teamId, staff.name]),
+        );
+        const coachOfYear = coachOfTheYear({
+          teams: selectRankingTeams(state),
+          records,
+          playoffs: nextState,
+          coachNameByTeamId: (teamId) => (teamId === coach.selectedTeamId && coach.profile ? coach.profile.name : staffNames.get(teamId) ?? 'Staff'),
+        });
+        return {
+          playoffs: nextState,
+          coachOfTheYear: coachOfYear ?? undefined,
+          mostOutstandingPlayer: mostOutstandingPlayer(nextState) ?? undefined,
+        };
     }
 );
 
@@ -416,6 +444,7 @@ const seasonSlice = createSlice({
         trophyHolders: state.trophyHolders ?? {},
         awardHistory: state.awardHistory ?? {},
         allAmericanHistory: state.allAmericanHistory ?? {},
+        postseasonAwardHistory: state.postseasonAwardHistory ?? {},
       };
     },
     /** Fold a finished season into the ledger. Ignored if that season was already counted. */
@@ -484,6 +513,10 @@ const seasonSlice = createSlice({
             // The regular season is over: name the national awards.
             state.awardHistory = { ...(state.awardHistory ?? {}), [state.year]: seasonAwards(state.playerSeasonStats) };
             state.allAmericanHistory = { ...(state.allAmericanHistory ?? {}), [state.year]: allAmericanTeams(state.playerSeasonStats) };
+            state.postseasonAwardHistory = {
+              ...(state.postseasonAwardHistory ?? {}),
+              [state.year]: { conferencePlayers: action.payload.conferencePlayers ?? {} },
+            };
         }
       })
       .addCase(simConferenceChampionships.fulfilled, (state, action) => {
@@ -498,10 +531,19 @@ const seasonSlice = createSlice({
       })
       .addCase(simNextPlayoffRound.fulfilled, (state, action) => {
           if (state.phase !== 'PLAYOFF') return;
-          state.playoffs = action.payload;
+          state.playoffs = action.payload.playoffs;
           if (state.playoffs.championTeamId) {
               state.phase = 'OFFSEASON';
               state.isComplete = true;
+              const awards = state.postseasonAwardHistory?.[state.year] ?? { conferencePlayers: {} };
+              state.postseasonAwardHistory = {
+                ...(state.postseasonAwardHistory ?? {}),
+                [state.year]: {
+                  ...awards,
+                  ...(action.payload.coachOfTheYear ? { coachOfTheYear: action.payload.coachOfTheYear } : {}),
+                  ...(action.payload.mostOutstandingPlayer ? { mostOutstandingPlayer: action.payload.mostOutstandingPlayer } : {}),
+                },
+              };
           }
       });
   },

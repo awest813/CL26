@@ -71,6 +71,7 @@ export function storedGameResult(result: GameResult, keepDetail: boolean): GameR
   delete rest.boxScoreA;
   delete rest.boxScoreB;
   if (keepDetail) return rest;
+  delete rest.scoringPlays;
   return {
     ...rest,
     highlights: rest.highlights.slice(0, STORED_HIGHLIGHTS_FOR_OTHER_GAMES),

@@ -82,6 +82,41 @@ wins about half its games over its first five years. The 20-season regression co
 the highest stars regardless of fit) averages about 36%, close to the ~38% a program at its rank
 is expected to win.
 
+### Job offers, staff, awards, and the game log (follow-up)
+
+**Job offers audit.** Before: any strong season (job security 68+) offered the single highest-prestige
+program in the league, whether or not it had an opening; the market listed CPU head coaches who were
+"hiring" at random, unrelated to the offers; and the listing showed the old coach, not the job.
+Now (`jobOffers.ts`):
+- Jobs open where CPU staffs badly missed what their program should win (75% at four or more wins
+  short), plus about one in twenty that move on. Offers only come from open jobs.
+- Reach follows the season: hitting the win target draws one call up to +6 prestige, a playoff run two
+  calls up to +11, a title three up to +18. A losing season draws nothing.
+- A firing always lands somewhere: the best open seat at or below the old one.
+- The office lists head-coaching jobs: stars, conference, region, the targets that come with the job,
+  why the seat opened, and an Upgrade / Lateral / Step down tag on offers. Accepting confirms what stays
+  behind (commits, assistants, earned prestige).
+
+**Assistant coaches** (`assistants.ts`). Four roles: offensive and defensive coordinators, a recruiting
+coordinator, and a strength coach. 60 is neutral; 95 is the ceiling; an empty seat plays at 48.
+- Coordinators add up to +1.2 offense or defense (plus shot quality or goalie) and make their install
+  hit up to 15% harder. The strength coach cuts fatigue build-up up to 15% and late-game wear; the
+  recruiting coordinator moves weekly interest up to 8%.
+- Better programs start with better staffs. Each offseason assistants age, young ones improve, the best
+  (76+) are hired away as head coaches into the season's openings (more often after a playoff year),
+  and the oldest retire. Hiring opens after the season is recorded: three candidates per role, and the
+  best only take jobs at programs of a certain star rating.
+
+**Postseason awards** (`postseasonAwards.ts`). Each conference names a Player of the Year after week
+12; Coach of the Year (wins over expectation plus the bracket run) and the championship's Most
+Outstanding Player (semifinal and final) after the title game. Shown on the hub during the postseason
+and on the Leaders page.
+
+**Game log.** The engine now records every goal (scorer, assist, man-up, clock, running score) without
+drawing from the rng, so results are unchanged. The user's regular-season and playoff games keep it;
+the hub shows a line score with overtime columns, lead changes and the biggest leads, the scoring
+summary by period, and the game's plays.
+
 ## Open items, in priority order
 
 1. **CPU recruiting reads the same pitches.** CPU pursuit uses prestige and region only; academics
@@ -94,4 +129,8 @@ is expected to win.
    stars in job-offer tiers (`jobOffers.ts` still compares raw prestige).
 4. **Hub wire in the bracket.** The wire covers regular-season weeks and the pause before
    selection. Add conference championship and playoff round results.
-5. **Responsive pass.** The recruiting target table and the wire panel are dense under 760px.
+5. **Coach of the Year tuning.** A turnaround that missed the field can beat a playoff team; consider
+   requiring a winning record or weighting the bracket run more.
+6. **Staff contracts.** Assistants have no salary or contract length yet; a staff budget tied to boosters
+   would make the elite hires a trade-off.
+7. **Responsive pass.** The recruiting target table and the wire panel are dense under 760px.

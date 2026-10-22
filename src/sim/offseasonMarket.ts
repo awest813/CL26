@@ -171,7 +171,11 @@ export function buildProDraft(input: ProDraftInput): ProDraftPick[] {
   });
 }
 
-export function buildCoachPool(teams: Team[], seed: number, year: number, userTeamId: string): StaffCoach[] {
+/**
+ * Every program's head coach. With `openings` (see `programOpenings`), the programs in it
+ * are the ones hiring; without it, a few are, at random.
+ */
+export function buildCoachPool(teams: Team[], seed: number, year: number, userTeamId: string, openings?: Set<string>): StaffCoach[] {
   return teams.map((team) => {
     const rng = makeRng(seedToNumber(`${seed}:coach:${team.id}`));
     const hiringRng = makeRng(seedToNumber(`${seed}:${year}:hiring:${team.id}`));
@@ -183,7 +187,7 @@ export function buildCoachPool(teams: Team[], seed: number, year: number, userTe
       age: randInt(rng, 34, 64),
       skill,
       teamId: team.id,
-      hiring: team.id !== userTeamId && hiringRng() < 0.09,
+      hiring: team.id !== userTeamId && (openings ? openings.has(team.id) : hiringRng() < 0.09),
     };
   });
 }
