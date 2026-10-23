@@ -41,7 +41,12 @@ const SECURITY_BASELINE: Record<ProgramSituation, number> = {
   CONTENDER: 64,
 };
 
-const BASE_PRESTIGE = (leagueData.teams as Team[]).map((team) => team.prestige).sort((a, b) => b - a);
+/** Every program's prestige, highest first: the league a program's standing is ranked in. */
+export function leaguePrestiges(teams: Pick<Team, 'prestige'>[]): number[] {
+  return teams.map((team) => team.prestige).sort((a, b) => b - a);
+}
+
+const BASE_PRESTIGE = leaguePrestiges(leagueData.teams as Team[]);
 
 /** The situation by star rating: 4½ stars and up must win now, under 2½ stars is a rebuild. */
 export function situationFromPrestige(prestige: number): ProgramSituation {
@@ -51,7 +56,10 @@ export function situationFromPrestige(prestige: number): ProgramSituation {
   return 'REBUILD';
 }
 
-/** Where this prestige would rank in the league, 0 for the top. */
+/**
+ * Where this prestige would rank in the league, 0 for the top. Pass the league as it stands
+ * (with the program itself at its current prestige) so the rank matches how CPU programs are judged.
+ */
 function leagueRank(prestige: number, prestiges: number[]): number {
   return prestiges.filter((value) => value > prestige).length;
 }

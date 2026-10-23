@@ -44,6 +44,7 @@ import {
 } from '../../sim/offseasonMarket';
 import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { advanceProgramLedger, draftLedger, nextPrestigeDrift, prestigeDriftForSeason, programRoster, reachedSemifinal, withLeaguePrestige } from '../../sim/programLedger';
+import { leaguePrestiges } from '../../sim/programExpectations';
 import { buildSeasonJobMarket, FIRED_JOB_SECURITY, programOpenings } from '../../sim/jobOffers';
 import { advanceStaff, generateStaff } from '../../sim/assistants';
 import {
@@ -364,10 +365,6 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     dispatch(updateJobSecurity(newJobSecurity));
     dispatch(applyPrestigeDrift(prestigeDriftDelta));
 
-    // Raise or lower program expectations as prestige drifts across a long career.
-    const standing = careerSetupFromPrestige(currentEffectivePrestige);
-    dispatch(updateProgramStanding(standing));
-
     // The rest of the league: results move each CPU program's prestige, and the class it
     // signed and the players it lost early to the pros move its talent. Read the CPU
     // classes before the recruit pool is cleared for next year.
@@ -410,6 +407,8 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     // Offers read prestige after this season is on the ledger, the same numbers accepting a job uses.
     const updated = getState();
     const marketTeams = withLeaguePrestige(teams, updated.season.programLedger, coach.selectedTeamId, updated.coach.programPrestigeDrift ?? 0);
+    // Raise or lower program expectations as prestige drifts, ranked in the league as it now stands.
+    dispatch(updateProgramStanding(careerSetupFromPrestige(currentEffectivePrestige, leaguePrestiges(marketTeams))));
     // Head-coaching jobs open where CPU staffs missed badly; offers and poached assistants both come from them.
     // Judged against where each program stood going into the season, as the ledger judged it.
     const openings = programOpenings({

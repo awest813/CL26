@@ -9,7 +9,7 @@ import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
 import { generateStaff, staffEffects, type AssistantCandidate, type AssistantCoach, type StaffDeparture } from '../../sim/assistants';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
-import { expectationsFromPrestige as programExpectationsFor, situationFromPrestige, type ProgramExpectations } from '../../sim/programExpectations';
+import { expectationsFromPrestige as programExpectationsFor, leaguePrestiges, situationFromPrestige, type ProgramExpectations } from '../../sim/programExpectations';
 import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
 import { ledgerEntry, MAX_PRESTIGE_DRIFT, MIN_PRESTIGE_DRIFT, nextPrestigeDrift, withLeaguePrestige } from '../../sim/programLedger';
@@ -697,17 +697,18 @@ export function careerTierFromPrestige(prestige: number): NonNullable<CoachState
     return situationFromPrestige(prestige);
 }
 
-export function expectationsFromPrestige(prestige: number): ProgramExpectations {
-    return programExpectationsFor(prestige);
+export function expectationsFromPrestige(prestige: number, prestiges?: number[]): ProgramExpectations {
+    return programExpectationsFor(prestige, prestiges);
 }
 
-export function careerSetupFromPrestige(prestige: number): {
+/** Situation and targets for a program at this prestige, ranked in the given league (the base league if omitted). */
+export function careerSetupFromPrestige(prestige: number, prestiges?: number[]): {
     careerTier: NonNullable<CoachState['careerTier']>;
     programExpectations: ProgramExpectations;
 } {
     return {
         careerTier: careerTierFromPrestige(prestige),
-        programExpectations: expectationsFromPrestige(prestige),
+        programExpectations: expectationsFromPrestige(prestige, prestiges),
     };
 }
 
@@ -732,13 +733,19 @@ export const acceptJobOffer = createAsyncThunk(
             }));
         }
         const inheritedDrift = ledgerEntry(ledger, teamId).prestigeDrift;
+        const leagueAfterMove = withLeaguePrestige(
+            state.league.teams,
+            previousTeamId ? { ...ledger, [previousTeamId]: { ...ledgerEntry(ledger, previousTeamId), prestigeDrift: state.coach.programPrestigeDrift ?? 0 } } : ledger,
+            teamId,
+            inheritedDrift,
+        );
 
         dispatch(applyJobOfferAcceptance({
             teamId,
             seasonYear: state.season.year,
             prestigeDrift: inheritedDrift,
             assistants: generateStaff({ ...team, prestige: clamp(team.prestige + inheritedDrift, 1, 100) }, `${state.season.year}`),
-            ...careerSetupFromPrestige(clamp(team.prestige + inheritedDrift, 1, 100)),
+            ...careerSetupFromPrestige(clamp(team.prestige + inheritedDrift, 1, 100), leaguePrestiges(leagueAfterMove)),
         }));
     },
 );

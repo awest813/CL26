@@ -4,7 +4,7 @@ import PrestigeStars from '../components/PrestigeStars';
 import { selectRankingTeams, selectTeamRecords } from '../features/season/seasonSlice';
 import { hasSeasonHistoryForYear } from '../sim/seasonPhase';
 import { prestigeStars, prestigeStarText } from '../sim/prestige';
-import { SITUATION_DETAILS, SITUATION_LABELS } from '../sim/programExpectations';
+import { leaguePrestiges, SITUATION_DETAILS, SITUATION_LABELS } from '../sim/programExpectations';
 import type { JobOffer } from '../types/sim';
 import { acceptJobOffer, careerSetupFromPrestige, declineAllJobOffers, togglePortalClaim } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
@@ -89,6 +89,7 @@ function OffseasonMarket() {
   // Judged against where programs stood going into the season, as the openings were.
   const preseasonLedger = draftLedger(season);
   const expectedWins = useMemo(() => expectedWinsByTeamId(withLeaguePrestige(teams, preseasonLedger)), [preseasonLedger, teams]);
+  const prestiges = useMemo(() => leaguePrestiges(currentTeams), [currentTeams]);
   const marketCoaches = coaches
     .filter((staff) => staff.hiring || offerIds.has(staff.teamId))
     .map((staff) => ({ staff, prestige: currentTeams.find((team) => team.id === staff.teamId)?.prestige ?? 0 }))
@@ -325,7 +326,7 @@ function OffseasonMarket() {
             {marketCoaches.map(({ staff, prestige }) => {
               const school = teams.find((team) => team.id === staff.teamId);
               const offer = liveOffers.find((item) => item.teamId === staff.teamId);
-              const { careerTier: situation, programExpectations: expectations } = careerSetupFromPrestige(prestige);
+              const { careerTier: situation, programExpectations: expectations } = careerSetupFromPrestige(prestige, prestiges);
               return (
                 <li key={staff.id} className={`marketRow jobRow${offer ? ' jobRow-offer' : ''}`}>
                   <span className="programLockup">
