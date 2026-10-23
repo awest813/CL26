@@ -17,6 +17,7 @@ import {
   setAssistants,
   setStaffDepartures,
   setJobOpenings,
+  setSeasonStartRoster,
   setEmployment,
   initializeRecruitingBoard,
   updateProgramStanding,
@@ -523,6 +524,8 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
     await dispatch(startNewSeason({ seed: nextSeed })).unwrap();
 
     const after = getState();
+    // The season's starting roster, kept so a reset can restore it.
+    dispatch(setSeasonStartRoster({ year: after.season.year, roster: after.coach.managedRoster ?? [], starterIds: after.coach.starterIds }));
     const recruitingTeams = withLeaguePrestige(
       league.teams,
       after.season.programLedger,
@@ -536,7 +539,8 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
 
 /**
  * PRE → REGULAR handoff for the first (or soft-reset) season.
- * Generates the schedule, refreshes the managed roster to the season seed, and opens recruiting.
+ * Generates the schedule, sets the roster (drawn at the season seed for a new career, restored
+ * from the season's start after a reset), and opens recruiting.
  */
 export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { state: RootState }>(
   'coach/beginFirstSeason',
@@ -555,8 +559,17 @@ export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { sta
 
     const after = getState();
     if (after.coach.selectedTeamId && after.coach.onboardingStep === 'READY') {
-      // A reset season keeps the roster the coach built; only a new career draws one.
-      if (!after.coach.managedRoster?.length) await dispatch(initializeManagedRoster());
+      const snapshot = after.coach.seasonStartRoster;
+      if (snapshot && snapshot.year === after.season.year) {
+        // A reset season starts from the roster it began with, so weekly growth is not applied twice.
+        dispatch(setManagedRoster(snapshot.roster));
+        dispatch(setStarterIds(snapshot.starterIds));
+      } else if (after.coach.seasonHistory.length === 0 || !after.coach.managedRoster?.length) {
+        // A new career draws its roster at the season seed the coach picked.
+        await dispatch(initializeManagedRoster());
+      }
+      const started = getState().coach;
+      dispatch(setSeasonStartRoster({ year: after.season.year, roster: started.managedRoster ?? [], starterIds: started.starterIds }));
       const recruitingTeams = withLeaguePrestige(
         after.league.teams,
         after.season.programLedger,

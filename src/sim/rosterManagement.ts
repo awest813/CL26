@@ -372,7 +372,7 @@ export function applyRosterTurnover(
         addWalkOn(pos, 'walkon', 5);
         continue;
       }
-      const donor = lowestSurplusIndex(combined);
+      const donor = lowestSurplusIndex(combined, newcomers);
       if (donor < 0) break;
       combined.splice(donor, 1);
       addWalkOn(pos, 'walkon', 5);
@@ -389,15 +389,20 @@ function positionCounts(roster: Player[]): Map<Position, number> {
   return counts;
 }
 
-/** Lowest-rated player at a position that is above its starting minimum. */
-function lowestSurplusIndex(roster: Player[]): number {
+/**
+ * Lowest-rated player at a position that is above its starting minimum. Players in
+ * `protectedIds` (new signees and transfers) go only once no returner can.
+ */
+function lowestSurplusIndex(roster: Player[], protectedIds: Set<string> = new Set()): number {
   const counts = positionCounts(roster);
+  const surplus = (player: Player) => (counts.get(player.position) ?? 0) > POSITION_MINIMUMS[player.position];
+  const anyReturner = roster.some((player) => surplus(player) && !protectedIds.has(player.id));
   let removal = -1;
   let lowestOverall = Infinity;
   for (let index = 0; index < roster.length; index += 1) {
     const player = roster[index];
-    const count = counts.get(player.position) ?? 0;
-    if (count <= POSITION_MINIMUMS[player.position]) continue;
+    if (!surplus(player)) continue;
+    if (anyReturner && protectedIds.has(player.id)) continue;
     if (player.overall < lowestOverall) {
       removal = index;
       lowestOverall = player.overall;

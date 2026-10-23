@@ -13,7 +13,7 @@ import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
 import { ledgerEntry, MAX_PRESTIGE_DRIFT, MIN_PRESTIGE_DRIFT, nextPrestigeDrift, withLeaguePrestige } from '../../sim/programLedger';
 import { redshirtBlocker } from '../../sim/redshirts';
-import { startingRating, swapStarter } from '../../sim/depthChart';
+import { STARTER_SLOTS, startingRating, swapStarter } from '../../sim/depthChart';
 import { setProgramLedgerEntry } from '../season/seasonSlice';
 
 export const WEEKLY_HOURS_CAP = 120;
@@ -128,6 +128,8 @@ export interface CoachState {
   staffDepartures?: StaffDeparture[];
   /** Programs with an open head-coaching job after the last recorded season. */
   jobOpenings?: string[];
+  /** The roster and depth chart as this season began, so a season reset does not grow players twice. */
+  seasonStartRoster?: { year: number; roster: Player[]; starterIds: string[] } | null;
 }
 
 const initialState: CoachState = {
@@ -373,6 +375,9 @@ const coachSlice = createSlice({
     setJobOpenings: (state, action: PayloadAction<string[]>) => {
         state.jobOpenings = action.payload;
     },
+    setSeasonStartRoster: (state, action: PayloadAction<CoachState['seasonStartRoster']>) => {
+        state.seasonStartRoster = action.payload;
+    },
     /** Hire an assistant into his role, replacing whoever held it. Callers check the window and his prestige demand. */
     hireAssistant: (state, action: PayloadAction<{ candidate: AssistantCandidate; currentStaff: AssistantCoach[] }>) => {
         // The demand is the hiring check's business; the staff keeps only the coach.
@@ -581,11 +586,18 @@ const coachSlice = createSlice({
         const roster = state.managedRoster ?? [];
         const incoming = roster.find((player) => player.id === action.payload.inId);
         if (!incoming || incoming.redshirt) return;
+        // Drop starters who left the roster or sit as redshirts, so their slots read as open.
+        const playable = new Set(roster.filter((player) => !player.redshirt).map((player) => player.id));
+        const starters = state.starterIds.filter((id) => playable.has(id));
         if (action.payload.outId) {
             const outgoing = roster.find((player) => player.id === action.payload.outId);
-            if (!outgoing || outgoing.position !== incoming.position) return;
+            if (!outgoing || outgoing.position !== incoming.position || !starters.includes(outgoing.id)) return;
+        } else if (!starters.includes(incoming.id)) {
+            // Filling an empty slot: only while the unit is short.
+            const atPosition = starters.filter((id) => roster.find((player) => player.id === id)?.position === incoming.position).length;
+            if (atPosition >= STARTER_SLOTS[incoming.position]) return;
         }
-        state.starterIds = swapStarter(state.starterIds, action.payload.outId, action.payload.inId);
+        state.starterIds = swapStarter(starters, action.payload.outId, action.payload.inId);
     },
     toggleStarter: (state, action: PayloadAction<string>) => {
         const playerId = action.payload;
@@ -677,6 +689,7 @@ export const {
     setAssistants,
     setStaffDepartures,
     setJobOpenings,
+    setSeasonStartRoster,
     hireAssistant,
 } = coachSlice.actions;
 

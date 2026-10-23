@@ -1305,7 +1305,7 @@ td.num {
 }
 
 .home-hero .btn-primary:hover {
-  background: var(--accent-strong);
+  background: var(--accent-hover);
   border-color: var(--accent-strong);
 }
 
@@ -1702,8 +1702,8 @@ input[type='range'] {
 }
 
 .btn-primary:hover {
-  background-color: var(--accent-strong);
-  border-color: var(--accent-strong);
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
   color: #fff;
 }
 

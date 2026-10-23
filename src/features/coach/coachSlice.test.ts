@@ -11,6 +11,9 @@ import {
   coachReducer,
   declineAllJobOffers,
   hireAssistant,
+  replaceStarter,
+  setManagedRoster,
+  setStarterIds,
   initializeRecruitingBoard,
   setRecruitHours,
   setRecruitPitch,
@@ -252,5 +255,23 @@ describe('redshirting a starter', () => {
     assert.strictEqual(state.assistants?.length, 4);
     assert.strictEqual(state.assistants?.find((coach) => coach.role === candidate.role)?.name, 'New OC');
     assert.ok(state.assistants?.every((coach) => !('minPrestige' in coach)));
+  });
+
+  test('a depth chart swap never overfills a unit and clears stale starters', () => {
+    const roster = generateRoster(mockTeams[0], 'depth');
+    const attack = roster.filter((player) => player.position === 'A');
+    let state = coachReducer(undefined, setManagedRoster(roster));
+    // Three attack starters plus a stale id for a player who left the roster.
+    state = coachReducer(state, setStarterIds([attack[0].id, attack[1].id, attack[2].id, 'gone']));
+    // Filling an "empty" slot when the unit is full does nothing.
+    state = coachReducer(state, replaceStarter({ outId: null, inId: attack[3].id }));
+    assert.ok(!state.starterIds.includes(attack[3].id));
+    // A real swap replaces the starter and drops the stale id.
+    state = coachReducer(state, replaceStarter({ outId: attack[0].id, inId: attack[3].id }));
+    assert.deepStrictEqual(state.starterIds, [attack[3].id, attack[1].id, attack[2].id]);
+    // A swap across positions is refused.
+    const middie = roster.find((player) => player.position === 'M')!;
+    state = coachReducer(state, replaceStarter({ outId: attack[1].id, inId: middie.id }));
+    assert.ok(!state.starterIds.includes(middie.id));
   });
 });

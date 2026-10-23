@@ -12,7 +12,7 @@ import { playerYearLabel } from '../sim/rosterSummary';
 import PageHeader from '../components/PageHeader';
 import { ROSTER_SIZE } from '../sim/generateRoster';
 import DepthChartBoard from '../components/DepthChartBoard';
-import { POSITION_NAMES, STARTER_SLOTS, startingRating, weakestStarter } from '../sim/depthChart';
+import { depthChartSlots, POSITION_NAMES, STARTER_SLOTS, startingRating, weakestStarter } from '../sim/depthChart';
 
 
 /** The rating that matters most for a specialist: faceoffs for a faceoff man, saves for a goalie. */
@@ -369,7 +369,8 @@ function RosterPage() {
         if (players.length === 0) return null;
         const swapTarget = weakestStarter(roster, coach.starterIds, pos);
         const starterTarget = STARTER_SLOTS[pos];
-        const currentStarters = players.filter((p) => starterSet.has(p.id)).length;
+        // Only starters who can play count: a stale or redshirted id leaves its slot open.
+        const currentStarters = depthChartSlots(roster, coach.starterIds)[pos].filter((slot) => slot.player).length;
 
         return (
           <div key={pos} className="card">

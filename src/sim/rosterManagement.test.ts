@@ -3,6 +3,8 @@ import { describe, test } from 'node:test';
 import type { Player, Position, SignedRecruit, Team } from '../types/sim.ts';
 import { applyRosterTurnover, applyWeeklyTraitGrowth, convertRecruitToPlayer, developPlayers, previewOffseasonDepartures } from './rosterManagement.ts';
 import { makeRng } from './rng.ts';
+import leagueData from '../data/teams128.json' with { type: 'json' };
+import { generateRoster } from './generateRoster.ts';
 
 const basePlayer = (id: string): Player => ({
   id,
@@ -231,5 +233,22 @@ describe('roster management progression systems', () => {
     const named = convertRecruitToPlayer({ ...signed, name: 'Logan Hayes' }, team, makeRng(7));
     assert.strictEqual(named.name, 'Logan Hayes');
     assert.deepStrictEqual({ ...named, name: '' }, { ...unnamed, name: '' });
+  });
+
+  test('filling a position below its minimum cuts returning depth, never a new signee', () => {
+    const team = (leagueData.teams as Team[])[5];
+    // Every goalie graduates and the class brings only one, so the staff must make room for a walk-on goalie.
+    const roster = generateRoster(team, 'x').map((player) =>
+      player.position === 'G' ? { ...player, year: 4 as const } : { ...player, year: Math.min(player.year, 3) as Player['year'] });
+    const positions: Position[] = ['A', 'M', 'D', 'M', 'A', 'D', 'M', 'LSM', 'FO', 'A', 'M', 'G'];
+    for (let seed = 1; seed <= 12; seed += 1) {
+      const signed: SignedRecruit[] = positions.map((position, i) => ({
+        recruitId: `r${i}`, name: `Signee ${i}`, signedAtYear: 2026, stars: 2, position, potential: 70,
+      }));
+      const next = applyRosterTurnover(roster, signed, team, seed);
+      const names = new Set(next.map((player) => player.name));
+      assert.deepStrictEqual(signed.filter((row) => !names.has(row.name!)).map((row) => row.position), [], `seed ${seed}`);
+      assert.ok(next.filter((player) => player.position === 'G').length >= 2, `seed ${seed} goalies`);
+    }
   });
 });

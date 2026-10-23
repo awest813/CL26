@@ -109,7 +109,8 @@ function OffseasonMarket() {
   const graduates = departures.filter((departure) => departure.reason === 'graduate');
   const seatsThatFit = Math.min(claims.length, scholarships, PORTAL_CLAIM_CAP);
   // The portal opens once signing day settles how many scholarships are left.
-  const signingDone = Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, season.year);
+  // An ended season counts too: some older saves lost that year's class key.
+  const signingDone = Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, season.year) || seasonRecorded;
   const canAddPortal = signingDone && claims.length < PORTAL_CLAIM_CAP && claims.length < scholarships;
   const earlyPros = (coach.managedRoster ?? []).filter((player) => {
     const pick = yourPickById.get(player.id);
@@ -165,7 +166,7 @@ function OffseasonMarket() {
       </div>
       <p className="text-xs mt-2 mb-3">
         {projectedTotal > ROSTER_SIZE
-          ? <span className="text-amber-600">{projectedTotal - ROSTER_SIZE} returning depth {projectedTotal - ROSTER_SIZE === 1 ? 'player is' : 'players are'} cut to make the limit. Signees and transfers are kept first.</span>
+          ? <span className="text-amber-600">{projectedTotal - ROSTER_SIZE} returning depth {projectedTotal - ROSTER_SIZE === 1 ? 'player is' : 'players are'} cut to make the limit (about; the staff also fills any position below its minimum). Signees and transfers are kept first.</span>
           : projectedTotal < ROSTER_SIZE
             ? <span className="text-gray-500">{ROSTER_SIZE - projectedTotal} walk-on{ROSTER_SIZE - projectedTotal === 1 ? '' : 's'} fill the open spots where the roster is thinnest.</span>
             : <span className="text-gray-500">The roster lands right at the limit.</span>}

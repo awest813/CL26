@@ -9,6 +9,8 @@
   --accent: #0e6b3c;
   --accent-strong: #0a5530;
   --accent-soft: #e4f5eb;
+  /* A pressed or hovered primary button: always dark enough for white text. */
+  --accent-hover: #0a5530;
   --ink: #102018;
   --surface-soft: #f3f7f4;
   --success: #157a3c;
@@ -45,6 +47,7 @@
   --accent: #2f9a62;
   --accent-strong: #7fd8a6;
   --accent-soft: #163024;
+  --accent-hover: #237a4d;
   --ink: #0b2216;
   --surface-soft: #1b2720;
   --success: #6fd49a;
@@ -73,6 +76,7 @@
     --accent: #2f9a62;
     --accent-strong: #7fd8a6;
     --accent-soft: #163024;
+    --accent-hover: #237a4d;
     --ink: #0b2216;
     --surface-soft: #1b2720;
     --success: #6fd49a;
@@ -199,7 +203,8 @@
 .bootstrap-splash-sub {
   margin: 0.5rem 0 0;
   font-size: 0.9rem;
-  color: var(--text-muted);
+  /* The splash is always dark, whatever the theme. */
+  color: #94a3b8;
 }
 
 .error-boundary {
