@@ -480,7 +480,7 @@ function CoachCareerPage() {
                 className="btn btn-primary"
                 onClick={onEndSeason}
               >
-                Finalize Season &amp; Update Record
+                End the season
               </button>
             )}
             {canBeginNextYear && (
@@ -498,9 +498,9 @@ function CoachCareerPage() {
                   ? 'The AD let you go. Take a landing job under head-coaching jobs. The next season waits on that.'
                   : !seasonEndProcessed
                   ? signedClassThisYear.length === 0
-                    ? 'No signees this year — finalize to update career record and continue.'
-                    : 'Finalize to update career record and job security.'
-                  : 'Season recorded. Begin the next season from the Weekly Hub when ready.'}
+                    ? 'No signees this year. End the season to update the career record and continue.'
+                    : 'End the season to update the career record and job security.'
+                  : 'Season over. Begin the next season from the Weekly Hub when ready.'}
               </div>
             )}
           </div>

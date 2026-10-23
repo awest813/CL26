@@ -171,7 +171,7 @@ export function nextLoopStep(input: {
     return {
       action: 'signing-day',
       title: 'Signing day',
-      detail: 'Sign the high school class. Then the portal opens in the Coach Office, and recording the season opens the job market and staff hiring.',
+      detail: 'Sign the high school class. Then the portal opens in the Coach Office, and ending the season opens the job market and staff hiring.',
       button: 'Resolve signing day',
     };
   }
@@ -179,9 +179,9 @@ export function nextLoopStep(input: {
   if (input.phase === 'OFFSEASON' && input.canRecordSeason) {
     return {
       action: 'record-season',
-      title: 'Record the season',
+      title: 'End the season',
       detail: 'Write the record into the career: job security, prestige, the job market, and staff moves.',
-      button: 'Record the season',
+      button: 'End the season',
     };
   }
 
@@ -198,7 +198,7 @@ export function nextLoopStep(input: {
     return {
       action: 'begin-next-year',
       title: 'Next season',
-      detail: 'The season is recorded. Settle the portal, the staff, and any job offers in the Coach Office, then begin the next season.',
+      detail: 'The season is over. Settle the portal, the staff, and any job offers in the Coach Office, then begin the next season.',
       button: 'Begin next season',
     };
   }

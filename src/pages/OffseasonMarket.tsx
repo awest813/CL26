@@ -71,7 +71,7 @@ function OffseasonMarket() {
   );
   const yourPicks = selectedTeam ? proDraft.filter((pick) => pick.collegeId === selectedTeam.id) : [];
   const yourPickById = new Map(yourPicks.map((pick) => [pick.playerId, pick]));
-  // Openings are announced when the season is recorded; until then the market waits.
+  // Openings are announced when the season ends; until then the market waits.
   const seasonRecorded = hasSeasonHistoryForYear(coach.seasonHistory, season.year);
   const openingIds = useMemo(
     () => new Set(seasonRecorded ? coach.jobOpenings ?? [] : []),
@@ -82,7 +82,7 @@ function OffseasonMarket() {
     [openingIds, season.seasonSeed, season.year, selectedTeam, teams],
   );
   const conferenceName = useMemo(() => new Map(conferences.map((conference) => [conference.id, conference.name])), [conferences]);
-  // Offers belong to the recorded season; anything older has expired.
+  // Offers belong to the season just ended; anything older has expired.
   const liveOffers = seasonRecorded ? (coach.pendingJobOffers ?? []).filter((offer) => offer.presentedAtYear === season.year) : [];
   const offerIds = new Set(liveOffers.map((offer) => offer.teamId));
   // Judged against where programs stood going into the season, as the openings were.
@@ -307,7 +307,7 @@ function OffseasonMarket() {
         </div>
         <p className="text-xs text-gray-500 mt-1 mb-0">
           {!seasonRecorded
-            ? 'Jobs open when the season is recorded: staffs that missed badly are let go, and a few coaches move on.'
+            ? 'Jobs open when you end the season: staffs that missed badly are let go, and a few coaches move on.'
             : (coach.employment ?? 'ACTIVE') === 'FIRED'
               ? 'The AD let you go. The offer below is the seat that will have you.'
               : liveOffers.length > 0

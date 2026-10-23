@@ -825,7 +825,7 @@ function WeeklyHubPage() {
                 : offseasonCaps.canProcessSigningDay
                   ? 'Signing day and the season record are the next clicks. The portal can wait.'
                   : offseasonCaps.canFinalizeSeason
-                    ? 'The class is signed. Record the season next: it opens the job market and the staff moves.'
+                    ? 'The class is signed. End the season next: it opens the job market and the staff moves.'
                     : [
                         liveJobOffers > 0
                           ? `${liveJobOffers} program${liveJobOffers === 1 ? '' : 's'} called about your job.`

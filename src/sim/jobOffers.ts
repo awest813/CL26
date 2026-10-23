@@ -2,7 +2,7 @@ import type { JobOffer, Team, TeamRecord } from '../types/sim';
 import { makeRng, seedToNumber } from './rng';
 import { expectedWinsByTeamId } from './programLedger';
 
-/** Below this score after the season is recorded, the AD ends the job. */
+/** Below this score when the season ends, the AD ends the job. */
 export const FIRED_JOB_SECURITY = 20;
 /** A season that meets its targets with job security at least this high draws a call. */
 const OFFER_JOB_SECURITY = 60;

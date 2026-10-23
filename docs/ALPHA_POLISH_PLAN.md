@@ -104,7 +104,7 @@ coordinator, and a strength coach. 60 is neutral; 95 is the ceiling; an empty se
   recruiting coordinator moves weekly interest up to 8%.
 - Better programs start with better staffs. Each offseason assistants age, young ones improve, the best
   (76+) are hired away as head coaches into the season's openings (more often after a playoff year),
-  and the oldest retire. Hiring opens after the season is recorded: three candidates per role, and the
+  and the oldest retire. Hiring opens after the season ends: three candidates per role, and the
   best only take jobs at programs of a certain star rating.
 
 **Postseason awards** (`postseasonAwards.ts`). Each conference names a Player of the Year after week
@@ -120,7 +120,7 @@ summary by period, and the game's plays.
 ### Offseason, depth chart, terminology, and dark mode
 
 **Offseason order.** Signing day, then the portal (it opens once signing day settles the scholarship
-count), then Record the season, which opens head-coaching jobs and assistant hiring. Begin next season
+count), then End the season, which opens head-coaching jobs and assistant hiring. Begin next season
 warns when job offers will lapse or staff seats are empty. The offseason market projects next season's
 roster: returning players, signees, transfers in, and the cuts or walk-ons that land it at 32.
 
@@ -148,7 +148,7 @@ with the weakest starter when a unit is full.
 | install | practice focus, practice block |
 | base scheme | tactics (in UI copy) |
 | offseason market | roster market, coach pool |
-| Record the season | Record the year |
+| End the season | Record the season, Record the year, Finalize |
 | Playoff seeds, the field, the bracket | Tournament seeds |
 | conference championship | conference tournament |
 
