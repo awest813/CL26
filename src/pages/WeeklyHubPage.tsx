@@ -587,6 +587,7 @@ function WeeklyHubPage() {
   }
 
   const weeksLeft = Math.max(0, season.scheduleByWeek.length - season.currentWeekIndex);
+  const liveJobOffers = coach.pendingJobOffers.filter((offer) => offer.presentedAtYear === season.year).length;
 
   async function simToBracket() {
     if (advancing || loopStep.action !== 'play-week') return;
@@ -819,10 +820,10 @@ function WeeklyHubPage() {
                   : offseasonCaps.canFinalizeSeason
                     ? 'The class is signed. Record the season next: it opens the job market and the staff moves.'
                     : [
-                        coach.pendingJobOffers.length > 0
-                          ? `${coach.pendingJobOffers.length} program${coach.pendingJobOffers.length === 1 ? '' : 's'} called about your job.`
+                        liveJobOffers > 0
+                          ? `${liveJobOffers} program${liveJobOffers === 1 ? '' : 's'} called about your job.`
                           : null,
-                        (coach.staffDepartures ?? []).length > 0 || (coach.assistants && coach.assistants.length < 4)
+                        coach.assistants && coach.assistants.length < ASSISTANT_ROLES.length
                           ? 'Your staff has an empty seat to fill.'
                           : null,
                         'Before the new year: check the portal, the pro draft, the staff, and the depth chart.',

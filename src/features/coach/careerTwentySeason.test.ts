@@ -187,6 +187,13 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
   );
   assert.strictEqual(afterFinalize.coach.profile?.age, ageBefore + 1, `${seasonLabel} coach should age one year`);
   assert.ok(afterFinalize.coach.jobSecurity >= 0 && afterFinalize.coach.jobSecurity <= 100);
+  // A job an assistant took is filled: it is neither open nor calling the head coach.
+  for (const departure of afterFinalize.coach.staffDepartures ?? []) {
+    if (!departure.teamId) continue;
+    assert.ok(!(afterFinalize.coach.jobOpenings ?? []).includes(departure.teamId), `${seasonLabel} poached job still open`);
+    assert.ok(!afterFinalize.coach.pendingJobOffers.some((offer) => offer.teamId === departure.teamId), `${seasonLabel} poached job still offered`);
+  }
+  assert.ok(afterFinalize.coach.pendingJobOffers.every((offer) => offer.presentedAtYear === afterPlayoffs.season.year));
   assert.ok((afterFinalize.coach.programPrestigeDrift ?? 0) >= -20);
   assert.ok((afterFinalize.coach.programPrestigeDrift ?? 0) <= 30);
   assert.strictEqual(afterFinalize.coach.recruitPool.length, 0, `${seasonLabel} recruiting cleared after finalize`);

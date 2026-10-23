@@ -373,11 +373,12 @@ const coachSlice = createSlice({
         state.jobOpenings = action.payload;
     },
     /** Hire an assistant into his role, replacing whoever held it. Callers check the window and his prestige demand. */
-    hireAssistant: (state, action: PayloadAction<AssistantCandidate>) => {
+    hireAssistant: (state, action: PayloadAction<{ candidate: AssistantCandidate; currentStaff: AssistantCoach[] }>) => {
         // The demand is the hiring check's business; the staff keeps only the coach.
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { minPrestige, ...hire } = action.payload;
-        const staff = (state.assistants ?? []).filter((coach) => coach.role !== hire.role);
+        const { minPrestige, ...hire } = action.payload.candidate;
+        // A save from before staffs existed hires into the program's current staff, not an empty one.
+        const staff = (state.assistants ?? action.payload.currentStaff).filter((coach) => coach.role !== hire.role);
         state.assistants = [...staff, { ...hire, tenure: 0 }];
     },
     updateJobSecurity: (state, action: PayloadAction<number>) => {
@@ -695,6 +696,10 @@ export const acceptJobOffer = createAsyncThunk(
         const state = getState() as RootState;
         const team = state.league.teams.find((t) => t.id === teamId);
         if (!team) return;
+        // Only this offseason's offers, and only once the season is on the record.
+        const offer = state.coach.pendingJobOffers.find((row) => row.teamId === teamId);
+        const recorded = state.coach.seasonHistory.some((entry) => entry.year === state.season.year);
+        if (!offer || offer.presentedAtYear !== state.season.year || !recorded) return;
 
         // Prestige stays with the program, not the coach: leave behind what was built, take over what the new school has.
         const ledger = state.season.programLedger;

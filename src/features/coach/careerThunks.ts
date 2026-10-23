@@ -128,6 +128,10 @@ export const runCareerWeeklyCycle = createAsyncThunk<'advanced' | 'skipped', voi
     // Saves from before assistants existed get the program's staff before the first game.
     const staffTeam = state.league.teams.find((team) => team.id === coach.selectedTeamId);
     if (!coach.assistants && staffTeam) dispatch(setAssistants(generateStaff(staffTeam, 'staff')));
+    // Offers expire when the new season starts.
+    if (coach.pendingJobOffers.length > 0 && coach.pendingJobOffers.every((offer) => offer.presentedAtYear < season.year)) {
+      dispatch(setPendingJobOffers([]));
+    }
 
     const simAction = await dispatch(simCurrentWeek());
     if (!simCurrentWeek.fulfilled.match(simAction)) {
@@ -369,8 +373,9 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const updated = getState();
     const marketTeams = withLeaguePrestige(teams, updated.season.programLedger, coach.selectedTeamId, updated.coach.programPrestigeDrift ?? 0);
     // Head-coaching jobs open where CPU staffs missed badly; offers and poached assistants both come from them.
+    // Judged against where each program stood going into the season, as the ledger judged it.
     const openings = programOpenings({
-      teams: marketTeams,
+      teams: leagueTeams,
       records,
       seasonSeed: season.seasonSeed,
       year: season.year,
@@ -389,7 +394,6 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       effectivePrestige: currentEffectivePrestige,
       openings,
     });
-    dispatch(setJobOpenings([...openings].sort()));
     dispatch(setPendingJobOffers(market.offers));
     dispatch(setEmployment(market.employment));
 
@@ -399,8 +403,12 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       seed: season.seasonSeed,
       year: season.year,
       madePlayoffs,
-      openings: marketTeams.filter((team) => openings.has(team.id)),
+      // A job that called the head coach is his to take or leave, not his assistant's.
+      openings: marketTeams.filter((team) => openings.has(team.id) && !market.offers.some((offer) => offer.teamId === team.id)),
     });
+    // A seat an assistant took is filled.
+    const filled = new Set(staffYear.departures.map((departure) => departure.teamId).filter(Boolean));
+    dispatch(setJobOpenings([...openings].filter((teamId) => !filled.has(teamId)).sort()));
     dispatch(setAssistants(staffYear.staff));
     dispatch(setStaffDepartures(staffYear.departures));
 

@@ -4,6 +4,7 @@ import {
   ASSISTANT_ROLE_LABELS,
   ASSISTANT_ROLES,
   assistantCandidates,
+  generateStaff,
   staffEffectLines,
   VACANT_RATING,
   type AssistantCandidate,
@@ -36,15 +37,18 @@ function ratingTone(rating: number): string {
 /** The four assistants, what each one does, who left, and who is on the market. */
 function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, seasonSeed, year, teams }: StaffPanelProps) {
   const dispatch = useAppDispatch();
-  const lines = staffEffectLines(staff);
+  // A save from before staffs existed shows (and hires into) the staff the program will field.
+  const team = teams.find((row) => row.id === teamId);
+  const currentStaff = useMemo(() => staff ?? (team ? generateStaff(team, 'staff') : []), [staff, team]);
+  const lines = staffEffectLines(currentStaff);
   const candidates = useMemo(() => assistantCandidates(seasonSeed, year, teamId), [seasonSeed, teamId, year]);
-  const onStaffIds = new Set((staff ?? []).map((coach) => coach.id));
+  const onStaffIds = new Set(currentStaff.map((coach) => coach.id));
 
   function hire(candidate: AssistantCandidate) {
-    const current = staff?.find((coach) => coach.role === candidate.role);
+    const current = currentStaff.find((coach) => coach.role === candidate.role);
     const replacing = current ? ` ${current.name} (${current.rating}) leaves the staff.` : '';
     if (!window.confirm(`Hire ${candidate.name} (${candidate.rating}) as ${ASSISTANT_ROLE_LABELS[candidate.role].toLowerCase()}?${replacing}`)) return;
-    dispatch(hireAssistant(candidate));
+    dispatch(hireAssistant({ candidate, currentStaff }));
   }
 
   return (
@@ -66,12 +70,11 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
           ))}
         </ul>
       )}
-      {!staff ? (
-        <p className="text-sm text-gray-500 m-0">Your staff arrives with the first game of the season.</p>
-      ) : (
+      {(
+
         <ul className="staffList">
           {ASSISTANT_ROLES.map((role) => {
-            const coach = staff.find((row) => row.role === role);
+            const coach = currentStaff.find((row) => row.role === role);
             return (
               <li key={role} className="staffRow">
                 <div>
@@ -97,7 +100,7 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
           <h4 className="planSubhead">On the market</h4>
           <ul className="staffList">
             {candidates.map((candidate) => {
-              const current = staff?.find((coach) => coach.role === candidate.role);
+              const current = currentStaff.find((coach) => coach.role === candidate.role);
               const hired = onStaffIds.has(candidate.id);
               const tooBig = candidate.minPrestige > effectivePrestige;
               const upgrade = candidate.rating - (current?.rating ?? VACANT_RATING);
@@ -132,7 +135,7 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
           </ul>
         </>
       )}
-      {!canHire && staff && (
+      {!canHire && (
         <p className="text-xs text-gray-500 mt-2 mb-0">Assistants are hired between seasons: after the bracket and before week 1.</p>
       )}
     </section>

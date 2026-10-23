@@ -10,6 +10,7 @@ import {
   clearRecruitPitch,
   coachReducer,
   declineAllJobOffers,
+  hireAssistant,
   initializeRecruitingBoard,
   setRecruitHours,
   setRecruitPitch,
@@ -18,6 +19,7 @@ import {
   togglePortalClaim,
 } from './coachSlice.ts';
 import { generateRoster } from '../../sim/generateRoster.ts';
+import { generateStaff } from '../../sim/assistants.ts';
 
 const mockTeams: Team[] = [
   {
@@ -239,5 +241,16 @@ describe('redshirting a starter', () => {
     assert.strictEqual(state.starterIds.length, starterIds.length, 'the spot is filled');
     const backup = midfield.find((player) => !starterIds.includes(player.id));
     assert.ok(backup && state.starterIds.includes(backup.id));
+  });
+
+  test('hiring on a save without a staff keeps the rest of the program staff', () => {
+    let state = coachReducer(undefined, setSelectedTeam('team-1'));
+    assert.strictEqual(state.assistants, undefined);
+    const currentStaff = generateStaff(mockTeams[0], 'staff');
+    const candidate = { ...currentStaff[0], id: 'cand', name: 'New OC', rating: 80, minPrestige: 0 };
+    state = coachReducer(state, hireAssistant({ candidate, currentStaff }));
+    assert.strictEqual(state.assistants?.length, 4);
+    assert.strictEqual(state.assistants?.find((coach) => coach.role === candidate.role)?.name, 'New OC');
+    assert.ok(state.assistants?.every((coach) => !('minPrestige' in coach)));
   });
 });

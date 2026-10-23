@@ -15,7 +15,7 @@ import {
   buildProDraft,
 } from '../sim/offseasonMarket';
 import { previewOffseasonDepartures } from '../sim/rosterManagement';
-import { draftLedger, expectedWinsByTeamId } from '../sim/programLedger';
+import { draftLedger, expectedWinsByTeamId, withLeaguePrestige } from '../sim/programLedger';
 import { playerYearLabel } from '../sim/rosterSummary';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
@@ -81,8 +81,12 @@ function OffseasonMarket() {
     [openingIds, season.seasonSeed, season.year, selectedTeam, teams],
   );
   const conferenceName = useMemo(() => new Map(conferences.map((conference) => [conference.id, conference.name])), [conferences]);
-  const offerIds = new Set((coach.pendingJobOffers ?? []).map((offer) => offer.teamId));
-  const expectedWins = useMemo(() => expectedWinsByTeamId(currentTeams), [currentTeams]);
+  // Offers belong to the recorded season; anything older has expired.
+  const liveOffers = seasonRecorded ? (coach.pendingJobOffers ?? []).filter((offer) => offer.presentedAtYear === season.year) : [];
+  const offerIds = new Set(liveOffers.map((offer) => offer.teamId));
+  // Judged against where programs stood going into the season, as the openings were.
+  const preseasonLedger = draftLedger(season);
+  const expectedWins = useMemo(() => expectedWinsByTeamId(withLeaguePrestige(teams, preseasonLedger)), [preseasonLedger, teams]);
   const marketCoaches = coaches
     .filter((staff) => staff.hiring || offerIds.has(staff.teamId))
     .map((staff) => ({ staff, prestige: currentTeams.find((team) => team.id === staff.teamId)?.prestige ?? 0 }))
@@ -267,7 +271,7 @@ function OffseasonMarket() {
       <div className="marketSection">
         <div className="weekActionBar">
           <h4 className="marketHeading m-0">Head-coaching jobs</h4>
-          {coach.pendingJobOffers.length > 0 && (coach.employment ?? 'ACTIVE') !== 'FIRED' && (
+          {liveOffers.length > 0 && (coach.employment ?? 'ACTIVE') !== 'FIRED' && (
             <button type="button" className="btn text-xs" onClick={() => dispatch(declineAllJobOffers())}>
               Stay and decline (+3 security)
             </button>
@@ -278,8 +282,8 @@ function OffseasonMarket() {
             ? 'Jobs open when the season is recorded: staffs that missed badly are let go, and a few coaches move on.'
             : (coach.employment ?? 'ACTIVE') === 'FIRED'
               ? 'The AD let you go. The offer below is the seat that will have you.'
-              : coach.pendingJobOffers.length > 0
-                ? `${coach.pendingJobOffers.length} program${coach.pendingJobOffers.length === 1 ? '' : 's'} called. A title reaches furthest, then a playoff run, then hitting the win target.`
+              : liveOffers.length > 0
+                ? `${liveOffers.length} program${liveOffers.length === 1 ? '' : 's'} called. A title reaches furthest, then a playoff run, then hitting the win target.`
                 : 'No one called. Make the field, or win the title, to get a call from a bigger program.'}
         </p>
         {offerError && <p className="text-xs text-red-600 mt-2 mb-0">{offerError}</p>}
@@ -290,7 +294,7 @@ function OffseasonMarket() {
           <ul className="marketList mt-2">
             {marketCoaches.map(({ staff, prestige }) => {
               const school = teams.find((team) => team.id === staff.teamId);
-              const offer = coach.pendingJobOffers.find((item) => item.teamId === staff.teamId);
+              const offer = liveOffers.find((item) => item.teamId === staff.teamId);
               const expectations = careerSetupFromPrestige(prestige).programExpectations;
               return (
                 <li key={staff.id} className={`marketRow jobRow${offer ? ' jobRow-offer' : ''}`}>
