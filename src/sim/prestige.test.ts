@@ -40,8 +40,8 @@ describe('prestige stars', () => {
 
   test('names tiers and writes stars as text', () => {
     assert.strictEqual(prestigeTier(5), 'Blue blood');
-    assert.strictEqual(prestigeTier(3.5), 'Contender');
-    assert.strictEqual(prestigeTier(1), 'Rebuild');
+    assert.strictEqual(prestigeTier(3.5), 'Established');
+    assert.strictEqual(prestigeTier(1), 'Underdog');
     assert.strictEqual(prestigeStarText(3.5), '★★★½');
     assert.strictEqual(prestigeStarText(4), '★★★★');
   });

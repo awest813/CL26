@@ -29,13 +29,16 @@ export function prestigeStars(prestige: number): number {
   return PRESTIGE_STAR_STEPS.find((step) => value >= step.min)?.stars ?? 1;
 }
 
-/** What a program of this many stars is called. */
+/**
+ * What a program of this many stars is called. Kept apart from the situation names
+ * (Rebuild, Stable, Win now), which say what the AD expects rather than how big the brand is.
+ */
 export function prestigeTier(stars: number): string {
   if (stars >= 5) return 'Blue blood';
   if (stars >= 4) return 'National power';
-  if (stars >= 3) return 'Contender';
-  if (stars >= 2) return 'Builder';
-  return 'Rebuild';
+  if (stars >= 3) return 'Established';
+  if (stars >= 2) return 'Mid-major';
+  return 'Underdog';
 }
 
 /** "★★★½": filled stars with a half mark, for text-only places such as select options. */

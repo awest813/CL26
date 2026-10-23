@@ -8,7 +8,7 @@ found and left open.
 ### Five-star prestige (`src/sim/prestige.ts`, `src/components/PrestigeStars.tsx`)
 - Prestige stays a 1–100 number; stars name it in half steps (5★ at 86+, then every 5 points
   down to 1★ below 51). The base league splits into a pyramid: 7 five-star, 7 one-star programs.
-- Tiers: Blue blood (5★), National power (4★+), Contender (3★+), Builder (2★+), Rebuild.
+- Tiers: Blue blood (5★), National power (4★+), Established (3★+), Mid-major (2★+), Underdog.
 - Stars show on the Coach Office (with distance to the next half star and to a drop), team pages,
   the conference browser (now at current prestige, not base), career setup, the job market, the
   recruiting header, and a new Prestige column in career history (`SeasonHistoryEntry.prestigeEnd`).

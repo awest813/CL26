@@ -28,6 +28,13 @@ export const SITUATION_DETAILS: Record<ProgramSituation, string> = {
   CONTENDER: 'Big budget, short patience. The AD expects a final-four run; an early playoff exit barely counts.',
 };
 
+/** What moves job security beyond the win target, shown with the Job Security meter. */
+export const SITUATION_STAKES: Record<ProgramSituation, string> = {
+  REBUILD: 'A winning record earns extra security.',
+  STABLE: 'Meet the win and poll targets to stay secure.',
+  CONTENDER: 'Missing the field costs extra; an exit before the semifinals earns little.',
+};
+
 const SECURITY_BASELINE: Record<ProgramSituation, number> = {
   REBUILD: 52,
   STABLE: 58,

@@ -17,7 +17,7 @@ import {
 import TeamLogo from '../components/TeamLogo';
 import PrestigeStars from '../components/PrestigeStars';
 import StaffPanel from '../components/StaffPanel';
-import { SITUATION_DETAILS, SITUATION_LABELS } from '../sim/programExpectations';
+import { SITUATION_DETAILS, SITUATION_LABELS, SITUATION_STAKES } from '../sim/programExpectations';
 import { formatPrestige, prestigeCushion, prestigeStarText, prestigeToNextStar } from '../sim/prestige';
 import OffseasonMarket from './OffseasonMarket';
 import { selectTeamRecords } from '../features/season/seasonSlice';
@@ -396,6 +396,11 @@ function CoachCareerPage() {
                   ? 'You have strong administrative support.'
                   : 'Keep performing to stay secure.'}
             </div>
+            {coach.careerTier && (coach.employment ?? 'ACTIVE') !== 'FIRED' && (
+              <div className="text-xs text-gray-500 mt-1">
+                {SITUATION_LABELS[coach.careerTier]}: {SITUATION_STAKES[coach.careerTier]}
+              </div>
+            )}
           </div>
 
           {/* Archetype */}
