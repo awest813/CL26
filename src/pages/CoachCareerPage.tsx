@@ -384,7 +384,7 @@ function CoachCareerPage() {
             <div className="text-xs text-gray-500 uppercase mb-2">Job Security</div>
             <JobSecurityBar value={coach.jobSecurity} />
             <div className="text-xs mt-2" style={{ color: pressureState.color }}>
-              {pressureState.label} · {adPressure}%
+              {pressureState.label} · {Math.round(adPressure)}%
             </div>
             <div className="text-xs text-gray-500 mt-1">
               {(coach.employment ?? 'ACTIVE') === 'FIRED'

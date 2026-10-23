@@ -22,6 +22,7 @@ import {
   initializeRecruitingBoard,
   updateProgramStanding,
   careerSetupFromPrestige,
+  tierAdPressure,
   applyPlayoffRoundFatigue,
   clearOffseasonMarket,
   MAX_HOURS_PER_RECRUIT,
@@ -62,6 +63,9 @@ const FACILITY_PRESSURE_RELIEF_BASELINE = 50;
 const FACILITY_PRESSURE_RELIEF_DIVISOR = 6;
 const SECURITY_PENALTY_NEUTRAL_PRESSURE = 50;
 const SECURITY_PENALTY_DIVISOR = 6;
+const AD_PRESSURE_SETTLE_RATE = 0.25;
+const PLAYOFF_PRESSURE_RELIEF = 4;
+const CHAMPION_PRESSURE_RELIEF = 10;
 const TOTAL_TEAMS = 128;
 
 export function userWonResult(result: GameResult | undefined, teamId: string | null | undefined): boolean {
@@ -263,6 +267,9 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       securityDelta = 12;
     } else if (winDiff >= 0) {
       securityDelta = 4;
+    } else if (winDiff >= -1) {
+      // One game short is a disappointment, not a crisis.
+      securityDelta = -5;
     } else if (winDiff >= -2) {
       securityDelta = -10;
     } else {
@@ -273,16 +280,24 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     if (gamesPlayed >= 8 && pollRank <= rankTarget) {
       securityDelta += 5;
     }
-    if (gamesPlayed >= 8 && pollRank > rankTarget + 10 && !madePlayoffs) {
+    // A poor poll finish only stings when the wins fell short too.
+    if (gamesPlayed >= 8 && pollRank > rankTarget + 10 && !madePlayoffs && winDiff < 0) {
       securityDelta -= 8;
     }
 
     const winExpectationGap = Math.max(0, coach.programExpectations.winTarget - wins);
+    const winSurplus = Math.max(0, wins - coach.programExpectations.winTarget);
     const rankExpectationGap = Math.max(0, pollRank - rankTarget);
+    // Pressure settles a quarter of the way back toward the program's norm each year, so it
+    // cannot only ratchet up; missed targets push it up and good seasons ease it.
+    const priorPressure = coach.adPressure ?? DEFAULT_AD_PRESSURE;
+    const settledPressure = priorPressure + (tierAdPressure(coach.careerTier) - priorPressure) * AD_PRESSURE_SETTLE_RATE;
     const baseAdPressure =
-      (coach.adPressure ?? DEFAULT_AD_PRESSURE) +
+      settledPressure +
       winExpectationGap * WIN_GAP_PRESSURE_MULTIPLIER +
-      Math.floor(rankExpectationGap / RANK_GAP_PRESSURE_DIVISOR);
+      Math.floor(rankExpectationGap / RANK_GAP_PRESSURE_DIVISOR) -
+      winSurplus * WIN_GAP_PRESSURE_MULTIPLIER -
+      (champion ? CHAMPION_PRESSURE_RELIEF : madePlayoffs ? PLAYOFF_PRESSURE_RELIEF : 0);
     const resourceShield = Math.round(
       ((coach.programResources?.facilities ?? FACILITY_PRESSURE_RELIEF_BASELINE) - FACILITY_PRESSURE_RELIEF_BASELINE) /
         FACILITY_PRESSURE_RELIEF_DIVISOR,
@@ -326,7 +341,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       prestigeEnd: currentEffectivePrestige,
     }));
 
-    dispatch(setAdPressure(boostedPressure));
+    dispatch(setAdPressure(Math.round(boostedPressure * 10) / 10));
     dispatch(updateJobSecurity(newJobSecurity));
     dispatch(applyPrestigeDrift(prestigeDriftDelta));
 

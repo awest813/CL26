@@ -101,7 +101,7 @@ function OffseasonMarket() {
     const record = records[teamId];
     if (!record) return `${coachName} moved on.`;
     const shortfall = (expectedWins.get(teamId) ?? 6) - record.wins;
-    return shortfall >= 1.5
+    return shortfall >= 2
       ? `${coachName} was let go after ${record.wins}–${record.losses}.`
       : `${coachName} moved on after ${record.wins}–${record.losses}.`;
   }

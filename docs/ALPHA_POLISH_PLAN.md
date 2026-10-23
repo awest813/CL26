@@ -88,8 +88,9 @@ is expected to win.
 program in the league, whether or not it had an opening; the market listed CPU head coaches who were
 "hiring" at random, unrelated to the offers; and the listing showed the old coach, not the job.
 Now (`jobOffers.ts`):
-- Jobs open where CPU staffs badly missed what their program should win (75% at four or more wins
-  short), plus about one in twenty that move on. Offers only come from open jobs.
+- Jobs open where CPU staffs badly missed what their program should win (60% at four or more wins
+  short, 30% at three, 10% at two), plus about one in thirty that move on, about ten openings a
+  year. Offers only come from open jobs.
 - Reach follows the season: hitting the win target draws one call up to +6 prestige, a playoff run two
   calls up to +11, a title three up to +18. A losing season draws nothing.
 - A firing always lands somewhere: the best open seat at or below the old one.
@@ -156,6 +157,23 @@ with the weakest starter when a unit is full.
 stylesheets reads theme tokens (backgrounds, surfaces, borders, text, and status tints), with a dark
 value for each. The header and the coach card stay on the dark brand surface in both themes, and a
 saved choice applies before first paint.
+
+### Long-career audit: job security and AD pressure
+
+A 20-season career on staff recruiting at mid-tier programs was fired six times, and coaching
+openings climbed from 11 to 26 a year. Causes and fixes:
+- AD pressure could only rise. Missed targets added to it at season end, nothing took it back, and
+  the weekly booster drift rounded to +1 a week for a coach with low security (about +12 a season,
+  whatever the results). Pressure now settles a quarter of the way back toward the program's norm
+  each year, wins over the target, a playoff run, and a title ease it, and the weekly drift is small
+  and symmetric (about three points a season either way).
+- Missing the win target by one game cost 10 security, the same as missing by two. It costs 5 now.
+- A poll finish more than ten spots past the rank target cost 8 security even when the win target
+  was met. It only applies when the wins also fell short.
+- Openings were tuned down (above).
+
+After: three firings in 20 seasons, each after a genuinely bad stretch, a 12-year tenure at one
+program, and about ten openings a year.
 
 ## Open items, in priority order
 

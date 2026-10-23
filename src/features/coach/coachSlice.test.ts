@@ -11,6 +11,9 @@ import {
   coachReducer,
   declineAllJobOffers,
   hireAssistant,
+  advanceCoachWeek,
+  updateJobSecurity,
+  setAdPressure,
   replaceStarter,
   setManagedRoster,
   setStarterIds,
@@ -273,5 +276,18 @@ describe('redshirting a starter', () => {
     const middie = roster.find((player) => player.position === 'M')!;
     state = coachReducer(state, replaceStarter({ outId: attack[1].id, inId: middie.id }));
     assert.ok(!state.starterIds.includes(middie.id));
+  });
+
+  test('weekly booster pressure moves a few points a season, either way', () => {
+    let shaky = coachReducer(undefined, updateJobSecurity(0));
+    shaky = coachReducer(shaky, setAdPressure(50));
+    let secure = coachReducer(undefined, updateJobSecurity(100));
+    secure = coachReducer(secure, setAdPressure(50));
+    for (let week = 0; week < 12; week += 1) {
+      shaky = coachReducer(shaky, advanceCoachWeek());
+      secure = coachReducer(secure, advanceCoachWeek());
+    }
+    assert.ok(shaky.adPressure > 50 && shaky.adPressure <= 53, `shaky ${shaky.adPressure}`);
+    assert.ok(secure.adPressure < 50 && secure.adPressure >= 47, `secure ${secure.adPressure}`);
   });
 });

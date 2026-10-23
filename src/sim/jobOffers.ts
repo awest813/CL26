@@ -56,8 +56,8 @@ export function programOpenings(input: {
     const rng = makeRng(seedToNumber(`${input.seasonSeed}:${input.year}:opening:${team.id}`));
     const wins = input.records[team.id]?.wins ?? Math.round(expected.get(team.id) ?? 6);
     const shortfall = (expected.get(team.id) ?? 6) - wins;
-    // Fired for results, or moving on (retirement, another job): about one in twenty.
-    const chance = shortfall >= 4 ? 0.75 : shortfall >= 2.5 ? 0.4 : shortfall >= 1.5 ? 0.15 : 0.05;
+    // Fired for results, or moving on (retirement, another job): about one in thirty.
+    const chance = shortfall >= 4 ? 0.6 : shortfall >= 3 ? 0.3 : shortfall >= 2 ? 0.1 : 0.03;
     if (rng() < chance) openings.add(team.id);
   }
   return openings;

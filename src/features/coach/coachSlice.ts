@@ -18,7 +18,7 @@ import { setProgramLedgerEntry } from '../season/seasonSlice';
 
 export const WEEKLY_HOURS_CAP = 120;
 export const MAX_HOURS_PER_RECRUIT = 20;
-const AD_PRESSURE_DIVISOR = 60;
+const AD_PRESSURE_DIVISOR = 240;
 const JOB_SECURITY_DECLINE_BONUS = 3;
 
 function clamp(value: number, min: number, max: number): number {
@@ -347,14 +347,11 @@ const coachSlice = createSlice({
             state.skillTree?.operations ?? 0,
             staffEffects(state.assistants).fatigueScale,
         );
+        // Boosters lean on a coach whose seat is shaky and ease off a secure one: about
+        // three points a season either way. Results move pressure at season end.
         const boostersLevel = state.programResources?.boosters ?? 50;
-        state.adPressure = Math.max(
-            15,
-            Math.min(
-                98,
-                state.adPressure + Math.round((boostersLevel - state.jobSecurity) / AD_PRESSURE_DIVISOR),
-            ),
-        );
+        const drift = (boostersLevel - state.jobSecurity) / AD_PRESSURE_DIVISOR;
+        state.adPressure = Math.round(Math.max(15, Math.min(98, state.adPressure + drift)) * 10) / 10;
     },
     applyPlayoffRoundFatigue: (state, action: PayloadAction<{ played: boolean }>) => {
         state.teamFatigue = playoffRoundFatigue(
@@ -692,6 +689,11 @@ export const {
     setSeasonStartRoster,
     hireAssistant,
 } = coachSlice.actions;
+
+/** The AD pressure a program of this tier settles back toward when results are steady. */
+export function tierAdPressure(tier: CoachState['careerTier']): number {
+    return CAREER_TIER_DEFAULTS[tier ?? 'STABLE'].adPressure;
+}
 
 export function careerTierFromPrestige(prestige: number): NonNullable<CoachState['careerTier']> {
     if (prestige >= 78) return 'CONTENDER';
