@@ -25,7 +25,7 @@ export const SITUATION_LABELS: Record<ProgramSituation, string> = {
 export const SITUATION_DETAILS: Record<ProgramSituation, string> = {
   REBUILD: 'A patient AD and a thin budget. Show progress; a winning record is a big year.',
   STABLE: 'Hold the program where it is: a winning record and a respectable poll finish.',
-  CONTENDER: 'Big budget, short patience. The AD expects the playoffs every year.',
+  CONTENDER: 'Big budget, short patience. The AD expects a final-four run; an early playoff exit barely counts.',
 };
 
 const SECURITY_BASELINE: Record<ProgramSituation, number> = {

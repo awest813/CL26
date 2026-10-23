@@ -43,7 +43,7 @@ import {
   entrantToPlayer,
 } from '../../sim/offseasonMarket';
 import { computePollInputs, computeRankings } from '../../sim/rankings';
-import { advanceProgramLedger, draftLedger, nextPrestigeDrift, prestigeDriftForSeason, programRoster, withLeaguePrestige } from '../../sim/programLedger';
+import { advanceProgramLedger, draftLedger, nextPrestigeDrift, prestigeDriftForSeason, programRoster, reachedSemifinal, withLeaguePrestige } from '../../sim/programLedger';
 import { buildSeasonJobMarket, FIRED_JOB_SECURITY, programOpenings } from '../../sim/jobOffers';
 import { advanceStaff, generateStaff } from '../../sim/assistants';
 import {
@@ -67,6 +67,10 @@ const AD_PRESSURE_SETTLE_RATE = 0.25;
 const PLAYOFF_PRESSURE_RELIEF = 4;
 const CHAMPION_PRESSURE_RELIEF = 10;
 const CONTENDER_MISSED_FIELD_PENALTY = 4;
+/** Security for a win-now program's bracket run short of a title: an early exit barely counts. */
+const CONTENDER_EARLY_EXIT_SECURITY = 3;
+const CONTENDER_FINAL_FOUR_SECURITY = 10;
+const CONTENDER_FINAL_SECURITY = 16;
 const REBUILD_WINNING_RECORD_BONUS = 5;
 const TOTAL_TEAMS = 128;
 
@@ -257,12 +261,18 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     const madePlayoffs = playoffSeeds.some((s) => s.teamId === coach.selectedTeamId);
     const champion = season.playoffs?.championTeamId === coach.selectedTeamId;
     const playoffRun = userPlayoffRun(season.playoffs ?? null, coach.selectedTeamId);
+    const finalFour = reachedSemifinal(season.playoffs, coach.selectedTeamId);
+    const winNow = coach.careerTier === 'CONTENDER';
 
     // Job security delta: compare actual wins to win target
     const winDiff = wins - coach.programExpectations.winTarget;
     let securityDelta: number;
     if (champion) {
       securityDelta = 25;
+    } else if (madePlayoffs && winNow) {
+      securityDelta = playoffRun.lastRound === 'FINAL'
+        ? CONTENDER_FINAL_SECURITY
+        : finalFour ? CONTENDER_FINAL_FOUR_SECURITY : CONTENDER_EARLY_EXIT_SECURITY;
     } else if (madePlayoffs) {
       securityDelta = 10;
     } else if (winDiff >= 2) {
@@ -279,7 +289,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     }
 
     // Each situation has its own bar: a win-now AD wants the bracket, a rebuild AD a winning record.
-    if (coach.careerTier === 'CONTENDER' && !madePlayoffs) securityDelta -= CONTENDER_MISSED_FIELD_PENALTY;
+    if (winNow && !madePlayoffs) securityDelta -= CONTENDER_MISSED_FIELD_PENALTY;
     if (coach.careerTier === 'REBUILD' && wins > losses) securityDelta += REBUILD_WINNING_RECORD_BONUS;
 
     const gamesPlayed = wins + losses;
@@ -303,7 +313,8 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       winExpectationGap * WIN_GAP_PRESSURE_MULTIPLIER +
       Math.floor(rankExpectationGap / RANK_GAP_PRESSURE_DIVISOR) -
       winSurplus * WIN_GAP_PRESSURE_MULTIPLIER -
-      (champion ? CHAMPION_PRESSURE_RELIEF : madePlayoffs ? PLAYOFF_PRESSURE_RELIEF : 0);
+      // A win-now AD is only eased by a final-four run.
+      (champion ? CHAMPION_PRESSURE_RELIEF : madePlayoffs && (!winNow || finalFour) ? PLAYOFF_PRESSURE_RELIEF : 0);
     const resourceShield = Math.round(
       ((coach.programResources?.facilities ?? FACILITY_PRESSURE_RELIEF_BASELINE) - FACILITY_PRESSURE_RELIEF_BASELINE) /
         FACILITY_PRESSURE_RELIEF_DIVISOR,
@@ -316,7 +327,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     // Hitting the AD's win target always saves the job for another year.
     const securityFloor = winDiff >= 0 ? FIRED_JOB_SECURITY : 0;
     const newJobSecurity = Math.max(securityFloor, Math.min(100, coach.jobSecurity + securityDelta - pressurePenalty));
-    const prestigeDriftDelta = prestigeDriftForSeason(champion, madePlayoffs, winDiff);
+    const prestigeDriftDelta = prestigeDriftForSeason(champion, madePlayoffs, winDiff, coach.careerTier ?? undefined, finalFour);
     const currentTeam = teams.find((team) => team.id === coach.selectedTeamId);
     const currentEffectivePrestige = Math.max(
       1,

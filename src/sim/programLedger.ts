@@ -1,6 +1,7 @@
 import type { Player, PlayoffState, ProgramLedger, ProgramLedgerEntry, Team, TeamRecord } from '../types/sim';
 import { generateRoster } from './generateRoster.ts';
 import { buildDefaultStarters } from './rosterManagement.ts';
+import { situationFromPrestige, type ProgramSituation } from './programExpectations.ts';
 
 /**
  * Each CPU program's standing beyond its base rating in the league file: prestige it
@@ -29,6 +30,9 @@ const PLAYOFF_PRESTIGE_DRIFT = 2;
 const TARGET_MET_PRESTIGE_DRIFT = 1;
 const MODERATE_MISS_PRESTIGE_DRIFT = -2;
 const SEVERE_MISS_PRESTIGE_DRIFT = -3;
+/** A win-now program is expected in the field, so only a final-four run earns prestige. */
+const WIN_NOW_EARLY_EXIT_PRESTIGE_DRIFT = 0;
+const WIN_NOW_MISSED_FIELD_PRESTIGE_DRIFT = -1;
 
 const EMPTY_ENTRY: ProgramLedgerEntry = { prestigeDrift: 0, talent: 0 };
 
@@ -40,9 +44,22 @@ function roundTenth(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
-/** One season's prestige change from results against expectations. Shared by the user's program and the CPU. */
-export function prestigeDriftForSeason(champion: boolean, madePlayoffs: boolean, winDiff: number): number {
+/**
+ * One season's prestige change from results against expectations. Shared by the user's program
+ * and the CPU. A win-now program earns nothing for an early exit and loses some for missing the field.
+ */
+export function prestigeDriftForSeason(
+  champion: boolean,
+  madePlayoffs: boolean,
+  winDiff: number,
+  situation: ProgramSituation = 'STABLE',
+  reachedSemifinal = false,
+): number {
   if (champion) return CHAMPION_PRESTIGE_DRIFT;
+  if (situation === 'CONTENDER') {
+    if (madePlayoffs) return reachedSemifinal ? PLAYOFF_PRESTIGE_DRIFT : WIN_NOW_EARLY_EXIT_PRESTIGE_DRIFT;
+    return Math.min(0, prestigeDriftForSeason(false, false, winDiff)) + WIN_NOW_MISSED_FIELD_PRESTIGE_DRIFT;
+  }
   if (madePlayoffs) return PLAYOFF_PRESTIGE_DRIFT;
   if (winDiff >= 0) return TARGET_MET_PRESTIGE_DRIFT;
   if (winDiff <= -4) return SEVERE_MISS_PRESTIGE_DRIFT;
@@ -143,6 +160,12 @@ function expectedClassStars(points: Array<{ prestige: number; stars: number }>):
   return (prestige) => meanY + slope * (prestige - meanX);
 }
 
+/** Whether a program played in the semifinals (the final four) of this bracket. */
+export function reachedSemifinal(playoffs: PlayoffState | null | undefined, teamId: string | null | undefined): boolean {
+  if (!teamId) return false;
+  return (playoffs?.rounds?.SEMIFINAL ?? []).some((game) => game.homeTeamId === teamId || game.awayTeamId === teamId);
+}
+
 export interface ProgramLedgerSeason {
   ledger: ProgramLedger | null | undefined;
   /** Base teams from the league file. */
@@ -185,7 +208,13 @@ export function advanceProgramLedger(season: ProgramLedgerSeason): ProgramLedger
     const record = season.recordsByTeamId[team.id];
     const wins = record?.wins ?? 0;
     const winDiff = Math.round(wins - (expectedWins.get(team.id) ?? 6));
-    const driftDelta = prestigeDriftForSeason(champion === team.id, seeds.has(team.id), winDiff);
+    const driftDelta = prestigeDriftForSeason(
+      champion === team.id,
+      seeds.has(team.id),
+      winDiff,
+      situationFromPrestige(team.prestige),
+      reachedSemifinal(season.playoffs, team.id),
+    );
     const prestigeDrift = nextPrestigeDrift(entry.prestigeDrift, driftDelta);
 
     const classEdge = commits > 0

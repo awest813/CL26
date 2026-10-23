@@ -205,6 +205,18 @@ After (ten seasons, staff recruiting): a Rebuild holds its roster at about 66, w
 of 3, and is never fired. A Stable program climbs from 69 to 75 prestige. A Win now program wins 10
 or more in most seasons and is never fired.
 
+**Win now follow-up: titles are the bar.** A win-now program still climbed from 87 to 96 prestige
+in ten seasons, because every playoff trip paid like an overachievement. Now, for programs at 4½★ and
+up (the user's and the CPU's alike):
+- Prestige: a playoff exit before the semifinals earns nothing (was +2); missing the field costs 1
+  more than it would elsewhere. A semifinal or final still earns +2, a title +4.
+- Security: an early exit is worth +3 (was +10), a semifinal +10, a final +16, a title +25. Only a
+  final-four run or a title eases AD pressure.
+
+After (twenty seasons, two win-now programs): 9–3 seasons that miss the field now cost security and
+prestige, early prestige wobbles between 82 and 90, and the climb to the top comes from repeat
+titles rather than bracket appearances.
+
 ## Open items, in priority order
 
 1. **CPU recruiting reads the same pitches.** CPU pursuit uses prestige and region only; academics

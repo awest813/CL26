@@ -55,6 +55,14 @@ describe('prestige drift for a season', () => {
     assert.strictEqual(prestigeDriftForSeason(false, false, -2), -2);
     assert.strictEqual(prestigeDriftForSeason(false, false, -5), -3);
   });
+
+  test('a win-now program only earns prestige for a final-four run', () => {
+    assert.strictEqual(prestigeDriftForSeason(true, true, 0, 'CONTENDER', true), 4);
+    assert.strictEqual(prestigeDriftForSeason(false, true, 0, 'CONTENDER', true), 2);
+    assert.strictEqual(prestigeDriftForSeason(false, true, 2, 'CONTENDER', false), 0);
+    assert.strictEqual(prestigeDriftForSeason(false, false, 0, 'CONTENDER'), -1);
+    assert.strictEqual(prestigeDriftForSeason(false, false, -2, 'CONTENDER'), -3);
+  });
 });
 
 describe('league prestige', () => {
