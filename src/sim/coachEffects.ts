@@ -1,5 +1,6 @@
 import { CoachArchetype, PracticeFocus, Tactics, TeamGameplayModifiers } from '../types/sim';
 import { staffEffects, type AssistantCoach } from './assistants';
+import { perkGameDayEdges, type CoachPerks } from './coachPerks.ts';
 
 const FOCUS_TRANSLATION_BY_ARCHETYPE: Record<CoachArchetype, number> = {
   RECRUITER: 1,
@@ -121,6 +122,8 @@ export interface CoachWeekSettings {
   };
   /** The head coach's assistants. Missing means no staff effect at all. */
   staff?: AssistantCoach[] | null;
+  /** Head coach perks picked on the skill tree. */
+  perks?: CoachPerks;
 }
 
 export interface CoachGamePlan {
@@ -261,11 +264,12 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   modifiers.groundBallBonus += focusModifiers.groundBallBonus * focusTranslation;
   // Conditioning also keeps legs under the team late in games.
   const installWearRelief = settings.practiceFocus === 'CONDITIONING' ? CONDITIONING_WEAR_RELIEF * focusTranslation : 0;
-  const wearRelief = clamp(installWearRelief + staff.wearRelief, 0, 0.35);
+  const perkEdges = perkGameDayEdges(settings.perks);
+  const wearRelief = clamp(installWearRelief + staff.wearRelief + perkEdges.wearRelief, 0, 0.35);
 
-  modifiers.offense += staff.offense;
+  modifiers.offense += staff.offense + perkEdges.offense;
   modifiers.shotQuality += staff.shotQuality;
-  modifiers.defense += staff.defense;
+  modifiers.defense += staff.defense + perkEdges.defense;
   modifiers.goalie += staff.goalie;
 
   const archetypeBonus = ARCHETYPE_BONUSES[archetype];
@@ -292,7 +296,7 @@ export function buildCoachGamePlan(settings: CoachWeekSettings): CoachGamePlan {
   let fatiguePenaltyScale = settings.practiceFocus === 'CONDITIONING' ? CONDITIONING_FATIGUE_REDUCTION : 1;
   if (archetype === 'TACTICIAN') fatiguePenaltyScale *= TACTICIAN_FATIGUE_MITIGATION;
   if (archetype === 'DEVELOPER') fatiguePenaltyScale *= DEVELOPER_FATIGUE_MITIGATION;
-  fatiguePenaltyScale *= 1 - operationsSkill * 0.03;
+  fatiguePenaltyScale *= (1 - operationsSkill * 0.03) * perkEdges.fatigueDragScale;
   const fatiguePenalty = fatiguePenaltyBase * fatiguePenaltyScale;
 
   modifiers.offense -= fatiguePenalty * FATIGUE_PENALTIES.offense;

@@ -1,6 +1,7 @@
 import type { Recruit, RecruitingPitch, TeamId } from '../types/sim.ts';
 import { makeRng, randInt, seedToNumber } from './rng.ts';
 import { regionsAreProximate } from './recruiting.ts';
+import { NEUTRAL_RECRUITING_EDGES, recruitEdgeScale, type RecruitingEdges } from './coachPerks.ts';
 
 export interface RecruitingWeekResult {
   interestByRecruitId: Record<string, Record<string, number>>; // recruitId -> teamId -> interest
@@ -90,6 +91,8 @@ export interface UserWeeklyGainInput {
   positionNeedBonus: number;
   /** The week's random swing, -1 to +1. Zero gives the expected gain. */
   swing?: number;
+  /** Head coach perks and the recruiting coordinator's specialty. */
+  edges?: RecruitingEdges;
 }
 
 /**
@@ -100,10 +103,12 @@ export interface UserWeeklyGainInput {
  */
 export function userWeeklyGain(input: UserWeeklyGainInput): number {
   if (input.hours <= 0) return 0;
-  const rawGain = input.hours * INTEREST_PER_HOUR + input.recruit.stars * 0.2 + (input.swing ?? 0);
+  const edges = input.edges ?? NEUTRAL_RECRUITING_EDGES;
+  const rawGain = input.hours * INTEREST_PER_HOUR * edges.hourScale + input.recruit.stars * 0.2 + (input.swing ?? 0);
   const pull = input.programPrestige == null ? 1 : programPull(input.programPrestige, input.recruit.stars);
-  const baseGain = rawGain * input.gainMultiplier * coachSkillMultiplier(input.coachSkill) * pull * blueChipPace(input.recruit.stars);
-  const pitchBonus = baseGain * (pitchMultiplier(input.recruit, input.pitch, input.pitchGrade) - 1);
+  const baseGain = rawGain * input.gainMultiplier * coachSkillMultiplier(input.coachSkill) * pull * blueChipPace(input.recruit.stars)
+    * recruitEdgeScale(edges, input.recruit);
+  const pitchBonus = baseGain * (pitchMultiplier(input.recruit, input.pitch, input.pitchGrade) - 1) * edges.pitchScale;
   return Math.max(0, Math.round(baseGain + pitchBonus + input.positionNeedBonus));
 }
 
@@ -165,6 +170,7 @@ export function simulateRecruitingWeek(
   coachSkill: number = 72,
   /** Prestige and region by program. The user's entry sets their program pull. */
   teamProfilesByTeamId: Record<string, CpuRecruitingProfile> = {},
+  edges?: RecruitingEdges,
 ): RecruitingWeekResult {
   const boardSet = new Set(boardRecruitIds);
   // Commits made this week count toward CPU class caps for recruits checked later.
@@ -208,6 +214,7 @@ export function simulateRecruitingWeek(
           positionNeedBonus: boardSet.has(recruit.id) ? positionNeedBonusByRecruitId[recruit.id] ?? 0 : 0,
           // A visit that lands or falls flat: -1 to +1 before the multipliers.
           swing: rng() * 2 - 1,
+          edges,
         });
       }
 

@@ -248,8 +248,9 @@ function WeeklyHubPage() {
         coachSkill: coach.profile?.skill,
         skillTree: coach.skillTree,
         staff: coach.assistants,
+        perks: coach.coachPerks,
       }),
-    [coach.assistants, coach.practiceFocus, coach.profile, coach.skillTree, coach.tactics, coach.teamFatigue],
+    [coach.assistants, coach.coachPerks, coach.practiceFocus, coach.profile, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
   const gameDayChanges = useMemo(
     () =>

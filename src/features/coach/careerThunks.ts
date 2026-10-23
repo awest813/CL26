@@ -523,6 +523,7 @@ export const applyOffseasonRosterTurnover = createAsyncThunk<void, { newSeed: nu
       operationsSkill: coach.skillTree?.operations ?? 0,
       facilitiesLevel: coach.programResources?.facilities ?? 50,
       boostersLevel: coach.programResources?.boosters ?? 50,
+      perks: coach.coachPerks,
     }, portalPlayers, earlyProIds);
     dispatch(clearOffseasonMarket());
     const newStarters = buildDefaultStarters(newRoster);

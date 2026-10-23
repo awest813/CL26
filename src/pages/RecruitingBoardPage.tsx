@@ -25,6 +25,7 @@ import {
   RECRUITING_POSITION_FILTERS,
 } from '../sim/recruiting';
 import { programPull, userWeeklyGain } from '../sim/recruitingWeek';
+import { recruitingEdges } from '../sim/coachPerks';
 import { PROGRAM_PULL_LABELS, programPullBand } from '../sim/prestige';
 import PrestigeStars from '../components/PrestigeStars';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -124,6 +125,7 @@ function RecruitingBoardPage() {
 
   const gainMultiplier = programRecruitingBonus(coach);
   const coachSkill = coach.profile?.skill ?? 72;
+  const edges = recruitingEdges(coach.coachPerks, coach.assistants, selectedTeam?.region);
   /** What this week's hours add, before the random swing; the same formula the recruiting week plays. */
   const projectedGain = (recruit: Recruit, hours: number, pitch: RecruitingPitch | undefined, pitchGrade: string | undefined, dealbreaker: boolean) => {
     const gain = userWeeklyGain({
@@ -135,6 +137,7 @@ function RecruitingBoardPage() {
       coachSkill,
       programPrestige: effectivePrestige,
       positionNeedBonus: Math.max(0, Math.min(3, positionNeedByPosition[recruit.position] ?? 0)),
+      edges,
     });
     return gain - (dealbreaker ? DEALBREAKER_WEEKLY_COST : 0);
   };

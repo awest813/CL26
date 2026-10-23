@@ -4,6 +4,7 @@ import namesData from '../data/names.json' with { type: 'json' };
 import { faceoffRating, growSpecialty, playerPotential, rollPotential, rollSpecialties, savingRating } from './playerSpecialty';
 import { ROSTER_POSITION_ORDER, ROSTER_POSITION_TARGETS, ROSTER_SIZE } from './generateRoster';
 import { advanceClassYear } from './redshirts';
+import { perkGrowthBonus, type CoachPerks } from './coachPerks.ts';
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
 const FACILITIES_BONUS_DIVISOR = 22;
@@ -30,6 +31,8 @@ export interface CoachDevelopmentInputs {
   operationsSkill?: number;
   facilitiesLevel?: number;
   boostersLevel?: number;
+  /** Head coach perks; the development perk adds growth for one half of the roster. */
+  perks?: CoachPerks;
 }
 
 /**
@@ -117,7 +120,7 @@ export function developPlayers(
   return roster.map((player) => {
     // Freshmen and sophomores develop more, and a player near his ceiling hardly at all.
     const growthCeiling =
-      (player.year === 1 ? 4 : player.year === 2 ? 3 : player.year === 3 ? 2 : 1) + totalBonus;
+      (player.year === 1 ? 4 : player.year === 2 ? 3 : player.year === 3 ? 2 : 1) + totalBonus + perkGrowthBonus(options?.perks, player.year);
     const roomToPotential = playerPotential(player) - player.overall;
     const potentialScale = Math.max(0, Math.min(POTENTIAL_SCALE_MAX, roomToPotential / POTENTIAL_ROOM_FOR_FULL_GROWTH));
     const growth = randInt(rng, 0, Math.min(6, Math.round(growthCeiling * potentialScale)));
@@ -301,6 +304,7 @@ export function applyRosterTurnover(
     operationsSkill: options?.operationsSkill,
     facilitiesLevel: options?.facilitiesLevel,
     boostersLevel: options?.boostersLevel,
+    perks: options?.perks,
   });
 
   // Step 2: Seniors graduate. Underclassmen can enter the portal.

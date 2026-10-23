@@ -55,6 +55,7 @@ export function headCoachRating(skill: number, tree: SkillTreeLevels | null | un
 
 /** Rating points to the next half star, or null at five stars. */
 export function coachToNextStar(rating: number): { stars: number; points: number } | null {
+  if (!Number.isFinite(rating)) return null;
   const current = coachStars(rating);
   const next = [...COACH_STAR_STEPS].reverse().find((step) => step.stars > current);
   if (!next) return null;

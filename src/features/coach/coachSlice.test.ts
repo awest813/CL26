@@ -3,6 +3,8 @@ import { describe, test } from 'node:test';
 import type { GameResult, Team } from '../../types/sim.ts';
 import { computeWeeklyCoachXp, userWonResult } from './careerThunks.ts';
 import {
+  chooseAssistantSpecialty,
+  chooseCoachPerk,
   addRecruitToBoard,
   applyJobOfferAcceptance,
   applyAutoRecruitingPlan,
@@ -289,5 +291,32 @@ describe('redshirting a starter', () => {
     }
     assert.ok(shaky.adPressure > 50 && shaky.adPressure <= 53, `shaky ${shaky.adPressure}`);
     assert.ok(secure.adPressure < 50 && secure.adPressure >= 47, `secure ${secure.adPressure}`);
+  });
+});
+
+describe('perks and specialties', () => {
+  test('a branch perk opens at level 3 and is picked once', () => {
+    let state = coachReducer(undefined, chooseCoachPerk({ branch: 'recruiting', perk: 'GRINDER' }));
+    assert.deepStrictEqual(state.coachPerks, {});
+    state = { ...state, skillTree: { ...state.skillTree, recruiting: 3 } };
+    state = coachReducer(state, chooseCoachPerk({ branch: 'recruiting', perk: 'FILM_ROOM' }));
+    assert.deepStrictEqual(state.coachPerks, {});
+    state = coachReducer(state, chooseCoachPerk({ branch: 'recruiting', perk: 'GRINDER' }));
+    state = coachReducer(state, chooseCoachPerk({ branch: 'recruiting', perk: 'PITCHMAN' }));
+    assert.deepStrictEqual(state.coachPerks, { recruiting: 'GRINDER' });
+  });
+
+  test('an assistant takes a specialty for his role after a season on staff', () => {
+    const team = { id: 't1', prestige: 70 } as Team;
+    const staff = generateStaff(team, 'x');
+    const oc = staff.find((coach) => coach.role === 'OFFENSE')!;
+    let state = { ...coachReducer(undefined, { type: 'noop' }), assistants: staff };
+    state = coachReducer(state, chooseAssistantSpecialty({ assistantId: oc.id, specialty: 'SHOT_DOCTOR' }));
+    assert.strictEqual(state.assistants?.find((coach) => coach.id === oc.id)?.specialty, undefined);
+    state = { ...state, assistants: state.assistants!.map((coach) => ({ ...coach, tenure: 1 })) };
+    state = coachReducer(state, chooseAssistantSpecialty({ assistantId: oc.id, specialty: 'CLOSER' }));
+    assert.strictEqual(state.assistants?.find((coach) => coach.id === oc.id)?.specialty, undefined);
+    state = coachReducer(state, chooseAssistantSpecialty({ assistantId: oc.id, specialty: 'SHOT_DOCTOR' }));
+    assert.strictEqual(state.assistants?.find((coach) => coach.id === oc.id)?.specialty, 'SHOT_DOCTOR');
   });
 });

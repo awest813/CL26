@@ -16,6 +16,8 @@ import {
   setRecruitPitch,
   careerSetupFromPrestige,
   upgradeCoachSkill,
+  chooseCoachPerk,
+  chooseAssistantSpecialty,
   declineAllJobOffers,
   acceptJobOffer,
   processSigningDay,
@@ -29,6 +31,8 @@ import {
   simCareerConferenceChampionships,
 } from './careerThunks.ts';
 import { exhibitionReducer } from '../exhibition/exhibitionSlice.ts';
+import { COACH_PERKS } from '../../sim/coachPerks.ts';
+import { ASSISTANT_SPECIALTIES } from '../../sim/assistants.ts';
 import { validateSeasonState } from '../../sim/seasonValidation.ts';
 import type { RootState } from '../../store/store.ts';
 import type { CoachSkillTree, Position, ProgramLedger, Team } from '../../types/sim.ts';
@@ -75,6 +79,13 @@ function spendSkillPoints(store: CareerStore) {
     if (!target) break;
     store.dispatch(upgradeCoachSkill(target));
     guard += 1;
+  }
+  // Take the first perk in each open branch, and a specialty for each eligible assistant.
+  for (const branch of order) {
+    store.dispatch(chooseCoachPerk({ branch, perk: COACH_PERKS[branch][0].id }));
+  }
+  for (const coach of store.getState().coach.assistants ?? []) {
+    store.dispatch(chooseAssistantSpecialty({ assistantId: coach.id, specialty: ASSISTANT_SPECIALTIES[coach.role][1].id }));
   }
 }
 
@@ -340,6 +351,9 @@ async function runDynasty(seasonCount: number) {
   assert.strictEqual(finalState.coach.profile?.age, startingAge + seasonCount);
   assert.ok(finalState.coach.careerRecord.totalWins + finalState.coach.careerRecord.totalLosses > 0);
   assert.ok(finalState.coach.coachLevel >= 1);
+  if (finalState.coach.skillTree.recruiting >= 3) {
+    assert.strictEqual(finalState.coach.coachPerks?.recruiting, 'PITCHMAN', 'an open branch takes its perk');
+  }
   assert.ok(finalState.coach.careerRecord.championships <= finalState.coach.careerRecord.playoffAppearances);
   assert.ok(finalState.coach.careerRecord.playoffAppearances <= seasonCount);
 

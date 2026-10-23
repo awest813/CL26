@@ -6,6 +6,7 @@ import {
   setPracticeFocus,
   setTactics,
   upgradeCoachSkill,
+  chooseCoachPerk,
   selectUserEffectivePrestige,
   WEEKLY_HOURS_CAP,
   processSigningDay,
@@ -39,6 +40,7 @@ import { withLeaguePrestige } from '../sim/programLedger';
 import { careerOffseasonCapabilities, hasSeasonHistoryForYear } from '../sim/seasonPhase';
 import PageHeader from '../components/PageHeader';
 import CoachStars from '../components/CoachStars';
+import { COACH_PERKS, PERK_UNLOCK_LEVEL, perkInfo, type CoachPerkId, type SkillBranch } from '../sim/coachPerks';
 import { coachToNextStar, headCoachRating, skillTreeLevels } from '../sim/coachRating';
 
 const ARCHETYPE_BONUSES: Record<string, string[]> = {
@@ -59,6 +61,43 @@ function prestigeOutlook(prestige: number): string {
 }
 
 const PRESTIGE_HELP = 'Titles, playoff runs, and hitting the win target raise prestige; missing it badly lowers it. Earned prestige fades 10% a year.';
+
+/** A branch's perk: locked until level 3, then a one-time pick between two. */
+function PerkPicker({ branch, level, picked, onPick }: {
+  branch: SkillBranch;
+  level: number;
+  picked: CoachPerkId | undefined;
+  onPick: (perk: CoachPerkId) => void;
+}) {
+  const chosen = perkInfo(picked);
+  if (chosen) {
+    return (
+      <div className="perkChosen" title={chosen.detail}>
+        <span className="perkBadge">Perk</span> <strong>{chosen.name}</strong>
+        <div className="text-xs text-gray-500">{chosen.detail}</div>
+      </div>
+    );
+  }
+  const options = COACH_PERKS[branch];
+  if (level < PERK_UNLOCK_LEVEL) {
+    return (
+      <div className="text-xs text-gray-500 mt-2">
+        At level {PERK_UNLOCK_LEVEL}: pick {options[0].name} or {options[1].name}.
+      </div>
+    );
+  }
+  return (
+    <div className="perkChoice">
+      <div className="text-xs font-semibold youMark">Pick a perk</div>
+      {options.map((option) => (
+        <button key={option.id} type="button" className="btn text-xs perkOption" onClick={() => onPick(option.id)}>
+          <strong>{option.name}</strong>
+          <span>{option.detail}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function jobSecurityLabel(security: number): { label: string; color: string } {
   if (security >= 75) return { label: 'Strong Position', color: 'var(--success)' };
@@ -212,8 +251,9 @@ function CoachCareerPage() {
         coachSkill: coach.profile?.skill,
         skillTree: coach.skillTree,
         staff: coach.assistants,
+        perks: coach.coachPerks,
       }),
-    [coach.assistants, coach.practiceFocus, coach.profile?.archetype, coach.profile?.skill, coach.skillTree, coach.tactics, coach.teamFatigue],
+    [coach.assistants, coach.coachPerks, coach.practiceFocus, coach.profile?.archetype, coach.profile?.skill, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
   const prepNotes = useMemo(() => summarizeCoachGamePlan(coachGamePlan), [coachGamePlan]);
   const gameDayChanges = useMemo(
@@ -333,7 +373,7 @@ function CoachCareerPage() {
                 {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; <span title={coach.careerTier ? SITUATION_DETAILS[coach.careerTier] : undefined}>{coach.careerTier ? SITUATION_LABELS[coach.careerTier] : 'Program'}</span> &bull; Age {coach.profile.age}
               </span>
             </div>
-            <div className="text-xs text-gray-500 mt-1 programPrestigeLine" title="Coach rating: base skill plus a point for each skill-tree level.">
+            <div className="text-xs text-gray-500 mt-1 programPrestigeLine" title="Coach rating: a summary of base skill plus a point for each skill-tree level. Recruiting and development still run on base skill; the tree adds its own effects.">
               <span className="mr-1">Coach</span>
               <CoachStars rating={coachRating} showTier showValue size="md" />
               <span className="ml-1">
@@ -667,7 +707,7 @@ function CoachCareerPage() {
             <div>Coach level {coachLevel}</div>
             <div>XP {coachXp}/100</div>
             <div className="font-semibold youMark">Skill points: {coachSkillPoints}</div>
-            <div>Each level adds a point to your coach rating.</div>
+            <div>Each skill-tree upgrade adds a point to your coach rating.</div>
           </div>
         </div>
 
@@ -691,6 +731,17 @@ function CoachCareerPage() {
               >
                 Upgrade (+1)
               </button>
+              <PerkPicker
+                branch={key}
+                level={skillTree[key]}
+                picked={coach.coachPerks?.[key]}
+                onPick={(perk) => {
+                  const info = perkInfo(perk);
+                  if (info && window.confirm(`Take ${info.name}? ${info.detail} The pick is for the rest of your career.`)) {
+                    dispatch(chooseCoachPerk({ branch: key, perk }));
+                  }
+                }}
+              />
             </div>
           ))}
         </div>

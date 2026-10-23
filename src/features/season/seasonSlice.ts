@@ -140,6 +140,7 @@ export const simCurrentWeek = createAsyncThunk(
           coachSkill: coachState.profile?.skill,
           skillTree: coachState.skillTree,
           staff: coachState.assistants,
+          perks: coachState.coachPerks,
         })
       : null;
     const coachTeamTactics = coachGamePlan?.tactics ?? DEFAULT_TACTICS;
@@ -257,6 +258,7 @@ function conferenceTournamentSides(state: RootState): (teamId: string, weekKey: 
         coachSkill: coach.profile?.skill,
         skillTree: coach.skillTree,
         staff: coach.assistants,
+        perks: coach.coachPerks,
       })
     : null;
   return (teamId, weekKey) => {
@@ -348,6 +350,7 @@ export const simNextPlayoffRound = createAsyncThunk(
               coachSkill: coach.profile?.skill,
               skillTree: coach.skillTree,
               staff: coach.assistants,
+              perks: coach.coachPerks,
             })
           : null;
 

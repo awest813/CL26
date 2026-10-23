@@ -7,7 +7,8 @@ import { simulateRecruitingWeek, type CpuRecruitingProfile } from '../../sim/rec
 import { RECRUITING_BOARD_LIMIT, type AutoRecruitPlan } from '../../sim/autoRecruit';
 import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
-import { generateStaff, staffEffects, type AssistantCandidate, type AssistantCoach, type StaffDeparture } from '../../sim/assistants';
+import { generateStaff, SPECIALTY_TENURE, specialtyFitsRole, staffEffects, type AssistantCandidate, type AssistantCoach, type AssistantSpecialty, type StaffDeparture } from '../../sim/assistants';
+import { PERK_UNLOCK_LEVEL, perkFitsBranch, recruitingEdges, type CoachPerkId, type CoachPerks, type SkillBranch } from '../../sim/coachPerks';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { expectationsFromPrestige as programExpectationsFor, leaguePrestiges, situationFromPrestige, type ProgramExpectations } from '../../sim/programExpectations';
 import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
@@ -107,6 +108,8 @@ export interface CoachState {
   coachLevel: number;
   coachSkillPoints: number;
   skillTree: CoachSkillTree;
+  /** One perk per skill-tree branch, picked at level 3. Missing on older saves. */
+  coachPerks?: CoachPerks;
   programResources: ProgramResources;
   programPrestigeDrift: number;
   pendingJobOffers: JobOffer[];
@@ -159,6 +162,7 @@ const initialState: CoachState = {
     development: 0,
     operations: 0,
   },
+  coachPerks: {},
   programResources: {
     nil: 50,
     boosters: 50,
@@ -412,6 +416,22 @@ const coachSlice = createSlice({
         if (state.skillTree[key] >= 5) return;
         state.skillTree[key] += 1;
         state.coachSkillPoints -= 1;
+    },
+    /** Pick a branch's perk once the branch reaches level 3. The pick is for the career. */
+    chooseCoachPerk: (state, action: PayloadAction<{ branch: SkillBranch; perk: CoachPerkId }>) => {
+        const { branch, perk } = action.payload;
+        if (!perkFitsBranch(branch, perk)) return;
+        if ((state.skillTree?.[branch] ?? 0) < PERK_UNLOCK_LEVEL) return;
+        if (state.coachPerks?.[branch]) return;
+        state.coachPerks = { ...(state.coachPerks ?? {}), [branch]: perk };
+    },
+    /** Give an assistant his specialty after a season on staff. It stays with him. */
+    chooseAssistantSpecialty: (state, action: PayloadAction<{ assistantId: string; specialty: AssistantSpecialty }>) => {
+        const assistant = state.assistants?.find((coach) => coach.id === action.payload.assistantId);
+        if (!assistant || assistant.specialty) return;
+        if (assistant.tenure < SPECIALTY_TENURE) return;
+        if (!specialtyFitsRole(assistant.role, action.payload.specialty)) return;
+        assistant.specialty = action.payload.specialty;
     },
     setAdPressure: (state, action: PayloadAction<number>) => {
         state.adPressure = Math.max(0, Math.min(100, action.payload));
@@ -685,6 +705,8 @@ export const {
     setJobOpenings,
     setSeasonStartRoster,
     hireAssistant,
+    chooseCoachPerk,
+    chooseAssistantSpecialty,
 } = coachSlice.actions;
 
 /** The AD pressure a program of this tier settles back toward when results are steady. */
@@ -830,6 +852,7 @@ export const advanceRecruitingWeek = createAsyncThunk(
             recruitingBonus,
             coachSkill,
             teamProfilesByTeamId,
+            recruitingEdges(coach.coachPerks, coach.assistants, selectedTeam.region),
         );
 
         const commitments: { recruitId: string; teamId: string }[] = [];

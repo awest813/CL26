@@ -153,22 +153,25 @@ function CoachCareerSetupPage() {
               onChange={(e) => setCoachAge(Number(e.target.value))}
             />
           </label>
-          <label>
-            Coach skill (40–99)
-            <input
-              type="number"
-              min={40}
-              max={99}
-              value={coachSkill}
-              onChange={(e) => setCoachSkill(Number(e.target.value))}
-            />
-            <small className="mutedText" style={{ display: 'block', marginTop: 4 }}>
+          <div>
+            <label>
+              Coach skill (40–99)
+              <input
+                type="number"
+                min={40}
+                max={99}
+                value={coachSkill}
+                aria-describedby="coach-skill-hint"
+                onChange={(e) => setCoachSkill(Number(e.target.value))}
+              />
+            </label>
+            <small id="coach-skill-hint" className="mutedText" style={{ display: 'block', marginTop: 4 }}>
               {coachSkill >= 40 && coachSkill <= 99 && (
                 <><CoachStars rating={coachSkill} showTier />{' '}</>
               )}
-              Higher skill improves recruiting and game outcomes. Skill-tree levels add to it over a career.
+              Higher skill improves recruiting and game outcomes. Your stars also count skill-tree upgrades, which add their own effects.
             </small>
-          </label>
+          </div>
         </div>
 
         {/* Archetype cards */}

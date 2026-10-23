@@ -29,6 +29,65 @@ export interface AssistantCoach {
   age: number;
   /** Seasons on this staff. */
   tenure: number;
+  /** Picked by the head coach after a season on staff; missing until then. */
+  specialty?: AssistantSpecialty;
+}
+
+/** One specialty per assistant, two to choose from in each role. */
+export type AssistantSpecialty =
+  | 'SHOT_DOCTOR'
+  | 'PLAY_CALLER'
+  | 'GOALIE_COACH'
+  | 'PRESSURE'
+  | 'CLOSER'
+  | 'HOMETOWN'
+  | 'ENDURANCE'
+  | 'RECOVERY';
+
+export interface SpecialtyInfo {
+  id: AssistantSpecialty;
+  name: string;
+  detail: string;
+}
+
+export const ASSISTANT_SPECIALTIES: Record<AssistantRole, [SpecialtyInfo, SpecialtyInfo]> = {
+  OFFENSE: [
+    { id: 'SHOT_DOCTOR', name: 'Shot doctor', detail: 'Better looks: +0.4% shot quality on game day.' },
+    { id: 'PLAY_CALLER', name: 'Play caller', detail: 'The offense install hits 6% harder.' },
+  ],
+  DEFENSE: [
+    { id: 'GOALIE_COACH', name: 'Goalie coach', detail: '+0.3 goalie on game day.' },
+    { id: 'PRESSURE', name: 'Pressure scheme', detail: '+0.3 defense on game day.' },
+  ],
+  RECRUITING: [
+    { id: 'CLOSER', name: 'Closer', detail: '+8% weekly interest with 4★ and 5★ prospects.' },
+    { id: 'HOMETOWN', name: 'Hometown ties', detail: '+10% weekly interest with prospects from your region.' },
+  ],
+  STRENGTH: [
+    { id: 'ENDURANCE', name: 'Endurance', detail: '5% less weekly fatigue build-up.' },
+    { id: 'RECOVERY', name: 'Recovery', detail: '3% less late-game wear.' },
+  ],
+};
+
+/** Seasons on staff before an assistant takes a specialty. */
+export const SPECIALTY_TENURE = 1;
+
+export function specialtyInfo(specialty: AssistantSpecialty | undefined): SpecialtyInfo | null {
+  if (!specialty) return null;
+  for (const options of Object.values(ASSISTANT_SPECIALTIES)) {
+    const match = options.find((option) => option.id === specialty);
+    if (match) return match;
+  }
+  return null;
+}
+
+/** Whether this specialty belongs to this role. */
+export function specialtyFitsRole(role: AssistantRole, specialty: AssistantSpecialty): boolean {
+  return ASSISTANT_SPECIALTIES[role].some((option) => option.id === specialty);
+}
+
+function hasSpecialty(staff: AssistantCoach[], specialty: AssistantSpecialty): boolean {
+  return staff.some((coach) => coach.specialty === specialty && specialtyFitsRole(coach.role, specialty));
 }
 
 /** Why an assistant left after a season. */
@@ -92,14 +151,14 @@ export function staffEffects(staff: AssistantCoach[] | null | undefined): StaffE
   const strength = assistantEdge(ratingFor(staff, 'STRENGTH'));
   return {
     offense: offense * 1.2,
-    shotQuality: offense * 0.006,
-    defense: defense * 1.2,
-    goalie: defense * 0.5,
+    shotQuality: offense * 0.006 + (hasSpecialty(staff, 'SHOT_DOCTOR') ? 0.004 : 0),
+    defense: defense * 1.2 + (hasSpecialty(staff, 'PRESSURE') ? 0.3 : 0),
+    goalie: defense * 0.5 + (hasSpecialty(staff, 'GOALIE_COACH') ? 0.3 : 0),
     recruitingMultiplier: 1 + recruiting * 0.08,
-    fatigueScale: 1 - strength * 0.15,
-    wearRelief: Math.max(0, strength) * 0.05,
+    fatigueScale: 1 - strength * 0.15 - (hasSpecialty(staff, 'ENDURANCE') ? 0.05 : 0),
+    wearRelief: Math.max(0, strength) * 0.05 + (hasSpecialty(staff, 'RECOVERY') ? 0.03 : 0),
     installBoost: {
-      OFFENSE: 1 + offense * 0.15,
+      OFFENSE: 1 + offense * 0.15 + (hasSpecialty(staff, 'PLAY_CALLER') ? 0.06 : 0),
       DEFENSE: 1 + defense * 0.15,
       CONDITIONING: 1 + strength * 0.15,
       DISCIPLINE: 1,

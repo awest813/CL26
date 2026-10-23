@@ -235,6 +235,34 @@ coaches. The head coach's rating is base skill plus a point per skill-tree level
 stars. Shown at career setup, in the Coach Office (with points to the next half star), on the
 assistant cards and hiring market, in staff news, and on the Weekly Hub.
 
+### A small skill tree: perks and specialties
+
+**Head coach perks** (`src/sim/coachPerks.ts`). At level 3 of a skill-tree branch the coach picks one
+of two perks, once per career:
+
+| Branch | Perk | Effect |
+|---|---|---|
+| Recruiting | Pitchman | Pitches land 30% harder, good or bad |
+| | Grinder | Each recruiting hour is worth 10% more interest |
+| Development | Young core | Freshmen and sophomores can grow a point more each offseason |
+| | Finishing school | Juniors and seniors can grow a point more each offseason |
+| Operations | Film room | +0.25 offense and defense on game day |
+| | Fresh legs | 4% less late-game wear, 10% less fatigue drag |
+
+**Assistant specialties** (`assistants.ts`). After a season on staff, each assistant takes one of two
+specialties for his role. It stays with him, and leaves with him if he is hired away:
+
+| Role | Specialty | Effect |
+|---|---|---|
+| Offensive coordinator | Shot doctor / Play caller | +0.4% shot quality / offense install +6% |
+| Defensive coordinator | Goalie coach / Pressure scheme | +0.3 goalie / +0.3 defense |
+| Recruiting coordinator | Closer / Hometown ties | +8% interest with 4–5★ / +10% with home-region prospects |
+| Strength and conditioning | Endurance / Recovery | −5% fatigue build-up / −3% late-game wear |
+
+Specialties fold into `staffEffects`, so every game plan, fatigue projection, and staff line reads
+them. The recruiting perks and the coordinator's specialty scale the same weekly gain the board
+projects (`recruitingEdges`).
+
 ## Open items, in priority order
 
 1. **CPU recruiting reads the same pitches.** CPU pursuit uses prestige and region only; academics

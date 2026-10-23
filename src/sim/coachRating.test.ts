@@ -29,5 +29,6 @@ describe('coach stars', () => {
   test('distance to the next half star', () => {
     assert.deepEqual(coachToNextStar(72), { stars: 4, points: 3 });
     assert.equal(coachToNextStar(90), null);
+    assert.equal(coachToNextStar(Number.NaN), null);
   });
 });

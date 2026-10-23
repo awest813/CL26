@@ -3224,7 +3224,7 @@ button.seasonScoreButton:hover:not(:disabled) {
 .prestigeStar-empty { color: var(--border); }
 
 .prestigeStar-half {
-  background: linear-gradient(90deg, #d99a06 50%, var(--border) 50%);
+  background: linear-gradient(90deg, var(--star) 50%, var(--border) 50%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -3603,6 +3603,42 @@ button.seasonScoreButton:hover:not(:disabled) {
 .staffRating-elite { background: var(--success-soft); color: var(--success); }
 .staffRating-good { background: var(--accent-soft); color: var(--accent-strong); }
 .staffRating-weak { background: var(--danger-soft); color: var(--danger); }
+
+/* Skill-tree perks and assistant specialties. */
+.perkChoice {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.perkOption {
+  display: grid;
+  gap: 0.1rem;
+  text-align: left;
+  white-space: normal;
+}
+
+.perkOption span {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.perkChosen {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.perkBadge {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
 .staffMark {
   display: flex;

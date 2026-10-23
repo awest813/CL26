@@ -1,14 +1,18 @@
 import { useMemo } from 'react';
-import { hireAssistant } from '../features/coach/coachSlice';
+import { chooseAssistantSpecialty, hireAssistant } from '../features/coach/coachSlice';
 import {
   ASSISTANT_ROLE_LABELS,
   ASSISTANT_ROLES,
+  ASSISTANT_SPECIALTIES,
   assistantCandidates,
+  SPECIALTY_TENURE,
+  specialtyInfo,
   generateStaff,
   staffEffectLines,
   VACANT_RATING,
   type AssistantCandidate,
   type AssistantCoach,
+  type AssistantSpecialty,
   type StaffDeparture,
 } from '../sim/assistants';
 import { coachStars } from '../sim/coachRating';
@@ -68,6 +72,44 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
     dispatch(hireAssistant({ candidate, currentStaff }));
   }
 
+  function pickSpecialty(coach: AssistantCoach, specialty: AssistantSpecialty) {
+    const info = specialtyInfo(specialty);
+    if (!info || !window.confirm(`Make ${coach.name} your ${info.name.toLowerCase()}? ${info.detail} It stays with him.`)) return;
+    dispatch(chooseAssistantSpecialty({ assistantId: coach.id, specialty }));
+  }
+
+  function specialtyLine(coach: AssistantCoach) {
+    const chosen = specialtyInfo(coach.specialty);
+    if (chosen) {
+      return (
+        <div className="perkChosen" title={chosen.detail}>
+          <span className="perkBadge">Specialty</span> <strong>{chosen.name}</strong>
+          <div className="text-xs text-gray-500">{chosen.detail}</div>
+        </div>
+      );
+    }
+    const options = ASSISTANT_SPECIALTIES[coach.role];
+    // A save from before staffs existed shows a staff it has not hired yet; nothing to pick.
+    if (!staff || coach.tenure < SPECIALTY_TENURE) {
+      return (
+        <div className="staffEffect">
+          After a season on staff: {options[0].name} or {options[1].name}.
+        </div>
+      );
+    }
+    return (
+      <div className="perkChoice">
+        <div className="text-xs font-semibold youMark">Pick a specialty</div>
+        {options.map((option) => (
+          <button key={option.id} type="button" className="btn text-xs perkOption" onClick={() => pickSpecialty(coach, option.id)}>
+            <strong>{option.name}</strong>
+            <span>{option.detail}</span>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <section className="card" id="staff" aria-labelledby="staff-title">
       <h3 id="staff-title" className="text-base font-bold m-0">Assistant coaches</h3>
@@ -105,6 +147,7 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
                     <div className="text-red-600 text-sm font-semibold">Vacant{canHire ? ': hire below' : ''}</div>
                   )}
                   <div className="staffEffect">{lines[role]}</div>
+                  {coach && specialtyLine(coach)}
                 </div>
                 <RatingMark rating={coach?.rating ?? VACANT_RATING} />
               </li>
