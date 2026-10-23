@@ -11,7 +11,9 @@ import {
   type AssistantCoach,
   type StaffDeparture,
 } from '../sim/assistants';
+import { coachStars } from '../sim/coachRating';
 import { prestigeStars, prestigeStarText } from '../sim/prestige';
+import CoachStars from './CoachStars';
 import { useAppDispatch } from '../store/hooks';
 import type { Team } from '../types/sim';
 
@@ -34,6 +36,21 @@ function ratingTone(rating: number): string {
   return 'staffRating staffRating-weak';
 }
 
+/** "★★★½ 72": an assistant's stars and rating, for confirmations and news lines. */
+function ratingText(rating: number): string {
+  return `${prestigeStarText(coachStars(rating))} ${rating}`;
+}
+
+/** Stars with the rating number beside them. */
+function RatingMark({ rating }: { rating: number }) {
+  return (
+    <span className="staffMark">
+      <CoachStars rating={rating} />
+      <span className={ratingTone(rating)}>{rating}</span>
+    </span>
+  );
+}
+
 /** The four assistants, what each one does, who left, and who is on the market. */
 function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, seasonSeed, year, teams }: StaffPanelProps) {
   const dispatch = useAppDispatch();
@@ -46,8 +63,8 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
 
   function hire(candidate: AssistantCandidate) {
     const current = currentStaff.find((coach) => coach.role === candidate.role);
-    const replacing = current ? ` ${current.name} (${current.rating}) leaves the staff.` : '';
-    if (!window.confirm(`Hire ${candidate.name} (${candidate.rating}) as ${ASSISTANT_ROLE_LABELS[candidate.role].toLowerCase()}?${replacing}`)) return;
+    const replacing = current ? ` ${current.name} (${ratingText(current.rating)}) leaves the staff.` : '';
+    if (!window.confirm(`Hire ${candidate.name} (${ratingText(candidate.rating)}) as ${ASSISTANT_ROLE_LABELS[candidate.role].toLowerCase()}?${replacing}`)) return;
     dispatch(hireAssistant({ candidate, currentStaff }));
   }
 
@@ -55,14 +72,14 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
     <section className="card" id="staff" aria-labelledby="staff-title">
       <h3 id="staff-title" className="text-base font-bold m-0">Assistant coaches</h3>
       <p className="text-xs text-gray-500 mt-1 mb-3">
-        A 60 is a league-average hire. Coordinators move their side of the ball and the install that drills it; an empty
+        A 60 (two and a half stars) is a league-average hire; four-star assistants are the ones programs hire away. Coordinators move their side of the ball and the install that drills it; an empty
         seat plays at {VACANT_RATING}. The best assistants get hired away as head coaches, more often after a playoff year.
       </p>
       {departures.length > 0 && (
         <ul className="staffNews" aria-label="Staff changes">
           {departures.map((row) => (
             <li key={`${row.role}-${row.name}`}>
-              <strong>{row.name}</strong> ({ASSISTANT_ROLE_LABELS[row.role].toLowerCase()}, {row.rating}){' '}
+              <strong>{row.name}</strong> ({ASSISTANT_ROLE_LABELS[row.role].toLowerCase()}, {ratingText(row.rating)}){' '}
               {row.reason === 'head-coach'
                 ? `left to be head coach at ${teams.find((team) => team.id === row.teamId)?.schoolName ?? 'another program'}.`
                 : 'retired.'}
@@ -89,7 +106,7 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
                   )}
                   <div className="staffEffect">{lines[role]}</div>
                 </div>
-                <span className={ratingTone(coach?.rating ?? VACANT_RATING)}>{coach?.rating ?? VACANT_RATING}</span>
+                <RatingMark rating={coach?.rating ?? VACANT_RATING} />
               </li>
             );
           })}
@@ -120,7 +137,7 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
                     )}
                   </div>
                   <span className="staffHire">
-                    <span className={ratingTone(candidate.rating)}>{candidate.rating}</span>
+                    <RatingMark rating={candidate.rating} />
                     {hired ? (
                       <span className="text-xs text-green-600 font-semibold">On staff</span>
                     ) : (

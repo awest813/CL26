@@ -4,6 +4,7 @@ import PrestigeStars from '../components/PrestigeStars';
 import { prestigeStars, prestigeStarText } from '../sim/prestige';
 import { generateStaff } from '../sim/assistants';
 import { SITUATION_DETAILS, SITUATION_LABELS } from '../sim/programExpectations';
+import CoachStars from '../components/CoachStars';
 import TeamLogo from '../components/TeamLogo';
 import { careerSetupFromPrestige, completeCareerSetup, setCoachProfile } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
@@ -162,7 +163,10 @@ function CoachCareerSetupPage() {
               onChange={(e) => setCoachSkill(Number(e.target.value))}
             />
             <small className="mutedText" style={{ display: 'block', marginTop: 4 }}>
-              Higher skill improves recruiting and game outcomes.
+              {coachSkill >= 40 && coachSkill <= 99 && (
+                <><CoachStars rating={coachSkill} showTier />{' '}</>
+              )}
+              Higher skill improves recruiting and game outcomes. Skill-tree levels add to it over a career.
             </small>
           </label>
         </div>

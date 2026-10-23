@@ -38,6 +38,8 @@ import { computePollInputs, computeRankings } from '../sim/rankings';
 import { withLeaguePrestige } from '../sim/programLedger';
 import { careerOffseasonCapabilities, hasSeasonHistoryForYear } from '../sim/seasonPhase';
 import PageHeader from '../components/PageHeader';
+import CoachStars from '../components/CoachStars';
+import { coachToNextStar, headCoachRating, skillTreeLevels } from '../sim/coachRating';
 
 const ARCHETYPE_BONUSES: Record<string, string[]> = {
   RECRUITER: ['+15% weekly interest gain', 'Expanded recruit reach', 'Faster commitments on key needs'],
@@ -247,6 +249,9 @@ function CoachCareerPage() {
   const coachXp = coach.coachXp ?? 0;
   const coachSkillPoints = coach.coachSkillPoints ?? 0;
   const skillTree = coach.skillTree ?? { recruiting: 0, development: 0, operations: 0 };
+  const treeLevels = skillTreeLevels(skillTree);
+  const coachRating = headCoachRating(coach.profile?.skill ?? 72, skillTree);
+  const nextCoachStar = coachToNextStar(coachRating);
   const programResources = coach.programResources ?? { nil: 50, boosters: 50, facilities: 50 };
   const pressureState = adPressureLabel(adPressure);
 
@@ -325,7 +330,15 @@ function CoachCareerPage() {
             <div className="text-gray-500 text-sm mt-0.5 programLockup">
               {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
               <span>
-                {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; <span title={coach.careerTier ? SITUATION_DETAILS[coach.careerTier] : undefined}>{coach.careerTier ? SITUATION_LABELS[coach.careerTier] : 'Program'}</span> &bull; Skill {coach.profile.skill} &bull; Age {coach.profile.age}
+                {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; <span title={coach.careerTier ? SITUATION_DETAILS[coach.careerTier] : undefined}>{coach.careerTier ? SITUATION_LABELS[coach.careerTier] : 'Program'}</span> &bull; Age {coach.profile.age}
+              </span>
+            </div>
+            <div className="text-xs text-gray-500 mt-1 programPrestigeLine" title="Coach rating: base skill plus a point for each skill-tree level.">
+              <span className="mr-1">Coach</span>
+              <CoachStars rating={coachRating} showTier showValue size="md" />
+              <span className="ml-1">
+                {treeLevels > 0 ? `· Skill ${coach.profile.skill} + ${treeLevels} from the skill tree ` : ''}
+                {nextCoachStar ? `· ${nextCoachStar.points} to ${prestigeStarText(nextCoachStar.stars)}` : ''}
               </span>
             </div>
             {selectedTeam && effectivePrestige != null && (
@@ -654,6 +667,7 @@ function CoachCareerPage() {
             <div>Coach level {coachLevel}</div>
             <div>XP {coachXp}/100</div>
             <div className="font-semibold youMark">Skill points: {coachSkillPoints}</div>
+            <div>Each level adds a point to your coach rating.</div>
           </div>
         </div>
 

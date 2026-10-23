@@ -1,4 +1,5 @@
 import { formatPrestige, prestigeStars, prestigeTier } from '../sim/prestige';
+import StarRow from './StarRow';
 
 type PrestigeStarsProps = {
   prestige: number;
@@ -16,12 +17,7 @@ function PrestigeStars({ prestige, showTier = false, showValue = false, size = '
   const label = `${stars} of 5 stars, ${tier.toLowerCase()} (prestige ${formatPrestige(prestige)})`;
   return (
     <span className={`prestigeStars prestigeStars-${size}`} title={label}>
-      <span className="prestigeStarRow" role="img" aria-label={label}>
-        {[1, 2, 3, 4, 5].map((slot) => {
-          const fill = stars >= slot ? 'full' : stars >= slot - 0.5 ? 'half' : 'empty';
-          return <span key={slot} className={`prestigeStar prestigeStar-${fill}`} aria-hidden="true">★</span>;
-        })}
-      </span>
+      <StarRow stars={stars} label={label} />
       {showTier && <span className="prestigeTier">{tier}</span>}
       {showValue && <span className="prestigeValue">{formatPrestige(prestige)}</span>}
     </span>

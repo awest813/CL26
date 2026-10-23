@@ -49,6 +49,9 @@ import { careerOffseasonCapabilities } from '../sim/seasonPhase';
 import { buildWeeklyDesk } from '../sim/weeklyDesk';
 import { ASSISTANT_ROLES, staffEffects, type AssistantRole } from '../sim/assistants';
 import { buildLeagueWire } from '../sim/leagueWire';
+import { coachStars, headCoachRating } from '../sim/coachRating';
+import { prestigeStarText } from '../sim/prestige';
+import CoachStars from '../components/CoachStars';
 import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { GameResult, Recruit, Tactics, TeamGameStats } from '../types/sim';
@@ -988,11 +991,16 @@ function WeeklyHubPage() {
 
         <div className="card">
           <h3 className="m-0 mb-3 text-base font-bold">Coach and staff</h3>
+          {coach.profile && (
+            <div className="text-xs text-gray-500 mb-2">
+              Head coach: <CoachStars rating={headCoachRating(coach.profile.skill, coach.skillTree)} showTier />
+            </div>
+          )}
           {coach.assistants && (
             <div className="text-xs text-gray-500 mb-2">
               Staff: {ASSISTANT_ROLES.map((role) => {
                 const assistant = coach.assistants?.find((row) => row.role === role);
-                return `${ASSISTANT_SHORT_LABELS[role]} ${assistant ? assistant.rating : 'vacant'}`;
+                return `${ASSISTANT_SHORT_LABELS[role]} ${assistant ? `${prestigeStarText(coachStars(assistant.rating))} ${assistant.rating}` : 'vacant'}`;
               }).join(' · ')}
             </div>
           )}

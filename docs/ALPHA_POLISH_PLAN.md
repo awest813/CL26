@@ -217,6 +217,24 @@ After (twenty seasons, two win-now programs): 9–3 seasons that miss the field 
 prestige, early prestige wobbles between 82 and 90, and the climb to the top comes from repeat
 titles rather than bracket appearances.
 
+### Coach stars
+
+Coaches use the same half-star scale as programs (`src/sim/coachRating.ts`, `CoachStars`). Ratings
+stay numbers and drive the sim as before; stars are how the game names them:
+
+| Stars | Rating | Tier |
+|---|---|---|
+| 5 | 85+ | Elite |
+| 4–4½ | 75–84 | Proven |
+| 3–3½ | 65–74 | Solid |
+| 2–2½ | 55–64 | Capable |
+| 1–1½ | under 55 | Green |
+
+A 60 (league-average assistant) is 2½ stars; the 76+ assistants that programs hire away are four-star
+coaches. The head coach's rating is base skill plus a point per skill-tree level, so a career earns
+stars. Shown at career setup, in the Coach Office (with points to the next half star), on the
+assistant cards and hiring market, in staff news, and on the Weekly Hub.
+
 ## Open items, in priority order
 
 1. **CPU recruiting reads the same pitches.** CPU pursuit uses prestige and region only; academics
