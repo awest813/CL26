@@ -3729,3 +3729,112 @@ button.seasonScoreButton:hover:not(:disabled) {
   border-color: var(--border);
   background: var(--bg-elevated);
 }
+
+/* Weekly Hub: season at a glance and the section jump links. */
+.glanceSplits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.9rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.glanceStreak {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.78rem;
+}
+
+.glanceStreak-win { background: var(--success-soft); color: var(--success); }
+.glanceStreak-loss { background: var(--danger-soft); color: var(--danger); }
+
+.glanceResults {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: 0.35rem;
+}
+
+.glanceResult {
+  display: grid;
+  grid-template-columns: 1.4rem auto;
+  column-gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.8rem;
+}
+
+.glanceResult:hover { border-color: var(--accent); }
+
+.glanceResultMark {
+  grid-row: span 2;
+  align-self: center;
+  font-weight: 800;
+  text-align: center;
+}
+
+.glanceResult-win .glanceResultMark { color: var(--success); }
+.glanceResult-loss .glanceResultMark { color: var(--danger); }
+
+.glanceResultScore {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.glanceResultOpp {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glanceStandings {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.glanceStandings th,
+.glanceStandings td {
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.glanceStandings thead th {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hubJumps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: -0.25rem;
+}
+
+.hubJump {
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hubJump:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+[id] { scroll-margin-top: 7.5rem; }

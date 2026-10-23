@@ -6,11 +6,14 @@ import StaffRecruitingControls from '../components/StaffRecruitingControls';
 import LeagueWirePanel from '../components/LeagueWirePanel';
 import GameLog from '../components/GameLog';
 import AwardsPanel from '../components/AwardsPanel';
+import SeasonGlancePanel from '../components/SeasonGlancePanel';
+import { buildSeasonGlance } from '../sim/seasonGlance';
 import {
   selectRankTrends,
   selectTeamRecords,
   selectUserUpcomingGame,
   selectUserLastResult,
+  selectConferenceStandings,
   startPlayoffs,
 } from '../features/season/seasonSlice';
 import {
@@ -455,6 +458,23 @@ function WeeklyHubPage() {
       conferenceTeamIds: new Set(teams.filter((team) => team.conferenceId === selectedTeam?.conferenceId).map((team) => team.id)),
     });
   }, [season.currentWeekIndex, season.gameResults, season.phase, season.previousRankByTeamId, season.scheduleByWeek, selectedTeam?.conferenceId, selectedTeamId, teams, top25, wireWeekIndex]);
+  const seasonGlance = useMemo(
+    () => (selectedTeamId
+      ? buildSeasonGlance({
+          scheduleByWeek: season.scheduleByWeek,
+          results: season.gameResults,
+          userTeamId: selectedTeamId,
+          records,
+          rankByTeamId: Object.fromEntries(top25.map((row) => [row.teamId, row.rank])),
+        })
+      : null),
+    [records, season.gameResults, season.scheduleByWeek, selectedTeamId, top25],
+  );
+  const conferenceStandingsSelector = useMemo(
+    () => selectConferenceStandings(selectedTeam?.conferenceId ?? ''),
+    [selectedTeam?.conferenceId],
+  );
+  const conferenceStandings = useAppSelector(conferenceStandingsSelector);
   const blueChipCommits = useMemo(
     () => (coach.recruitingReport?.commits ?? [])
       .filter(({ teamId }) => teamId !== selectedTeamId)
@@ -624,6 +644,24 @@ function WeeklyHubPage() {
     return <Navigate to="/career/setup" replace />;
   }
 
+  // Jump links for the sections this hub is showing right now.
+  const hasLastResult = Boolean(
+    ((season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') && (playoffSpot.lastGame?.result || lastConferenceGame))
+      || userLastResult,
+  );
+  const hubSections = [
+    hasLastResult ? { id: 'week-result', label: 'Last game' } : null,
+    { id: 'loop-title', label: loopStep.title },
+    { id: 'weekly-desk-title', label: 'This week' },
+    seasonGlance && season.phase !== 'PRE' ? { id: 'season-glance', label: 'Season' } : null,
+    (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') && (season.awardHistory?.[season.year]?.length ?? 0) > 0
+      ? { id: 'awards-title', label: 'Awards' }
+      : null,
+    leagueWire ? { id: 'league-wire-title', label: 'Around the league' } : null,
+    showInstall ? { id: 'week-practice', label: 'Install' } : null,
+    showPrep && coach.recruitPool.length > 0 ? { id: 'week-recruiting', label: 'Recruiting' } : null,
+  ].filter((section): section is { id: string; label: string } => section !== null);
+
   return (
     <div className="pageStack">
       <PageHeader
@@ -635,6 +673,12 @@ function WeeklyHubPage() {
           </>
         }
       />
+
+      <nav className="hubJumps" aria-label="Jump to a section">
+        {hubSections.map((section) => (
+          <a key={section.id} href={`#${section.id}`} className="hubJump">{section.label}</a>
+        ))}
+      </nav>
 
       {playoffSpot.lastGame?.result && (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') ? (
         <Scoreboard
@@ -857,6 +901,16 @@ function WeeklyHubPage() {
         </ul>
       </section>
 
+      {seasonGlance && season.phase !== 'PRE' && (
+        <SeasonGlancePanel
+          glance={seasonGlance}
+          teams={teams}
+          userTeamId={selectedTeamId}
+          conferenceName={userConference?.name ?? null}
+          standings={conferenceStandings}
+        />
+      )}
+
       {(season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') && (season.awardHistory?.[season.year]?.length ?? 0) > 0 && (
         <AwardsPanel
           year={season.year}
@@ -960,7 +1014,7 @@ function WeeklyHubPage() {
 
       {/* ── Recruiting board compact ── */}
       {showPrep && boardRecruits.length > 0 && (
-        <div className="card">
+        <div className="card" id="week-recruiting">
           <div className="flex justify-between items-center mb-3">
             <div>
               <h3 className="m-0 text-base font-bold">Active recruiting board</h3>
@@ -1062,7 +1116,7 @@ function WeeklyHubPage() {
       )}
 
       {showPrep && boardRecruits.length === 0 && coach.recruitPool.length > 0 && (
-        <div className="card">
+        <div className="card" id="week-recruiting">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="m-0 text-base font-bold">Recruiting board</h3>
