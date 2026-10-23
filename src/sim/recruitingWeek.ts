@@ -283,3 +283,40 @@ export function simulateRecruitingWeek(
 
   return { interestByRecruitId, committedTeamByRecruitId };
 }
+
+/**
+ * Late signings after the last recruiting period: every prospect still on the board signs
+ * somewhere. Best prospects choose first, each with the CPU suitor that wants him most and
+ * still has room; a prospect whose suitors are all full lands with the nearest program
+ * that still has room (his region first, then the smallest class). The user's program
+ * only keeps the commits it earned during the year.
+ */
+export function lateSigningSweep(
+  recruits: Recruit[],
+  userTeamId: string | null,
+  teams: { id: string; region: string }[],
+  cap: number = CPU_CLASS_CAP,
+): Record<string, TeamId> {
+  const classSize = committedCountsByTeam(recruits);
+  const cpuTeams = teams.filter((team) => team.id !== userTeamId);
+  const signings: Record<string, TeamId> = {};
+  const open = recruits
+    .filter((recruit) => !recruit.committedTeamId)
+    .sort((a, b) => b.stars - a.stars || b.potential - a.potential || a.id.localeCompare(b.id));
+  for (const recruit of open) {
+    const hasRoom = (teamId: string) => (classSize.get(teamId) ?? 0) < cap;
+    const suitor = Object.entries(recruit.interestByTeamId)
+      .filter(([teamId, interest]) => teamId !== userTeamId && interest > 0 && hasRoom(teamId))
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0];
+    const fallback = suitor ?? cpuTeams
+      .filter((team) => hasRoom(team.id))
+      .sort((a, b) =>
+        Number(b.region === recruit.region) - Number(a.region === recruit.region)
+        || (classSize.get(a.id) ?? 0) - (classSize.get(b.id) ?? 0)
+        || a.id.localeCompare(b.id))[0]?.id;
+    if (!fallback) continue;
+    signings[recruit.id] = fallback;
+    classSize.set(fallback, (classSize.get(fallback) ?? 0) + 1);
+  }
+  return signings;
+}

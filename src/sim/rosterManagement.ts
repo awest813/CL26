@@ -32,10 +32,13 @@ export interface CoachDevelopmentInputs {
   boostersLevel?: number;
 }
 
-/** Convert star rating to an approximate overall baseline */
+/**
+ * Convert star rating to an approximate overall baseline. 2★ ~61, 3★ ~67, 4★ ~73, 5★ ~79:
+ * a program's usual signee starts a similar step below its rated roster at every tier, so a
+ * rebuild can climb on development instead of falling further behind each class.
+ */
 function starsToBaseline(stars: number): number {
-  // 2★ ~53, 3★ ~61, 4★ ~69, 5★ ~77 — elite signees are good, not finished products
-  return 37 + stars * 8;
+  return 49 + stars * 6;
 }
 
 function potentialBaselineBonus(potential: number | undefined, stars: number): number {

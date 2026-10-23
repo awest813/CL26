@@ -32,7 +32,7 @@ import {
 import { planAutoRecruiting } from '../../sim/autoRecruit';
 import { userPlayoffRun } from '../../sim/gameLoop';
 import { buildPositionNeedByPosition } from '../../sim/recruiting';
-import { coachSkillMultiplier } from '../../sim/recruitingWeek';
+import { coachSkillMultiplier, lateSigningSweep } from '../../sim/recruitingWeek';
 import type { GameResult } from '../../types/sim';
 import { generateRoster } from '../../sim/generateRoster';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
@@ -44,7 +44,7 @@ import {
 } from '../../sim/offseasonMarket';
 import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { advanceProgramLedger, draftLedger, nextPrestigeDrift, prestigeDriftForSeason, programRoster, withLeaguePrestige } from '../../sim/programLedger';
-import { buildSeasonJobMarket, programOpenings } from '../../sim/jobOffers';
+import { buildSeasonJobMarket, FIRED_JOB_SECURITY, programOpenings } from '../../sim/jobOffers';
 import { advanceStaff, generateStaff } from '../../sim/assistants';
 import {
   canSimRegularWeek,
@@ -66,6 +66,8 @@ const SECURITY_PENALTY_DIVISOR = 6;
 const AD_PRESSURE_SETTLE_RATE = 0.25;
 const PLAYOFF_PRESSURE_RELIEF = 4;
 const CHAMPION_PRESSURE_RELIEF = 10;
+const CONTENDER_MISSED_FIELD_PENALTY = 4;
+const REBUILD_WINNING_RECORD_BONUS = 5;
 const TOTAL_TEAMS = 128;
 
 export function userWonResult(result: GameResult | undefined, teamId: string | null | undefined): boolean {
@@ -276,6 +278,10 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       securityDelta = -22;
     }
 
+    // Each situation has its own bar: a win-now AD wants the bracket, a rebuild AD a winning record.
+    if (coach.careerTier === 'CONTENDER' && !madePlayoffs) securityDelta -= CONTENDER_MISSED_FIELD_PENALTY;
+    if (coach.careerTier === 'REBUILD' && wins > losses) securityDelta += REBUILD_WINNING_RECORD_BONUS;
+
     const gamesPlayed = wins + losses;
     if (gamesPlayed >= 8 && pollRank <= rankTarget) {
       securityDelta += 5;
@@ -307,7 +313,9 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       (boostedPressure - SECURITY_PENALTY_NEUTRAL_PRESSURE) / SECURITY_PENALTY_DIVISOR,
     );
 
-    const newJobSecurity = Math.max(0, Math.min(100, coach.jobSecurity + securityDelta - pressurePenalty));
+    // Hitting the AD's win target always saves the job for another year.
+    const securityFloor = winDiff >= 0 ? FIRED_JOB_SECURITY : 0;
+    const newJobSecurity = Math.max(securityFloor, Math.min(100, coach.jobSecurity + securityDelta - pressurePenalty));
     const prestigeDriftDelta = prestigeDriftForSeason(champion, madePlayoffs, winDiff);
     const currentTeam = teams.find((team) => team.id === coach.selectedTeamId);
     const currentEffectivePrestige = Math.max(
@@ -352,10 +360,13 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     // The rest of the league: results move each CPU program's prestige, and the class it
     // signed and the players it lost early to the pros move its talent. Read the CPU
     // classes before the recruit pool is cleared for next year.
+    // Prospects still uncommitted sign late with CPU programs, so every program brings in a class.
+    const lateSignings = lateSigningSweep(coach.recruitPool, coach.selectedTeamId, teams);
     const classStarsByTeamId: Record<string, number[]> = {};
     for (const recruit of coach.recruitPool) {
-      if (!recruit.committedTeamId || recruit.committedTeamId === coach.selectedTeamId) continue;
-      (classStarsByTeamId[recruit.committedTeamId] ??= []).push(recruit.stars);
+      const teamId = recruit.committedTeamId ?? lateSignings[recruit.id];
+      if (!teamId || teamId === coach.selectedTeamId) continue;
+      (classStarsByTeamId[teamId] ??= []).push(recruit.stars);
     }
     const earlyEntrantsByTeamId: Record<string, number> = {};
     for (const pick of buildProDraft({

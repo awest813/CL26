@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import PrestigeStars from '../components/PrestigeStars';
 import { prestigeStars, prestigeStarText } from '../sim/prestige';
 import { generateStaff } from '../sim/assistants';
+import { SITUATION_DETAILS, SITUATION_LABELS } from '../sim/programExpectations';
 import TeamLogo from '../components/TeamLogo';
 import { careerSetupFromPrestige, completeCareerSetup, setCoachProfile } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
@@ -224,7 +225,9 @@ function CoachCareerSetupPage() {
                 <strong>{team.schoolName} {team.nickname}</strong> &bull; <PrestigeStars prestige={team.prestige} showTier showValue /> &bull; {team.region}
               </span>
             </p>
-            <p className="mutedText">Tier: <strong>{teamExpectations.careerTier}</strong></p>
+            <p className="mutedText">
+              Situation: <strong>{SITUATION_LABELS[teamExpectations.careerTier]}</strong>. {SITUATION_DETAILS[teamExpectations.careerTier]}
+            </p>
             <p className="mutedText">
               Year 1 targets: {teamExpectations.programExpectations.winTarget}+ wins, Top {teamExpectations.programExpectations.rankTarget}
             </p>

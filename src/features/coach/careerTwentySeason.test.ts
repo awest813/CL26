@@ -349,7 +349,7 @@ async function runDynasty(seasonCount: number) {
       `expected elevated tier after dynasty, got ${finalState.coach.careerTier}`,
     );
     assert.ok(
-      (finalState.coach.programExpectations?.winTarget ?? 0) >= 7,
+      (finalState.coach.programExpectations?.winTarget ?? 0) >= setup.programExpectations.winTarget,
       'win target should rise with program standing',
     );
   } else {

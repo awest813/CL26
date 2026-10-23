@@ -9,6 +9,7 @@ import { resolveSigningDay } from '../../sim/offseason';
 import { advanceFatigue, playoffRoundFatigue } from '../../sim/coachEffects';
 import { generateStaff, staffEffects, type AssistantCandidate, type AssistantCoach, type StaffDeparture } from '../../sim/assistants';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
+import { expectationsFromPrestige as programExpectationsFor, situationFromPrestige, type ProgramExpectations } from '../../sim/programExpectations';
 import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
 import { ledgerEntry, MAX_PRESTIGE_DRIFT, MIN_PRESTIGE_DRIFT, nextPrestigeDrift, withLeaguePrestige } from '../../sim/programLedger';
@@ -51,11 +52,7 @@ export interface CoachProfile {
   skill: number;
 }
 
-export interface ProgramExpectations {
-  winTarget: number;
-  rankTarget: number;
-  securityBaseline: number;
-}
+export type { ProgramExpectations } from '../../sim/programExpectations';
 
 export interface CoachSkillTree {
   recruiting: number;
@@ -695,21 +692,13 @@ export function tierAdPressure(tier: CoachState['careerTier']): number {
     return CAREER_TIER_DEFAULTS[tier ?? 'STABLE'].adPressure;
 }
 
+/** The program's situation, from its star rating: Rebuild, Stable, or Win now. */
 export function careerTierFromPrestige(prestige: number): NonNullable<CoachState['careerTier']> {
-    if (prestige >= 78) return 'CONTENDER';
-    if (prestige >= 58) return 'STABLE';
-    return 'REBUILD';
+    return situationFromPrestige(prestige);
 }
 
 export function expectationsFromPrestige(prestige: number): ProgramExpectations {
-    switch (careerTierFromPrestige(prestige)) {
-        case 'CONTENDER':
-            return { winTarget: 9, rankTarget: 12, securityBaseline: 64 };
-        case 'STABLE':
-            return { winTarget: 7, rankTarget: 35, securityBaseline: 58 };
-        default:
-            return { winTarget: 5, rankTarget: 70, securityBaseline: 52 };
-    }
+    return programExpectationsFor(prestige);
 }
 
 export function careerSetupFromPrestige(prestige: number): {

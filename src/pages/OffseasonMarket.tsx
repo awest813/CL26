@@ -4,6 +4,7 @@ import PrestigeStars from '../components/PrestigeStars';
 import { selectRankingTeams, selectTeamRecords } from '../features/season/seasonSlice';
 import { hasSeasonHistoryForYear } from '../sim/seasonPhase';
 import { prestigeStars, prestigeStarText } from '../sim/prestige';
+import { SITUATION_DETAILS, SITUATION_LABELS } from '../sim/programExpectations';
 import type { JobOffer } from '../types/sim';
 import { acceptJobOffer, careerSetupFromPrestige, declineAllJobOffers, togglePortalClaim } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
@@ -324,7 +325,7 @@ function OffseasonMarket() {
             {marketCoaches.map(({ staff, prestige }) => {
               const school = teams.find((team) => team.id === staff.teamId);
               const offer = liveOffers.find((item) => item.teamId === staff.teamId);
-              const expectations = careerSetupFromPrestige(prestige).programExpectations;
+              const { careerTier: situation, programExpectations: expectations } = careerSetupFromPrestige(prestige);
               return (
                 <li key={staff.id} className={`marketRow jobRow${offer ? ' jobRow-offer' : ''}`}>
                   <span className="programLockup">
@@ -334,7 +335,7 @@ function OffseasonMarket() {
                       {offer && <span className={`jobTier jobTier-${offer.tier}`}>{JOB_TIER_LABEL[offer.tier]}</span>}
                       <span className="pollNick">
                         {school ? `${conferenceName.get(school.conferenceId) ?? 'Independent'} · ${school.region}` : ''}
-                        {' · '}Targets: {expectations.winTarget}+ wins, Top {expectations.rankTarget}
+                        {' · '}<span title={SITUATION_DETAILS[situation]}>{SITUATION_LABELS[situation]}</span>: {expectations.winTarget}+ wins, Top {expectations.rankTarget}
                       </span>
                       <span className="jobMeta">
                         <PrestigeStars prestige={prestige} showTier />

@@ -175,6 +175,36 @@ openings climbed from 11 to 26 a year. Causes and fixes:
 After: three firings in 20 seasons, each after a genuinely bad stretch, a 12-year tenure at one
 program, and about ten openings a year.
 
+### Program situations: Rebuild, Stable, Win now
+
+Audit: the three situations were prestige buckets with flat targets (Rebuild 5 wins, Stable 7,
+Contender 9) that ignored where a program actually ranks. A bottom rebuild is expected to win 2–4
+games and was asked for 5; a mid Stable at par 4–8 was asked for 7. Ten-season careers on staff
+recruiting: the rebuild sank every year, and a 9–3 contender was fired.
+
+Now (`src/sim/programExpectations.ts`):
+- Situations follow stars: 4½★ and up is **Win now**, 2½★ to 4★ is **Stable**, under 2½★ is
+  **Rebuild**. Each has a one-line brief shown at setup, in the Coach Office header, and on job
+  listings.
+- The win target is the program's par (10 wins for the top program down to 2 for the bottom, the
+  scale CPU programs are judged on), rounded down and kept to 3–9. The rank target is the program's
+  league rank plus ten.
+- Win now: missing the field costs 4 more security. Rebuild: a winning record adds 5.
+- A coach who met the win target is never left below the firing line by security alone.
+
+Two causes of the rebuild sinking, both fixed:
+- Signees started too far below the rosters they joined, so a low program fell further behind with
+  each class. Freshmen now start at 49 + 6 × stars (2★ 61, 5★ 79).
+- CPU programs judged their class on total stars against a league-wide line. Most programs under 4★
+  sign nobody, so the line pushed the bottom up and the middle down: peers of a rebuild inflated from
+  69 to 77 over ten seasons. Classes are judged on average stars, scaled by class size, and a program
+  that signed nobody keeps its talent fading toward its rating. Unsigned prospects go to CPU programs
+  after signing day (`lateSigningSweep`): the most interested suitor with room, else a regional team.
+
+After (ten seasons, staff recruiting): a Rebuild holds its roster at about 66, wins about its target
+of 3, and is never fired. A Stable program climbs from 69 to 75 prestige. A Win now program wins 10
+or more in most seasons and is never fired.
+
 ## Open items, in priority order
 
 1. **CPU recruiting reads the same pitches.** CPU pursuit uses prestige and region only; academics

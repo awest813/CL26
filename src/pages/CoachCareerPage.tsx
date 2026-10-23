@@ -17,6 +17,7 @@ import {
 import TeamLogo from '../components/TeamLogo';
 import PrestigeStars from '../components/PrestigeStars';
 import StaffPanel from '../components/StaffPanel';
+import { SITUATION_DETAILS, SITUATION_LABELS } from '../sim/programExpectations';
 import { formatPrestige, prestigeCushion, prestigeStarText, prestigeToNextStar } from '../sim/prestige';
 import OffseasonMarket from './OffseasonMarket';
 import { selectTeamRecords } from '../features/season/seasonSlice';
@@ -324,7 +325,7 @@ function CoachCareerPage() {
             <div className="text-gray-500 text-sm mt-0.5 programLockup">
               {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
               <span>
-                {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; {coach.careerTier} Program &bull; Skill {coach.profile.skill} &bull; Age {coach.profile.age}
+                {selectedTeam?.schoolName} {selectedTeam?.nickname} &bull; <span title={coach.careerTier ? SITUATION_DETAILS[coach.careerTier] : undefined}>{coach.careerTier ? SITUATION_LABELS[coach.careerTier] : 'Program'}</span> &bull; Skill {coach.profile.skill} &bull; Age {coach.profile.age}
               </span>
             </div>
             {selectedTeam && effectivePrestige != null && (

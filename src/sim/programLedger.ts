@@ -17,8 +17,10 @@ export const MIN_TALENT = -8;
 export const MAX_TALENT = 8;
 /** About a third of a roster turns over each year, taking that much of the old talent with it. */
 const TALENT_RETENTION = 0.7;
-/** Rating points per star a class lands above (or below) what a program of its prestige usually signs. */
-const CLASS_TALENT_PER_STAR = 0.3;
+/** Rating points for a full class whose average is a star above what programs of its prestige sign. */
+const CLASS_TALENT_PER_AVERAGE_STAR = 2.4;
+/** Commits that count as a full class; a smaller class moves talent proportionally less. */
+const FULL_CLASS = 8;
 /** Rating points an early pro departure takes off next year's roster. */
 const EARLY_ENTRY_TALENT_COST = 0.8;
 
@@ -126,7 +128,7 @@ export function expectedWinsByTeamId(teams: Team[]): Map<string, number> {
   return new Map(ordered.map((team, rank) => [team.id, 10 - (8 * rank) / last]));
 }
 
-/** Stars a program of this prestige usually signs in a class: a least-squares line over this year's league. */
+/** Average stars a program of this prestige usually signs: a least-squares line over this year's classes. */
 function expectedClassStars(points: Array<{ prestige: number; stars: number }>): (prestige: number) => number {
   if (points.length === 0) return () => 0;
   const meanX = points.reduce((sum, p) => sum + p.prestige, 0) / points.length;
@@ -169,11 +171,16 @@ export function advanceProgramLedger(season: ProgramLedgerSeason): ProgramLedger
   const classTotals = cpuTeams.map((team) => ({
     team,
     stars: (season.classStarsByTeamId[team.id] ?? []).reduce((sum, value) => sum + value, 0),
+    commits: (season.classStarsByTeamId[team.id] ?? []).length,
   }));
-  const expectedStars = expectedClassStars(classTotals.map(({ team, stars }) => ({ prestige: team.prestige, stars })));
+  // A class is judged on its quality against programs of the same standing that signed one.
+  // A program that signed nobody tells nothing, so its talent just fades toward its rating.
+  const expectedAverage = expectedClassStars(
+    classTotals.filter(({ commits }) => commits > 0).map(({ team, stars, commits }) => ({ prestige: team.prestige, stars: stars / commits })),
+  );
 
   const next: ProgramLedger = { ...(season.ledger ?? {}) };
-  for (const { team, stars } of classTotals) {
+  for (const { team, stars, commits } of classTotals) {
     const entry = ledgerEntry(season.ledger, team.id);
     const record = season.recordsByTeamId[team.id];
     const wins = record?.wins ?? 0;
@@ -181,18 +188,19 @@ export function advanceProgramLedger(season: ProgramLedgerSeason): ProgramLedger
     const driftDelta = prestigeDriftForSeason(champion === team.id, seeds.has(team.id), winDiff);
     const prestigeDrift = nextPrestigeDrift(entry.prestigeDrift, driftDelta);
 
-    const classEdge = (stars - expectedStars(team.prestige)) * CLASS_TALENT_PER_STAR;
+    const classEdge = commits > 0
+      ? (stars / commits - expectedAverage(team.prestige)) * CLASS_TALENT_PER_AVERAGE_STAR * Math.min(1, commits / FULL_CLASS)
+      : 0;
     const departures = (season.earlyEntrantsByTeamId[team.id] ?? 0) * EARLY_ENTRY_TALENT_COST;
     const talent = roundTenth(clamp(entry.talent * TALENT_RETENTION + classEdge - departures, MIN_TALENT, MAX_TALENT));
 
-    const commits = season.classStarsByTeamId[team.id] ?? [];
     next[team.id] = {
       prestigeDrift,
       talent,
       lastClass: {
         year: season.year,
-        commits: commits.length,
-        averageStars: commits.length > 0 ? Math.round((stars / commits.length) * 100) / 100 : 0,
+        commits,
+        averageStars: commits > 0 ? Math.round((stars / commits) * 100) / 100 : 0,
       },
     };
   }
