@@ -117,6 +117,46 @@ drawing from the rng, so results are unchanged. The user's regular-season and pl
 the hub shows a line score with overtime columns, lead changes and the biggest leads, the scoring
 summary by period, and the game's plays.
 
+### Offseason, depth chart, terminology, and dark mode
+
+**Offseason order.** Signing day, then the portal (it opens once signing day settles the scholarship
+count), then Record the season, which opens head-coaching jobs and assistant hiring. Begin next season
+warns when job offers will lapse or staff seats are empty. The offseason market projects next season's
+roster: returning players, signees, transfers in, and the cuts or walk-ons that land it at 32.
+
+Bugs fixed from the review of the untouched code:
+- Resetting a season after year 1 regenerated the roster; it now keeps it.
+- Recording the season refilled scholarships to 12, so three portal players fit on top of a full class.
+- Turnover over the 32-man limit cut new signees and transfers first; returning depth goes first now.
+- Walk-ons filled attack first whatever the need; they fill the thinnest positions now.
+- An injured goalie or faceoff man was replaced by the best overall backup, not the best specialist.
+- The roster and hub showed no injuries between the conference championships and the bracket.
+- Signed recruits joined the roster under a different, random name.
+
+**Depth chart.** A board with every starting slot and a pick list per slot (a starter picked elsewhere
+trades places), this week's fill-ins for injured starters, and Set best lineup with the rating points the
+current lineup leaves on the bench. Position tabs, four sorts, a potential column, and Start that swaps
+with the weakest starter when a unit is full.
+
+**Terminology.** One name per thing:
+
+| Use | Not |
+|---|---|
+| season (the playing year); Year N only for the coach's tenure | next year, new year |
+| Coach Office | the office |
+| Weekly Hub | the hub (in links and buttons) |
+| install | practice focus, practice block |
+| base scheme | tactics (in UI copy) |
+| offseason market | roster market, coach pool |
+| Record the season | Record the year |
+| Playoff seeds, the field, the bracket | Tournament seeds |
+| conference championship | conference tournament |
+
+**Dark mode.** Settings has System, Light, and Dark; System follows the device. Every color in the
+stylesheets reads theme tokens (backgrounds, surfaces, borders, text, and status tints), with a dark
+value for each. The header and the coach card stay on the dark brand surface in both themes, and a
+saved choice applies before first paint.
+
 ## Open items, in priority order
 
 1. **CPU recruiting reads the same pitches.** CPU pursuit uses prestige and region only; academics

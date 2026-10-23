@@ -340,7 +340,7 @@
   margin-right: 0.15rem;
   border: 1.5px solid;
   border-radius: 4px;
-  background: #fff;
+  background: var(--bg-elevated);
   font-family: var(--font-display);
   font-size: 0.62rem;
   font-weight: 700;
@@ -583,7 +583,7 @@
 }
 
 .leftNav .navLink-active .navLinkHint {
-  color: #3f6b52;
+  color: var(--success);
 }
 
 /* The menu drawer's own bar only shows when the nav is a drawer. */
@@ -767,24 +767,24 @@ table {
 th,
 td {
   border: 0;
-  border-bottom: 1px solid #e4ece7;
+  border-bottom: 1px solid var(--border);
   padding: 0.55rem 0.65rem;
   text-align: left;
   vertical-align: middle;
 }
 
 thead th {
-  background: #f4f7f4;
+  background: var(--surface-soft);
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #526158;
-  border-bottom: 1px solid #d5e0d8;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
 }
 
 tbody tr:hover {
-  background-color: #f3faf5;
+  background-color: var(--accent-soft);
 }
 
 caption {
@@ -874,9 +874,9 @@ td.num {
 
 .leagueOverviewStat {
   padding: 0.85rem 0.95rem;
-  border: 1px solid #dbe4ee;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: linear-gradient(180deg, #fff, #f8fbff);
+  background: linear-gradient(180deg, var(--bg-elevated), var(--info-soft));
 }
 
 .leagueOverviewStat strong {
@@ -940,7 +940,7 @@ td.num {
   align-items: center;
   padding: 0.32rem 0.65rem;
   border-radius: 999px;
-  border: 1px solid #b7d7c4;
+  border: 1px solid var(--border);
   background: var(--accent-soft);
   color: var(--accent-strong);
   font-size: 0.78rem;
@@ -960,9 +960,9 @@ td.num {
   gap: 0.65rem;
   min-height: 112px;
   padding: 0.85rem;
-  border: 1px solid #dbe4ee;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: linear-gradient(180deg, #fff, #f8fafc);
+  background: linear-gradient(180deg, var(--bg-elevated), var(--surface-soft));
   color: var(--text);
   text-decoration: none;
   transition: box-shadow var(--transition-ui, 0.2s ease), border-color var(--transition-ui, 0.2s ease);
@@ -974,11 +974,11 @@ td.num {
 }
 
 .conferenceBrowserCard-you {
-  border-color: #b7d7c4;
+  border-color: var(--border);
 }
 
 .conferenceTeamCard-you {
-  border-color: #b7d7c4;
+  border-color: var(--border);
   background: var(--accent-soft);
   box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -1055,7 +1055,7 @@ td.num {
   justify-content: space-between;
   gap: 0.75rem;
   padding-bottom: 0.65rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 .teamInfoRow:last-child {
@@ -1075,8 +1075,8 @@ td.num {
   margin-top: 1rem;
   padding: 0.9rem 1rem;
   border-radius: 12px;
-  border: 1px solid #dbeafe;
-  background: linear-gradient(180deg, #eff6ff, #f8fbff);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--info-soft), var(--info-soft));
 }
 
 .teamSpotlightCard .teamInfoLabel {
@@ -1108,9 +1108,9 @@ td.num {
 }
 
 .rosterSummaryTile {
-  border: 1px solid #dbe4ee;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--surface-soft);
   padding: 0.75rem;
 }
 
@@ -1130,15 +1130,15 @@ td.num {
 
 .rating-good { color: var(--success); }
 .rating-solid { color: #4ade80; }
-.rating-warning { color: #f59e0b; }
-.rating-muted { color: #9ca3af; }
+.rating-warning { color: var(--star); }
+.rating-muted { color: var(--text-muted); }
 .standing-good { color: var(--success); }
 .standing-watch { color: var(--warning-fg); }
 .standing-danger { color: var(--danger); }
 
 .card-elevated {
-  background: var(--bg-elevated, #fff);
-  border-color: #d8e0ea;
+  background: var(--bg-elevated, var(--bg-elevated));
+  border-color: var(--border);
   box-shadow: var(--shadow-md, 0 12px 32px rgba(15, 23, 42, 0.08));
 }
 
@@ -1148,7 +1148,7 @@ td.num {
   gap: 1rem 1.5rem;
   padding: 1.15rem 1.2rem 1.2rem;
   border-radius: var(--radius-lg);
-  border: 1px solid #d7e4db;
+  border: 1px solid var(--border);
   background:
     linear-gradient(180deg, rgba(14, 107, 60, 0.06), transparent 42%),
     var(--bg-elevated);
@@ -1194,7 +1194,7 @@ td.num {
 }
 
 .commandStats div {
-  background: #fff;
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 0.55rem 0.7rem;
@@ -1332,7 +1332,7 @@ td.num {
 
 .sectionSubtitle {
   margin: 0.4rem 0 0;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -1345,9 +1345,9 @@ td.num {
   text-align: left;
   border-radius: var(--radius-md, 12px);
   margin-bottom: 0.75rem;
-  border: 1px solid var(--warning-border, #f59e0b);
-  background: var(--warning-bg, #fef3c7);
-  color: var(--warning-fg, #92400e);
+  border: 1px solid var(--warning-border, var(--warning-border));
+  background: var(--warning-bg, var(--warning-bg));
+  color: var(--warning-fg, var(--warning-fg));
   font-size: 0.9rem;
   line-height: 1.45;
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.05));
@@ -1360,7 +1360,7 @@ td.num {
 .statusBanner-icon {
   flex-shrink: 0;
   margin-top: 0.1rem;
-  color: var(--warning-fg, #92400e);
+  color: var(--warning-fg, var(--warning-fg));
 }
 
 .statusBanner-warning {
@@ -1389,14 +1389,14 @@ td.num {
   border-radius: 8px;
   background: transparent;
   box-shadow: none;
-  color: #dc2626;
+  color: var(--danger);
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
 }
 
 .removeTarget:hover {
-  background: #fef2f2;
+  background: var(--danger-soft);
 }
 
 /* On a phone each target becomes a small card: who, then pitch and hours, then interest. */
@@ -1414,7 +1414,7 @@ td.num {
       'interest interest';
     gap: 0.35rem 0.75rem;
     padding: 0.6rem 0;
-    border-bottom: 1px solid #e4ece7;
+    border-bottom: 1px solid var(--border);
   }
 
   .targetTable td {
@@ -1461,7 +1461,7 @@ td.num {
 }
 
 .suitorChip-ahead {
-  color: #b42318;
+  color: var(--danger);
   font-weight: 700;
 }
 
@@ -1621,9 +1621,9 @@ label {
 select,
 input {
   padding: 0.4rem;
-  border: 1px solid var(--border, #cbd5e1);
+  border: 1px solid var(--border, var(--border));
   border-radius: 6px;
-  background: var(--bg-elevated, #fff);
+  background: var(--bg-elevated, var(--bg-elevated));
   transition: border-color var(--transition-ui, 0.2s ease), box-shadow var(--transition-fast, 0.15s ease);
 }
 
@@ -1661,13 +1661,13 @@ input[type='range'] {
 .btn {
   padding: 0.5rem 0.95rem;
   border-radius: 10px;
-  border: 1px solid #c9d5cc;
+  border: 1px solid var(--border);
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: #fff;
+  background-color: var(--bg-elevated);
   color: var(--text);
   font-size: 0.9rem;
   font-family: var(--font-display, system-ui);
@@ -1685,19 +1685,19 @@ input[type='range'] {
 }
 
 .btn-danger {
-  background-color: #fef2f2;
-  color: #b91c1c;
+  background-color: var(--danger-soft);
+  color: var(--danger);
   border-color: #fca5a5;
 }
 
 .btn-danger:hover {
-  background-color: #fee2e2;
-  border-color: #f87171;
+  background-color: var(--danger-soft);
+  border-color: var(--danger);
 }
 
 .btn:hover:not(.btn-primary):not(.btn-danger) {
   background-color: var(--accent-soft);
-  border-color: #b7d7c4;
+  border-color: var(--border);
   color: var(--text);
 }
 
@@ -1738,14 +1738,14 @@ input[type='range'] {
 .stat-item label {
   font-size: 0.75rem;
   text-transform: uppercase;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-bottom: 0.25rem;
 }
 
 .stat-label {
   font-size: 0.75rem;
   text-transform: uppercase;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-bottom: 0.25rem;
   letter-spacing: 0.04em;
 }
@@ -1753,7 +1753,7 @@ input[type='range'] {
 .stat-item .value {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #111827;
+  color: var(--text);
   margin: 0;
 }
 
@@ -1777,13 +1777,13 @@ input[type='range'] {
   border-radius: 12px;
   text-decoration: none;
   color: inherit;
-  background: #fff;
+  background: var(--bg-elevated);
   box-shadow: inset 0 0 0 0 var(--accent);
   transition: border-color var(--transition-ui, 0.2s ease), background-color var(--transition-ui, 0.2s ease);
 }
 
 .link-card:hover {
-  background-color: #f4fbf6;
+  background-color: var(--accent-soft);
   border-color: #9dccb0;
   color: inherit;
   transform: none;
@@ -1791,7 +1791,7 @@ input[type='range'] {
 
 .link-card-meta {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--text-muted);
   margin-top: 0.35rem;
 }
 
@@ -1888,9 +1888,9 @@ details[open] > summary::before {
 .champion-banner {
   position: relative;
   overflow: hidden;
-  border: 2px solid #ca8a04;
+  border: 2px solid var(--warning-border);
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+  background: linear-gradient(135deg, var(--warning-bg) 0%, var(--warning-bg) 100%);
   padding: 1.25rem;
   text-align: center;
   box-shadow: 0 4px 16px rgba(202, 138, 4, 0.2);
@@ -1919,7 +1919,7 @@ details[open] > summary::before {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #92400e;
+  color: var(--warning-fg);
   margin: 0 0 0.35rem;
 }
 
@@ -1928,13 +1928,13 @@ details[open] > summary::before {
   font-weight: 800;
   font-family: var(--font-display);
   letter-spacing: -0.02em;
-  color: #78350f;
+  color: var(--warning-fg);
   margin: 0;
 }
 
 .champion-banner-you {
   margin: 0.5rem 0 0;
-  color: #15803d;
+  color: var(--success);
   font-weight: 700;
   font-size: 0.95rem;
 }
@@ -2007,7 +2007,7 @@ details[open] > summary::before {
   flex-wrap: wrap;
   margin-top: 1rem;
   padding-top: 0.55rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border);
 }
 
 .seasonLinkRow-flush {
@@ -2039,7 +2039,7 @@ details[open] > summary::before {
 }
 
 .seasonInlineLink-danger {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .seasonMatchupList {
@@ -2050,13 +2050,13 @@ details[open] > summary::before {
 
 .seasonMatchupRow {
   padding: 0.7rem 0.85rem;
-  border: 1px solid #e7eee9;
+  border: 1px solid var(--border);
   border-radius: 12px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 4.5rem minmax(0, 1fr);
   gap: 0.75rem;
   align-items: center;
-  background: #fff;
+  background: var(--bg-elevated);
   transition: background-color var(--transition-ui, 0.2s ease), border-color var(--transition-ui, 0.2s ease);
 }
 
@@ -2139,12 +2139,12 @@ details[open] > summary::before {
 }
 
 .seasonMatchupRow:hover {
-  background: #f4faf6;
-  border-color: #cfe3d6;
+  background: var(--accent-soft);
+  border-color: var(--border);
 }
 
 .seasonMatchupRow-user {
-  border-color: #b7d7c4;
+  border-color: var(--border);
   background: var(--accent-soft);
 }
 
@@ -2156,7 +2156,7 @@ details[open] > summary::before {
 
 .choiceChip {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--bg-elevated);
   border-radius: 12px;
   padding: 0.55rem 0.65rem;
   text-align: left;
@@ -2174,7 +2174,8 @@ details[open] > summary::before {
   line-height: 1.35;
 }
 
-.choiceChip[aria-pressed='true'] {
+.choiceChip[aria-pressed='true'],
+.choiceChip[aria-checked='true'] {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent-strong);
@@ -2249,7 +2250,7 @@ details[open] > summary::before {
   padding: 0.2rem 0.55rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--bg-elevated);
   font-size: 0.78rem;
   font-weight: 600;
 }
@@ -2297,7 +2298,7 @@ details[open] > summary::before {
   padding: 0.3rem 0.35rem;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-elevated);
   text-align: center;
 }
 
@@ -2329,7 +2330,7 @@ details[open] > summary::before {
 }
 
 .youRow {
-  background: #eef8f2;
+  background: var(--accent-soft);
 }
 
 .youMark {
@@ -2339,7 +2340,7 @@ details[open] > summary::before {
 }
 
 .fieldBanner {
-  border-color: #b7d7c4;
+  border-color: var(--border);
   background: var(--accent-soft);
 }
 
@@ -2353,7 +2354,7 @@ details[open] > summary::before {
 
 .playoffGame.playoffUserGame {
   border-color: #7dbe96;
-  background: #f3faf6;
+  background: var(--accent-soft);
   box-shadow: 0 0 0 1px #cfe8d8;
 }
 
@@ -2396,22 +2397,22 @@ details[open] > summary::before {
 .starterBadge-out {
   width: auto;
   margin-left: 0.35rem;
-  background: #f8e4e4;
-  color: #8a2b2b;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .lineupAction {
   font-size: 0.75rem;
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
-  border: 1px solid #b7d7c4;
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
   color: var(--accent-strong);
   cursor: pointer;
 }
 
 .lineupAction-bench {
-  border-color: #d5e0d8;
+  border-color: var(--border);
   color: var(--text-muted);
 }
 
@@ -2419,14 +2420,14 @@ details[open] > summary::before {
   font-size: 0.75rem;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  border: 1px solid #b7d7c4;
+  border: 1px solid var(--border);
   background: var(--accent-soft);
   color: var(--accent-strong);
   cursor: pointer;
 }
 
 .chipAdd:hover {
-  background: #d7f0e2;
+  background: var(--accent-soft);
 }
 
 .chipAdd:disabled {
@@ -2435,7 +2436,7 @@ details[open] > summary::before {
 
 .meter {
   height: 0.4rem;
-  background: #e6eee8;
+  background: var(--accent-soft);
   border-radius: 999px;
   overflow: hidden;
   min-width: 5rem;
@@ -2472,7 +2473,7 @@ details[open] > summary::before {
 }
 
 .noticeCard-warn {
-  border-left: 4px solid #d97706;
+  border-left: 4px solid var(--warning-border);
 }
 
 .archetypeOption {
@@ -2480,7 +2481,7 @@ details[open] > summary::before {
   border-radius: 12px;
   padding: 0.75rem 0.85rem;
   cursor: pointer;
-  background: #fff;
+  background: var(--bg-elevated);
   text-align: left;
   color: var(--text);
   box-shadow: inset 3px 0 0 transparent;
@@ -2581,7 +2582,7 @@ button.archetypeOption[aria-pressed='true'] {
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--bg-elevated);
 }
 
 .deskItem-ready { box-shadow: inset 3px 0 0 var(--accent); }
@@ -2607,12 +2608,12 @@ button.archetypeOption[aria-pressed='true'] {
   background: var(--accent-soft);
 }
 .deskItem-open .deskStatus {
-  color: #b45309;
-  background: #fff7ed;
+  color: var(--warning-fg);
+  background: var(--warning-bg);
 }
 .deskItem-watch .deskStatus {
-  color: #b91c1c;
-  background: #fef2f2;
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .matchupBoardTop {
@@ -2699,15 +2700,15 @@ button.archetypeOption[aria-pressed='true'] {
 }
 
 .resultBoard-win {
-  background: linear-gradient(180deg, #f3fbf6, var(--bg-elevated));
+  background: linear-gradient(180deg, var(--accent-soft), var(--bg-elevated));
 }
 
 .resultBoard-loss {
-  background: linear-gradient(180deg, #fff7f7, var(--bg-elevated));
+  background: linear-gradient(180deg, var(--danger-soft), var(--bg-elevated));
 }
 
 .resultKicker-loss {
-  color: #b91c1c;
+  color: var(--danger);
 }
 
 .resultLine {
@@ -2921,7 +2922,7 @@ button.seasonScoreButton:hover:not(:disabled) {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 0.75rem;
-  background: #fff;
+  background: var(--bg-elevated);
 }
 
 .marketGrid {
@@ -2963,7 +2964,7 @@ button.seasonScoreButton:hover:not(:disabled) {
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--bg-elevated);
 }
 
 .marketRow > span:first-child {
@@ -3075,12 +3076,12 @@ button.seasonScoreButton:hover:not(:disabled) {
   text-align: center;
   margin-top: 0.5rem;
   padding: 0.5rem;
-  background: #f9fafb;
+  background: var(--surface-soft);
   border-radius: var(--radius-sm, 8px);
 }
 
 .seasonMatchupFooter:hover {
-  background: #f3f4f6;
+  background: var(--surface-soft);
 }
 
 .seasonWeekControlCard {
@@ -3111,7 +3112,7 @@ button.seasonScoreButton:hover:not(:disabled) {
 }
 
 .seasonWeekGameRow {
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 .seasonWeekGameRow:last-child {
@@ -3119,12 +3120,12 @@ button.seasonScoreButton:hover:not(:disabled) {
 }
 
 .seasonWeekGameRow:hover {
-  background: #f9fafb;
+  background: var(--surface-soft);
 }
 
 .seasonWeekPerformerRow {
-  border-bottom: 1px solid #e5e7eb;
-  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
 }
 
 @media (max-width: 760px) {
@@ -3219,7 +3220,7 @@ button.seasonScoreButton:hover:not(:disabled) {
 .prestigeStars-sm .prestigeStarRow { font-size: 0.85rem; }
 .prestigeStars-md .prestigeStarRow { font-size: 1.15rem; }
 
-.prestigeStar-full { color: #d99a06; }
+.prestigeStar-full { color: var(--star); }
 .prestigeStar-empty { color: var(--border); }
 
 .prestigeStar-half {
@@ -3256,7 +3257,7 @@ button.seasonScoreButton:hover:not(:disabled) {
 .pullTag-strong { background: var(--success-soft); color: var(--success); border-color: transparent; }
 .pullTag-even { background: var(--accent-soft); color: var(--accent-strong); border-color: transparent; }
 .pullTag-reach { background: var(--warning-bg); color: var(--warning-fg); border-color: transparent; }
-.pullTag-longShot { background: #fde8e6; color: var(--danger); border-color: transparent; }
+.pullTag-longShot { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
 
 /* Weekly Hub: around the league after a week. */
 .wireGrid {
@@ -3305,7 +3306,7 @@ button.seasonScoreButton:hover:not(:disabled) {
   color: var(--text-muted);
 }
 
-.wireItem-upset .wireKind { background: #fde8e6; color: var(--danger); }
+.wireItem-upset .wireKind { background: var(--danger-soft); color: var(--danger); }
 .wireItem-star .wireKind { background: var(--warning-bg); color: var(--warning-fg); }
 .wireItem-showdown .wireKind { background: var(--accent-soft); color: var(--accent-strong); }
 
@@ -3601,7 +3602,7 @@ button.seasonScoreButton:hover:not(:disabled) {
 
 .staffRating-elite { background: var(--success-soft); color: var(--success); }
 .staffRating-good { background: var(--accent-soft); color: var(--accent-strong); }
-.staffRating-weak { background: #fde8e6; color: var(--danger); }
+.staffRating-weak { background: var(--danger-soft); color: var(--danger); }
 
 .staffHire {
   display: flex;
@@ -3622,7 +3623,7 @@ button.seasonScoreButton:hover:not(:disabled) {
 /* Roster: the depth chart board and the position tabs. */
 .depthBoard {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: 0.75rem;
 }
 

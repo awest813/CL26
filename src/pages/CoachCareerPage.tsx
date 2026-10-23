@@ -49,19 +49,20 @@ function prestigeOutlook(prestige: number): string {
   const next = prestigeToNextStar(prestige);
   const cushion = prestigeCushion(prestige);
   const parts: string[] = [];
-  if (next) parts.push(`${formatPrestige(next.points)} pts to ${prestigeStarText(next.stars)}`);
-  if (cushion != null && cushion < 2) parts.push(`${formatPrestige(cushion)} pts above a drop`);
+  const pts = (value: number) => `${formatPrestige(value)} ${value === 1 ? 'pt' : 'pts'}`;
+  if (next) parts.push(`${pts(next.points)} to ${prestigeStarText(next.stars)}`);
+  if (cushion != null && cushion < 2) parts.push(`${pts(cushion)} above a drop`);
   return parts.length > 0 ? `· ${parts.join(' · ')}` : '· Top of the scale';
 }
 
 const PRESTIGE_HELP = 'Titles, playoff runs, and hitting the win target raise prestige; missing it badly lowers it. Earned prestige fades 10% a year.';
 
 function jobSecurityLabel(security: number): { label: string; color: string } {
-  if (security >= 75) return { label: 'Strong Position', color: '#16a34a' };
-  if (security >= 55) return { label: 'Secure', color: '#4ade80' };
-  if (security >= 40) return { label: 'Moderate Pressure', color: '#f59e0b' };
-  if (security >= 25) return { label: 'Hot Seat', color: '#ef4444' };
-  return { label: 'On Thin Ice', color: '#b91c1c' };
+  if (security >= 75) return { label: 'Strong Position', color: 'var(--success)' };
+  if (security >= 55) return { label: 'Secure', color: 'var(--accent)' };
+  if (security >= 40) return { label: 'Moderate Pressure', color: 'var(--warning-border)' };
+  if (security >= 25) return { label: 'Hot Seat', color: 'var(--danger)' };
+  return { label: 'On Thin Ice', color: 'var(--danger)' };
 }
 
 function JobSecurityBar({ value }: { value: number }) {
@@ -84,10 +85,10 @@ function JobSecurityBar({ value }: { value: number }) {
 }
 
 function adPressureLabel(pressure: number): { label: string; color: string } {
-  if (pressure >= 80) return { label: 'Extreme AD pressure', color: '#b91c1c' };
-  if (pressure >= 65) return { label: 'High AD pressure', color: '#dc2626' };
-  if (pressure >= 45) return { label: 'Moderate AD pressure', color: '#f59e0b' };
-  return { label: 'Low AD pressure', color: '#16a34a' };
+  if (pressure >= 80) return { label: 'Extreme AD pressure', color: 'var(--danger)' };
+  if (pressure >= 65) return { label: 'High AD pressure', color: 'var(--danger)' };
+  if (pressure >= 45) return { label: 'Moderate AD pressure', color: 'var(--warning-border)' };
+  return { label: 'Low AD pressure', color: 'var(--success)' };
 }
 
 const PLAYOFF_EXIT_LABELS: Record<PlayoffRoundName, string> = {

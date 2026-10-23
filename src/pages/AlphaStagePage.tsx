@@ -146,7 +146,7 @@ function AlphaStagePage() {
                 border: '1px solid #e2e8f0',
                 borderRadius: '0.6rem',
                 padding: '0.75rem',
-                background: entry.done ? '#f0fdf4' : '#fff7ed',
+                background: entry.done ? 'var(--success-soft)' : 'var(--warning-bg)',
               }}
             >
               <div style={{ fontWeight: 600 }}>{entry.done ? 'Done' : 'Open'} · {entry.item}</div>
@@ -160,7 +160,7 @@ function AlphaStagePage() {
           ))}
         </ul>
 
-        <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#64748b' }}>
+        <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
           Current save snapshot: season started <strong>{seasonHasStarted ? 'yes' : 'no'}</strong>, regular season complete{' '}
           <strong>{regularSeasonComplete ? 'yes' : 'no'}</strong>, rankings generated <strong>{rankingsGenerated ? 'yes' : 'no'}</strong>, playoff
           complete <strong>{playoffComplete ? 'yes' : 'no'}</strong>.

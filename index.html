@@ -22,6 +22,16 @@
       rel="stylesheet"
     />
     <title>College Lacrosse Head Coach Sim</title>
+    <script>
+      // Apply a saved light or dark choice before first paint, so the page never flashes the other theme.
+      try {
+        var saved = JSON.parse(localStorage.getItem('persist:root') || '{}');
+        var theme = saved.settings ? JSON.parse(saved.settings).theme : null;
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch (error) {
+        // No saved settings yet, or storage is blocked: the system setting applies.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

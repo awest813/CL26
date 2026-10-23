@@ -11,11 +11,6 @@ type DepthChartBoardProps = {
   scratches: WeekScratch[];
 };
 
-/** The rating label a slot shows: FO and SV for the specialists, OVR otherwise. */
-function ratingLabel(player: Player): string {
-  return player.position === 'FO' ? 'FO' : player.position === 'G' ? 'SV' : 'OVR';
-}
-
 /** Every starting slot at a glance, each with a pick list, the game-day fill-ins, and a one-click best lineup. */
 function DepthChartBoard({ roster, starterIds, scratches }: DepthChartBoardProps) {
   const dispatch = useAppDispatch();
@@ -78,9 +73,7 @@ function DepthChartBoard({ roster, starterIds, scratches }: DepthChartBoardProps
                         const hurt = out.get(player.id);
                         return (
                           <option key={player.id} value={player.id}>
-                            {player.name} · {startingRating(player)} {ratingLabel(player)}
-                            {startsElsewhere ? ' · starting' : ''}
-                            {hurt ? ' · out' : ''}
+                            {player.name} ({startingRating(player)}){startsElsewhere ? ' · starting' : ''}{hurt ? ' · out' : ''}
                           </option>
                         );
                       })}

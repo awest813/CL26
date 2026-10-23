@@ -5,6 +5,8 @@ import Footer from './Layout/Footer';
 import Header from './Layout/Header';
 import LeftNavBar from './Layout/LeftNavBar';
 import { useSeasonSanityCheck } from '../hooks/useSeasonSanityCheck';
+import { applyTheme } from '../features/settings/settingsSlice';
+import { useAppSelector } from '../store/hooks';
 import './style.css';
 
 /** Above this width the menu is a sidebar, not a drawer. Matches the 980px breakpoint in style.css. */
@@ -15,6 +17,11 @@ function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
+  const theme = useAppSelector((state) => state.settings.theme);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   const closeMenu = useCallback((returnFocus: boolean) => {
     setIsMenuOpen(false);

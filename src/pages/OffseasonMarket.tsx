@@ -145,7 +145,9 @@ function OffseasonMarket() {
     <section className="card" aria-labelledby="offseason-market-title">
       <h3 id="offseason-market-title" className="m-0 text-base font-bold">Offseason market</h3>
       <p className="text-xs text-gray-500 mt-1 mb-3">
-        {signingDone ? (
+        {signingDone && scholarships === 0 ? (
+          'Signing day used every scholarship, so there is no room for portal players this year.'
+        ) : signingDone ? (
           <>
             Scholarships left after signing day: {scholarships}. Claim up to {PORTAL_CLAIM_CAP} portal players with them;
             {' '}{seatsThatFit} of {claims.length} claimed {claims.length === 1 ? 'fits' : 'fit'}

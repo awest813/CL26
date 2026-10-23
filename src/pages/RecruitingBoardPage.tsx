@@ -72,10 +72,10 @@ function getRecruitInterest(recruit: { interestByTeamId?: Record<string, number>
 function MotivationIcon({ motivation }: { motivation: RecruitMotivation }) {
   const color =
     motivation.importance === 'HIGH'
-      ? '#ef4444'
+      ? 'var(--danger)'
       : motivation.importance === 'MEDIUM'
-        ? '#f59e0b'
-        : '#9ca3af';
+        ? 'var(--warning-border)'
+        : 'var(--text-muted)';
   const label = PITCH_LABELS[motivation.pitch as RecruitingPitch] ?? motivation.pitch;
   const description = `${label}, ${motivation.importance.toLowerCase()} importance`;
   return (
