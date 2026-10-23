@@ -2,7 +2,7 @@ import { Player, Position, SignedRecruit, Team } from '../types/sim';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 import namesData from '../data/names.json' with { type: 'json' };
 import { faceoffRating, growSpecialty, playerPotential, rollPotential, rollSpecialties, savingRating } from './playerSpecialty';
-import { ROSTER_POSITION_ORDER, ROSTER_SIZE } from './generateRoster';
+import { ROSTER_POSITION_ORDER, ROSTER_POSITION_TARGETS, ROSTER_SIZE } from './generateRoster';
 import { advanceClassYear } from './redshirts';
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
@@ -71,10 +71,12 @@ export function convertRecruitToPlayer(
 
   const overall = Math.round((shooting + passing + speed + defense + IQ + stamina + discipline) / 7);
   const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
+  // The recruit keeps the name he signed under. The name is still drawn so the rest of the roll is unchanged.
+  const drawnName = `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`;
 
   return {
     id: `${team.id}-recruit-${signedRecruit.recruitId}-yr1`,
-    name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
+    name: signedRecruit.name ?? drawnName,
     position,
     year: 1,
     age: 18,
@@ -318,7 +320,9 @@ export function applyRosterTurnover(
   const combined = [...agedReturners, ...incomingFreshmen, ...additions];
   const requiredPositions: Position[] = ['A', 'M', 'D', 'LSM', 'FO', 'G'];
   const missingPositions = requiredPositions.filter((pos) => !combined.some((player) => player.position === pos));
-  trimRosterForRequiredAdds(combined, ROSTER_TARGET_SIZE, missingPositions.length);
+  // Over the limit, the staff cuts returning depth before anyone it just signed or claimed.
+  const newcomers = new Set([...incomingFreshmen, ...additions].map((player) => player.id));
+  trimRosterForRequiredAdds(combined, ROSTER_TARGET_SIZE, missingPositions.length, newcomers);
 
   const baseline = 45 + team.prestige * 0.4;
   let walkOnSerial = 0;
@@ -350,10 +354,14 @@ export function applyRosterTurnover(
 
   for (const pos of missingPositions) addWalkOn(pos, 'walkon', 5);
 
-  let fillIndex = 0;
-  while (combined.length < ROSTER_TARGET_SIZE && fillIndex < POSITION_FILL_ORDER.length) {
-    const pos = POSITION_FILL_ORDER[fillIndex];
-    fillIndex += 1;
+  // Walk-ons fill where the roster is thinnest against its position targets.
+  while (combined.length < ROSTER_TARGET_SIZE) {
+    const counts = positionCounts(combined);
+    const pos = POSITION_FILL_ORDER.reduce((best, candidate) => {
+      const need = ROSTER_POSITION_TARGETS[candidate] - (counts.get(candidate) ?? 0);
+      const bestNeed = ROSTER_POSITION_TARGETS[best] - (counts.get(best) ?? 0);
+      return need > bestNeed ? candidate : best;
+    }, POSITION_FILL_ORDER[0]);
     addWalkOn(pos, 'fill', 8);
   }
 
@@ -371,7 +379,7 @@ export function applyRosterTurnover(
     }
   }
 
-  trimRosterForRequiredAdds(combined, ROSTER_TARGET_SIZE, 0);
+  trimRosterForRequiredAdds(combined, ROSTER_TARGET_SIZE, 0, newcomers);
   return combined;
 }
 
@@ -398,17 +406,24 @@ function lowestSurplusIndex(roster: Player[]): number {
   return removal;
 }
 
-/** Drop the lowest-rated depth player until `incomingRequired` new spots fit. */
-function trimRosterForRequiredAdds(roster: Player[], target: number, incomingRequired: number) {
+/**
+ * Drop the lowest-rated depth player at the deepest position until `incomingRequired`
+ * new spots fit. Players in `protectedIds` (new signees and transfers) go only once no
+ * returner can.
+ */
+function trimRosterForRequiredAdds(roster: Player[], target: number, incomingRequired: number, protectedIds: Set<string> = new Set()) {
   const required = new Set<Position>(['A', 'M', 'D', 'LSM', 'FO', 'G']);
   while (roster.length + incomingRequired > target && roster.length > 0) {
     const counts = positionCounts(roster);
+    const anyReturnerCuttable = roster.some((player) =>
+      !protectedIds.has(player.id) && (counts.get(player.position) ?? 0) > POSITION_MINIMUMS[player.position]);
 
     let removal = -1;
     let deepest = 1;
     let lowestOverall = Infinity;
     for (let index = 0; index < roster.length; index += 1) {
       const player = roster[index];
+      if (anyReturnerCuttable && protectedIds.has(player.id)) continue;
       const count = counts.get(player.position) ?? 0;
       if (count <= POSITION_MINIMUMS[player.position]) continue;
       if (required.has(player.position) && count <= 1) continue;

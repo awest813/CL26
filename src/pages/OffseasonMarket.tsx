@@ -15,6 +15,7 @@ import {
   buildProDraft,
 } from '../sim/offseasonMarket';
 import { previewOffseasonDepartures } from '../sim/rosterManagement';
+import { ROSTER_SIZE } from '../sim/generateRoster';
 import { draftLedger, expectedWinsByTeamId, withLeaguePrestige } from '../sim/programLedger';
 import { playerYearLabel } from '../sim/rosterSummary';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -106,8 +107,10 @@ function OffseasonMarket() {
   }
   const transfers = departures.filter((departure) => departure.reason === 'transfer');
   const graduates = departures.filter((departure) => departure.reason === 'graduate');
-  const seatsThatFit = Math.min(claims.length, scholarships);
-  const canAddPortal = claims.length < PORTAL_CLAIM_CAP && claims.length < scholarships;
+  const seatsThatFit = Math.min(claims.length, scholarships, PORTAL_CLAIM_CAP);
+  // The portal opens once signing day settles how many scholarships are left.
+  const signingDone = Object.prototype.hasOwnProperty.call(coach.signedRecruitsByYear, season.year);
+  const canAddPortal = signingDone && claims.length < PORTAL_CLAIM_CAP && claims.length < scholarships;
   const earlyPros = (coach.managedRoster ?? []).filter((player) => {
     const pick = yourPickById.get(player.id);
     return Boolean(pick?.early) && !departures.some((departure) => departure.player.id === player.id);
@@ -133,14 +136,37 @@ function OffseasonMarket() {
 
   if (!selectedTeam) return null;
 
+  // Next season's roster before cuts and walk-ons: who stays, plus who signed and transferred in.
+  const signedCount = coach.signedRecruitsByYear[season.year]?.length ?? 0;
+  const returning = Math.max(0, (coach.managedRoster?.length ?? 0) - departures.length - earlyPros.length);
+  const projectedTotal = returning + signedCount + seatsThatFit;
+
   return (
     <section className="card" aria-labelledby="offseason-market-title">
-      <h3 id="offseason-market-title" className="m-0 text-base font-bold">Roster market</h3>
+      <h3 id="offseason-market-title" className="m-0 text-base font-bold">Offseason market</h3>
       <p className="text-xs text-gray-500 mt-1 mb-3">
-        Scholarships left: {scholarships}. You can claim up to {PORTAL_CLAIM_CAP} portal players.
-        {' '}
-        {seatsThatFit} of {claims.length} reserved
-        {claims.length > scholarships ? '. Extra claims are dropped when the next season begins.' : '.'}
+        {signingDone ? (
+          <>
+            Scholarships left after signing day: {scholarships}. Claim up to {PORTAL_CLAIM_CAP} portal players with them;
+            {' '}{seatsThatFit} of {claims.length} claimed {claims.length === 1 ? 'fits' : 'fit'}
+            {claims.length > scholarships ? '. Extra claims are dropped when the next season begins.' : '.'}
+          </>
+        ) : (
+          'The portal opens after signing day, once you know how many scholarships are left.'
+        )}
+      </p>
+      <div className="resultStats rosterProjection" aria-label="Next season's roster">
+        <div><span>Returning</span><strong>{returning}</strong></div>
+        <div><span>Signed</span><strong>+{signedCount}</strong></div>
+        <div><span>Transfers in</span><strong>+{seatsThatFit}</strong></div>
+        <div><span>Roster limit</span><strong>{ROSTER_SIZE}</strong></div>
+      </div>
+      <p className="text-xs mt-2 mb-3">
+        {projectedTotal > ROSTER_SIZE
+          ? <span className="text-amber-600">{projectedTotal - ROSTER_SIZE} returning depth {projectedTotal - ROSTER_SIZE === 1 ? 'player is' : 'players are'} cut to make the limit. Signees and transfers are kept first.</span>
+          : projectedTotal < ROSTER_SIZE
+            ? <span className="text-gray-500">{ROSTER_SIZE - projectedTotal} walk-on{ROSTER_SIZE - projectedTotal === 1 ? '' : 's'} fill the open spots where the roster is thinnest.</span>
+            : <span className="text-gray-500">The roster lands right at the limit.</span>}
       </p>
 
       <div className="marketGrid">

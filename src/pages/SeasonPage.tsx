@@ -79,7 +79,7 @@ function SeasonPage() {
     }
     if (summary.phase === 'OFFSEASON') {
       if (coachReady) {
-        return { label: 'Signing day, the season record, and next year continue on the hub.', link: '/career/week', cta: 'Continue in the Weekly Hub' };
+        return { label: 'Signing day, the season record, and the next season continue in the Weekly Hub.', link: '/career/week', cta: 'Continue in the Weekly Hub' };
       }
       return { label: 'Season is complete. Begin a fresh season when ready.', link: null, cta: null };
     }
@@ -119,7 +119,7 @@ function SeasonPage() {
   const handleReset = () => {
     if (!capabilities.canResetSeason) return;
     const message = coachReady
-      ? 'Reset the season schedule and results? Your coach career, roster, and recruiting board will stay — calendar year is preserved, but you will need to begin the season again from Preseason.'
+      ? 'Reset this season\'s schedule and results? Your career and roster stay, the year stays the same, and the recruiting class starts over. You begin the season again from preseason.'
       : 'Are you sure you want to reset the season? This cannot be undone.';
     if (confirm(message)) {
       dispatch(resetSeason(coachReady ? { preserveYear: true } : undefined));

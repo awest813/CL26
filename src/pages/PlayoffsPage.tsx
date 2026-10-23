@@ -176,10 +176,10 @@ function PlayoffsPage() {
         <div className="playoffLayoutGrid">
             {/* Seeding panel */}
             <div className="card">
-                <h3>Tournament seeds</h3>
+                <h3>Playoff seeds</h3>
                 <div className="dataTableWrap">
                     <table className="seedsTable text-sm">
-                        <caption className="sr-only">Tournament seeds and where each team stands</caption>
+                        <caption className="sr-only">Playoff seeds and where each team stands</caption>
                         <colgroup>
                             <col className="seedsCol-seed" />
                             <col />

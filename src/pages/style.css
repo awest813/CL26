@@ -3618,3 +3618,113 @@ button.seasonScoreButton:hover:not(:disabled) {
   color: var(--warning-fg);
   font-size: 0.82rem;
 }
+
+/* Roster: the depth chart board and the position tabs. */
+.depthBoard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.depthGroup {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.depthGroupTitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.depthSlot {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.depthSlot select {
+  width: 100%;
+  min-width: 0;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.35rem;
+}
+
+.depthSlotLabel {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent-strong);
+}
+
+.depthSlot-out select {
+  border-color: var(--danger);
+}
+
+.depthSlotNote {
+  grid-column: 2;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.rosterToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+.rosterTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.rosterTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rosterTab-active {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+  color: #fff;
+}
+
+.rosterTabCount {
+  font-size: 0.68rem;
+  opacity: 0.75;
+}
+
+.rosterSort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.signedCard {
+  border-color: var(--border);
+  background: var(--bg-elevated);
+}

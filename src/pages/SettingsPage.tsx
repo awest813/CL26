@@ -45,7 +45,7 @@ function SettingsPage() {
             />
             <span>
               <span className="settingTitle">Ask before playing</span>
-              <span className="settingDetail">A week and a playoff round wait for a yes. Signing day and next year stay one click.</span>
+              <span className="settingDetail">A week and a playoff round wait for a yes. Signing day and the next season stay one click.</span>
             </span>
           </label>
           <label className="settingRow">

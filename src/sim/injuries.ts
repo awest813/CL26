@@ -1,6 +1,7 @@
 import type { Player, Position } from '../types/sim';
 import type { SeasonPhase } from './weeklyDesk';
 import { makeRng, seedToNumber } from './rng';
+import { faceoffRating, savingRating } from './playerSpecialty';
 
 export interface WeekScratch {
   playerId: string;
@@ -137,6 +138,10 @@ export function weeklyScratches(
   }));
 }
 
+/**
+ * The injury slot for the game at hand. Between the conference championships and the
+ * bracket, callers pass 'ROUND1': the first-round games read that slot.
+ */
 export function availabilityWeekKey(
   phase: SeasonPhase,
   weekIndex: number,
@@ -171,9 +176,12 @@ export function rosterForAvailability(
   for (const position of Object.keys(MIN_AVAILABLE) as Position[]) {
     const need = MIN_AVAILABLE[position] - counts[position];
     if (need <= 0) continue;
+    // A goalie or faceoff man comes in on his specialty, the way a staff picks its starter.
+    const fillRating = (player: Player) =>
+      position === 'G' ? savingRating(player) : position === 'FO' ? faceoffRating(player) : player.overall;
     const backups = availableRoster
       .filter((player) => player.position === position && !starterSet.has(player.id))
-      .sort((a, b) => b.overall - a.overall || a.id.localeCompare(b.id));
+      .sort((a, b) => fillRating(b) - fillRating(a) || b.overall - a.overall || a.id.localeCompare(b.id));
     for (const player of backups.slice(0, need)) {
       filled.push(player.id);
       starterSet.add(player.id);

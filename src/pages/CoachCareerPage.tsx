@@ -494,12 +494,12 @@ function CoachCareerPage() {
             {signingDayResolved && (
               <div className="text-xs text-gray-500 self-center">
                 {fired
-                  ? 'The AD let you go. Take a landing job under head-coaching jobs. The next year waits on that.'
+                  ? 'The AD let you go. Take a landing job under head-coaching jobs. The next season waits on that.'
                   : !seasonEndProcessed
                   ? signedClassThisYear.length === 0
                     ? 'No signees this year — finalize to update career record and continue.'
                     : 'Finalize to update career record and job security.'
-                  : 'Season recorded. Start next year when ready.'}
+                  : 'Season recorded. Begin the next season from the Weekly Hub when ready.'}
               </div>
             )}
           </div>
@@ -526,7 +526,7 @@ function CoachCareerPage() {
           </div>
           {coach.recruitPool.length === 0 ? (
             isOffseason ? (
-              <p className="text-xs text-gray-500 m-0">The high school class is closed. Use the roster market for the portal and the pro draft.</p>
+              <p className="text-xs text-gray-500 m-0">The high school class is closed. Use the offseason market below for the portal, the pro draft, and jobs.</p>
             ) : (
               <div className="recruitSeed">
                 <label className="text-xs font-semibold text-gray-600">
@@ -571,7 +571,7 @@ function CoachCareerPage() {
             )}
             {season.phase === 'OFFSEASON' && (
               <Link to="/career/week" className="block mt-1">
-                Signing day and next year continue on the Weekly Hub
+                Signing day and the next season continue in the Weekly Hub
               </Link>
             )}
           </div>

@@ -211,7 +211,11 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
     Object.keys(afterFinalize.season.programLedger ?? {}).length >= 127,
     `${seasonLabel} every CPU program should have a ledger entry`,
   );
-  assert.strictEqual(afterFinalize.coach.scholarshipsAvailable, 12);
+  // Recording the season does not refill scholarships: the portal works with what signing day left.
+  assert.strictEqual(
+    afterFinalize.coach.scholarshipsAvailable,
+    Math.max(0, 12 - (afterFinalize.coach.signedRecruitsByYear[afterPlayoffs.season.year]?.length ?? 0)),
+  );
   assert.ok(afterFinalize.coach.programExpectations, `${seasonLabel} expectations should remain set`);
   assert.ok(afterFinalize.coach.careerTier, `${seasonLabel} career tier should remain set`);
 

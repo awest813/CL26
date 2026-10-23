@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import type { Player, Position, SignedRecruit, Team } from '../types/sim.ts';
-import { applyRosterTurnover, applyWeeklyTraitGrowth, developPlayers, previewOffseasonDepartures } from './rosterManagement.ts';
+import { applyRosterTurnover, applyWeeklyTraitGrowth, convertRecruitToPlayer, developPlayers, previewOffseasonDepartures } from './rosterManagement.ts';
 import { makeRng } from './rng.ts';
 
 const basePlayer = (id: string): Player => ({
@@ -222,5 +222,14 @@ describe('roster management progression systems', () => {
     if (!left.includes('junior')) {
       assert.ok(plain.some((player) => player.id === 'junior'));
     }
+  });
+
+  test('a signed recruit joins the roster under the name he signed with, and his ratings do not change for it', () => {
+    const team = { id: 'tm', schoolName: 'T', nickname: 'T', conferenceId: 'c', region: 'North', prestige: 70 } as Team;
+    const signed: SignedRecruit = { recruitId: 'r1', signedAtYear: 2026, stars: 4, position: 'M', potential: 88 };
+    const unnamed = convertRecruitToPlayer(signed, team, makeRng(7));
+    const named = convertRecruitToPlayer({ ...signed, name: 'Logan Hayes' }, team, makeRng(7));
+    assert.strictEqual(named.name, 'Logan Hayes');
+    assert.deepStrictEqual({ ...named, name: '' }, { ...unnamed, name: '' });
   });
 });

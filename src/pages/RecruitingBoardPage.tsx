@@ -276,7 +276,7 @@ function RecruitingBoardPage() {
           eyebrow="Program"
           title="Recruiting"
           subtitle={classClosed
-            ? 'The high school class is closed. The portal and the pro draft are on the office.'
+            ? 'The high school class is closed. The portal and the pro draft are in the Coach Office.'
             : 'Start recruiting to manage your prospect pool.'}
         />
         <div className="card emptyState">

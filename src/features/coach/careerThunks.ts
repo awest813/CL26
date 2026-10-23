@@ -555,7 +555,8 @@ export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { sta
 
     const after = getState();
     if (after.coach.selectedTeamId && after.coach.onboardingStep === 'READY') {
-      await dispatch(initializeManagedRoster());
+      // A reset season keeps the roster the coach built; only a new career draws one.
+      if (!after.coach.managedRoster?.length) await dispatch(initializeManagedRoster());
       const recruitingTeams = withLeaguePrestige(
         after.league.teams,
         after.season.programLedger,

@@ -319,7 +319,7 @@ function WeeklyHubPage() {
 
   const weekKey = inConferenceChampionship
     ? CONFERENCE_SEMIFINAL_KEY
-    : availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? null);
+    : availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? (season.conferenceTournaments ? 'ROUND1' : null));
   const scratches = useMemo(() => {
     if (!weekKey || !selectedTeamId || !coach.managedRoster?.length) return [];
     return weeklyScratches(activeRoster(coach.managedRoster), season.seasonSeed, weekKey, selectedTeamId);
@@ -576,6 +576,13 @@ function WeeklyHubPage() {
       } else if (loopStep.action === 'record-season') {
         await dispatch(processSeasonEnd()).unwrap();
       } else if (loopStep.action === 'begin-next-year') {
+        // Beginning the season closes the offseason: offers lapse and empty seats stay empty.
+        const vacancies = coach.assistants ? ASSISTANT_ROLES.length - coach.assistants.length : 0;
+        const warnings = [
+          liveJobOffers > 0 ? `${liveJobOffers} job offer${liveJobOffers === 1 ? '' : 's'} will lapse` : null,
+          vacancies > 0 ? `${vacancies} staff seat${vacancies === 1 ? '' : 's'} will open the season empty` : null,
+        ].filter(Boolean);
+        if (warnings.length > 0 && !window.confirm(`Begin the next season? ${warnings.join(', and ')}.`)) return;
         await dispatch(beginNextCareerSeason()).unwrap();
       }
     } catch (err) {
@@ -814,7 +821,7 @@ function WeeklyHubPage() {
                   : 'Your season is over. The install comes back next regular season.'
               : season.phase === 'OFFSEASON'
               ? (coach.employment ?? 'ACTIVE') === 'FIRED'
-                ? 'The AD let you go. Take a landing job on the office before the next year.'
+                ? 'The AD let you go. Take a landing job in the Coach Office before the next season.'
                 : offseasonCaps.canProcessSigningDay
                   ? 'Signing day and the season record are the next clicks. The portal can wait.'
                   : offseasonCaps.canFinalizeSeason
@@ -826,7 +833,7 @@ function WeeklyHubPage() {
                         coach.assistants && coach.assistants.length < ASSISTANT_ROLES.length
                           ? 'Your staff has an empty seat to fill.'
                           : null,
-                        'Before the new year: check the portal, the pro draft, the staff, and the depth chart.',
+                        'Before the next season: check the portal, the staff, and the depth chart.',
                       ].filter(Boolean).join(' ')
               : 'Set the install and the board, then play the week.'}
         </p>

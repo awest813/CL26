@@ -4,6 +4,7 @@ import { generateRoster } from './generateRoster.ts';
 import { rosterForAvailability, weeklyScratches } from './injuries.ts';
 import { buildDefaultStarters } from './rosterManagement.ts';
 import type { Player, Position } from '../types/sim.ts';
+import { savingRating } from './playerSpecialty.ts';
 
 const team = {
   id: 'hilltop',
@@ -114,5 +115,17 @@ describe('injuries that last', () => {
     }
     const average = total / samples;
     assert.ok(average > 0.5 && average < 2.5, `about ${average.toFixed(2)} players out a week`);
+  });
+
+  test('an injured goalie is replaced by the best saver, not the best overall', () => {
+    const goalie = (id: string, overall: number, saving: number): Player => ({
+      id, name: id, position: 'G', year: 2, age: 20, skill: overall, overall, saving,
+      shooting: 50, passing: 50, speed: 50, defense: 50, IQ: 50, stamina: 50, discipline: 50,
+    });
+    const roster = [goalie('starter', 80, 85), goalie('athlete', 78, 60), goalie('keeper', 70, 82)];
+    const lineup = rosterForAvailability(roster, ['starter'], [{ playerId: 'starter', name: 'starter', position: 'G', injury: 'Ankle sprain', weeksLeft: 1 } as never]);
+    const filled = lineup.roster.filter((player) => lineup.starterIds.includes(player.id) && player.position === 'G');
+    assert.deepEqual(filled.map((player) => player.id), ['keeper']);
+    assert.ok(savingRating(filled[0]) > savingRating(roster[1]));
   });
 });

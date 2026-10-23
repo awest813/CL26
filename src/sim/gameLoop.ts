@@ -171,7 +171,7 @@ export function nextLoopStep(input: {
     return {
       action: 'signing-day',
       title: 'Signing day',
-      detail: 'Close the high school class. The portal and the pro draft stay on the office, and the next year does not wait on them.',
+      detail: 'Sign the high school class. Then the portal opens in the Coach Office, and recording the season opens the job market and staff hiring.',
       button: 'Resolve signing day',
     };
   }
@@ -179,8 +179,8 @@ export function nextLoopStep(input: {
   if (input.phase === 'OFFSEASON' && input.canRecordSeason) {
     return {
       action: 'record-season',
-      title: 'Record the year',
-      detail: 'Write the record, job security, and the AD review into the career.',
+      title: 'Record the season',
+      detail: 'Write the record into the career: job security, prestige, the job market, and staff moves.',
       button: 'Record the season',
     };
   }
@@ -189,7 +189,7 @@ export function nextLoopStep(input: {
     return {
       action: 'take-job',
       title: 'The AD let you go',
-      detail: 'A landing job is on the office. The next year starts after you take it.',
+      detail: 'A landing job is in the Coach Office. The next season starts after you take it.',
       button: 'Take a job',
     };
   }
@@ -198,7 +198,7 @@ export function nextLoopStep(input: {
     return {
       action: 'begin-next-year',
       title: 'Next season',
-      detail: 'The year is recorded. Begin the next season once the roster looks right.',
+      detail: 'The season is recorded. Settle the portal, the staff, and any job offers in the Coach Office, then begin the next season.',
       button: 'Begin next season',
     };
   }
@@ -207,7 +207,7 @@ export function nextLoopStep(input: {
     return {
       action: 'begin-next-year',
       title: 'Offseason',
-      detail: 'The office still has the class and the roster market.',
+      detail: 'The Coach Office still has the class and the offseason market.',
       button: null,
     };
   }

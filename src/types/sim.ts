@@ -88,6 +88,8 @@ export interface Recruit {
 
 export interface SignedRecruit {
   recruitId: string;
+  /** The name he signed under. Missing on classes signed before it was kept. */
+  name?: string;
   signedAtYear: number;
   stars: number;
   position: Position;

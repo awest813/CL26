@@ -13,6 +13,7 @@ import { careerOffseasonCapabilities } from '../../sim/seasonPhase';
 import { RootState } from '../../store/store';
 import { ledgerEntry, MAX_PRESTIGE_DRIFT, MIN_PRESTIGE_DRIFT, nextPrestigeDrift, withLeaguePrestige } from '../../sim/programLedger';
 import { redshirtBlocker } from '../../sim/redshirts';
+import { startingRating, swapStarter } from '../../sim/depthChart';
 import { setProgramLedgerEntry } from '../season/seasonSlice';
 
 export const WEEKLY_HOURS_CAP = 120;
@@ -502,7 +503,8 @@ const coachSlice = createSlice({
         state.activePitchesByRecruitId = {};
         state.recruitingWeekIndex = 0;
         state.recruitingReport = null;
-        state.scholarshipsAvailable = 12;
+        // Scholarships refill when the next class opens; until then, what signing day left
+        // is what the portal can use.
         state.teamFatigue = 20;
     },
     applyRecruitingUpdates: (state, action: PayloadAction<{
@@ -571,6 +573,20 @@ const coachSlice = createSlice({
     setStarterIds: (state, action: PayloadAction<string[]>) => {
         state.starterIds = action.payload;
     },
+    /**
+     * Start `inId` in `outId`'s slot (or an empty slot when `outId` is null). Both must play
+     * the same position, and a redshirt cannot start. A current starter trades slots.
+     */
+    replaceStarter: (state, action: PayloadAction<{ outId: string | null; inId: string }>) => {
+        const roster = state.managedRoster ?? [];
+        const incoming = roster.find((player) => player.id === action.payload.inId);
+        if (!incoming || incoming.redshirt) return;
+        if (action.payload.outId) {
+            const outgoing = roster.find((player) => player.id === action.payload.outId);
+            if (!outgoing || outgoing.position !== incoming.position) return;
+        }
+        state.starterIds = swapStarter(state.starterIds, action.payload.outId, action.payload.inId);
+    },
     toggleStarter: (state, action: PayloadAction<string>) => {
         const playerId = action.payload;
         const idx = state.starterIds.indexOf(playerId);
@@ -593,7 +609,7 @@ const coachSlice = createSlice({
                 const starters = new Set(state.starterIds);
                 const backup = roster
                     .filter((row) => row.position === player.position && !row.redshirt && !starters.has(row.id))
-                    .sort((a, b) => b.overall - a.overall || a.id.localeCompare(b.id))[0];
+                    .sort((a, b) => startingRating(b) - startingRating(a) || b.overall - a.overall || a.id.localeCompare(b.id))[0];
                 state.starterIds = state.starterIds.map((id) => (id === player.id ? backup?.id : id)).filter((id): id is string => Boolean(id));
             }
         } else {
@@ -653,6 +669,7 @@ export const {
     setManagedRoster,
     setStarterIds,
     toggleStarter,
+    replaceStarter,
     setPlayerRedshirt,
     togglePortalClaim,
     clearOffseasonMarket,
@@ -840,12 +857,15 @@ export const processSigningDay = createAsyncThunk(
             (recruit) => recruit.committedTeamId === coach.selectedTeamId,
         );
 
-        const signingOutcome = resolveSigningDay(committedToUser, coach.scholarshipsAvailable, coach.managedRoster);
+        // Portal players already claimed hold their scholarships.
+        const openScholarships = Math.max(0, coach.scholarshipsAvailable - (coach.portalClaimIds ?? []).length);
+        const signingOutcome = resolveSigningDay(committedToUser, openScholarships, coach.managedRoster);
         const signedRecruits = signingOutcome.signedRecruitIds
             .map((recruitId) => coach.recruitPool.find((recruit) => recruit.id === recruitId))
             .filter((recruit): recruit is Recruit => Boolean(recruit))
             .map((recruit) => ({
                 recruitId: recruit.id,
+                name: recruit.name,
                 signedAtYear: state.season.year,
                 stars: recruit.stars,
                 position: recruit.position,

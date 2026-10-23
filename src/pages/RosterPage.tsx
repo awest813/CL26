@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { setPlayerRedshirt, toggleStarter } from '../features/coach/coachSlice';
+import { replaceStarter, setPlayerRedshirt, toggleStarter } from '../features/coach/coachSlice';
 import { activeRoster, canChangeRedshirts, redshirtBlocker } from '../sim/redshirts';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { Player, Position, POSITION_ORDER } from '../types/sim';
@@ -10,15 +10,10 @@ import { getRosterDepthSummary } from '../sim/rosterManagement';
 import { faceoffRating, playerPotential, savingRating } from '../sim/playerSpecialty';
 import { playerYearLabel } from '../sim/rosterSummary';
 import PageHeader from '../components/PageHeader';
+import { ROSTER_SIZE } from '../sim/generateRoster';
+import DepthChartBoard from '../components/DepthChartBoard';
+import { POSITION_NAMES, STARTER_SLOTS, startingRating, weakestStarter } from '../sim/depthChart';
 
-const POSITION_LABELS: Record<Position, string> = {
-  A: 'Attack',
-  M: 'Midfield',
-  D: 'Defense',
-  LSM: 'LSM',
-  FO: 'Faceoff',
-  G: 'Goalie',
-};
 
 /** The rating that matters most for a specialist: faceoffs for a faceoff man, saves for a goalie. */
 function specialtyRating(player: Player): number | null {
@@ -32,14 +27,6 @@ function specialtyClass(player: Player): string {
   return rating == null ? '' : ratingClass(rating);
 }
 
-const STARTER_COUNTS: Record<Position, number> = {
-  A: 3,
-  M: 3,
-  D: 3,
-  LSM: 1,
-  FO: 1,
-  G: 1,
-};
 
 function ratingClass(overall: number): string {
   if (overall >= 80) return 'rating-good';
@@ -57,6 +44,15 @@ function computeAverageOfThreeAttributes<T>(players: T[], selector: (player: T) 
   return Math.round(total / (3 * players.length));
 }
 
+type RosterSort = 'depth' | 'overall' | 'potential' | 'year';
+
+const SORT_LABELS: Record<RosterSort, string> = {
+  depth: 'Depth order',
+  overall: 'Overall',
+  potential: 'Potential',
+  year: 'Class year',
+};
+
 function StarDisplay({ count }: { count: number }) {
   return <span className="text-yellow-400">{'★'.repeat(count)}</span>;
 }
@@ -68,6 +64,8 @@ function PlayerRow({
   starterCountForPos,
   currentStartersForPos,
   onToggle,
+  swapTarget,
+  onSwap,
   redshirtControl,
 }: {
   player: Player;
@@ -77,10 +75,14 @@ function PlayerRow({
   starterCountForPos: number;
   currentStartersForPos: number;
   onToggle: (id: string) => void;
+  /** When the position is full: start him in the weakest starter's place. */
+  swapTarget: Player | null;
+  onSwap: (outId: string, inId: string) => void;
   /** Shown before week 1: redshirt him, or take it back. */
   redshirtControl: { label: string; blocker: string | null; onClick: () => void } | null;
 }) {
   const canPromote = !player.redshirt && !isStarter && currentStartersForPos < starterCountForPos;
+  const canSwap = !player.redshirt && !isStarter && !canPromote && swapTarget != null;
   const canDemote = isStarter;
 
   return (
@@ -102,7 +104,8 @@ function PlayerRow({
       <td className="font-medium rosterName">{player.name}</td>
       <td className="num text-gray-500 text-xs">{playerYearLabel(player.year, player.redshirtUsed)}</td>
       <td className="num text-gray-500 text-xs">{player.age}</td>
-      <td className={`num font-bold ${ratingClass(player.overall)}`} title={`Potential ${playerPotential(player)}`}>{player.overall}</td>
+      <td className={`num font-bold ${ratingClass(player.overall)}`}>{player.overall}</td>
+      <td className="num text-xs text-gray-500">{playerPotential(player)}</td>
       <td className="num text-xs text-gray-500">{player.shooting}</td>
       <td className="num text-xs text-gray-500">{player.passing}</td>
       <td className="num text-xs text-gray-500">{player.speed}</td>
@@ -110,6 +113,17 @@ function PlayerRow({
       <td className="num text-xs text-gray-500">{player.IQ}</td>
       <td className={`num font-bold ${specialtyClass(player)}`}>{specialtyRating(player) ?? ''}</td>
       <td className="text-right">
+        {canSwap && swapTarget && (
+          <button
+            type="button"
+            aria-label={`Start ${player.name} in place of ${swapTarget.name}`}
+            title={`Starts in place of ${swapTarget.name}`}
+            className="lineupAction"
+            onClick={() => onSwap(swapTarget.id, player.id)}
+          >
+            Start
+          </button>
+        )}
         {(canPromote || canDemote) && (
           <button
             type="button"
@@ -143,6 +157,8 @@ function RosterPage() {
   const teams = useAppSelector((state) => state.league.teams);
   const season = useAppSelector((state) => state.season);
 
+  const [positionFilter, setPositionFilter] = useState<Position | 'ALL'>('ALL');
+  const [sortBy, setSortBy] = useState<RosterSort>('depth');
   const selectedTeam = teams.find((t) => t.id === coach.selectedTeamId) ?? null;
   const roster = useMemo(() => coach.managedRoster ?? [], [coach.managedRoster]);
   const starterSet = useMemo(() => new Set(coach.starterIds), [coach.starterIds]);
@@ -159,7 +175,7 @@ function RosterPage() {
       && season.completedWeeks >= season.scheduleByWeek.length;
     const weekKey = championshipWeek
       ? CONFERENCE_SEMIFINAL_KEY
-      : availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? null);
+      : availabilityWeekKey(season.phase, season.currentWeekIndex, season.playoffs?.currentRound ?? (season.conferenceTournaments ? 'ROUND1' : null));
     if (!weekKey || !coach.selectedTeamId || roster.length === 0) return [];
     return weeklyScratches(activeRoster(roster), season.seasonSeed, weekKey, coach.selectedTeamId);
   }, [coach.selectedTeamId, roster, season.completedWeeks, season.conferenceTournaments, season.currentWeekIndex, season.phase, season.playoffs, season.scheduleByWeek.length, season.seasonSeed]);
@@ -170,17 +186,22 @@ function RosterPage() {
     for (const player of roster) {
       map[player.position]?.push(player);
     }
-    // Sort each group: starters first, then by overall desc
+    // Depth order: starters in their slot order, then backups by starting rating, redshirts last.
+    const slotOrder = new Map(coach.starterIds.map((id, index) => [id, index]));
     for (const pos of POSITION_ORDER) {
       map[pos].sort((a, b) => {
-        const aStarter = starterSet.has(a.id) ? 1 : 0;
-        const bStarter = starterSet.has(b.id) ? 1 : 0;
-        if (bStarter !== aStarter) return bStarter - aStarter;
-        return b.overall - a.overall;
+        if (sortBy === 'overall') return b.overall - a.overall || a.name.localeCompare(b.name);
+        if (sortBy === 'potential') return playerPotential(b) - playerPotential(a) || b.overall - a.overall;
+        if (sortBy === 'year') return b.year - a.year || b.overall - a.overall;
+        const aRank = starterSet.has(a.id) ? 0 : a.redshirt ? 2 : 1;
+        const bRank = starterSet.has(b.id) ? 0 : b.redshirt ? 2 : 1;
+        if (aRank !== bRank) return aRank - bRank;
+        if (aRank === 0) return (slotOrder.get(a.id) ?? 0) - (slotOrder.get(b.id) ?? 0);
+        return startingRating(b) - startingRating(a) || a.name.localeCompare(b.name);
       });
     }
     return map;
-  }, [roster, starterSet]);
+  }, [coach.starterIds, roster, sortBy, starterSet]);
 
   const rosterOverall = roster.length > 0
     ? Math.round(roster.reduce((s, p) => s + p.overall, 0) / roster.length)
@@ -285,17 +306,45 @@ function RosterPage() {
         </div>
       </div>
 
+      <DepthChartBoard roster={roster} starterIds={coach.starterIds} scratches={scratches} />
+
+      <div className="card rosterToolbar">
+        <div className="rosterTabs" role="tablist" aria-label="Show position">
+          {(['ALL', ...POSITION_ORDER] as const).map((pos) => (
+            <button
+              key={pos}
+              type="button"
+              role="tab"
+              aria-selected={positionFilter === pos}
+              className={`rosterTab${positionFilter === pos ? ' rosterTab-active' : ''}`}
+              onClick={() => setPositionFilter(pos)}
+            >
+              {pos === 'ALL' ? 'All' : pos}
+              <span className="rosterTabCount">{pos === 'ALL' ? roster.length : byPosition[pos].length}</span>
+            </button>
+          ))}
+        </div>
+        <label className="text-sm rosterSort">
+          Sort
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as RosterSort)}>
+            {(Object.keys(SORT_LABELS) as RosterSort[]).map((key) => (
+              <option key={key} value={key}>{SORT_LABELS[key]}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       {/* Offseason notes */}
       {season.phase === 'OFFSEASON' && (
         <div className="card noticeCard-warn">
           <h3 className="text-base font-bold mb-2">Offseason roster notes</h3>
           <div className="flex gap-6 text-sm">
             <div>
-              <div className="text-xs text-gray-400">Graduating Seniors</div>
+              <div className="text-xs text-gray-400">Seniors graduating</div>
               <div className="font-semibold text-red-600">{graduatingCount} players leaving</div>
             </div>
             <div>
-              <div className="text-xs text-gray-400">Incoming Class</div>
+              <div className="text-xs text-gray-400">Signed class</div>
               <div className="font-semibold text-green-600">{signedClass.length} recruits signed</div>
               {signedClass.length > 0 && (
                 <div className="text-xs text-gray-500 mt-0.5">
@@ -304,9 +353,10 @@ function RosterPage() {
               )}
             </div>
             <div>
-              <div className="text-xs text-gray-400">Net Roster Change</div>
-              <div className={`font-semibold ${signedClass.length - graduatingCount >= 0 ? 'text-green-600' : 'text-amber-600'}`}>
-                {signedClass.length - graduatingCount >= 0 ? '+' : ''}{signedClass.length - graduatingCount}
+              <div className="text-xs text-gray-400">Next season</div>
+              <div className="text-sm">
+                Transfers, early pro departures, portal players, and any cuts to the {ROSTER_SIZE}-man limit are on the{' '}
+                <Link to="/career#offseason-market-title">offseason market</Link>.
               </div>
             </div>
           </div>
@@ -314,17 +364,18 @@ function RosterPage() {
       )}
 
       {/* Roster by position */}
-      {POSITION_ORDER.map((pos) => {
+      {POSITION_ORDER.filter((pos) => positionFilter === 'ALL' || positionFilter === pos).map((pos) => {
         const players = byPosition[pos];
         if (players.length === 0) return null;
-        const starterTarget = STARTER_COUNTS[pos];
+        const swapTarget = weakestStarter(roster, coach.starterIds, pos);
+        const starterTarget = STARTER_SLOTS[pos];
         const currentStarters = players.filter((p) => starterSet.has(p.id)).length;
 
         return (
           <div key={pos} className="card">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-base font-bold m-0">
-                {POSITION_LABELS[pos]} ({players.length})
+                {POSITION_NAMES[pos]} ({players.length})
               </h3>
               <span className="text-xs text-gray-400">
                 {currentStarters}/{starterTarget} starters set
@@ -334,10 +385,11 @@ function RosterPage() {
             <div className="dataTableWrap">
               {/* Fixed columns so every position table lines up with the next. */}
               <table className="rosterTable">
-                <caption className="sr-only">{POSITION_LABELS[pos]} depth chart</caption>
+                <caption className="sr-only">{POSITION_NAMES[pos]} depth chart</caption>
                 <colgroup>
                   <col className="rosterCol-role" />
                   <col />
+                  <col className="rosterCol-stat" />
                   <col className="rosterCol-stat" />
                   <col className="rosterCol-stat" />
                   <col className="rosterCol-stat" />
@@ -356,6 +408,7 @@ function RosterPage() {
                     <th scope="col" className="num">Yr</th>
                     <th scope="col" className="num">Age</th>
                     <th scope="col" className="num">OVR</th>
+                    <th scope="col" className="num"><abbr title="Potential: the overall he can grow to">POT</abbr></th>
                     <th scope="col" className="num"><abbr title="Shooting">SHT</abbr></th>
                     <th scope="col" className="num"><abbr title="Passing">PAS</abbr></th>
                     <th scope="col" className="num"><abbr title="Speed">SPD</abbr></th>
@@ -378,6 +431,8 @@ function RosterPage() {
                       starterCountForPos={starterTarget}
                       currentStartersForPos={currentStarters}
                       onToggle={onToggle}
+                      swapTarget={swapTarget}
+                      onSwap={(outId, inId) => dispatch(replaceStarter({ outId, inId }))}
                       redshirtControl={redshirtsOpen && (player.redshirt || (!player.redshirtUsed && player.year < 4))
                         ? {
                             label: player.redshirt ? 'Undo redshirt' : 'Redshirt',
@@ -399,16 +454,16 @@ function RosterPage() {
         <div className="card">
           <h3 className="text-base font-bold mb-2">Signed recruiting class ({signedClass.length})</h3>
           <p className="text-xs text-gray-500 mb-2">
-            These recruits will join the roster at the start of next season.
+            They join the roster when the next season begins. Over the roster limit, returning depth is cut before any signee.
           </p>
           <div className="flex flex-wrap gap-2">
             {signedClass.map((s) => (
               <div
                 key={s.recruitId}
-                className="px-3 py-2 rounded border text-sm"
-                style={{ borderColor: '#d1d5db' }}
+                className="px-3 py-2 rounded border text-sm signedCard"
               >
-                <div className="font-semibold">{s.position}</div>
+                <div className="font-semibold">{s.name ?? s.position}</div>
+                {s.name && <div className="text-xs text-gray-500">{s.position}</div>}
                 <div><StarDisplay count={s.stars} /></div>
                 <div className="text-xs text-gray-400">Joins {season.year + 1}</div>
               </div>
