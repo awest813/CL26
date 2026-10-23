@@ -124,7 +124,13 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
                     {hired ? (
                       <span className="text-xs text-green-600 font-semibold">On staff</span>
                     ) : (
-                      <button type="button" className="btn text-xs" disabled={tooBig} onClick={() => hire(candidate)}>
+                      <button
+                        type="button"
+                        className="btn text-xs"
+                        disabled={tooBig}
+                        aria-label={`Hire ${candidate.name} as ${ASSISTANT_ROLE_LABELS[candidate.role].toLowerCase()}`}
+                        onClick={() => hire(candidate)}
+                      >
                         Hire
                       </button>
                     )}

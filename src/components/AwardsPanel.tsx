@@ -42,7 +42,7 @@ function AwardsPanel({ year, national, allAmericans, postseason, teams, conferen
     <section className="card" aria-labelledby="awards-title">
       <div className="cardHeadRow mb-3">
         <h3 id="awards-title" className="m-0 text-base font-bold">{year} awards</h3>
-        <Link to="/leaders" className="text-sm hover:underline">All awards</Link>
+        <Link to="/season/leaders" className="text-sm hover:underline">All awards</Link>
       </div>
       <div className="wireGrid">
         <div>
@@ -88,7 +88,7 @@ function AwardsPanel({ year, national, allAmericans, postseason, teams, conferen
                   </li>
                 ))}
                 {conferenceAwards.length > 6 && (
-                  <li><Link to="/leaders" className="hover:underline">+{conferenceAwards.length - 6} more conferences</Link></li>
+                  <li><Link to="/season/leaders" className="hover:underline">+{conferenceAwards.length - 6} more conferences</Link></li>
                 )}
               </ul>
             </div>

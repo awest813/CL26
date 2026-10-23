@@ -314,7 +314,12 @@ function OffseasonMarket() {
                     </span>
                   </span>
                   {offer ? (
-                    <button type="button" className="btn btn-primary text-xs" onClick={() => void onAcceptOffer(staff.teamId, prestige)}>
+                    <button
+                      type="button"
+                      className="btn btn-primary text-xs"
+                      aria-label={`Take the ${school?.schoolName ?? 'offered'} job`}
+                      onClick={() => void onAcceptOffer(staff.teamId, prestige)}
+                    >
                       {offer.tier === 'UPGRADE' ? 'Take the upgrade' : 'Take the job'}
                     </button>
                   ) : (

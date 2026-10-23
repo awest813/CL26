@@ -657,6 +657,7 @@ function RecruitingBoardPage() {
                           <button
                             type="button"
                             className="text-xs text-red-500 hover:underline bg-transparent border-0 cursor-pointer"
+                            aria-label={`Remove ${recruit.name} from board`}
                             onClick={() => dispatch(removeRecruitFromBoard(recruit.id))}
                           >
                             Remove
@@ -666,6 +667,7 @@ function RecruitingBoardPage() {
                             <button
                               type="button"
                               className="chipAdd"
+                              aria-label={`Add ${recruit.name} to board`}
                               onClick={() => onAdd(recruit.id)}
                               disabled={boardSet.size >= RECRUITING_BOARD_LIMIT || periodsDone}
                               title={periodsDone
