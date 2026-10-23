@@ -263,6 +263,18 @@ Specialties fold into `staffEffects`, so every game plan, fatigue projection, an
 them. The recruiting perks and the coordinator's specialty scale the same weekly gain the board
 projects (`recruitingEdges`).
 
+### Player names
+
+Audit: 23 first and 22 last names gave 506 possible names for 4,096 players. 88 of 128 rosters had
+two players with the same name, "Riley Wells" played for 21 programs, and four players were named
+like "Chase Chase". The lists are now 213 first and 324 last names (~69,000 pairs). Every name draw
+goes through `drawName` (`src/sim/names.ts`), which keeps names distinct within a roster, a
+recruiting class, the portal board, walk-ons, and the CPU coaching pool, and never repeats a name
+as first and last. A draw always takes exactly two rolls from the caller's rng (a clash redraws from
+its own stream), so every rating and roll is unchanged. After: 3,967 unique names among 4,096
+players, no repeats on any roster or board. CPU rosters in a save in progress get the new names;
+the user's roster and recruits keep theirs.
+
 ## Open items, in priority order
 
 1. **CPU recruiting reads the same pitches.** CPU pursuit uses prestige and region only; academics

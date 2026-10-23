@@ -1,6 +1,6 @@
 import type { PracticeFocus, Team } from '../types/sim.ts';
-import { makeRng, pickOne, randInt, seedToNumber } from './rng.ts';
-import namesData from '../data/names.json' with { type: 'json' };
+import { makeRng, randInt, seedToNumber } from './rng.ts';
+import { drawName } from './names.ts';
 
 /**
  * The head coach's four assistants. Each one moves a part of the program: the
@@ -180,7 +180,7 @@ export function staffEffectLines(staff: AssistantCoach[] | null | undefined): Re
 }
 
 function assistantName(rng: () => number): string {
-  return `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`;
+  return drawName(rng);
 }
 
 /** The staff a program has when a head coach arrives: better programs keep better assistants. */

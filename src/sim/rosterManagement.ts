@@ -1,6 +1,6 @@
 import { Player, Position, SignedRecruit, Team } from '../types/sim';
-import { makeRng, pickOne, randInt, seedToNumber } from './rng';
-import namesData from '../data/names.json' with { type: 'json' };
+import { makeRng, randInt, seedToNumber } from './rng';
+import { drawName } from './names';
 import { faceoffRating, growSpecialty, playerPotential, rollPotential, rollSpecialties, savingRating } from './playerSpecialty';
 import { ROSTER_POSITION_ORDER, ROSTER_POSITION_TARGETS, ROSTER_SIZE } from './generateRoster';
 import { advanceClassYear } from './redshirts';
@@ -78,7 +78,7 @@ export function convertRecruitToPlayer(
   const overall = Math.round((shooting + passing + speed + defense + IQ + stamina + discipline) / 7);
   const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
   // The recruit keeps the name he signed under. The name is still drawn so the rest of the roll is unchanged.
-  const drawnName = `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`;
+  const drawnName = drawName(rng);
 
   return {
     id: `${team.id}-recruit-${signedRecruit.recruitId}-yr1`,
@@ -332,6 +332,8 @@ export function applyRosterTurnover(
   trimRosterForRequiredAdds(combined, ROSTER_TARGET_SIZE, missingPositions.length, newcomers);
 
   const baseline = 45 + team.prestige * 0.4;
+  // Walk-ons never share a name with someone already on the roster.
+  const rosterNames = new Set(combined.map((player) => player.name));
   let walkOnSerial = 0;
   const addWalkOn = (pos: Position, tag: string, overallPenalty: number) => {
     walkOnSerial += 1;
@@ -341,7 +343,7 @@ export function applyRosterTurnover(
     const walkOnRng = makeRng(seedToNumber(`${team.id}:${tag}:${newSeed}:${walkOnSerial}:specialty`));
     combined.push({
       id: `${team.id}-${tag}-${pos}-${newSeed}-${walkOnSerial}`,
-      name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
+      name: drawName(rng, rosterNames),
       position: pos,
       year: 1,
       age: 18,

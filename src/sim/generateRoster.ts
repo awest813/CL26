@@ -1,6 +1,6 @@
 import { Player, Position, Team } from '../types/sim';
-import { makeRng, pickOne, randInt, seedToNumber } from './rng';
-import namesData from '../data/names.json' with { type: 'json' };
+import { makeRng, randInt, seedToNumber } from './rng';
+import { drawName } from './names';
 import { rollPotential, rollSpecialties } from './playerSpecialty';
 
 /** Positions in the order a generated roster fills them. */
@@ -35,6 +35,8 @@ const clamp = (value: number) => Math.max(40, Math.min(99, value));
 export function generateRoster(team: Team, seed: string, talentOffset = 0): Player[] {
   const rng = makeRng(seedToNumber(`${seed}:${team.id}`));
   const baseline = 45 + team.prestige * 0.4 + talentOffset;
+  // No two players on a roster share a name.
+  const names = new Set<string>();
 
   return ROSTER_POSITION_ORDER.map((position, index) => {
     const year = randInt(rng, 1, 4) as 1 | 2 | 3 | 4;
@@ -55,7 +57,7 @@ export function generateRoster(team: Team, seed: string, talentOffset = 0): Play
 
     return {
       id: `${team.id}-P${index + 1}`,
-      name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
+      name: drawName(rng, names),
       position,
       year,
       age,

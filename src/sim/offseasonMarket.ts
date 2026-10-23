@@ -1,5 +1,5 @@
 import type { Player, Position, ProgramLedger, Team } from '../types/sim';
-import namesData from '../data/names.json' with { type: 'json' };
+import { drawName } from './names';
 import { programRoster } from './programLedger';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
 
@@ -84,6 +84,7 @@ export function buildPortalBoard(teams: Team[], userTeamId: string, seed: number
   const rng = makeRng(seedToNumber(`${seed}:${year}:portal`));
   const count = Math.min(24, bag.length);
   const board: PortalEntrant[] = [];
+  const names = new Set<string>();
 
   for (let index = 0; index < count; index += 1) {
     const origin = bag.splice(randInt(rng, 0, bag.length - 1), 1)[0];
@@ -92,7 +93,7 @@ export function buildPortalBoard(teams: Team[], userTeamId: string, seed: number
     const overall = clampRating(48 + origin.prestige * 0.35 + randInt(rng, -8, 8));
     board.push({
       id: `portal-${seed}-${year}-${index + 1}`,
-      name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
+      name: drawName(rng, names),
       position,
       year: yearInSchool,
       age: 17 + yearInSchool,
@@ -176,13 +177,14 @@ export function buildProDraft(input: ProDraftInput): ProDraftPick[] {
  * are the ones hiring; without it, a few are, at random.
  */
 export function buildCoachPool(teams: Team[], seed: number, year: number, userTeamId: string, openings?: Set<string>): StaffCoach[] {
+  const names = new Set<string>();
   return teams.map((team) => {
     const rng = makeRng(seedToNumber(`${seed}:coach:${team.id}`));
     const hiringRng = makeRng(seedToNumber(`${seed}:${year}:hiring:${team.id}`));
     const skill = clampRating(40 + team.prestige * 0.45 + randInt(rng, -8, 8));
     return {
       id: `staff-${team.id}`,
-      name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
+      name: drawName(rng, names),
       archetype: pickOne(rng, [...ARCHETYPES]),
       age: randInt(rng, 34, 64),
       skill,

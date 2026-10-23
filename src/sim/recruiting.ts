@@ -2,7 +2,7 @@ import type { Player, Position, Recruit, RecruitingPitch, RecruitMotivation, Tea
 import { POSITION_ORDER } from '../types/sim.ts';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng.ts';
 import { prestigeStars } from './prestige.ts';
-import namesData from '../data/names.json' with { type: 'json' };
+import { drawName } from './names.ts';
 import { LEAGUE_REGIONS } from './leagueDataValidation.ts';
 import { ROSTER_POSITION_TARGETS } from './generateRoster.ts';
 
@@ -70,6 +70,8 @@ function shuffleInPlace<T>(rng: () => number, values: T[]): T[] {
 
 export function generateRecruitPool(seed: number, count = 180): Recruit[] {
   const rng = makeRng(seed);
+  // Every prospect in a class has his own name.
+  const names = new Set<string>();
 
   return Array.from({ length: count }, (_, index) => {
     const starsRoll = randInt(rng, 1, 100);
@@ -90,7 +92,7 @@ export function generateRecruitPool(seed: number, count = 180): Recruit[] {
 
     return {
       id: `recruit-${seed}-${index + 1}`,
-      name: `${pickOne(rng, namesData.firstNames)} ${pickOne(rng, namesData.lastNames)}`,
+      name: drawName(rng, names),
       position: pickOne(rng, POSITION_ORDER),
       stars,
       region: pickOne(rng, REGIONS),
