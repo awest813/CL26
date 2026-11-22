@@ -11,6 +11,7 @@ import { buildSeasonGlance } from '../sim/seasonGlance';
 import {
   selectRankTrends,
   selectTeamRecords,
+  selectProgramCoaches,
   selectUserUpcomingGame,
   selectUserLastResult,
   selectConferenceStandings,
@@ -36,7 +37,8 @@ import {
 } from '../sim/coachEffects';
 import { GameDayEdge, GameDayScheme, InstallPicker, ScoutingReport } from '../components/GamePlan';
 import { gameDayProgramTactics, programTactics } from '../sim/schemeMatchups';
-import { programRoster, programStarters } from '../sim/programLedger';
+import { expectedWinsByTeamId, programRoster, programStarters, withLeaguePrestige } from '../sim/programLedger';
+import { hotSeat } from '../sim/coachingCarousel';
 import { activeRoster } from '../sim/redshirts';
 import { availabilityWeekKey, injuryTimeline, rosterForAvailability, weeklyScratches } from '../sim/injuries';
 import { nextPaint } from '../lib/nextPaint';
@@ -567,6 +569,20 @@ function WeeklyHubPage() {
     : season.phase === 'PLAYOFF' && season.playoffs == null
       ? season.completedWeeks - 1
       : -1;
+  const programCoaches = useAppSelector(selectProgramCoaches);
+  // Coaches on pace to miss badly: next offseason's likeliest openings.
+  const hotSeatList = useMemo(
+    () => (season.phase === 'REGULAR' || season.phase === 'PLAYOFF'
+      ? hotSeat({
+        coaches: programCoaches,
+        teams,
+        records,
+        expectedWins: expectedWinsByTeamId(withLeaguePrestige(teams, season.programLedger)),
+        limit: 4,
+      })
+      : []),
+    [programCoaches, records, season.phase, season.programLedger, teams],
+  );
   const leagueWire = useMemo(() => {
     if (wireWeekIndex < 0) return null;
     const teamById = new Map(teams.map((team) => [team.id, team]));
@@ -1105,6 +1121,7 @@ function WeeklyHubPage() {
           userTeamId={selectedTeamId || null}
           conferenceName={userConference?.name ?? null}
           blueChipCommits={blueChipCommits}
+          hotSeat={hotSeatList}
         />
       )}
 
@@ -1142,6 +1159,14 @@ function WeeklyHubPage() {
           {featuredOpponent && opponentScheme && (
             <>
               <div className="planReadoutLabel mt-3">Scouting: {featuredOpponent.schoolName}</div>
+              {programCoaches[featuredOpponent.id] && (
+                <p className="text-xs text-gray-500 mt-1 mb-1">
+                  Head coach {programCoaches[featuredOpponent.id].name}{' '}
+                  <CoachStars rating={programCoaches[featuredOpponent.id].rating} showTier />
+                  {programCoaches[featuredOpponent.id].wins + programCoaches[featuredOpponent.id].losses > 0
+                    && ` · ${programCoaches[featuredOpponent.id].wins}–${programCoaches[featuredOpponent.id].losses} there`}
+                </p>
+              )}
               <ScoutingReport
                 plan={gamePlan}
                 opponent={opponentScheme}

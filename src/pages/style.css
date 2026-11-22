@@ -3373,6 +3373,7 @@ button.seasonScoreButton:hover:not(:disabled) {
 
 .wireUp { color: var(--success); font-weight: 700; font-size: 0.72rem; }
 .wireDown { color: var(--danger); font-weight: 700; font-size: 0.72rem; }
+.wireWarm { color: var(--warning-fg); font-weight: 700; font-size: 0.72rem; }
 
 /* The user's last game: a stat strip and the plays that decided it. */
 .resultStats {
@@ -3701,9 +3702,10 @@ button.seasonScoreButton:hover:not(:disabled) {
   }
 }
 
-/* A hire that would be a step down stays on the market but steps back. */
+/* A hire that would be a step down stays on the market but steps back: a dashed edge, text at full contrast. */
 .staffRow-downgrade {
-  opacity: 0.72;
+  border-style: dashed;
+  background: transparent;
 }
 
 .staffHotName {

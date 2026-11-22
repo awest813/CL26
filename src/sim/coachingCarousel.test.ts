@@ -4,8 +4,10 @@ import teamsData from '../data/teams128.json' with { type: 'json' };
 import type { Team, TeamRecord } from '../types/sim.ts';
 import {
   coachDevelopmentEdge,
+  coachingTree,
   coachRecruitingPull,
   fillVacantPrograms,
+  hotSeat,
   initialProgramCoaches,
   runCoachingCarousel,
   type CarouselInput,
@@ -101,6 +103,7 @@ describe('coaching carousel', () => {
     assert.equal(result.coaches[assistantJob].name, 'Pat Assistant');
     assert.equal(result.coaches[assistantJob].background, 'your-staff');
     assert.equal(result.coaches[assistantJob].fromTeamId, userTeamId);
+    assert.deepEqual(coachingTree(result.coaches).map((row) => row.teamId), [assistantJob]);
 
     const next = fillVacantPrograms({ coaches: result.coaches, teams, userTeamId, year: 2027, seed: 2027 });
     assert.ok(next.coaches[held], 'the held job is filled when the season begins');
@@ -127,5 +130,24 @@ describe('coaching carousel', () => {
     assert.ok(coachRecruitingPull(95) > 1.1 && coachRecruitingPull(45) < 0.9);
     assert.ok(coachDevelopmentEdge(95) > 0.5 && coachDevelopmentEdge(45) < -0.5);
     assert.equal(coachRecruitingPull(undefined), 1);
+  });
+});
+
+describe('hot seat', () => {
+  test('lists the coaches on pace to miss badly, hottest first, from four games in', () => {
+    const coaches = initialProgramCoaches(teams, 2026, userTeamId);
+    const expectedWins = expectedWinsByTeamId(teams);
+    const top = byPrestige[0].id;
+    const mid = byPrestige[50].id;
+    const recordsAfter = (games: number, wins: Record<string, number>) => Object.fromEntries(teams.map((team) => {
+      const w = wins[team.id] ?? Math.round(((expectedWins.get(team.id) ?? 6) * games) / 12);
+      return [team.id, { teamId: team.id, wins: w, losses: games - w } as TeamRecord];
+    }));
+    assert.equal(hotSeat({ coaches, teams, records: recordsAfter(3, { [top]: 0 }), expectedWins }).length, 0, 'too early to tell');
+    const list = hotSeat({ coaches, teams, records: recordsAfter(6, { [top]: 1, [mid]: 1 }), expectedWins });
+    assert.equal(list[0].teamId, top, 'a top program at 1-5 is the hottest seat');
+    assert.equal(list[0].heat, 'hot');
+    assert.ok(list.some((entry) => entry.teamId === mid));
+    assert.ok(list.every((entry) => entry.shortfall >= 2));
   });
 });

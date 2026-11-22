@@ -269,6 +269,10 @@ Now (`src/sim/coachingCarousel.ts`, stored as `season.programCoaches`):
 - **What a coach is worth.** CPU staffs recruit 0.85× to 1.15× as hard by head coach rating (`coachRecruitingPull`, neutral at 70), and his players gain −0.8 to +0.8 roster rating points a year on the ledger (`coachDevelopmentEdge`). Game day is unchanged, so engine calibration holds.
 - **Where to see it.** The Coach Office market lists the carousel: who left (let go, retired, moved on, with his record) and who was hired from where. Team pages show the head coach, his stars, when he was hired, his record there, and his background. Coach of the Year names the real coach. The hub points to the carousel in the offseason.
 - **Old saves** need no migration: until a carousel runs, every program shows its original coach, drawn from the program alone.
+- **Hot seat.** From week 4 the hub's league wire lists CPU coaches on pace to miss their program's expected wins by two or more (`hotSeat`; "Hot" at four, the miss that sees most of them let go): next offseason's likeliest openings.
+- **Scouting** names the opponent's head coach, his stars, and his record there.
+- **Coaching tree.** Assistants hired off your staff keep the mark wherever they go next; the Coach Office lists them with their records and titles.
+- **Fixed:** dimming downgrade candidates on the staff market with opacity failed color contrast (axe); they now step back with a dashed edge instead.
 
 The 20-season batch checks every season that each CPU program has its own coach, the user's program has none, and ratings stay in range: no problems, identical replay, saves +0.02 MB.
 

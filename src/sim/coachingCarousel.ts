@@ -275,6 +275,7 @@ function fillOpenings(context: {
         losses: 0,
         titles: 0,
         background: 'your-staff',
+        fromYourStaff: true,
         ...(input.userTeamId ? { fromTeamId: input.userTeamId } : {}),
       };
       names.add(coach.name);
@@ -393,4 +394,55 @@ export function fillVacantPrograms(input: {
     },
   });
   return { coaches, news };
+}
+
+export interface HotSeatEntry {
+  teamId: string;
+  coach: ProgramCoach;
+  wins: number;
+  losses: number;
+  /** Wins the program was expected to get in 12 games. */
+  expectedWins: number;
+  /** Expected wins less the wins this pace projects to. */
+  shortfall: number;
+  /** "hot": on pace to miss by 4+ (60% of those programs make a change); "warm": by 2–3. */
+  heat: 'hot' | 'warm';
+}
+
+/**
+ * Coaches on pace to miss their program's expectations by two wins or more, after at least
+ * four games: the seats likeliest to open (see `programOpenings`). Hottest first; among
+ * equals, the bigger program.
+ */
+export function hotSeat(input: {
+  coaches: ProgramCoaches;
+  teams: Team[];
+  records: Record<string, TeamRecord>;
+  expectedWins: Map<string, number>;
+  seasonGames?: number;
+  limit?: number;
+}): HotSeatEntry[] {
+  const seasonGames = input.seasonGames ?? 12;
+  const prestige = new Map(input.teams.map((team) => [team.id, team.prestige]));
+  const entries: HotSeatEntry[] = [];
+  for (const [teamId, coach] of Object.entries(input.coaches)) {
+    const record = input.records[teamId];
+    const played = (record?.wins ?? 0) + (record?.losses ?? 0);
+    if (!record || played < 4) continue;
+    const expectedWins = input.expectedWins.get(teamId) ?? 6;
+    const shortfall = expectedWins - (record.wins / played) * Math.max(seasonGames, played);
+    if (shortfall < 2) continue;
+    entries.push({ teamId, coach, wins: record.wins, losses: record.losses, expectedWins, shortfall, heat: shortfall >= 4 ? 'hot' : 'warm' });
+  }
+  return entries
+    .sort((a, b) => b.shortfall - a.shortfall || (prestige.get(b.teamId) ?? 0) - (prestige.get(a.teamId) ?? 0) || a.teamId.localeCompare(b.teamId))
+    .slice(0, input.limit ?? 5);
+}
+
+/** Your coaching tree: head coaches in the league who once coached on your staff. */
+export function coachingTree(coaches: ProgramCoaches): Array<{ teamId: string; coach: ProgramCoach }> {
+  return Object.entries(coaches)
+    .filter(([, coach]) => coach.fromYourStaff)
+    .map(([teamId, coach]) => ({ teamId, coach }))
+    .sort((a, b) => b.coach.rating - a.coach.rating || a.teamId.localeCompare(b.teamId));
 }

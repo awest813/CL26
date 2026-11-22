@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { LeagueWire, WireKind, WireScore } from '../sim/leagueWire';
 import type { Recruit, Team } from '../types/sim';
+import type { HotSeatEntry } from '../sim/coachingCarousel';
 
 const KIND_LABEL: Record<WireKind, string> = {
   upset: 'Upset',
@@ -19,10 +20,12 @@ type LeagueWirePanelProps = {
   conferenceName: string | null;
   /** Blue-chip commits (four stars and up) from the last recruiting period. */
   blueChipCommits: { recruit: Recruit; teamId: string }[];
+  /** CPU coaches on pace to miss their program's expectations badly. */
+  hotSeat?: HotSeatEntry[];
 };
 
 /** Around the league after a week: the headlines, poll movement, the conference, next week's games, and big commits. */
-function LeagueWirePanel({ wire, weekIndex, teams, userTeamId, conferenceName, blueChipCommits }: LeagueWirePanelProps) {
+function LeagueWirePanel({ wire, weekIndex, teams, userTeamId, conferenceName, blueChipCommits, hotSeat = [] }: LeagueWirePanelProps) {
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const name = (teamId: string) => teamById.get(teamId)?.schoolName ?? 'Unknown';
   const teamLink = (teamId: string, rank?: number | null) => (
@@ -103,6 +106,22 @@ function LeagueWirePanel({ wire, weekIndex, teams, userTeamId, conferenceName, b
                   <li key={game.gameId}>
                     {teamLink(game.awayId, game.awayRank)} at {teamLink(game.homeId, game.homeRank)}
                     {game.rivalryTrophy && <span className="rivalryTag">{game.rivalryTrophy}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {hotSeat.length > 0 && (
+            <div>
+              <div className="planReadoutLabel">
+                <span title="Coaches on pace to miss their program's expected wins by two or more. A miss of four sees most of them let go.">Hot seat</span>
+              </div>
+              <ul className="wireMini">
+                {hotSeat.map((entry) => (
+                  <li key={entry.teamId}>
+                    <span className={entry.heat === 'hot' ? 'wireDown' : 'wireWarm'}>{entry.heat === 'hot' ? 'Hot' : 'Warm'}</span>{' '}
+                    {entry.coach.name}, {teamLink(entry.teamId)} {entry.wins}–{entry.losses}
+                    <span className="text-gray-500"> (expected {Math.round(entry.expectedWins)} wins)</span>
                   </li>
                 ))}
               </ul>

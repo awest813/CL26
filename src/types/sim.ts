@@ -399,6 +399,8 @@ export interface ProgramCoach {
   background: 'original' | 'coordinator' | 'head-coach' | 'your-staff' | 'retread';
   /** The program he left for this one, when he was a head coach or on your staff. */
   fromTeamId?: string;
+  /** He coached on your staff: part of your coaching tree wherever he goes next. */
+  fromYourStaff?: boolean;
 }
 
 export type ProgramCoaches = Record<string, ProgramCoach>;

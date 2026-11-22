@@ -21,7 +21,8 @@ import StaffPanel from '../components/StaffPanel';
 import { SITUATION_DETAILS, SITUATION_LABELS, SITUATION_STAKES } from '../sim/programExpectations';
 import { formatPrestige, prestigeCushion, prestigeStarText, prestigeToNextStar } from '../sim/prestige';
 import OffseasonMarket from './OffseasonMarket';
-import { selectTeamRecords } from '../features/season/seasonSlice';
+import { selectProgramCoaches, selectTeamRecords } from '../features/season/seasonSlice';
+import { coachingTree } from '../sim/coachingCarousel';
 import {
   advanceFatigue,
   buildCoachGamePlan,
@@ -177,6 +178,8 @@ function CoachCareerPage() {
   const coach = useAppSelector((state) => state.coach);
   const season = useAppSelector((state) => state.season);
   const recordsByTeamId = useAppSelector(selectTeamRecords);
+  const programCoaches = useAppSelector(selectProgramCoaches);
+  const tree = useMemo(() => coachingTree(programCoaches), [programCoaches]);
   const gameResults = useAppSelector((state) => state.season.gameResults);
   const effectivePrestige = useAppSelector(selectUserEffectivePrestige);
 
@@ -501,6 +504,25 @@ function CoachCareerPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {tree.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="text-xs text-gray-400 uppercase font-semibold mb-2">Coaching tree</div>
+            <p className="text-xs text-gray-500 mt-0 mb-2">Assistants from your staff who run programs of their own.</p>
+            <ul className="m-0 pl-4 text-sm space-y-1">
+              {tree.map(({ teamId, coach: headCoach }) => (
+                <li key={teamId}>
+                  <strong>{headCoach.name}</strong>, <Link to={`/team/${teamId}`}>{teams.find((team) => team.id === teamId)?.schoolName ?? teamId}</Link>{' '}
+                  <CoachStars rating={headCoach.rating} />
+                  <span className="text-xs text-gray-500">
+                    {headCoach.wins + headCoach.losses > 0 ? ` ${headCoach.wins}–${headCoach.losses} there` : ' first season ahead'}
+                    {headCoach.titles > 0 ? ` · ${headCoach.titles} title${headCoach.titles === 1 ? '' : 's'}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
