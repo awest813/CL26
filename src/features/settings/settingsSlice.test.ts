@@ -26,3 +26,20 @@ describe('settings', () => {
     assert.doesNotMatch(confirmPlayCopy('round', 'Sim the first round'), /slate/);
   });
 });
+
+describe('game reveal and density', () => {
+  test('default to instant and comfortable, and remember a choice', async () => {
+    const { settingsReducer, setGameReveal, setDensity } = await import('./settingsSlice.ts');
+    const initial = settingsReducer(undefined, { type: 'init' });
+    assert.equal(initial.gameReveal, 'instant');
+    assert.equal(initial.density, 'comfortable');
+    const changed = settingsReducer(settingsReducer(initial, setGameReveal('quick')), setDensity('compact'));
+    assert.equal(changed.gameReveal, 'quick');
+    assert.equal(changed.density, 'compact');
+  });
+
+  test('a quick reveal is faster per goal than a full one', async () => {
+    const { REVEAL_MS_PER_GOAL } = await import('./settingsSlice.ts');
+    assert.ok(REVEAL_MS_PER_GOAL.quick < REVEAL_MS_PER_GOAL.full);
+  });
+});

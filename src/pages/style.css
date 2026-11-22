@@ -3927,3 +3927,32 @@ button.seasonScoreButton:hover:not(:disabled) {
 .hubJump:hover { border-color: var(--accent); color: var(--accent-strong); }
 
 [id] { scroll-margin-top: 7.5rem; }
+
+/* Compact density (Settings → Display): more rows on screen, same type scale for body text.
+   Tables lose the most padding since they are where a coach scans the most. */
+:root[data-density='compact'] th,
+:root[data-density='compact'] td {
+  padding: 0.28rem 0.5rem;
+}
+
+:root[data-density='compact'] table {
+  font-size: 0.86rem;
+}
+
+:root[data-density='compact'] .card {
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.65rem;
+}
+
+:root[data-density='compact'] .pageStack {
+  gap: 0.65rem;
+}
+
+/* A game being revealed goal by goal. */
+.resultKicker-live {
+  color: var(--accent-strong);
+}
+
+.revealSkip {
+  margin-left: auto;
+}

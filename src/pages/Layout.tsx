@@ -5,7 +5,7 @@ import Footer from './Layout/Footer';
 import Header from './Layout/Header';
 import LeftNavBar from './Layout/LeftNavBar';
 import { useSeasonSanityCheck } from '../hooks/useSeasonSanityCheck';
-import { applyTheme } from '../features/settings/settingsSlice';
+import { applyDensity, applyTheme } from '../features/settings/settingsSlice';
 import { useAppSelector } from '../store/hooks';
 import './style.css';
 
@@ -18,10 +18,15 @@ function Layout() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   const theme = useAppSelector((state) => state.settings.theme);
+  const density = useAppSelector((state) => state.settings.density);
 
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    applyDensity(density);
+  }, [density]);
 
   const closeMenu = useCallback((returnFocus: boolean) => {
     setIsMenuOpen(false);

@@ -23,11 +23,13 @@
     />
     <title>College Lacrosse Head Coach Sim</title>
     <script>
-      // Apply a saved light or dark choice before first paint, so the page never flashes the other theme.
+      // Apply a saved theme and density before first paint, so the page never flashes the other look.
       try {
         var saved = JSON.parse(localStorage.getItem('persist:root') || '{}');
         var theme = saved.settings ? JSON.parse(saved.settings).theme : null;
         if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+        var density = saved.settings ? JSON.parse(saved.settings).density : null;
+        if (density === 'compact') document.documentElement.dataset.density = 'compact';
       } catch (error) {
         // No saved settings yet, or storage is blocked: the system setting applies.
       }

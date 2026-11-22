@@ -46,7 +46,7 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 - [x] News feed and weekly storyline flavor: the Weekly Hub's league wire (upsets of ranked teams, ranked showdowns, shootouts, routs, the week's best line, poll movers, games to watch)
 - [x] Rivalry game tagging and trophy events (rivalry week, 64 trophies, holders tracked across seasons)
 - [x] Accessibility pass (keyboard navigation, semantic HTML, contrast audit): axe-core reports no violations on any page at desktop and phone widths in light and dark themes; every tab stop shows a focus ring, with a skip link first
-- [ ] Sim speed and display density (theme is done: System, Light, or Dark on the settings page, applied before first paint; confirmations and the matchup estimate are there too)
+- [x] Sim speed and display density: game reveal (instant, or your game goal by goal at quick or full speed, with skip; instant under reduced motion) and comfortable or compact density, alongside the theme, confirmations, and the matchup estimate on the settings page
 
 ---
 
@@ -193,7 +193,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Accessibility pass (keyboard nav, ARIA, contrast)
 - [x] Mobile / tablet responsive tables
 - [x] Settings page for play confirmations and the matchup estimate
-- [ ] Sim speed and display density (theme toggle done)
+- [x] Sim speed and display density (theme toggle done)
 - [x] Performance audit for 128-team workflows: page renders stay under 50 ms of main-thread work (no virtualization needed); a schedule builds 6.6x faster (Begin season 840 ms → ~240 ms); sim buttons paint "Working…" before the work runs; the save holds at ~2.2M chars across seasons
 
 ---

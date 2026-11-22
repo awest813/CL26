@@ -43,7 +43,7 @@ import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import { estimateWinChance } from '../sim/winEstimate';
 import { isNeutralSiteRound } from '../sim/playoffs';
 import { CONFERENCE_SEMIFINAL_KEY, CONFERENCE_TOURNAMENT_SIZE, conferenceSemifinalId, conferenceTournamentSeeds, tournamentRunFor } from '../sim/conferenceTournaments';
-import { confirmPlayCopy } from '../features/settings/settingsSlice';
+import { confirmPlayCopy, REVEAL_MS_PER_GOAL } from '../features/settings/settingsSlice';
 import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/gameLoop';
 import { buildPositionNeedByPosition } from '../sim/recruiting';
 import { careerOffseasonCapabilities } from '../sim/seasonPhase';
@@ -55,9 +55,10 @@ import { prestigeStarText } from '../sim/prestige';
 import CoachStars from '../components/CoachStars';
 import { buildGameRecap, gameResultToSummary } from '../sim/gameRecap';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { GameResult, Recruit, Tactics, TeamGameStats } from '../types/sim';
+import { GameResult, Recruit, ScoringPlay, Tactics, TeamGameStats } from '../types/sim';
 import { tacticShortLabel, tacticValue } from '../lib/tacticLabels';
 import PageHeader from '../components/PageHeader';
+import { prefersReducedMotion, useGameReveal } from '../hooks/useGameReveal';
 import { seasonPhaseLabel } from '../lib/seasonLabels';
 
 /** The two calls that shape a game most, as the desk's game-plan row reads them. */
@@ -118,6 +119,7 @@ function Scoreboard({
   oppStats,
   keyEdge,
   children,
+  live,
 }: {
   heading: string;
   won: boolean;
@@ -133,12 +135,25 @@ function Scoreboard({
   keyEdge?: string;
   /** The game log under the score. */
   children?: ReactNode;
+  /** Set while the game is revealed goal by goal: the result stays hidden until the final horn. */
+  live?: { onSkip: () => void };
 }) {
   return (
-    <section id="week-result" className={`card matchupBoard resultBoard ${won ? 'resultBoard-win' : 'resultBoard-loss'}`} aria-label={won ? 'Win' : 'Loss'}>
+    <section
+      id="week-result"
+      className={`card matchupBoard resultBoard ${live ? '' : won ? 'resultBoard-win' : 'resultBoard-loss'}`}
+      aria-label={live ? 'Game in progress' : won ? 'Win' : 'Loss'}
+    >
       <div className="matchupBoardTop">
         <h3 className="m-0 text-base font-bold">{heading}</h3>
-        <p className={`matchupKicker ${won ? 'resultKicker-win' : 'resultKicker-loss'}`}>{won ? 'Win' : 'Loss'}</p>
+        {live ? (
+          <>
+            <p className="matchupKicker resultKicker-live">Live</p>
+            <button type="button" className="btn revealSkip" onClick={live.onSkip}>Skip to final</button>
+          </>
+        ) : (
+          <p className={`matchupKicker ${won ? 'resultKicker-win' : 'resultKicker-loss'}`}>{won ? 'Win' : 'Loss'}</p>
+        )}
       </div>
       <div className="matchupSides">
         <div className="matchupSide">
@@ -151,8 +166,8 @@ function Scoreboard({
           </div>
         </div>
         <div className="matchupProb">
-          <span className={`matchupProbValue ${won ? 'matchup-strong' : 'matchup-underdog'}`}>{userScore}–{oppScore}</span>
-          <span className="matchupProbLabel">Final</span>
+          <span className={`matchupProbValue ${live ? '' : won ? 'matchup-strong' : 'matchup-underdog'}`} aria-live={live ? 'polite' : undefined}>{userScore}–{oppScore}</span>
+          <span className="matchupProbLabel">{live ? 'Live' : 'Final'}</span>
         </div>
         <div className="matchupSide matchupSide-away">
           <div className="matchupIdentity">
@@ -168,7 +183,7 @@ function Scoreboard({
           </div>
         </div>
       </div>
-      {userStats && oppStats && (
+      {!live && userStats && oppStats && (
         <div className="resultStats" aria-label="Box score, yours first">
           <div><span>Shots</span><strong>{userStats.shots}–{oppStats.shots}</strong></div>
           <div><span>Saves</span><strong>{userStats.saves}–{oppStats.saves}</strong></div>
@@ -178,15 +193,22 @@ function Scoreboard({
           <div><span>Man-up</span><strong>{userStats.extraManGoals ?? 0}/{userStats.extraManOpportunities ?? 0}</strong></div>
         </div>
       )}
-      {ledBy && (
+      {!live && ledBy && (
         <p className="resultLine">
           Led by <strong>{ledBy}</strong>
         </p>
       )}
-      {keyEdge && <p className="resultLine text-sm text-gray-500">{keyEdge}</p>}
+      {!live && keyEdge && <p className="resultLine text-sm text-gray-500">{keyEdge}</p>}
       {children}
     </section>
   );
+}
+
+/** The score after the first `shown` goals of a reveal, yours first. Side A is the engine's first side. */
+function revealedScore(plays: ScoringPlay[], shown: number, userIsA: boolean): [number, number] {
+  const last = shown > 0 ? plays[Math.min(shown, plays.length) - 1] : null;
+  if (!last) return [0, 0];
+  return userIsA ? [last.scoreA, last.scoreB] : [last.scoreB, last.scoreA];
 }
 
 function regularLedBy(result: GameResult, selectedTeamId: string): string {
@@ -264,6 +286,17 @@ function WeeklyHubPage() {
   );
 
   const playoffSpot = userPlayoffSpot(season.playoffs ?? null, selectedTeamId || null);
+  // Game reveal: the game just played can be shown goal by goal (Settings → Play).
+  const gameReveal = useAppSelector((state) => state.settings.gameReveal ?? 'instant');
+  const [revealKey, setRevealKey] = useState<string | null>(null);
+  const revealMs = gameReveal === 'instant' ? 0 : REVEAL_MS_PER_GOAL[gameReveal];
+  const canReveal = gameReveal !== 'instant' && !prefersReducedMotion();
+  const weekPlays = userLastResult?.scoringPlays ?? [];
+  const weekRevealKey = userLastResult ? `w${userLastResult.weekIndex ?? 0}` : '';
+  const weekReveal = useGameReveal(weekPlays.length, canReveal && revealKey === weekRevealKey, revealMs, weekRevealKey);
+  const roundPlays = playoffSpot.lastGame?.result?.scoringPlays ?? [];
+  const roundRevealKey = playoffSpot.lastGame ? `p${playoffSpot.lastGame.round}` : '';
+  const roundReveal = useGameReveal(roundPlays.length, canReveal && revealKey === roundRevealKey, revealMs, roundRevealKey);
   // A seeded program with games left still plays its install in the bracket.
   const inBracket = season.phase === 'PLAYOFF'
     && playoffSpot.seed != null
@@ -593,6 +626,7 @@ function WeeklyHubPage() {
       await nextPaint();
       if (loopStep.action === 'play-week') {
         pendingScroll.current = true;
+        setRevealKey(`w${season.currentWeekIndex}`);
         const outcome = await dispatch(runCareerWeeklyCycle()).unwrap();
         if (outcome === 'skipped') {
           pendingScroll.current = false;
@@ -604,6 +638,7 @@ function WeeklyHubPage() {
         await dispatch(startPlayoffs()).unwrap();
       } else if (loopStep.action === 'play-round') {
         pendingScroll.current = true;
+        setRevealKey(season.playoffs ? `p${season.playoffs.currentRound}` : null);
         await dispatch(simCareerPlayoffRound()).unwrap();
       } else if (loopStep.action === 'signing-day') {
         await dispatch(processSigningDay()).unwrap();
@@ -697,18 +732,23 @@ function WeeklyHubPage() {
 
       {playoffSpot.lastGame?.result && (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON') ? (
         <Scoreboard
-          heading={`${PLAYOFF_ROUND_LABELS[playoffSpot.lastGame.round]} final`}
+          heading={`${PLAYOFF_ROUND_LABELS[playoffSpot.lastGame.round]} ${roundReveal.revealing ? 'in progress' : 'final'}`}
           won={playoffSpot.lastGame.winnerTeamId === selectedTeamId}
           user={selectedTeam}
           opponent={teams.find((team) => team.id === (playoffSpot.lastGame?.homeTeamId === selectedTeamId ? playoffSpot.lastGame.awayTeamId : playoffSpot.lastGame?.homeTeamId))}
-          userScore={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.homeScore : playoffSpot.lastGame.result.awayScore}
-          oppScore={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.awayScore : playoffSpot.lastGame.result.homeScore}
+          userScore={roundReveal.revealing
+            ? revealedScore(roundPlays, roundReveal.shown, playoffSpot.lastGame.homeTeamId === selectedTeamId)[0]
+            : playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.homeScore : playoffSpot.lastGame.result.awayScore}
+          oppScore={roundReveal.revealing
+            ? revealedScore(roundPlays, roundReveal.shown, playoffSpot.lastGame.homeTeamId === selectedTeamId)[1]
+            : playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.awayScore : playoffSpot.lastGame.result.homeScore}
+          live={roundReveal.revealing ? { onSkip: roundReveal.skip } : undefined}
           userStats={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.teamStatsHome : playoffSpot.lastGame.result.teamStatsAway}
           oppStats={playoffSpot.lastGame.homeTeamId === selectedTeamId ? playoffSpot.lastGame.result.teamStatsAway : playoffSpot.lastGame.result.teamStatsHome}
         >
           <GameLog
-            plays={playoffSpot.lastGame.result.scoringPlays ?? []}
-            highlights={playoffSpot.lastGame.result.highlights ?? []}
+            plays={roundPlays.slice(0, roundReveal.shown)}
+            highlights={roundReveal.revealing ? [] : playoffSpot.lastGame.result.highlights ?? []}
             teamA={{ id: playoffSpot.lastGame.homeTeamId, name: teams.find((team) => team.id === playoffSpot.lastGame?.homeTeamId)?.schoolName ?? 'Home' }}
             teamB={{ id: playoffSpot.lastGame.awayTeamId, name: teams.find((team) => team.id === playoffSpot.lastGame?.awayTeamId)?.schoolName ?? 'Away' }}
             userTeamId={selectedTeamId}
@@ -725,20 +765,25 @@ function WeeklyHubPage() {
         />
       ) : userLastResult ? (
         <Scoreboard
-          heading={`Week ${(userLastResult.weekIndex ?? 0) + 1} final`}
+          heading={`Week ${(userLastResult.weekIndex ?? 0) + 1} ${weekReveal.revealing ? 'in progress' : 'final'}`}
           won={(userLastResult.teamAId === selectedTeamId ? userLastResult.scoreA : userLastResult.scoreB) > (userLastResult.teamAId === selectedTeamId ? userLastResult.scoreB : userLastResult.scoreA)}
           user={selectedTeam}
           opponent={teams.find((team) => team.id === (userLastResult.teamAId === selectedTeamId ? userLastResult.teamBId : userLastResult.teamAId))}
-          userScore={userLastResult.teamAId === selectedTeamId ? userLastResult.scoreA : userLastResult.scoreB}
-          oppScore={userLastResult.teamAId === selectedTeamId ? userLastResult.scoreB : userLastResult.scoreA}
+          userScore={weekReveal.revealing
+            ? revealedScore(weekPlays, weekReveal.shown, userLastResult.teamAId === selectedTeamId)[0]
+            : userLastResult.teamAId === selectedTeamId ? userLastResult.scoreA : userLastResult.scoreB}
+          oppScore={weekReveal.revealing
+            ? revealedScore(weekPlays, weekReveal.shown, userLastResult.teamAId === selectedTeamId)[1]
+            : userLastResult.teamAId === selectedTeamId ? userLastResult.scoreB : userLastResult.scoreA}
+          live={weekReveal.revealing ? { onSkip: weekReveal.skip } : undefined}
           ledBy={regularLedBy(userLastResult, selectedTeamId)}
           userStats={userLastResult.teamAId === selectedTeamId ? userLastResult.statsA : userLastResult.statsB}
           oppStats={userLastResult.teamAId === selectedTeamId ? userLastResult.statsB : userLastResult.statsA}
           keyEdge={lastResultEdge ?? undefined}
         >
           <GameLog
-            plays={userLastResult.scoringPlays ?? []}
-            highlights={userLastResult.highlights}
+            plays={weekPlays.slice(0, weekReveal.shown)}
+            highlights={weekReveal.revealing ? [] : userLastResult.highlights}
             teamA={{ id: userLastResult.teamAId, name: teams.find((team) => team.id === userLastResult.teamAId)?.schoolName ?? 'Home' }}
             teamB={{ id: userLastResult.teamBId, name: teams.find((team) => team.id === userLastResult.teamBId)?.schoolName ?? 'Away' }}
             userTeamId={selectedTeamId}
