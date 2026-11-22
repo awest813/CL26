@@ -16,6 +16,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import PageHeader from '../components/PageHeader';
 import { persistor } from '../store/persistor';
+import { saveStorage } from '../store/store';
 import { backupFileName, buildBackup, parseBackup, SAVE_STORAGE_KEY } from '../store/saveBackup';
 import type { RootState } from '../store/store';
 
@@ -107,7 +108,7 @@ function SettingsPage() {
     // Stop the running game from writing over the restored career before the reload.
     persistor.pause();
     try {
-      window.localStorage.setItem(SAVE_STORAGE_KEY, parsed.backup.persistRoot);
+      await saveStorage.setItem(SAVE_STORAGE_KEY, parsed.backup.persistRoot);
     } catch {
       persistor.persist();
       setBackupNote({ text: 'This browser would not store the backup (storage is full or blocked). Free up space or allow site data, then try again.', error: true });

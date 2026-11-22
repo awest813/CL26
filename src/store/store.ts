@@ -1,27 +1,7 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
-import storageEngine from 'redux-persist/es/storage';
 import { checkStorageAvailable, reportSaveFailure, reportSaveOk } from './saveStatus';
 import { SAVE_VERSION } from './saveBackup';
-
-type PersistStorage = {
-  getItem: (key: string) => Promise<string | null>;
-  setItem: (key: string, value: string) => Promise<unknown>;
-  removeItem: (key: string) => Promise<unknown>;
-};
-
-/** Vite can wrap the CJS storage engine so getItem/setItem are not own functions. */
-function resolvePersistStorage(candidate: unknown): PersistStorage {
-  if (candidate && typeof (candidate as PersistStorage).getItem === 'function' && typeof (candidate as PersistStorage).setItem === 'function') {
-    return candidate as PersistStorage;
-  }
-  const nested = candidate && typeof candidate === 'object' && 'default' in candidate
-    ? (candidate as { default: unknown }).default
-    : undefined;
-  if (nested && typeof (nested as PersistStorage).getItem === 'function' && typeof (nested as PersistStorage).setItem === 'function') {
-    return nested as PersistStorage;
-  }
-  throw new Error('Persist storage is unavailable.');
-}
+import { createSaveStorage, indexedDbBackend, localStorageBackend, type PersistStorage } from './saveStorage';
 
 /** Report every write's outcome, so a failing save is shown to the player instead of only logged. */
 function withSaveReporting(base: PersistStorage): PersistStorage {
@@ -41,9 +21,12 @@ function withSaveReporting(base: PersistStorage): PersistStorage {
   };
 }
 
-const storage = withSaveReporting(resolvePersistStorage(storageEngine));
-// redux-persist falls back to storage that keeps nothing when the browser blocks localStorage.
-checkStorageAvailable();
+const idb = indexedDbBackend();
+/** The career's storage: IndexedDB, or localStorage where IndexedDB is unavailable. */
+export const saveStorage = withSaveReporting(createSaveStorage(idb, localStorageBackend()));
+const storage = saveStorage;
+// Without IndexedDB the save depends on localStorage: say so up front if the browser blocks it.
+if (!idb) checkStorageAvailable();
 import { createMigrate, persistReducer } from 'redux-persist';
 import {
   FLUSH,

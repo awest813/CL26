@@ -42,6 +42,6 @@ This is a client-side-only React SPA — no backend, database, or Docker service
 ### Non-obvious notes
 
 - **Bun is required for tests.** The `test:regression` script uses `bun test`. Bun is pre-installed at `~/.bun/bin/bun`; ensure `~/.bun/bin` is on `PATH`.
-- **No `.env` or secrets needed.** All game data comes from bundled JSON files (`src/data/teams128.json`, `src/data/names.json`) and browser `localStorage` via `redux-persist`.
+- **No `.env` or secrets needed.** All game data comes from bundled JSON files (`src/data/teams128.json`, `src/data/names.json`) and the browser's IndexedDB (localStorage as a fallback) via `redux-persist` (`src/store/saveStorage.ts`).
 - **ESLint config is CJS.** The config lives in `.eslintrc.cjs` (CommonJS) despite the project being `"type": "module"`.
 - **Test files are excluded from `tsc`.** `tsconfig.json` excludes `src/**/*.test.ts`, so `npm run build` won't type-check test files.

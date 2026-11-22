@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [
     react(),
     // Installable, and playable offline: the whole app (every lazily loaded page) is
-    // precached, and the career already lives in localStorage. A new deploy waits for the
+    // precached, and the career already lives in IndexedDB. A new deploy waits for the
     // player to reload (registerType 'prompt'), so code never changes under a running game.
     VitePWA({
       registerType: 'prompt',
