@@ -2,6 +2,7 @@ import type { Player, Position, ProgramLedger, Team } from '../types/sim';
 import { drawName } from './names';
 import { programRoster } from './programLedger';
 import { makeRng, pickOne, randInt, seedToNumber } from './rng';
+import { positionOverall } from './positionRatings.ts';
 
 export const PORTAL_CLAIM_CAP = 3;
 export const PRO_DRAFT_ROUNDS = 4;
@@ -194,6 +195,21 @@ export function buildCoachPool(teams: Team[], seed: number, year: number, userTe
   });
 }
 
+/** How a position's traits sit around his level, the same shape new players are generated with. */
+const PORTAL_TRAIT_SHAPE: Record<Position, Partial<Record<'shooting' | 'passing' | 'speed' | 'defense' | 'faceoff' | 'saving', number>>> = {
+  A: { shooting: 8, defense: -6 },
+  M: { shooting: 4, passing: 6 },
+  D: { defense: 10, shooting: -8 },
+  LSM: { defense: 8, speed: 5, shooting: -6 },
+  FO: { faceoff: 8, passing: -4 },
+  G: { saving: 8, defense: 6, speed: -3, shooting: -10 },
+};
+
+/**
+ * A transfer or draft entrant as a player. His traits take his position's shape (a defenseman
+ * defends better than he shoots), shifted so his overall at the position is the rating the
+ * board listed.
+ */
 function playerFromRatings(
   id: string,
   name: string,
@@ -203,6 +219,30 @@ function playerFromRatings(
   overall: number,
 ): Player {
   const rating = clampRating(overall);
+  const shape = PORTAL_TRAIT_SHAPE[position];
+  const build = (shift: number) => {
+    const at = (trait: keyof typeof shape) => clampRating(rating + shift + (shape[trait] ?? 0));
+    return {
+      shooting: at('shooting'),
+      passing: at('passing'),
+      speed: at('speed'),
+      defense: at('defense'),
+      IQ: clampRating(rating + shift),
+      stamina: clampRating(rating + shift),
+      discipline: clampRating(rating + shift),
+      faceoff: position === 'FO' ? at('faceoff') : clampRating(rating - 18),
+      saving: position === 'G' ? at('saving') : 40,
+    };
+  };
+  // Find the shift that lands his position overall on the listed rating (clamping can stop it short).
+  let shift = 0;
+  let traits = build(shift);
+  for (let step = 0; step < 6; step += 1) {
+    const gap = rating - positionOverall({ position, ...traits });
+    if (gap === 0) break;
+    shift += gap;
+    traits = build(shift);
+  }
   return {
     id,
     name,
@@ -210,16 +250,8 @@ function playerFromRatings(
     year,
     age,
     skill: rating,
-    shooting: rating,
-    passing: rating,
-    speed: rating,
-    defense: rating,
-    IQ: rating,
-    stamina: rating,
-    discipline: rating,
-    overall: rating,
-    faceoff: position === 'FO' ? rating : clampRating(rating - 18),
-    saving: position === 'G' ? rating : 40,
+    ...traits,
+    overall: positionOverall({ position, ...traits }),
     potential: clampRating(rating + (4 - year) * 2),
   };
 }

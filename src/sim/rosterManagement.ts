@@ -5,12 +5,15 @@ import { faceoffRating, growSpecialty, playerPotential, rollPotential, rollSpeci
 import { ROSTER_POSITION_ORDER, ROSTER_POSITION_TARGETS, ROSTER_SIZE } from './generateRoster';
 import { advanceClassYear } from './redshirts';
 import { perkGrowthBonus, type CoachPerks } from './coachPerks.ts';
+import { positionOverall } from './positionRatings.ts';
 
 const clamp = (value: number) => Math.max(40, Math.min(99, value));
 const FACILITIES_BONUS_DIVISOR = 22;
 const OPERATIONS_BONUS_DIVISOR = 2;
 const BOOSTERS_GROWTH_THRESHOLD = 75;
 const TRAIT_BUMP_PROBABILITY = 0.62;
+/** A specialty stops growing from weekly reps here, the same ceiling season development uses. */
+const SPECIALTY_WEEKLY_CAP = 92;
 /** Attributes above this grow slowly; above HARD_CAP they stop. */
 const DEVELOPMENT_SOFT_CAP = 86;
 const DEVELOPMENT_HARD_CAP = 92;
@@ -75,7 +78,8 @@ export function convertRecruitToPlayer(
   const stamina = clamp(Math.round(baseline + randInt(rng, -6, 7)));
   const discipline = clamp(Math.round(baseline + randInt(rng, -5, 8)));
 
-  const overall = Math.round((shooting + passing + speed + defense + IQ + stamina + discipline) / 7);
+  const specialties = rollSpecialties(position, baseline, makeRng(seedToNumber(`${team.id}:${signedRecruit.recruitId}:specialty`)));
+  const overall = positionOverall({ position, shooting, passing, speed, defense, IQ, stamina, discipline, ...specialties });
   const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
   // The recruit keeps the name he signed under. The name is still drawn so the rest of the roll is unchanged.
   const drawnName = drawName(rng);
@@ -95,7 +99,7 @@ export function convertRecruitToPlayer(
     stamina,
     discipline,
     overall,
-    ...rollSpecialties(position, baseline, makeRng(seedToNumber(`${team.id}:${signedRecruit.recruitId}:specialty`))),
+    ...specialties,
     // The scouting ceiling, read as the overall he can reach by his senior year.
     potential: clampPotential(Math.max(overall + 2, 40 + ((signedRecruit.potential ?? 52 + signedRecruit.stars * 9) - 40) * 0.85)),
   };
@@ -138,12 +142,11 @@ export function developPlayers(
     const IQ = bump(player.IQ);
     const stamina = bump(player.stamina);
     const discipline = bump(player.discipline);
-    const overall = Math.round((shooting + passing + speed + defense + IQ + stamina + discipline) / 7);
-    const skill = clamp(Math.round(overall + randInt(rng, -2, 2)));
-
     // Only a specialist works on his specialty; it grows like the other traits.
     const faceoff = player.position === 'FO' ? growSpecialty(faceoffRating(player), growth, rng) : faceoffRating(player);
     const saving = player.position === 'G' ? growSpecialty(savingRating(player), growth, rng) : savingRating(player);
+    const overall = positionOverall({ position: player.position, shooting, passing, speed, defense, IQ, stamina, discipline, faceoff, saving });
+    const skill = clamp(Math.round(overall + randInt(rng, -2, 2)));
 
     return { ...player, shooting, passing, speed, defense, IQ, stamina, discipline, overall, skill, faceoff, saving };
   });
@@ -167,18 +170,13 @@ function applyTargetedTraitGrowth(player: Player, rng: () => number, targets: Pl
     }
   }
 
-  const overall = Math.round(
-    (updates.shooting +
-      updates.passing +
-      updates.speed +
-      updates.defense +
-      updates.IQ +
-      updates.stamina +
-      updates.discipline) /
-      7,
-  );
+  // A specialist's reps at the dot or in the cage count every week, whatever the install.
+  const specialty = { faceoff: faceoffRating(player), saving: savingRating(player) };
+  if (player.position === 'FO' && specialty.faceoff < SPECIALTY_WEEKLY_CAP && rng() < TRAIT_BUMP_PROBABILITY) specialty.faceoff += 1;
+  if (player.position === 'G' && specialty.saving < SPECIALTY_WEEKLY_CAP && rng() < TRAIT_BUMP_PROBABILITY) specialty.saving += 1;
+  const overall = positionOverall({ position: player.position, ...updates, ...specialty });
   const skill = clamp(Math.round(overall + randInt(rng, -2, 2)));
-  return { ...player, ...updates, overall, skill };
+  return { ...player, ...updates, ...specialty, overall, skill };
 }
 
 /** The traits a week of each install grows on the roster. */
@@ -335,6 +333,9 @@ export function applyRosterTurnover(
   // Walk-ons never share a name with someone already on the roster.
   const rosterNames = new Set(combined.map((player) => player.name));
   let walkOnSerial = 0;
+  // Known gap: a walk-on is listed `overallPenalty` below the traits he plays with, and career
+  // balance currently leans on that hidden edge. Making the two agree (either way) needs the
+  // recruiting pipeline rebalanced; see docs/SIM_AUDIT.md.
   const addWalkOn = (pos: Position, tag: string, overallPenalty: number) => {
     walkOnSerial += 1;
     const variance = randInt(rng, -12, 8);

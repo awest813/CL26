@@ -40,7 +40,8 @@ import { careerSetupFromPrestige } from '../features/coach/coachSlice';
 import { withLeaguePrestige } from '../sim/programLedger';
 import { leaguePrestiges } from '../sim/programExpectations';
 import leagueData from '../data/teams128.json';
-import type { ProgramLedger, Team } from '../types/sim';
+import type { Player, ProgramLedger, Team } from '../types/sim';
+import { rerateAtPosition } from '../sim/positionRatings';
 
 const rootReducer = combineReducers({
   league: leagueReducer,
@@ -53,7 +54,7 @@ const rootReducer = combineReducers({
 const persistConfig = {
   key: 'root',
   storage,
-  version: 3,
+  version: 4,
   migrate: createMigrate(
     {
       1: (state) => {
@@ -104,6 +105,27 @@ const persistConfig = {
         const team = league.find((row) => row.id === coach.selectedTeamId);
         if (!team) return state;
         return { ...persisted, coach: { ...coach, ...careerSetupFromPrestige(team.prestige, leaguePrestiges(league)) } };
+      },
+      // Overall is now weighted by position (a goalie's saves, a defenseman's defense). Re-rate the
+      // coach's players, moving each one's potential by the same amount so his room to grow holds.
+      4: (state) => {
+        if (!state || typeof state !== 'object') return state;
+        const persisted = state as typeof state & {
+          coach?: { managedRoster?: Player[] | null; seasonStartRoster?: { roster: Player[] } | null };
+        };
+        const coach = persisted.coach;
+        if (!coach) return state;
+        const rerate = rerateAtPosition;
+        return {
+          ...persisted,
+          coach: {
+            ...coach,
+            managedRoster: coach.managedRoster ? coach.managedRoster.map(rerate) : coach.managedRoster,
+            seasonStartRoster: coach.seasonStartRoster
+              ? { ...coach.seasonStartRoster, roster: coach.seasonStartRoster.roster.map(rerate) }
+              : coach.seasonStartRoster,
+          },
+        };
       },
     },
     { debug: false },

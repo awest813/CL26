@@ -2,6 +2,7 @@ import { Player, Position, Team } from '../types/sim';
 import { makeRng, randInt, seedToNumber } from './rng';
 import { drawName } from './names';
 import { rollPotential, rollSpecialties } from './playerSpecialty';
+import { positionOverall } from './positionRatings';
 
 /** Positions in the order a generated roster fills them. */
 export const ROSTER_POSITION_ORDER: Position[] = [
@@ -51,9 +52,11 @@ export function generateRoster(team: Team, seed: string, talentOffset = 0): Play
     const stamina = clamp(Math.round(baseline + randInt(rng, -8, 9)));
     const discipline = clamp(Math.round(baseline + randInt(rng, -7, 10) + (year - 2)));
 
-    const overall = Math.round((shooting + passing + speed + defense + IQ + stamina + discipline) / 7);
-    const skill = clamp(Math.round(overall + (year - 2) + randInt(rng, -3, 3)));
     const specialtyRng = makeRng(seedToNumber(`${seed}:${team.id}:${index}:specialty`));
+    // Own stream, so adding the specialties and potential left every existing rating where it was.
+    const specialties = rollSpecialties(position, baseline, specialtyRng);
+    const overall = positionOverall({ position, shooting, passing, speed, defense, IQ, stamina, discipline, ...specialties });
+    const skill = clamp(Math.round(overall + (year - 2) + randInt(rng, -3, 3)));
 
     return {
       id: `${team.id}-P${index + 1}`,
@@ -70,8 +73,7 @@ export function generateRoster(team: Team, seed: string, talentOffset = 0): Play
       stamina,
       discipline,
       overall,
-      // Own stream, so adding the specialties and potential left every existing rating where it was.
-      ...rollSpecialties(position, baseline, specialtyRng),
+      ...specialties,
       potential: rollPotential(overall, year, specialtyRng),
     };
   });

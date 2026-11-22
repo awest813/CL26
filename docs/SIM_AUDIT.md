@@ -89,6 +89,18 @@ Played full seasons through the real store (6–30 seasons) and compared stat le
 
 Checked and left as designed: **playoff seeding is close to a coin flip among the top 12.** All 12 seeds average 82–84 base prestige, so the field is the twelve best programs, and the poll orders them by 12 games of results between near-equals. #1 seeds won 1 title in 30 seasons. The engine does reward strength: champions are usually in the field's top three by prestige, and favorites win 56% / 63% / 75% / 90% at prestige gaps of 1–4 / 5–9 / 10–19 / 20+. More chalk at the top would take a wider prestige spread among the elite programs in `teams128.json`.
 
+### Position audit (2026-11-22)
+
+- **Overall was the same flat average of seven traits at every position.** A goalie's overall ignored `saving` and a faceoff man's ignored `faceoff`; a defenseman's counted his shooting as much as his defense. Overall picks starters at A, M, D, and LSM for every staff, so in **35–39% of starting slots** it chose a different player than the engine's own position weights would, costing 1.6–1.9 rating points per slot at A, D, and LSM. It is also the OVR the coach reads, so a backup goalie could show a higher OVR than the starter the depth chart (rightly) picked.
+  - Now: `positionOverall` (`positionRatings.ts`) weighs traits by what the engine reads at each position, including `faceoff` and `saving`. Starter picks disagree with the engine in 12% of slots (stamina and discipline, which count at team level, make up the rest). A per-position calibration keeps a given overall at the same standing everywhere: generated position means are 74.1–74.4 (faceoff men and goalies sat 1–2 points low before).
+  - Used for generated players, recruits, season development, and weekly growth. Saves migrate (persist v4): the coach's roster is re-rated and each player's potential moves with his overall, so his room to grow holds.
+- **Transfers had a flat profile:** every trait equal to the listed rating, so a transfer defenseman shot as well as he defended. They now take their position's shape and are listed at their position overall.
+- **Specialists never improved in weekly practice:** weekly growth only touched the seven general traits. A faceoff man or goalie picked for growth now also gets work at his specialty.
+- Box score and the career harness hold (100-season user win %: 68.7 vs 70.8 before; first 20 seasons 52.9 vs 50.9).
+- Production by position was already D-I-like and is unchanged: attack 55% of goals, midfield 42%; close defense 53% of caused turnovers; faceoff men 35% of ground balls.
+
+Still open: **walk-ons are listed 5–8 points below the traits they play with** (`addWalkOn` rolls the overall separately). Career balance leans on that hidden edge: penalizing their traits to match drops the user's program to about 25% wins for 35 seasons, and listing them honestly lifts it about 7 pp (good walk-ons stop being benched and cut). Fixing it needs the user's recruiting pipeline rebalanced with it.
+
 ---
 
 ## Gap list
