@@ -191,9 +191,9 @@ function AlphaStagePage() {
       </section>
 
       <section className="card">
-        <h3>Still open</h3>
+        <h3>Known trade-offs</h3>
         <ol style={{ margin: '0.5rem 0 0 1rem' }}>
-          <li>Top-end balance: the best offense in a sim season runs about 1.5 goals a game above 2026&apos;s best D-I offense. It comes from how much more talent the biggest programs carry, so closing it means retuning roster strength by prestige, which recruiting balance leans on.</li>
+          <li>Top-end balance, left as is by choice: the best offense in a sim season runs about 1.5 goals a game above 2026&apos;s best D-I offense. Narrowing the talent gap between programs would close it, but it more than doubled titles in a long career, so the current difficulty was kept.</li>
         </ol>
         <p className="text-sm text-gray-500 mt-2 mb-0">
           Since this alpha was scoped, the accessibility pass, phone-friendly tables, the league news wire, rivalry trophies, and press conferences have shipped.
