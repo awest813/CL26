@@ -25,7 +25,7 @@ const SET_VS_PACKAGE: Record<OffenseSet, Record<DefensePackage, number>> = {
   // Top-side dodges hunt man matchups; a zone walls them off.
   invert: { man: 0.03, zone: -0.025, pressure: -0.005 },
   // Inside cuts beat a jumping pressure and soft man coverage; a packed zone smothers the crease.
-  crease: { man: 0.015, zone: -0.03, pressure: 0.025 },
+  crease: { man: 0.015, zone: -0.03, pressure: 0.045 },
 };
 
 /** Slide timing (rows) against offense set (columns), as a shot-quality edge for the offense. */
@@ -46,7 +46,7 @@ export function schemeShotQualityEdge(offense: Tactics, defense: Tactics): numbe
   let edge = SET_VS_PACKAGE[set][pkg] + slides[set];
   // Patience buys better looks; pace trades them for volume.
   if (offense.tempo === 'slow') edge += 0.006;
-  if (offense.tempo === 'fast') edge -= 0.006;
+  if (offense.tempo === 'fast') edge -= 0.003;
   return edge;
 }
 
@@ -56,7 +56,7 @@ export function schemeTurnoverEdge(offense: Tactics, defense: Tactics): number {
   if (offense.offenseSet === 'invert') edge += 0.012;
   if (offense.offenseSet === 'motion') edge += 0.006;
   if (offense.tempo === 'fast') edge += 0.006;
-  if (defense.defensePackage === 'pressure') edge += defense.slideAggression === 'early' ? 0.03 : 0.022;
+  if (defense.defensePackage === 'pressure') edge += defense.slideAggression === 'early' ? 0.022 : 0.014;
   if (defense.defensePackage === 'zone') edge -= 0.01;
   return edge;
 }

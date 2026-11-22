@@ -98,6 +98,13 @@ const CLEAR_BASE_CHANCE = 0.87;
 const CLEAR_MIN_CHANCE = 0.7;
 const CLEAR_MAX_CHANCE = 0.97;
 const BEATEN_RIDE_TRANSITION_CHANCE = 0.35;
+/**
+ * A fast-tempo offense pushes after a clean clear and catches the defense before it is set.
+ * A conservative ride drops its defenders back early and takes most of that away. This is
+ * what pace buys in exchange for rushed settled looks, more turnovers, and tired legs.
+ */
+const PUSH_TRANSITION_CHANCE = 0.25;
+const PUSH_VS_CONSERVATIVE_RIDE_SCALE = 0.4;
 const TRANSITION_QUALITY_BOOST = 0.07;
 
 // Faceoffs: one draw per goal and per period start.
@@ -368,6 +375,11 @@ function resolveGameplayModifiers(input: TeamSimInput): EffectiveGameplayModifie
     groundBallBonus: input.gameplan.groundBallBonus ?? 0,
     wearRelief: input.gameplan.wearRelief ?? 0,
   };
+}
+
+/** Chance a fast-tempo offense turns a clean clear into a transition look, given the other side's ride. */
+export function pushTransitionChance(ridingTactics: Tactics): number {
+  return PUSH_TRANSITION_CHANCE * (ridingTactics.rideClear === 'conservative' ? PUSH_VS_CONSERVATIVE_RIDE_SCALE : 1);
 }
 
 /** Last-resort winner if sudden death somehow never produces a goal. */
@@ -723,6 +735,8 @@ export function simulateGame(
       }
       offense.stats.clearsMade = (offense.stats.clearsMade ?? 0) + 1;
       if (defense.tactics.rideClear === 'aggressive' && rng() < BEATEN_RIDE_TRANSITION_CHANCE) transition = true;
+      // Only a fast offense rolls here, so games without one replay exactly as before.
+      if (!transition && offense.tactics.tempo === 'fast' && rng() < pushTransitionChance(defense.tactics)) transition = true;
     } else if (start === 'faceoff' && rng() < FACEOFF_FAST_BREAK_CHANCE) {
       transition = true;
     }

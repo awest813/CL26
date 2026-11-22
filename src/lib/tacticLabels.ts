@@ -26,14 +26,14 @@ export const TACTIC_FIELDS: TacticField[] = [
     options: [
       { value: 'slow', label: 'Slow', hint: 'fewer possessions, better looks, shot-clock risk', short: 'Slow tempo' },
       { value: 'normal', label: 'Balanced', short: 'Balanced tempo' },
-      { value: 'fast', label: 'Fast', hint: 'more possessions, rushed looks, more turnovers', short: 'Fast tempo' },
+      { value: 'fast', label: 'Fast', hint: 'pushes for transition looks; rushed sets, more turnovers, tired legs', short: 'Fast tempo' },
     ],
   },
   {
     key: 'rideClear',
     label: 'Ride / clear',
     options: [
-      { value: 'conservative', label: 'Conservative', hint: 'safer clears; they clear easily too', short: 'Safe clears' },
+      { value: 'conservative', label: 'Conservative', hint: 'safer clears, slows a fast break; they clear easily too', short: 'Safe clears' },
       { value: 'balanced', label: 'Balanced', short: 'Balanced ride' },
       { value: 'aggressive', label: 'Aggressive', hint: 'forces failed clears; a beaten ride gives up breaks', short: 'Hard ride' },
     ],
@@ -63,7 +63,7 @@ export const TACTIC_FIELDS: TacticField[] = [
     options: [
       { value: 'man', label: 'Man-to-man', hint: 'stops motion; dodgers and cutters hunt it', short: 'Man defense' },
       { value: 'zone', label: 'Zone', hint: 'stops dodgers and the crease; motion pulls it apart', short: 'Zone defense' },
-      { value: 'pressure', label: 'Pressure', hint: 'takeaways and loose balls; cutters beat it; more fouls', short: 'Pressure defense' },
+      { value: 'pressure', label: 'Pressure', hint: 'takeaways and loose balls; motion and cutters beat it; more fouls', short: 'Pressure defense' },
     ],
   },
 ];

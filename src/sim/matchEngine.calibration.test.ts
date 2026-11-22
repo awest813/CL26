@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import { fatigueWear, homeFieldScale, lateGameAdjustment, simulateGame } from './matchEngine.ts';
+import { fatigueWear, homeFieldScale, lateGameAdjustment, pushTransitionChance, simulateGame } from './matchEngine.ts';
 import { generateRoster } from './generateRoster.ts';
 import { programStarters } from './programLedger.ts';
 import { DEFAULT_TACTICS } from './tactics.ts';
@@ -269,6 +269,39 @@ describe('no scheme to always run', () => {
       assert.ok(worst <= 0.05, `${name} beats default by at least ${(worst * 100).toFixed(1)} pp against every opponent`);
     });
   }
+});
+
+describe('each strategy earns its keep', () => {
+  const rosterA = generateRoster(alpha, 'strategy-keep');
+  const rosterB = generateRoster(beta, 'strategy-keep');
+  const GAMES_PER_CALL = 1000;
+
+  function winRate(tactics: Tactics, opponent: (index: number) => Tactics): number {
+    let wins = 0;
+    for (let i = 0; i < GAMES_PER_CALL; i += 1) {
+      const result = simulateGame({ team: alpha, roster: rosterA }, { team: beta, roster: rosterB }, tactics, opponent(i), i * 17 + 9, { homeAdvantageForA: i % 2 === 0 });
+      if (result.scoreA > result.scoreB) wins += 1;
+    }
+    return wins / GAMES_PER_CALL;
+  }
+
+  test('a conservative ride takes away most of a fast offense\'s push', () => {
+    const conservative = pushTransitionChance({ ...DEFAULT_TACTICS, rideClear: 'conservative' });
+    const balanced = pushTransitionChance(DEFAULT_TACTICS);
+    assert.ok(conservative > 0 && conservative < balanced * 0.5);
+  });
+
+  test('pressure has real counters: motion and the crease beat it, invert walks into it', () => {
+    const pressure = { ...DEFAULT_TACTICS, defensePackage: 'pressure' as const };
+    const edgeOverMan = (offenseSet: Tactics['offenseSet']) => {
+      const opponent = () => ({ ...DEFAULT_TACTICS, offenseSet });
+      return winRate(pressure, opponent) - winRate(DEFAULT_TACTICS, opponent);
+    };
+    // The crease margin is the one an over-tuned takeaway bonus erases (it once sat at +0.4 pp for pressure).
+    assert.ok(edgeOverMan('motion') < -0.02, 'motion should beat pressure');
+    assert.ok(edgeOverMan('crease') < -0.02, 'the crease should beat pressure');
+    assert.ok(edgeOverMan('invert') > 0, 'pressure should punish an invert offense');
+  });
 });
 
 describe('fatigue and the late game', () => {

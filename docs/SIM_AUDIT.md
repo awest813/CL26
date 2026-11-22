@@ -60,6 +60,20 @@ Run `bun scripts/calibrate-engine.ts --schemes` for the full scheme search (abou
 
 ---
 
+### Strategy audit (2026-11-22)
+
+Measured each single call against the schemes the 128 CPU programs actually run (`programTactics`), not just against default, at 8,000–12,000 games a cell. The box score did not move: games without a fast-tempo side replay the same random draws as before.
+
+| Finding | Before | After |
+|---|---|---|
+| Fast tempo was a trap: every effect it had was a cost (rushed looks, turnovers, wear), and shorter possessions gave both sides the extra trips | −3.3 pp vs the CPU field; −2.8 pp for an underdog; +0.5 pp for a favorite | −0.5 pp vs the field; +0.7 pp for a favorite, −1.4 pp for an underdog. A fast offense now pushes after a clean clear (25% transition chance, 40% of that against a conservative ride), and its settled shot-quality cost is halved. A conservative ride is its counter (−2.1 pp vs −0.7 pp against a balanced ride). |
+| Pressure defense beat man against three of four offense sets: its takeaway bonus outweighed the crease's shot-quality edge, so the crease did not beat it as the hint said | +2.8 pp vs the field; vs crease +0.4 pp | −0.3 pp vs the field; vs crease −4.4 pp, vs motion −5.7 pp, vs invert +8.3 pp. Crease vs pressure edge 0.025 → 0.045; pressure takeaway edge 0.022/0.030 → 0.014/0.022 (standard/early slides). |
+| Scheme search, best worst-case edge over default | +1.2 pp | +1.2 pp (no scheme to always run). Pressure schemes left the top of the average column (+4–5 pp). |
+
+Still open: slow tempo leads the scheme search's average column at about +2.5 pp (worst case +1.2 pp). It is the patient underdog's call (+1.5 pp for a weaker team), so it was left alone.
+
+---
+
 ## Gap list
 
 Severity: **P0** breaks realism or decision-making in a way players will notice. **P1** is a meaningful depth gap. **P2** is polish or flavor.
