@@ -1,6 +1,7 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import storageEngine from 'redux-persist/es/storage';
 import { checkStorageAvailable, reportSaveFailure, reportSaveOk } from './saveStatus';
+import { SAVE_VERSION } from './saveBackup';
 
 type PersistStorage = {
   getItem: (key: string) => Promise<string | null>;
@@ -75,7 +76,8 @@ const rootReducer = combineReducers({
 const persistConfig = {
   key: 'root',
   storage,
-  version: 4,
+  // Bump SAVE_VERSION (saveBackup.ts) with each new migration below.
+  version: SAVE_VERSION,
   migrate: createMigrate(
     {
       1: (state) => {

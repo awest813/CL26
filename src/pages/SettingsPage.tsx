@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useStore } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { eraseSave } from '../features/settings/eraseSave';
 import {
@@ -14,6 +15,9 @@ import {
 } from '../features/settings/settingsSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import PageHeader from '../components/PageHeader';
+import { persistor } from '../store/persistor';
+import { backupFileName, buildBackup, parseBackup, SAVE_STORAGE_KEY } from '../store/saveBackup';
+import type { RootState } from '../store/store';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; detail: string }[] = [
   { value: 'system', label: 'System', detail: 'Follows your device: light by day, dark if your device is set to dark.' },
@@ -68,7 +72,49 @@ function SettingsPage() {
   const density = useAppSelector((state) => state.settings.density ?? 'comfortable');
   const editedTeams = useAppSelector((state) => Object.keys(state.settings.teamOverrides ?? {}).length);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [backupNote, setBackupNote] = useState<{ text: string; error: boolean } | null>(null);
+  const restoreInput = useRef<HTMLInputElement>(null);
+  const appStore = useStore<RootState>();
   const [resetting, setResetting] = useState(false);
+
+  function onDownloadBackup() {
+    const state = appStore.getState();
+    const programName = state.league.teams.find((team) => team.id === state.coach.selectedTeamId)?.schoolName ?? null;
+    const backup = buildBackup({ season: state.season, coach: state.coach, settings: state.settings }, new Date(), programName);
+    const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = backupFileName(backup.summary);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setBackupNote({ text: `Downloaded ${link.download}.`, error: false });
+  }
+
+  async function onRestoreBackup(file: File) {
+    const parsed = parseBackup(await file.text());
+    if (!parsed.ok) {
+      setBackupNote({ text: parsed.error, error: true });
+      return;
+    }
+    const { summary, exportedAt } = parsed.backup;
+    const who = [summary.coachName, summary.programName].filter(Boolean).join(', ') || 'a career';
+    const when = [summary.year, summary.week ? `week ${summary.week}` : summary.phase?.toLowerCase()].filter(Boolean).join(', ');
+    const saved = new Date(exportedAt).toLocaleString();
+    if (!window.confirm(`Replace your current career with ${who}${when ? ` (${when})` : ''}, backed up ${saved}? The current career is erased.`)) return;
+    // Stop the running game from writing over the restored career before the reload.
+    persistor.pause();
+    try {
+      window.localStorage.setItem(SAVE_STORAGE_KEY, parsed.backup.persistRoot);
+    } catch {
+      persistor.persist();
+      setBackupNote({ text: 'This browser would not store the backup (storage is full or blocked). Free up space or allow site data, then try again.', error: true });
+      return;
+    }
+    window.location.reload();
+  }
 
   async function onResetSave() {
     if (resetting) return;
@@ -146,6 +192,35 @@ function SettingsPage() {
           >
             Restore all original names
           </button>
+        )}
+      </section>
+
+      <section className="card" aria-labelledby="settings-backup">
+        <h3 id="settings-backup" className="m-0 text-base font-bold">Backup</h3>
+        <p className="text-xs text-gray-500 mt-1 mb-3">
+          The career lives only in this browser. Download a backup to keep it safe from cleared site data, or to move it to another browser or device. A backup holds the career and these settings.
+        </p>
+        <div className="backupActions">
+          <button type="button" className="btn btn-primary" onClick={onDownloadBackup}>Download a backup</button>
+          <button type="button" className="btn" onClick={() => restoreInput.current?.click()}>Restore from a backup</button>
+          <input
+            ref={restoreInput}
+            type="file"
+            accept="application/json,.json"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (file) void onRestoreBackup(file);
+            }}
+          />
+        </div>
+        {backupNote && (
+          <p className={`text-sm mt-2 mb-0 ${backupNote.error ? 'text-red-600' : 'mutedText'}`} role={backupNote.error ? 'alert' : 'status'}>
+            {backupNote.text}
+          </p>
         )}
       </section>
 

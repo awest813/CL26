@@ -4110,3 +4110,9 @@ button.seasonScoreButton:hover:not(:disabled) {
   background: var(--accent-soft);
   color: var(--text);
 }
+
+.backupActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}

@@ -15,6 +15,7 @@ A deterministic, web-based college lacrosse head-coaching simulation. Build a pr
 - **Fully deterministic** — same seed always produces the same schedule, rosters, and results
 - **Client-side only** — all state lives in `localStorage` via redux-persist; no server, no account required. Pages load on demand, so the first visit downloads about 415 KB of JavaScript
 - **Installable and offline** — a PWA (via `vite-plugin-pwa`): install it from the browser, and after the first visit the whole game, every page included, loads without a connection. A new deploy waits for the player to choose Reload now, and the career is saved first. If the browser stops saving (storage full or blocked), every page says so
+- **Backups** — download the career as a file from Settings and restore it in any browser or device; older backups upgrade through the same save migrations
 
 The project site is [https://awest813.github.io/CL26/](https://awest813.github.io/CL26/). It publishes from `master` after GitHub Pages is set to **GitHub Actions**. See [Deploy](#deploy).
 
@@ -82,7 +83,7 @@ src/
 | `/season/leaders` | Regular-season stat leaders and national awards |
 | `/rankings` | Top 25 + Top 12 projection |
 | `/playoffs` | Playoff bracket |
-| `/settings` | Confirmations, matchup estimate, game reveal speed, theme, density, team-edit reset, and save reset |
+| `/settings` | Confirmations, matchup estimate, game reveal speed, theme, density, team-edit reset, backup and restore, and save reset |
 | `/login` | Redirects home |
 | `/alpha` | Alpha-stage progress tracker |
 
