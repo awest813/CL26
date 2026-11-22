@@ -5,6 +5,7 @@ import {
   computePollInputs,
   computeRankingBreakdown,
   computeRankings,
+  type PollInputs,
   MARGIN_CAP_PER_GAME,
   prestigeWeightShare,
   RANKING_WEIGHTS,
@@ -227,5 +228,21 @@ describe('head to head', () => {
     const inputs = computePollInputs([makeGameResult('x', 'y', 9, 7)], { x: makeRecord(1, 0), y: makeRecord(0, 1) });
     expect(inputs.x.beat).toEqual(['y']);
     expect(inputs.y.beat).toBeUndefined();
+  });
+});
+
+describe('computeRankings ordering', () => {
+  test('gives the same order whatever order the teams come in when totals round the same', () => {
+    const records = { A: makeRecord(1, 0), B: makeRecord(2, 0), C: makeRecord(3, 0) };
+    const inputs = {
+      A: { sos: 0, cappedMargin: 0, qualityResults: 0.4, qualityWins: 0, badLosses: 0 },
+      B: { sos: 0, cappedMargin: 0, qualityResults: 0, qualityWins: 0, badLosses: 0 },
+      C: { sos: 0, cappedMargin: 0, qualityResults: -0.4, qualityWins: 0, badLosses: 0 },
+    } as unknown as PollInputs;
+    const orders = [['A', 'B', 'C'], ['A', 'C', 'B'], ['B', 'A', 'C'], ['B', 'C', 'A'], ['C', 'A', 'B'], ['C', 'B', 'A']];
+    const results = orders.map((order) =>
+      computeRankings(order.map((id) => makeTeam(id, 0)), records, 3, inputs).map((row) => row.teamId).join(''),
+    );
+    expect(new Set(results).size).toBe(1);
   });
 });

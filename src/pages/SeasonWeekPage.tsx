@@ -337,7 +337,7 @@ function SeasonWeekPage() {
                             {isFinal ? `${result.statsB.turnovers}–${result.statsA.turnovers}` : '–'}
                         </td>
                         <td className="p-2 text-center text-xs text-gray-600 tabular nowrap hideNarrow">
-                            {isFinal ? `${result.statsB.faceoffPct}%–${result.statsA.faceoffPct}%` : '–'}
+                            {isFinal ? `${Math.round(result.statsB.faceoffPct)}%–${Math.round(result.statsA.faceoffPct)}%` : '–'}
                         </td>
                       </tr>
                       {isFinal && allPerformers.length > 0 && (

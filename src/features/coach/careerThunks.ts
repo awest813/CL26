@@ -18,6 +18,8 @@ import {
   setStaffDepartures,
   setJobOpenings,
   setSeasonStartRoster,
+  restoreSeasonStartProgress,
+  seasonStartProgress,
   setEmployment,
   initializeRecruitingBoard,
   updateProgramStanding,
@@ -342,28 +344,8 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
         ? signedClass.reduce((sum, s) => sum + s.stars, 0) / signedClass.length
         : 0;
 
-    dispatch(recordSeasonEnd({
-      year: season.year,
-      teamId: coach.selectedTeamId,
-      winTarget: coach.programExpectations.winTarget,
-      rankTarget,
-      pollRank,
-      wins,
-      losses,
-      madePlayoffs,
-      champion,
-      playoffWins: playoffRun.wins,
-      playoffLosses: playoffRun.losses,
-      playoffRound: playoffRun.lastRound,
-      recruitsSigned: signedClass.length,
-      avgRecruitStars: Math.round(avgRecruitStars * 100) / 100,
-      jobSecurityEnd: newJobSecurity,
-      prestigeEnd: currentEffectivePrestige,
-    }));
-
-    dispatch(setAdPressure(Math.round(boostedPressure * 10) / 10));
-    dispatch(updateJobSecurity(newJobSecurity));
-    dispatch(applyPrestigeDrift(prestigeDriftDelta));
+    // Everything below is worked out before anything is saved: if a step throws, the season
+    // stays unrecorded and the coach can try again, instead of a half-recorded year.
 
     // The rest of the league: results move each CPU program's prestige, and the class it
     // signed and the players it lost early to the pros move its talent. Read the CPU
@@ -390,9 +372,10 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
         earlyEntrantsByTeamId[pick.collegeId] = (earlyEntrantsByTeamId[pick.collegeId] ?? 0) + 1;
       }
     }
-    dispatch(applyProgramLedger({
-      year: season.year,
-      ledger: advanceProgramLedger({
+    // The ledger moves once a year; applyProgramLedger ignores a second write for the same year.
+    const nextLedger = season.programLedgerYear === season.year && season.programLedger
+      ? season.programLedger
+      : advanceProgramLedger({
         ledger: season.programLedger,
         teams,
         recordsByTeamId: records,
@@ -401,14 +384,13 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
         earlyEntrantsByTeamId,
         userTeamId: coach.selectedTeamId,
         year: season.year,
-      }),
-    }));
+      });
 
     // Offers read prestige after this season is on the ledger, the same numbers accepting a job uses.
-    const updated = getState();
-    const marketTeams = withLeaguePrestige(teams, updated.season.programLedger, coach.selectedTeamId, updated.coach.programPrestigeDrift ?? 0);
+    const nextDrift = nextPrestigeDrift(coach.programPrestigeDrift ?? 0, prestigeDriftDelta);
+    const marketTeams = withLeaguePrestige(teams, nextLedger, coach.selectedTeamId, nextDrift);
     // Raise or lower program expectations as prestige drifts, ranked in the league as it now stands.
-    dispatch(updateProgramStanding(careerSetupFromPrestige(currentEffectivePrestige, leaguePrestiges(marketTeams))));
+    const nextStanding = careerSetupFromPrestige(currentEffectivePrestige, leaguePrestiges(marketTeams));
     // Head-coaching jobs open where CPU staffs missed badly; offers and poached assistants both come from them.
     // Judged against where each program stood going into the season, as the ledger judged it.
     const openings = programOpenings({
@@ -431,12 +413,10 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
       effectivePrestige: currentEffectivePrestige,
       openings,
     });
-    dispatch(setPendingJobOffers(market.offers));
-    dispatch(setEmployment(market.employment));
 
     // The staff's offseason: a year older, some better, the best hired away, the oldest retired.
     const staffYear = advanceStaff({
-      staff: updated.coach.assistants ?? generateStaff(currentTeam ?? marketTeams[0], 'staff'),
+      staff: coach.assistants ?? generateStaff(currentTeam ?? marketTeams[0], 'staff'),
       seed: season.seasonSeed,
       year: season.year,
       madePlayoffs,
@@ -445,6 +425,32 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     });
     // A seat an assistant took is filled.
     const filled = new Set(staffYear.departures.map((departure) => departure.teamId).filter(Boolean));
+
+    dispatch(recordSeasonEnd({
+      year: season.year,
+      teamId: coach.selectedTeamId,
+      winTarget: coach.programExpectations.winTarget,
+      rankTarget,
+      pollRank,
+      wins,
+      losses,
+      madePlayoffs,
+      champion,
+      playoffWins: playoffRun.wins,
+      playoffLosses: playoffRun.losses,
+      playoffRound: playoffRun.lastRound,
+      recruitsSigned: signedClass.length,
+      avgRecruitStars: Math.round(avgRecruitStars * 100) / 100,
+      jobSecurityEnd: newJobSecurity,
+      prestigeEnd: currentEffectivePrestige,
+    }));
+    dispatch(setAdPressure(Math.round(boostedPressure * 10) / 10));
+    dispatch(updateJobSecurity(newJobSecurity));
+    dispatch(applyPrestigeDrift(prestigeDriftDelta));
+    dispatch(applyProgramLedger({ year: season.year, ledger: nextLedger }));
+    dispatch(updateProgramStanding(nextStanding));
+    dispatch(setPendingJobOffers(market.offers));
+    dispatch(setEmployment(market.employment));
     dispatch(setJobOpenings([...openings].filter((teamId) => !filled.has(teamId)).sort()));
     dispatch(setAssistants(staffYear.staff));
     dispatch(setStaffDepartures(staffYear.departures));
@@ -557,12 +563,17 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
     if (!ceremony.canAdvanceNextYear) return null;
 
     const nextSeed = season.seasonSeed + 1;
-    await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed }));
+    await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed })).unwrap();
     await dispatch(startNewSeason({ seed: nextSeed })).unwrap();
 
     const after = getState();
     // The season's starting roster, kept so a reset can restore it.
-    dispatch(setSeasonStartRoster({ year: after.season.year, roster: after.coach.managedRoster ?? [], starterIds: after.coach.starterIds }));
+    dispatch(setSeasonStartRoster({
+      year: after.season.year,
+      roster: after.coach.managedRoster ?? [],
+      starterIds: after.coach.starterIds,
+      progress: seasonStartProgress(after.coach),
+    }));
     const recruitingTeams = withLeaguePrestige(
       league.teams,
       after.season.programLedger,
@@ -601,12 +612,19 @@ export const beginFirstSeason = createAsyncThunk<number, { seed: number }, { sta
         // A reset season starts from the roster it began with, so weekly growth is not applied twice.
         dispatch(setManagedRoster(snapshot.roster));
         dispatch(setStarterIds(snapshot.starterIds));
+        // ...and from the coach progression it began with, so replaying weeks cannot farm XP.
+        if (snapshot.progress) dispatch(restoreSeasonStartProgress(snapshot.progress));
       } else if (after.coach.seasonHistory.length === 0 || !after.coach.managedRoster?.length) {
         // A new career draws its roster at the season seed the coach picked.
         await dispatch(initializeManagedRoster());
       }
       const started = getState().coach;
-      dispatch(setSeasonStartRoster({ year: after.season.year, roster: started.managedRoster ?? [], starterIds: started.starterIds }));
+      dispatch(setSeasonStartRoster({
+        year: after.season.year,
+        roster: started.managedRoster ?? [],
+        starterIds: started.starterIds,
+        progress: seasonStartProgress(started),
+      }));
       const recruitingTeams = withLeaguePrestige(
         after.league.teams,
         after.season.programLedger,

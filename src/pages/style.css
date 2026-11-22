@@ -1473,10 +1473,10 @@ td.num {
   vertical-align: bottom;
 }
 
-/* Fixed columns add up to about 45.5rem, so the minimum leaves the name column room to read. */
+/* Fixed columns add up to about 45.5rem; the minimum leaves the name column ~13rem so full names read. */
 .rosterTable {
   table-layout: fixed;
-  min-width: 55rem;
+  min-width: 59rem;
 }
 
 .rosterCol-role {
@@ -1493,7 +1493,7 @@ td.num {
 
 @media (max-width: 640px) {
   .rosterTable {
-    min-width: 51rem;
+    min-width: 57rem;
   }
 
   .rosterCol-role {

@@ -129,7 +129,35 @@ export interface CoachState {
   /** Programs with an open head-coaching job after the last recorded season. */
   jobOpenings?: string[];
   /** The roster and depth chart as this season began, so a season reset does not grow players twice. */
-  seasonStartRoster?: { year: number; roster: Player[]; starterIds: string[] } | null;
+  seasonStartRoster?: { year: number; roster: Player[]; starterIds: string[]; progress?: SeasonStartProgress } | null;
+}
+
+/**
+ * Coach progression as the season began. A season reset restores it, so replaying weeks
+ * cannot farm XP and skill points. Missing on snapshots taken before it was tracked.
+ */
+export function seasonStartProgress(coach: CoachState): SeasonStartProgress {
+  return {
+    coachXp: coach.coachXp,
+    coachLevel: coach.coachLevel,
+    coachSkillPoints: coach.coachSkillPoints,
+    skillTree: coach.skillTree,
+    coachPerks: coach.coachPerks,
+    teamFatigue: coach.teamFatigue,
+    adPressure: coach.adPressure,
+    jobSecurity: coach.jobSecurity,
+  };
+}
+
+export interface SeasonStartProgress {
+  coachXp: number;
+  coachLevel: number;
+  coachSkillPoints: number;
+  skillTree: CoachSkillTree;
+  coachPerks?: CoachPerks;
+  teamFatigue: number;
+  adPressure: number;
+  jobSecurity: number;
 }
 
 const initialState: CoachState = {
@@ -375,6 +403,18 @@ const coachSlice = createSlice({
     },
     setSeasonStartRoster: (state, action: PayloadAction<CoachState['seasonStartRoster']>) => {
         state.seasonStartRoster = action.payload;
+    },
+    /** Put coach progression back where the season began (a season reset). */
+    restoreSeasonStartProgress: (state, action: PayloadAction<SeasonStartProgress>) => {
+        const progress = action.payload;
+        state.coachXp = progress.coachXp;
+        state.coachLevel = progress.coachLevel;
+        state.coachSkillPoints = progress.coachSkillPoints;
+        state.skillTree = { ...progress.skillTree };
+        state.coachPerks = progress.coachPerks ? { ...progress.coachPerks } : undefined;
+        state.teamFatigue = progress.teamFatigue;
+        state.adPressure = progress.adPressure;
+        state.jobSecurity = progress.jobSecurity;
     },
     /** Hire an assistant into his role, replacing whoever held it. Callers check the window and his prestige demand. */
     hireAssistant: (state, action: PayloadAction<{ candidate: AssistantCandidate; currentStaff: AssistantCoach[] }>) => {
@@ -704,6 +744,7 @@ export const {
     setStaffDepartures,
     setJobOpenings,
     setSeasonStartRoster,
+    restoreSeasonStartProgress,
     hireAssistant,
     chooseCoachPerk,
     chooseAssistantSpecialty,
@@ -739,11 +780,15 @@ export const acceptJobOffer = createAsyncThunk(
     async (teamId: string, { getState, dispatch }) => {
         const state = getState() as RootState;
         const team = state.league.teams.find((t) => t.id === teamId);
-        if (!team) return;
+        // Throw rather than return quietly: callers redraw the roster after a move, which
+        // would wipe the current program's season of growth if no move happened.
+        if (!team) throw new Error(`No program ${teamId} in the league.`);
         // Only this offseason's offers, and only once the season is on the record.
         const offer = state.coach.pendingJobOffers.find((row) => row.teamId === teamId);
         const recorded = state.coach.seasonHistory.some((entry) => entry.year === state.season.year);
-        if (!offer || offer.presentedAtYear !== state.season.year || !recorded) return;
+        if (!offer || offer.presentedAtYear !== state.season.year || !recorded) {
+            throw new Error('That job offer is no longer open.');
+        }
 
         // Prestige stays with the program, not the coach: leave behind what was built, take over what the new school has.
         const ledger = state.season.programLedger;

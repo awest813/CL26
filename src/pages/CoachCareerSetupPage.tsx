@@ -103,14 +103,13 @@ function CoachCareerSetupPage() {
       }),
     [teams],
   );
-  const canContinue =
-    coachName.trim().length > 1 &&
-    almaMater.trim().length > 1 &&
-    coachAge >= 24 &&
-    coachAge <= 75 &&
-    coachSkill >= 40 &&
-    coachSkill <= 99 &&
-    Boolean(teamId);
+  const missing: string[] = [];
+  if (coachName.trim().length <= 1) missing.push('a coach name');
+  if (almaMater.trim().length <= 1) missing.push('an alma mater');
+  if (!(coachAge >= 24 && coachAge <= 75)) missing.push('an age from 24 to 75');
+  if (!(coachSkill >= 40 && coachSkill <= 99)) missing.push('a skill from 40 to 99');
+  if (!teamId) missing.push('a program');
+  const canContinue = missing.length === 0;
 
   const selectedArchetypeOption = archetypeOptions.find((o) => o.value === archetype)!;
 
@@ -247,6 +246,11 @@ function CoachCareerSetupPage() {
         <button type="submit" className="btn btn-primary" disabled={!canContinue} style={{ marginTop: 16 }}>
           {coach.onboardingStep === 'READY' ? 'Save profile' : 'Start career'}
         </button>
+        {!canContinue && (
+          <p className="mutedText" role="status" style={{ marginTop: 8 }}>
+            Still needed: {missing.join(', ')}.
+          </p>
+        )}
       </form>
     </div>
   );

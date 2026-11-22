@@ -133,7 +133,8 @@ function OffseasonMarket() {
       await dispatch(initializeManagedRoster()).unwrap();
     } catch (error) {
       console.error('Failed to accept coach job offer.', error);
-      setOfferError('The coaching move did not complete. Reload the page and try again.');
+      const reason = error instanceof Error ? error.message : (error as { message?: string })?.message;
+      setOfferError(`The coaching move did not complete${reason ? `: ${reason}` : ''}. Reload the page and try again.`);
     }
   }
 

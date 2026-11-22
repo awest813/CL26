@@ -31,9 +31,13 @@ export function buildGameRecap(game: GameSummary, awayName: string, homeName: st
   if (Math.abs(foEdge) >= 8) {
     const isHome = foEdge > 0;
     const team = isHome ? homeName : awayName;
-    const stats = isHome
-      ? `${game.teamStatsHome.faceoffPct}-${game.teamStatsAway.faceoffPct}`
-      : `${game.teamStatsAway.faceoffPct}-${game.teamStatsHome.faceoffPct}`;
+    const [winner, loser] = isHome
+      ? [game.teamStatsHome, game.teamStatsAway]
+      : [game.teamStatsAway, game.teamStatsHome];
+    // Show faceoff counts when the game tracked them; older saves only carry percentages.
+    const stats = winner.faceoffWins !== undefined && loser.faceoffWins !== undefined
+      ? `${winner.faceoffWins} of ${winner.faceoffWins + loser.faceoffWins}`
+      : `${winner.faceoffPct}%`;
     keyEdge = `${team} dominated faceoffs (${stats}).`;
   } else if (Math.abs(gbEdge) >= 4) {
     const isHome = gbEdge > 0;

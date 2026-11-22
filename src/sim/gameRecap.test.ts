@@ -48,7 +48,16 @@ describe('buildGameRecap', () => {
       teamStatsAway: { ...baseStats, teamId: 'away-1', faceoffPct: 40 },
     });
     const recap = buildGameRecap(game, mockAwayName, mockHomeName);
-    assert.strictEqual(recap.keyEdge, 'Home Team dominated faceoffs (60-40).');
+    assert.strictEqual(recap.keyEdge, 'Home Team dominated faceoffs (60%).');
+  });
+
+  test('should report faceoff counts when tracked', () => {
+    const game = createGame({
+      teamStatsHome: { ...baseStats, teamId: 'home-1', faceoffPct: 40, faceoffWins: 10, faceoffsTaken: 25 },
+      teamStatsAway: { ...baseStats, teamId: 'away-1', faceoffPct: 60, faceoffWins: 15, faceoffsTaken: 25 },
+    });
+    const recap = buildGameRecap(game, mockAwayName, mockHomeName);
+    assert.strictEqual(recap.keyEdge, 'Away Team dominated faceoffs (15 of 25).');
   });
 
   test('should identify ground ball edge', () => {

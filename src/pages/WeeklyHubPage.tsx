@@ -673,7 +673,7 @@ function WeeklyHubPage() {
         title="Weekly Hub"
         subtitle={
           <>
-            {seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length)} · {selectedTeam?.schoolName} {selectedTeam?.nickname} · {userRecord.wins}–{userRecord.losses} overall · {userRecord.confWins}–{userRecord.confLosses} conf
+            {seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length)} · {selectedTeam?.schoolName} {selectedTeam?.nickname} · <span className="nowrap">{userRecord.wins}–{userRecord.losses} overall</span> · <span className="nowrap">{userRecord.confWins}–{userRecord.confLosses} conf</span>
           </>
         }
       />

@@ -181,7 +181,9 @@ export function computeRankings(
       return { team, record, score: computeRankingBreakdown(team, record, teamPollInputs(inputs, team.id)).totalPoints };
     })
     .sort((a, b) => {
-      const roundedScoreDiff = Math.round(b.score - a.score);
+      // Compare the rounded totals the table shows, so the order is a consistent total order
+      // (rounding the difference makes ties non-transitive and asymmetric at exactly 0.5).
+      const roundedScoreDiff = Math.round(b.score) - Math.round(a.score);
       if (roundedScoreDiff !== 0) return roundedScoreDiff;
       if (b.record.wins !== a.record.wins) return b.record.wins - a.record.wins;
       const pointDiff = pointDifferential(b.record) - pointDifferential(a.record);

@@ -101,7 +101,7 @@ function PlayerRow({
           </span>
         )}
       </td>
-      <td className="font-medium rosterName">{player.name}</td>
+      <td className="font-medium rosterName" title={player.name}>{player.name}</td>
       <td className="num text-gray-500 text-xs">{playerYearLabel(player.year, player.redshirtUsed)}</td>
       <td className="num text-gray-500 text-xs">{player.age}</td>
       <td className={`num font-bold ${ratingClass(player.overall)}`}>{player.overall}</td>
