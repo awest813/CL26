@@ -9,7 +9,8 @@ export interface TeamMark {
 
 const STOP_WORDS = new Set(['university', 'college', 'tech', 'institute', 'school', 'the', 'of', 'and', 'at']);
 
-const COLORS: Array<Pick<TeamMark, 'primary' | 'secondary' | 'ink'>> = [
+/** The logo palettes. Each pairs a dark field with light ink, so the letters stay readable. */
+export const TEAM_COLORS: Array<Pick<TeamMark, 'primary' | 'secondary' | 'ink'>> = [
   { primary: '#0e3b24', secondary: '#d6f25c', ink: '#f4fff4' },
   { primary: '#14284a', secondary: '#e2c16b', ink: '#f7f4ea' },
   { primary: '#6e1d2a', secondary: '#f3d7a1', ink: '#fff8f3' },
@@ -114,6 +115,7 @@ function assignLetters(teams: Array<{ id: string; schoolName: string }>): Map<st
 }
 
 const LETTERS = assignLetters(teamsData.teams);
+const BASE_NAMES = new Map(teamsData.teams.map((team) => [team.id, team.schoolName]));
 
 function colorFor(id: string): Pick<TeamMark, 'primary' | 'secondary' | 'ink'> {
   let hash = 2166136261;
@@ -121,13 +123,26 @@ function colorFor(id: string): Pick<TeamMark, 'primary' | 'secondary' | 'ink'> {
     hash ^= id.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
-  return COLORS[(hash >>> 0) % COLORS.length];
+  return TEAM_COLORS[(hash >>> 0) % TEAM_COLORS.length];
 }
 
-export function teamMark(team: { id: string; schoolName: string }): TeamMark {
-  const colors = colorFor(team.id);
+/** The palette a team uses when the user has not picked one. */
+export function defaultColorIndex(id: string): number {
+  return TEAM_COLORS.indexOf(colorFor(id));
+}
+
+/** The letters a team's logo shows when the user has not picked any. */
+export function defaultLetters(team: { id: string; schoolName: string }): string {
+  // A renamed school gets letters from its new name; the league-unique letters belong to the old one.
+  const renamed = BASE_NAMES.has(team.id) && BASE_NAMES.get(team.id) !== team.schoolName;
+  if (renamed) return letterOptions(team.schoolName)[0] ?? 'TM';
+  return LETTERS.get(team.id) ?? letterOptions(team.schoolName)[0] ?? 'TM';
+}
+
+export function teamMark(team: { id: string; schoolName: string; abbreviation?: string; colorIndex?: number }): TeamMark {
+  const colors = team.colorIndex != null && TEAM_COLORS[team.colorIndex] ? TEAM_COLORS[team.colorIndex] : colorFor(team.id);
   return {
-    letters: LETTERS.get(team.id) ?? letterOptions(team.schoolName)[0] ?? 'TM',
+    letters: team.abbreviation || defaultLetters(team),
     ...colors,
   };
 }

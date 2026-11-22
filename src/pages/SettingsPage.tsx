@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eraseSave } from '../features/settings/eraseSave';
 import {
+  clearAllTeamOverrides,
   setConfirmPlay,
   setDensity,
   setGameReveal,
@@ -65,6 +66,7 @@ function SettingsPage() {
   const theme = useAppSelector((state) => state.settings.theme ?? 'system');
   const gameReveal = useAppSelector((state) => state.settings.gameReveal ?? 'instant');
   const density = useAppSelector((state) => state.settings.density ?? 'comfortable');
+  const editedTeams = useAppSelector((state) => Object.keys(state.settings.teamOverrides ?? {}).length);
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
 
@@ -126,6 +128,25 @@ function SettingsPage() {
         <ChoiceGroup label="Theme" value={theme} options={THEME_OPTIONS} onChange={(value) => dispatch(setTheme(value))} />
         <h4 className="planSubhead">Density</h4>
         <ChoiceGroup label="Density" value={density} options={DENSITY_OPTIONS} onChange={(value) => dispatch(setDensity(value))} />
+        <h4 className="planSubhead">Team names and logos</h4>
+        <p className="text-xs text-gray-500 mt-1 mb-2">
+          {editedTeams > 0
+            ? `You have edited ${editedTeams} program${editedTeams === 1 ? '' : 's'}. Edit any team from its page.`
+            : 'Rename any program or change its logo from its team page.'}
+        </p>
+        {editedTeams > 0 && (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              if (window.confirm(`Restore the original names and logos for all ${editedTeams} edited program${editedTeams === 1 ? '' : 's'}?`)) {
+                dispatch(clearAllTeamOverrides());
+              }
+            }}
+          >
+            Restore all original names
+          </button>
+        )}
       </section>
 
       <section className="card newGameCard" aria-labelledby="settings-save">

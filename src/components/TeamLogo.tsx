@@ -1,7 +1,7 @@
 import { teamMark } from '../sim/teamMark';
 
 type TeamLogoProps = {
-  team: { id: string; schoolName: string };
+  team: { id: string; schoolName: string; abbreviation?: string; colorIndex?: number };
   size?: 'sm' | 'md' | 'lg';
 };
 

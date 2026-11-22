@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { cleanTeamOverride, type TeamOverride } from '../../sim/teamOverrides';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 /** How your game is shown after you play it: all at once, or goal by goal. */
@@ -17,6 +18,8 @@ export interface SettingsState {
   gameReveal?: GameReveal;
   /** Missing on older saves: treat as 'comfortable'. */
   density?: DisplayDensity;
+  /** The user's renames and logo choices, by team id. They survive a reset of the career. */
+  teamOverrides?: Record<string, TeamOverride>;
 }
 
 const initialState: SettingsState = {
@@ -46,6 +49,23 @@ const settingsSlice = createSlice({
     setDensity: (state, action: PayloadAction<DisplayDensity>) => {
       state.density = action.payload;
     },
+    /** Save a team's edits (callers validate first). An edit with nothing left in it is removed. */
+    setTeamOverride: (state, action: PayloadAction<{ teamId: string; override: TeamOverride }>) => {
+      const clean = cleanTeamOverride(action.payload.override);
+      const overrides = { ...(state.teamOverrides ?? {}) };
+      if (Object.keys(clean).length === 0) delete overrides[action.payload.teamId];
+      else overrides[action.payload.teamId] = clean;
+      state.teamOverrides = overrides;
+    },
+    clearTeamOverride: (state, action: PayloadAction<string>) => {
+      if (!state.teamOverrides) return;
+      const overrides = { ...state.teamOverrides };
+      delete overrides[action.payload];
+      state.teamOverrides = overrides;
+    },
+    clearAllTeamOverrides: (state) => {
+      state.teamOverrides = {};
+    },
   },
 });
 
@@ -54,7 +74,7 @@ export function confirmPlayCopy(kind: 'week' | 'round', label: string): string {
   return `${label}? That round is simulated.`;
 }
 
-export const { setConfirmPlay, setShowWinChance, setTheme, setGameReveal, setDensity } = settingsSlice.actions;
+export const { setConfirmPlay, setShowWinChance, setTheme, setGameReveal, setDensity, setTeamOverride, clearTeamOverride, clearAllTeamOverrides } = settingsSlice.actions;
 
 /** Put the theme on the page: a set data-theme wins over the system setting; 'system' clears it. */
 export function applyTheme(theme: ThemePreference | undefined): void {

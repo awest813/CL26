@@ -149,7 +149,7 @@ Xbox 360 lacrosse was a handful of $5 Xbox Live Indie Games arcade titles, mostl
 
 Sources: [NLL 11 on Metacritic](https://www.metacritic.com/game/nll-11/), [Nexgam review](https://www.nexgam.de/xbox-live-arcade-xbox/nll-2011), [Armless Octopus via N4G](https://n4g.com/news/739871/examiner-nll-11-video-game-preview?info=true), [College Lacrosse 2012 review, Retro Sports Gamer](https://retrosportsgamer.wordpress.com/2012/07/29/college-lacrosse-2012-indie-dev-covers-ignored-sport/), [College Lacrosse 2012 on Metacritic](https://www.metacritic.com/game/college-lacrosse-2012/).
 
-What those games had that this one does not: ~~manual line changes~~ (added as the midfield-lines call; see "Midfield rotation" below), and **team editing** (College Lacrosse 2012; here schools, names, and colors are fixed). Reviewers of both faulted execution and onboarding more than missing modes; the lesson for this sim is to keep explaining its systems in the UI, as the scouting report and install descriptions do.
+What those games had that this one does not: ~~manual line changes~~ (added as the midfield-lines call; see "Midfield rotation" below), and ~~team editing~~ (added: rename any program and pick its logo letters and colors from its team page) (College Lacrosse 2012; here schools, names, and colors are fixed). Reviewers of both faulted execution and onboarding more than missing modes; the lesson for this sim is to keep explaining its systems in the UI, as the scouting report and install descriptions do.
 
 ### Recruiting stakes (2026-11-22)
 

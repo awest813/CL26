@@ -3983,3 +3983,60 @@ button.seasonScoreButton:hover:not(:disabled) {
 :root[data-revealing] .pageStack > #week-result ~ * {
   display: none;
 }
+
+/* Team editor on the team page. */
+.teamEditor summary {
+  cursor: pointer;
+}
+
+.teamEditorForm {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.teamEditorPreview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.teamColorPicker {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.teamColorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.25rem, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.teamColorSwatch {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.teamColorSwatch[aria-checked='true'] {
+  border-color: var(--text);
+  outline: 2px solid var(--bg-elevated);
+  outline-offset: -4px;
+}
+
+.teamEditorActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.formError {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--danger);
+}

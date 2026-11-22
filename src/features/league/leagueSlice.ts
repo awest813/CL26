@@ -6,26 +6,70 @@ import { programRoster, withLeaguePrestige } from '../../sim/programLedger';
 import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { assertValidLeagueData } from '../../sim/leagueDataValidation';
 import { buildRosterSummary } from '../../sim/rosterSummary';
+import { applyTeamOverrides, cleanTeamOverride, type TeamOverride } from '../../sim/teamOverrides';
+import { clearAllTeamOverrides, clearTeamOverride, setTeamOverride } from '../settings/settingsSlice';
+import { REHYDRATE } from 'redux-persist';
 
-interface LeagueState extends LeagueData {}
+interface LeagueState extends LeagueData {
+  /**
+   * A mirror of the user's team edits (persisted in settings), so the league can rebuild its
+   * teams from the bundled data. The league itself is never persisted.
+   */
+  teamOverrides?: Record<string, TeamOverride>;
+}
+
+const BASE_TEAMS = teamsData.teams as Team[];
 
 const initialState: LeagueState = {
   conferences: teamsData.conferences as Conference[],
-  teams: teamsData.teams as Team[],
+  teams: BASE_TEAMS,
+  teamOverrides: {},
 };
 
 assertValidLeagueData(initialState.conferences, initialState.teams);
+
+function rebrand(state: LeagueState, overrides: Record<string, TeamOverride>) {
+  state.teamOverrides = overrides;
+  state.teams = applyTeamOverrides(BASE_TEAMS, overrides);
+}
 
 const leagueSlice = createSlice({
   name: 'league',
   initialState,
   reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(setTeamOverride, (state, action) => {
+        const clean = cleanTeamOverride(action.payload.override);
+        const overrides = { ...(state.teamOverrides ?? {}) };
+        if (Object.keys(clean).length === 0) delete overrides[action.payload.teamId];
+        else overrides[action.payload.teamId] = clean;
+        rebrand(state, overrides);
+      })
+      .addCase(clearTeamOverride, (state, action) => {
+        const overrides = { ...(state.teamOverrides ?? {}) };
+        delete overrides[action.payload];
+        rebrand(state, overrides);
+      })
+      .addCase(clearAllTeamOverrides, (state) => {
+        rebrand(state, {});
+      })
+      // The saved edits come back with the rest of the save on load.
+      .addMatcher(
+        (action): action is { type: string; payload?: { settings?: { teamOverrides?: Record<string, TeamOverride> } } } => action.type === REHYDRATE,
+        (state, action) => {
+          rebrand(state, action.payload?.settings?.teamOverrides ?? {});
+        },
+      );
+  },
 });
 
 export const leagueReducer = leagueSlice.reducer;
 
 export const selectConferences = (state: RootState) => state.league.conferences;
 export const selectTeams = (state: RootState) => state.league.teams;
+/** A team as the bundled data has it, before the user's edits. */
+export const baseTeamById = (teamId: string): Team | undefined => BASE_TEAMS.find((team) => team.id === teamId);
 
 export const selectTeamsByConference = createSelector([selectConferences, selectTeams], (conferences, teams) =>
   conferences.map((conference) => ({

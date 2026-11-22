@@ -17,6 +17,10 @@ export interface Team {
   conferenceId: string;
   region: string;
   prestige: number;
+  /** Logo letters the user chose (2–4). Unset: generated from the school name. */
+  abbreviation?: string;
+  /** Logo colors the user chose, an index into TEAM_COLORS. Unset: picked from the team id. */
+  colorIndex?: number;
 }
 
 export interface TeamSimInput {

@@ -7,6 +7,7 @@ import { selectConferenceById, selectTeamWithRosterSummary } from '../features/l
 import { buildRosterSummary, playerYearLabel } from '../sim/rosterSummary';
 import { useAppSelector } from '../store/hooks';
 import PageHeader from '../components/PageHeader';
+import TeamEditor from '../components/TeamEditor';
 import { effectiveProgram, ledgerEntry } from '../sim/programLedger';
 import { buildRivalries, rivalOf, rivalryFor } from '../sim/rivalries';
 
@@ -111,6 +112,8 @@ function TeamPage() {
           </p>
         )}
       </section>
+
+      <TeamEditor team={teamSummary.team} />
 
       <div className="grid2 teamSummaryGrid">
         <section className="card">
