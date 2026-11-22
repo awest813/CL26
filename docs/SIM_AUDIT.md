@@ -303,6 +303,16 @@ Starters played both ends, so a bench middie who defended far better than a star
 
 A save peaks mid-season, with the week's results, player stats, and the national class all in it: 3.2 M characters in year 1, growing about 10 K a season to 3.8 M by year 60. localStorage allows about 5 MB, and some browsers count two bytes a character, so a long career could stop saving. The save now lives in IndexedDB (`src/store/saveStorage.ts`), which allows far more and writes without blocking the page; localStorage is the fallback where IndexedDB is unavailable. An old localStorage save moves into IndexedDB on its first load and is then cleared from localStorage. If IndexedDB fails mid-session the save falls back to localStorage and clears the stale IndexedDB copy, so the next load reads the newer one. Checked in the browser: an old save moved over and was cleared, a played week survived a reload, and backup download, reset, and restore all work. A week takes about 350 ms to play and save.
 
+### Rankings transparency (2026-11-22)
+
+The Top 25 page explained the formula, but broke down the score only for No. 1 and your program, in points without the numbers behind them. Now:
+- **Any team's score.** Each poll row's points open the score line by line, each with its inputs: record and win % times its weight, capped goal margin, prestige times its fade share ("81 × 0.8 × 40%, fades out by game 10"), the schedule-strength value, and the count of quality wins and bad losses (`rankingScoreLines`).
+- **What separates it from the team above**, biggest differences first ("12 points behind No. 4 Zion State. Behind on strength of schedule by 31, ahead on margin by 15", from `rankingGap`). A tie on points says the tiebreaks decide it.
+- **Head to head.** A team that moved ahead of the one above it by beating it says so ("Beat Hilltop head to head"); `computeRankings` marks the row (`headToHeadOver`).
+- **The bubble.** Outside the projected field, your program sees how many points it trails the last at-large team by, and that a conference title can also get it in.
+- **Your program** gets the same line-by-line breakdown, ranked or not.
+- **Phones.** Points now show at every width; the trend arrow moves under the rank there, so the poll still fits without sideways scrolling.
+
 ---
 
 ## Gap list

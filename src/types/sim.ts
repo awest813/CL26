@@ -263,6 +263,8 @@ export interface RankingRow {
   teamId: string;
   points: number;
   record: string;
+  /** Set when this team moved ahead of the team just above it on points, by beating it head to head. */
+  headToHeadOver?: string;
 }
 
 export interface RankingScoreBreakdown {

@@ -830,6 +830,11 @@ td.num {
   z-index: 1;
 }
 
+/* Shown only on phones, where the column it stands in for is hidden. */
+.showNarrow {
+  display: none;
+}
+
 @media (max-width: 640px) {
   th,
   td {
@@ -838,6 +843,10 @@ td.num {
 
   .hideNarrow {
     display: none;
+  }
+
+  .showNarrow {
+    display: block;
   }
 }
 
@@ -2849,6 +2858,47 @@ button.archetypeOption[aria-pressed='true'] {
 .tabular {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
+}
+
+.weightRow .scoreLineDetail {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreLine {
+  align-items: flex-start;
+}
+
+.pollWhy {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pollWhyRow > td {
+  background: var(--surface-soft);
+  padding-top: 0.25rem;
+  padding-bottom: 0.75rem;
+}
+
+.pollWhyRow .weightList {
+  margin-top: 0.25rem;
+}
+
+.h2hNote {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .pollWhyRow .weightList {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .scoreDetails {

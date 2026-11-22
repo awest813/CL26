@@ -194,6 +194,7 @@ export function computeRankings(
       return a.team.id.localeCompare(b.team.id);
     });
 
+  const headToHead = new Map<string, string>();
   // Head to head: one pass from the top, so a team that beat the team just above it, and
   // is close to it on points, moves ahead of it. A single pass cannot loop on a cycle.
   for (let index = 0; index < sorted.length - 1; index += 1) {
@@ -205,6 +206,7 @@ export function computeRankings(
     if (lowerBeatUpper > upperBeatLower) {
       sorted[index] = lower;
       sorted[index + 1] = upper;
+      headToHead.set(lower.team.id, upper.team.id);
     }
   }
 
@@ -215,5 +217,82 @@ export function computeRankings(
       teamId: row.team.id,
       points: Math.round(row.score),
       record: `${row.record.wins}-${row.record.losses}`,
+      ...(headToHead.has(row.team.id) ? { headToHeadOver: headToHead.get(row.team.id) } : {}),
     }));
+}
+
+/** One line of a poll score, with the season numbers that produced it. */
+export interface RankingScoreLine {
+  key: keyof Omit<RankingScoreBreakdown, 'totalPoints'>;
+  label: string;
+  points: number;
+  /** How the points were reached, e.g. "9–3 (.750) × 1000". */
+  detail: string;
+}
+
+const pct3 = (value: number) => value.toFixed(3).replace(/^0/, '');
+
+/** A team's poll score line by line, each with the numbers behind it. */
+export function rankingScoreLines(team: Team, record: TeamRecord, inputs: TeamPollInputs = EMPTY_POLL_INPUTS): RankingScoreLine[] {
+  const breakdown = computeRankingBreakdown(team, record, inputs);
+  const games = record.wins + record.losses;
+  const share = prestigeWeightShare(games);
+  const margin = inputs.cappedMargin;
+  return [
+    {
+      key: 'overallWinPctPoints',
+      label: 'Overall win %',
+      points: breakdown.overallWinPctPoints,
+      detail: `${record.wins}–${record.losses} (${pct3(winPct(record.wins, record.losses))}) × ${RANKING_WEIGHTS.overallWinPct}`,
+    },
+    {
+      key: 'conferenceWinPctPoints',
+      label: 'Conference win %',
+      points: breakdown.conferenceWinPctPoints,
+      detail: `${record.confWins}–${record.confLosses} (${pct3(winPct(record.confWins, record.confLosses))}) × ${RANKING_WEIGHTS.conferenceWinPct}`,
+    },
+    {
+      key: 'pointDifferentialPoints',
+      label: 'Margin (capped)',
+      points: breakdown.pointDifferentialPoints,
+      detail: `${margin > 0 ? '+' : ''}${margin} goals, ${MARGIN_CAP_PER_GAME} a game at most, × ${RANKING_WEIGHTS.pointDifferential}`,
+    },
+    {
+      key: 'prestigePoints',
+      label: 'Prestige',
+      points: breakdown.prestigePoints,
+      detail: share > 0
+        ? `${team.prestige} × ${RANKING_WEIGHTS.prestige} × ${Math.round(share * 100)}% (fades out by game ${PRESTIGE_FADE_GAMES})`
+        : `Faded out after game ${PRESTIGE_FADE_GAMES}`,
+    },
+    {
+      key: 'strengthOfSchedulePoints',
+      label: 'Strength of schedule',
+      points: breakdown.strengthOfSchedulePoints,
+      detail: games > 0 ? `${pct3(inputs.sos)} × ${RANKING_WEIGHTS.strengthOfSchedule}` : 'No games yet',
+    },
+    {
+      key: 'qualityResultPoints',
+      label: 'Quality wins and bad losses',
+      points: breakdown.qualityResultPoints,
+      detail: inputs.qualityWins + inputs.badLosses === 0
+        ? 'None yet'
+        : [
+          inputs.qualityWins > 0 ? `${inputs.qualityWins} quality win${inputs.qualityWins === 1 ? '' : 's'}` : null,
+          inputs.badLosses > 0 ? `${inputs.badLosses} bad loss${inputs.badLosses === 1 ? '' : 'es'} (−${BAD_LOSS_PENALTY} each)` : null,
+        ].filter(Boolean).join(', '),
+    },
+  ];
+}
+
+/**
+ * Where two teams' scores differ, largest gap first: what separates `team` from `other`.
+ * Positive points mean `team` is ahead on that line.
+ */
+export function rankingGap(team: RankingScoreLine[], other: RankingScoreLine[]): Array<{ label: string; points: number }> {
+  const otherByKey = new Map(other.map((line) => [line.key, line.points]));
+  return team
+    .map((line) => ({ label: line.label, points: line.points - (otherByKey.get(line.key) ?? 0) }))
+    .filter((line) => Math.abs(line.points) >= 0.5)
+    .sort((a, b) => Math.abs(b.points) - Math.abs(a.points));
 }

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import {
   BAD_LOSS_PENALTY,
   computeAllSOS,
@@ -9,6 +10,8 @@ import {
   MARGIN_CAP_PER_GAME,
   prestigeWeightShare,
   RANKING_WEIGHTS,
+  rankingGap,
+  rankingScoreLines,
 } from './rankings';
 import type { GameResult, Team, TeamRecord } from '../types/sim';
 
@@ -244,5 +247,44 @@ describe('computeRankings ordering', () => {
       computeRankings(order.map((id) => makeTeam(id, 0)), records, 3, inputs).map((row) => row.teamId).join(''),
     );
     expect(new Set(results).size).toBe(1);
+  });
+});
+
+describe('poll score explanations', () => {
+  const team = (id: string, prestige: number): Team => ({ id, schoolName: id, nickname: 'X', conferenceId: 'c', region: 'North', prestige });
+  const record = (wins: number, losses: number, confWins = 0, confLosses = 0): TeamRecord =>
+    ({ teamId: 'x', wins, losses, confWins, confLosses, pointsFor: 0, pointsAgainst: 0 }) as TeamRecord;
+
+  test('each line shows the numbers behind it, and the lines add up to the score', () => {
+    const inputs = { sos: 0.55, cappedMargin: 14, qualityResults: 15, qualityWins: 1, badLosses: 0 };
+    const lines = rankingScoreLines(team('a', 80), record(5, 1, 3, 0), inputs);
+    const total = computeRankingBreakdown(team('a', 80), record(5, 1, 3, 0), inputs).totalPoints;
+    assert.ok(Math.abs(lines.reduce((sum, line) => sum + line.points, 0) - total) < 1e-9);
+    assert.match(lines[0].detail, /5–1 \(\.833\) × 1000/);
+    assert.match(lines.find((line) => line.key === 'prestigePoints')!.detail, /80 × 0.8 × 40%/);
+    assert.match(lines.find((line) => line.key === 'qualityResultPoints')!.detail, /1 quality win/);
+    assert.match(rankingScoreLines(team('a', 80), record(10, 2), inputs).find((line) => line.key === 'prestigePoints')!.detail, /Faded out/);
+  });
+
+  test('the gap between two teams lists the biggest differences first', () => {
+    const a = rankingScoreLines(team('a', 70), record(6, 2), { sos: 0.6, cappedMargin: 5, qualityResults: 40, qualityWins: 1, badLosses: 0 });
+    const b = rankingScoreLines(team('b', 70), record(6, 2), { sos: 0.45, cappedMargin: 10, qualityResults: 0, qualityWins: 0, badLosses: 0 });
+    const gap = rankingGap(a, b);
+    assert.equal(gap[0].label, 'Strength of schedule');
+    assert.ok(gap[0].points > 0);
+    assert.ok(gap.every((line, i) => i === 0 || Math.abs(line.points) <= Math.abs(gap[i - 1].points)));
+  });
+
+  test('a team that moves up on head to head says whom it passed', () => {
+    const teams = [team('a', 70), team('b', 70)];
+    const records = { a: record(5, 1), b: record(5, 1) };
+    const inputs = {
+      a: { sos: 0.52, cappedMargin: 3, qualityResults: 0, qualityWins: 0, badLosses: 0, beat: [] },
+      b: { sos: 0.5, cappedMargin: 2, qualityResults: 0, qualityWins: 0, badLosses: 0, beat: ['a'] },
+    };
+    const rows = computeRankings(teams, records, 2, inputs);
+    assert.equal(rows[0].teamId, 'b');
+    assert.equal(rows[0].headToHeadOver, 'a');
+    assert.equal(rows[1].headToHeadOver, undefined);
   });
 });
