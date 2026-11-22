@@ -243,6 +243,19 @@ The 20-season batch after the change (no integrity problems, identical replay):
 
 The league is harder near the top: CPU programs that sign well now build real rosters. A mid program that recruits well still climbs (43% to 72%), but slower, and the bracket is harder to reach. Not recruiting is punished harder than before.
 
+### Staff audit (2026-11-22)
+
+What a staff is worth, measured: a prestige-77 program against the league, 3,000 games, same rosters, only the four assistants changed. All seats empty (48): 52.8% wins. League average (60): 53.7%. Good (75): 55.0%. Elite (90): 57.0%. About half a win a season from vacant to elite on game day, before recruiting and fatigue.
+
+Fixed:
+- **Recruiting coordinator.** He moved weekly interest by ±8% at the extremes, so a league-average hire read "+1%" and the role hardly mattered. Now ±15% for an elite hire, −5% for an empty seat.
+- **Strength line.** "+2% late-game wear" meant 2% *less* wear; it now says so, and says nothing when there is no relief.
+- **Hiring checks.** The window (before the first season, or between seasons once the year is recorded), the candidate being on this offseason's market, and the program meeting his prestige demand were only enforced by the page. `hireAssistantFromMarket` now checks all three and returns the reason it refused.
+- **Losing a specialty.** Replacing an assistant now warns that his specialty goes with him.
+- **Head-coach candidates.** Assistants rated 76+ show their chance to leave after a season and after a playoff year (`headCoachPoachChance`), instead of leaving without warning.
+- **Specialty reminder.** The hub flags assistants who have earned a specialty and links to the Coach Office. Links to a section of another page (`/career#staff`) now land on it; in-app navigation used to stop at the top.
+- **Layout.** The four seats read as a two-by-two (was three and an orphan), downgrades on the market step back, and specialty buttons are left-aligned.
+
 ---
 
 ## Gap list

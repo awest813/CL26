@@ -49,7 +49,7 @@ import { nextLoopStep, PLAYOFF_ROUND_LABELS, userPlayoffSpot } from '../sim/game
 import { buildPositionNeedByPosition } from '../sim/recruiting';
 import { careerOffseasonCapabilities } from '../sim/seasonPhase';
 import { buildWeeklyDesk } from '../sim/weeklyDesk';
-import { ASSISTANT_ROLES, staffEffects, type AssistantRole } from '../sim/assistants';
+import { ASSISTANT_ROLES, assistantsAwaitingSpecialty, staffEffects, type AssistantRole } from '../sim/assistants';
 import { buildLeagueWire } from '../sim/leagueWire';
 import { coachStars, headCoachRating } from '../sim/coachRating';
 import { prestigeStarText } from '../sim/prestige';
@@ -597,6 +597,12 @@ function WeeklyHubPage() {
     [selectedTeam?.conferenceId],
   );
   const conferenceStandings = useAppSelector(conferenceStandingsSelector);
+  const awaitingSpecialty = assistantsAwaitingSpecialty(coach.assistants);
+  const specialtyLine = awaitingSpecialty.length === 0
+    ? null
+    : awaitingSpecialty.length === 1
+      ? `${awaitingSpecialty[0].name} has earned a specialty.`
+      : `${awaitingSpecialty.length} assistants have earned a specialty.`;
   const blueChipCommits = useMemo(() => {
     const poolById = new Map(coach.recruitPool.map((recruit) => [recruit.id, recruit]));
     return (coach.recruitingReport?.commits ?? [])
@@ -1036,6 +1042,7 @@ function WeeklyHubPage() {
                         coach.assistants && coach.assistants.length < ASSISTANT_ROLES.length
                           ? 'Your staff has an empty seat to fill.'
                           : null,
+                        specialtyLine,
                         'Before the next season: check the portal, the staff, and the depth chart.',
                       ].filter(Boolean).join(' ')
               : 'Set the install and the board, then play the week.'}
@@ -1158,6 +1165,11 @@ function WeeklyHubPage() {
                 const assistant = coach.assistants?.find((row) => row.role === role);
                 return `${ASSISTANT_SHORT_LABELS[role]} ${assistant ? `${prestigeStarText(coachStars(assistant.rating))} ${assistant.rating}` : 'vacant'}`;
               }).join(' · ')}
+            </div>
+          )}
+          {specialtyLine && (
+            <div className="text-xs font-semibold youMark mb-2">
+              {specialtyLine} <Link to="/career#staff">Pick in the Coach Office</Link>
             </div>
           )}
           <div className="text-xs text-gray-500 mb-2">

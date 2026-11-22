@@ -3653,6 +3653,8 @@ button.seasonScoreButton:hover:not(:disabled) {
 .perkOption {
   display: grid;
   gap: 0.1rem;
+  justify-content: start;
+  justify-items: start;
   text-align: left;
   white-space: normal;
 }
@@ -3686,6 +3688,27 @@ button.seasonScoreButton:hover:not(:disabled) {
   align-items: flex-end;
   align-self: flex-start;
   gap: 0.25rem;
+}
+
+.staffList-current {
+  /* Four seats read as a two-by-two, never three and an orphan. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .staffList-current {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A hire that would be a step down stays on the market but steps back. */
+.staffRow-downgrade {
+  opacity: 0.72;
+}
+
+.staffHotName {
+  color: var(--warning-fg);
+  margin-top: 0.15rem;
 }
 
 .staffHire {

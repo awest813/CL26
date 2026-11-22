@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { chooseAssistantSpecialty, hireAssistant } from '../features/coach/coachSlice';
+import { chooseAssistantSpecialty } from '../features/coach/coachSlice';
+import { hireAssistantFromMarket } from '../features/coach/careerThunks';
 import {
   ASSISTANT_ROLE_LABELS,
   ASSISTANT_ROLES,
@@ -8,6 +9,8 @@ import {
   SPECIALTY_TENURE,
   specialtyInfo,
   generateStaff,
+  headCoachPoachChance,
+  HEAD_COACH_CANDIDATE_RATING,
   staffEffectLines,
   VACANT_RATING,
   type AssistantCandidate,
@@ -67,9 +70,12 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
 
   function hire(candidate: AssistantCandidate) {
     const current = currentStaff.find((coach) => coach.role === candidate.role);
-    const replacing = current ? ` ${current.name} (${ratingText(current.rating)}) leaves the staff.` : '';
+    const lostSpecialty = specialtyInfo(current?.specialty);
+    const replacing = current
+      ? ` ${current.name} (${ratingText(current.rating)}) leaves the staff${lostSpecialty ? `, and his ${lostSpecialty.name.toLowerCase()} specialty goes with him` : ''}.`
+      : '';
     if (!window.confirm(`Hire ${candidate.name} (${ratingText(candidate.rating)}) as ${ASSISTANT_ROLE_LABELS[candidate.role].toLowerCase()}?${replacing}`)) return;
-    dispatch(hireAssistant({ candidate, currentStaff }));
+    dispatch(hireAssistantFromMarket(candidate.id));
   }
 
   function pickSpecialty(coach: AssistantCoach, specialty: AssistantSpecialty) {
@@ -131,7 +137,7 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
       )}
       {(
 
-        <ul className="staffList">
+        <ul className="staffList staffList-current">
           {ASSISTANT_ROLES.map((role) => {
             const coach = currentStaff.find((row) => row.role === role);
             return (
@@ -142,6 +148,15 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
                     <div>
                       <strong>{coach.name}</strong>
                       <div className="pollNick">Age {coach.age} · {coach.tenure === 0 ? 'new hire' : `${coach.tenure} yr${coach.tenure === 1 ? '' : 's'} on staff`}</div>
+                      {coach.rating >= HEAD_COACH_CANDIDATE_RATING && (
+                        <div
+                          className="text-xs font-semibold staffHotName"
+                          title="Programs with an opening call the best assistants. He goes if one does; a playoff year makes the calls likelier."
+                        >
+                          Head-coach candidate: {Math.round(headCoachPoachChance(coach.rating, false) * 100)}% to leave after a season,{' '}
+                          {Math.round(headCoachPoachChance(coach.rating, true) * 100)}% after a playoff year
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-red-600 text-sm font-semibold">Vacant{canHire ? ': hire below' : ''}</div>
@@ -165,7 +180,7 @@ function StaffPanel({ staff, departures, canHire, teamId, effectivePrestige, sea
               const tooBig = candidate.minPrestige > effectivePrestige;
               const upgrade = candidate.rating - (current?.rating ?? VACANT_RATING);
               return (
-                <li key={candidate.id} className="staffRow">
+                <li key={candidate.id} className={`staffRow${upgrade <= 0 && !hired ? ' staffRow-downgrade' : ''}`}>
                   <div>
                     <div className="staffRole">{ASSISTANT_ROLE_LABELS[candidate.role]}</div>
                     <div>

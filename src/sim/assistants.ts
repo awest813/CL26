@@ -81,6 +81,11 @@ export function specialtyInfo(specialty: AssistantSpecialty | undefined): Specia
   return null;
 }
 
+/** Assistants who have earned a specialty the head coach has not picked yet. */
+export function assistantsAwaitingSpecialty(staff: AssistantCoach[] | null | undefined): AssistantCoach[] {
+  return (staff ?? []).filter((coach) => !coach.specialty && coach.tenure >= SPECIALTY_TENURE);
+}
+
 /** Whether this specialty belongs to this role. */
 export function specialtyFitsRole(role: AssistantRole, specialty: AssistantSpecialty): boolean {
   return ASSISTANT_SPECIALTIES[role].some((option) => option.id === specialty);
@@ -115,6 +120,9 @@ export function assistantEdge(rating: number): number {
 function ratingFor(staff: AssistantCoach[] | null | undefined, role: AssistantRole): number {
   return staff?.find((coach) => coach.role === role)?.rating ?? VACANT_RATING;
 }
+
+/** Weekly recruiting interest an elite (95) recruiting coordinator adds; an empty seat costs about a third of it. */
+const RECRUITING_COORDINATOR_REACH = 0.15;
 
 export interface StaffEffects {
   offense: number;
@@ -154,7 +162,7 @@ export function staffEffects(staff: AssistantCoach[] | null | undefined): StaffE
     shotQuality: offense * 0.006 + (hasSpecialty(staff, 'SHOT_DOCTOR') ? 0.004 : 0),
     defense: defense * 1.2 + (hasSpecialty(staff, 'PRESSURE') ? 0.3 : 0),
     goalie: defense * 0.5 + (hasSpecialty(staff, 'GOALIE_COACH') ? 0.3 : 0),
-    recruitingMultiplier: 1 + recruiting * 0.08,
+    recruitingMultiplier: 1 + recruiting * RECRUITING_COORDINATOR_REACH,
     fatigueScale: 1 - strength * 0.15 - (hasSpecialty(staff, 'ENDURANCE') ? 0.05 : 0),
     wearRelief: Math.max(0, strength) * 0.05 + (hasSpecialty(staff, 'RECOVERY') ? 0.03 : 0),
     installBoost: {
@@ -175,7 +183,7 @@ export function staffEffectLines(staff: AssistantCoach[] | null | undefined): Re
     OFFENSE: `${signed(effects.offense)} offense on game day; the offense install hits ${pct(effects.installBoost.OFFENSE - 1)} harder.`,
     DEFENSE: `${signed(effects.defense)} defense and ${signed(effects.goalie)} goalie; the defense install hits ${pct(effects.installBoost.DEFENSE - 1)} harder.`,
     RECRUITING: `${pct(effects.recruitingMultiplier - 1)} weekly recruiting interest.`,
-    STRENGTH: `${pct(effects.fatigueScale - 1)} weekly fatigue build-up, ${pct(effects.wearRelief)} late-game wear; conditioning hits ${pct(effects.installBoost.CONDITIONING - 1)} harder.`,
+    STRENGTH: `${pct(effects.fatigueScale - 1)} weekly fatigue build-up${effects.wearRelief > 0 ? `, ${Math.round(effects.wearRelief * 100)}% less late-game wear` : ''}; conditioning hits ${pct(effects.installBoost.CONDITIONING - 1)} harder.`,
   };
 }
 
@@ -226,6 +234,40 @@ export function assistantCandidates(seed: number, year: number, userTeamId: stri
   );
 }
 
+/** Ratings from which other programs call an assistant about head-coaching jobs. */
+export const HEAD_COACH_CANDIDATE_RATING = 76;
+
+/**
+ * The chance an assistant leaves this offseason to run his own program, when one is open:
+ * none below 76, 12% at 76 plus a point per rating point above it, and 18 points more after
+ * a playoff year.
+ */
+export function headCoachPoachChance(rating: number, madePlayoffs: boolean): number {
+  if (rating < HEAD_COACH_CANDIDATE_RATING) return 0;
+  return 0.12 + (madePlayoffs ? 0.18 : 0) + (rating - HEAD_COACH_CANDIDATE_RATING) * 0.01;
+}
+
+export type HireRefusal = 'closed' | 'prestige' | 'unknown' | 'already';
+
+/**
+ * Whether the head coach can hire this candidate now: hiring is open between seasons, the
+ * candidate is on this offseason's market and not already on staff, and the program meets his demand.
+ */
+export function assistantHireCheck(input: {
+  candidateId: string;
+  candidates: AssistantCandidate[];
+  staff: AssistantCoach[];
+  hiringOpen: boolean;
+  effectivePrestige: number;
+}): { ok: true; candidate: AssistantCandidate } | { ok: false; reason: HireRefusal } {
+  if (!input.hiringOpen) return { ok: false, reason: 'closed' };
+  const candidate = input.candidates.find((row) => row.id === input.candidateId);
+  if (!candidate) return { ok: false, reason: 'unknown' };
+  if (input.staff.some((coach) => coach.id === candidate.id)) return { ok: false, reason: 'already' };
+  if (candidate.minPrestige > input.effectivePrestige) return { ok: false, reason: 'prestige' };
+  return { ok: true, candidate };
+}
+
 /**
  * One offseason for the staff: everyone ages a year, young assistants improve and old ones
  * slip, the best get hired away as head coaches (more often after a winning year), and
@@ -248,7 +290,7 @@ export function advanceStaff(input: {
     const age = coach.age + 1;
     const growth = age < 40 ? randInt(rng, 0, 3) : age < 55 ? randInt(rng, -1, 2) : randInt(rng, -3, 0);
     const rating = clamp(coach.rating + growth, 40, 95);
-    const poachChance = rating >= 76 ? 0.12 + (input.madePlayoffs ? 0.18 : 0) + (rating - 76) * 0.01 : 0;
+    const poachChance = headCoachPoachChance(rating, input.madePlayoffs);
     const roll = rng();
     if (openings.length > 0 && roll < poachChance) {
       const pick = openings.splice(randInt(rng, 0, openings.length - 1), 1)[0];

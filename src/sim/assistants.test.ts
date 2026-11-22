@@ -5,7 +5,11 @@ import {
   advanceStaff,
   assistantCandidates,
   assistantEdge,
+  assistantHireCheck,
+  assistantsAwaitingSpecialty,
   generateStaff,
+  headCoachPoachChance,
+  staffEffectLines,
   staffEffects,
   type AssistantCoach,
 } from './assistants.ts';
@@ -81,5 +85,37 @@ describe('assistant coaches', () => {
     assert.ok(retired > 5, `retired ${retired}`);
     const noOpenings = advanceStaff({ staff: staffAt(90), seed: 1, year: 2026, madePlayoffs: true, openings: [] });
     assert.ok(noOpenings.departures.every((row) => row.reason !== 'head-coach'));
+  });
+
+  test('the game, not just the page, decides who can be hired', () => {
+    const candidates = assistantCandidates(2026, 2026, 'me');
+    const elite = [...candidates].sort((a, b) => b.minPrestige - a.minPrestige)[0];
+    const base = { candidates, staff: staffAt(60), hiringOpen: true, effectivePrestige: 100 };
+    assert.equal(assistantHireCheck({ ...base, candidateId: elite.id }).ok, true);
+    assert.deepEqual(assistantHireCheck({ ...base, candidateId: elite.id, hiringOpen: false }), { ok: false, reason: 'closed' });
+    assert.deepEqual(assistantHireCheck({ ...base, candidateId: elite.id, effectivePrestige: elite.minPrestige - 1 }), { ok: false, reason: 'prestige' });
+    assert.deepEqual(assistantHireCheck({ ...base, candidateId: 'cand-made-up' }), { ok: false, reason: 'unknown' });
+    const hired = [...staffAt(60).filter((coach) => coach.role !== elite.role), { ...elite, tenure: 0 }];
+    assert.deepEqual(assistantHireCheck({ ...base, staff: hired, candidateId: elite.id }), { ok: false, reason: 'already' });
+  });
+
+  test('only head-coach candidates get hired away, more often after a playoff year', () => {
+    assert.equal(headCoachPoachChance(75, true), 0);
+    assert.ok(headCoachPoachChance(80, true) > headCoachPoachChance(80, false));
+    assert.ok(headCoachPoachChance(90, false) > headCoachPoachChance(80, false));
+  });
+
+  test('a recruiting coordinator is worth hiring, and the strength line reads the right way', () => {
+    assert.ok(staffEffects(staffAt(95)).recruitingMultiplier >= 1.15);
+    assert.ok(staffEffects(staffAt(48)).recruitingMultiplier < 0.96);
+    assert.match(staffEffectLines(staffAt(90)).STRENGTH, /less late-game wear/);
+    assert.doesNotMatch(staffEffectLines(staffAt(48)).STRENGTH, /late-game wear/);
+  });
+
+  test('assistants who earned a specialty are flagged until one is picked', () => {
+    const staff = staffAt(60).map((coach, index) => ({ ...coach, tenure: index }));
+    assert.deepEqual(assistantsAwaitingSpecialty(staff).map((coach) => coach.role), ['DEFENSE', 'RECRUITING', 'STRENGTH']);
+    staff[1].specialty = 'PRESSURE';
+    assert.equal(assistantsAwaitingSpecialty(staff).length, 2);
   });
 });

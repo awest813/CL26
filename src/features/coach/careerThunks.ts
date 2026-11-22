@@ -30,6 +30,8 @@ import {
   MAX_HOURS_PER_RECRUIT,
   programRecruitingBonus,
   WEEKLY_HOURS_CAP,
+  hireAssistant,
+  selectUserEffectivePrestige,
 } from './coachSlice';
 import { planAutoRecruiting } from '../../sim/autoRecruit';
 import { userPlayoffRun } from '../../sim/gameLoop';
@@ -48,7 +50,7 @@ import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { advanceProgramLedger, draftLedger, nextPrestigeDrift, prestigeDriftForSeason, programRoster, reachedSemifinal, withLeaguePrestige } from '../../sim/programLedger';
 import { leaguePrestiges } from '../../sim/programExpectations';
 import { buildSeasonJobMarket, FIRED_JOB_SECURITY, programOpenings } from '../../sim/jobOffers';
-import { advanceStaff, generateStaff } from '../../sim/assistants';
+import { advanceStaff, assistantCandidates, assistantHireCheck, generateStaff, type HireRefusal } from '../../sim/assistants';
 import {
   canSimRegularWeek,
   careerOffseasonCapabilities,
@@ -679,5 +681,37 @@ export const simCareerPlayoffRound = createAsyncThunk<void, void, { state: RootS
     if (coach.selectedTeamId) {
       dispatch(applyPlayoffRoundFatigue({ played: playedThisRound }));
     }
+  },
+);
+
+/** Hiring is open before the first season and between seasons, once the year is on the books. */
+export function assistantHiringOpen(state: Pick<RootState, 'season' | 'coach'>): boolean {
+  if (state.season.phase === 'PRE') return true;
+  return state.season.phase === 'OFFSEASON' && hasSeasonHistoryForYear(state.coach.seasonHistory, state.season.year);
+}
+
+/**
+ * Hire an assistant off this offseason's market. The game checks the window, that he is on
+ * the market, and that the program meets his demand; the reason comes back when it says no.
+ */
+export const hireAssistantFromMarket = createAsyncThunk<'hired' | HireRefusal, string, { state: RootState }>(
+  'coach/hireAssistantFromMarket',
+  async (candidateId, { dispatch, getState }) => {
+    const state = getState();
+    const coach = state.coach;
+    const team = state.league.teams.find((row) => row.id === coach.selectedTeamId);
+    if (!team) return 'unknown';
+    // A save from before staffs existed hires into the staff the program fields.
+    const staff = coach.assistants ?? generateStaff(team, 'staff');
+    const check = assistantHireCheck({
+      candidateId,
+      candidates: assistantCandidates(state.season.seasonSeed, state.season.year, team.id),
+      staff,
+      hiringOpen: assistantHiringOpen(state),
+      effectivePrestige: selectUserEffectivePrestige(state) ?? team.prestige,
+    });
+    if (!check.ok) return check.reason;
+    dispatch(hireAssistant({ candidate: check.candidate, currentStaff: staff }));
+    return 'hired';
   },
 );

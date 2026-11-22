@@ -52,8 +52,27 @@ function Layout() {
 
   useEffect(() => {
     setIsMenuOpen(false);
-    window.scrollTo(0, 0);
-  }, [location.pathname]);
+    if (!location.hash) {
+      window.scrollTo(0, 0);
+      return undefined;
+    }
+    // A link to a section ("/career#staff") lands on it. Pages load on demand, so wait for
+    // the section to render, for up to two seconds.
+    const id = decodeURIComponent(location.hash.slice(1));
+    let tries = 0;
+    let timer: number | undefined;
+    const land = () => {
+      const target = document.getElementById(id);
+      if (target) {
+        target.scrollIntoView({ block: 'start' });
+        return;
+      }
+      tries += 1;
+      if (tries < 20) timer = window.setTimeout(land, 100);
+    };
+    land();
+    return () => window.clearTimeout(timer);
+  }, [location.pathname, location.hash]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
