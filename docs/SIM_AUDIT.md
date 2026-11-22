@@ -71,6 +71,24 @@ Measured each single call against the schemes the 128 CPU programs actually run 
 | Slow tempo stacked a shot-quality bonus (+0.006) on top of fewer possessions and fresher legs, and led the scheme search | +1.0 to +1.6 pp vs the field; best worst case +1.2 pp, average about +2.5 pp | Bonus removed: +0.3 pp in an even matchup, +0.7 pp for an underdog, −0.3 pp for a favorite. It stays the underdog's call through fewer possessions, not better shots. |
 | Scheme search, best worst-case edge over default | +1.2 pp | 0.0 pp: default tops the table and no scheme beats it against every opponent. Pressure schemes left the top of the average column (+4–5 pp); slow schemes average about +1.3 pp. |
 
+### Season-level audit (2026-11-22)
+
+Played full seasons through the real store (6–30 seasons) and compared stat leaders, records, and playoffs with D-I, scaled to a 12-game regular season.
+
+| Leader per game | Before | After | Approx. D-I |
+|---|---|---|---|
+| Faceoff % (top 3) | .56–.60: nobody separated | .61–.68 | .650–.750 |
+| Assists | ~2.0 | ~3.0–3.7 | ~3–3.5 |
+| Points | ~5.0 | ~6.0–6.7 | ~5.5–6.5 |
+| Goals, caused turnovers, save % | 3.8, 2.1, .59–.63 | unchanged | in range |
+| Ground balls | ~12.8 (all elite faceoff men) | unchanged | the best faceoff men reach ~13–14 |
+
+- **Faceoffs:** starting specialists are rated 75–93 (p10–p90), and at 0.3 pp per point the best man won about .54 against a median one. A steeper line only punished weak teams. Draw ratings above 85 now count triple (`drawStrength`), so elite men separate while a 50-rated man's team still wins 40%. An elite (95) man is worth about +9 pp of win rate in an even matchup, up from +3 pp. Install, staff, and fatigue modifiers stay linear.
+- **Assists:** the assisted-goal rate (56%) was right, but assists spread evenly, because starting attackmen pass alike. Each offense now runs through its strongest feeder, who sets up 20% of its assisted goals outright before the rest are drawn by passing.
+- **Install test:** "each working install outplays conditioning" passed on 1,800 games per install, a sample where the 2 pp gap is noise. It now plays 7,200. Install balance did not change (within 0.2 pp at 12,000 games).
+
+Checked and left as designed: **playoff seeding is close to a coin flip among the top 12.** All 12 seeds average 82–84 base prestige, so the field is the twelve best programs, and the poll orders them by 12 games of results between near-equals. #1 seeds won 1 title in 30 seasons. The engine does reward strength: champions are usually in the field's top three by prestige, and favorites win 56% / 63% / 75% / 90% at prestige gaps of 1–4 / 5–9 / 10–19 / 20+. More chalk at the top would take a wider prestige spread among the elite programs in `teams128.json`.
+
 ---
 
 ## Gap list

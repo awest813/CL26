@@ -35,6 +35,8 @@ interface TeamRatings {
   wearRate: number;
   shooters: WeightedPool;
   feeders: WeightedPool;
+  /** The player the offense runs through: its strongest feeder, who sets up a share of goals himself. */
+  quarterback: Player | null;
   scrappers: WeightedPool;
   defenders: WeightedPool;
 }
@@ -113,6 +115,12 @@ const FACEOFF_WING_WEIGHT = 0.2;
 const NO_SPECIALIST_FACEOFF = 55;
 const FACEOFF_EDGE_WEIGHT = 0.12;
 const FACEOFF_FORM_VARIANCE = 0.04;
+/**
+ * Draw ratings above this count extra: a few elite specialists dominate the dot while most
+ * matchups stay close, as in D-I, where leaders win .650+ and the median man is near .500.
+ */
+const FACEOFF_ELITE_PIVOT = 85;
+const FACEOFF_ELITE_BONUS = 4;
 /** Scale of a side's form for one game (about a third of this is a typical swing either way). */
 const GAME_FORM_VARIANCE = 10;
 const FACEOFF_MIN_CHANCE = 0.3;
@@ -135,6 +143,8 @@ const SAVE_REBOUND_CHANCE = 0.14;
 const LOOSE_BALL_GROUND_BALL_CHANCE = 0.5;
 const MAX_SHOTS_PER_POSSESSION = 5;
 const ASSIST_CHANCE = 0.56;
+/** Share of assisted goals set up by the offense's quarterback outright, before the rest are drawn by passing. */
+const QUARTERBACK_ASSIST_SHARE = 0.2;
 
 // Clock: the offense's tempo sets how long it holds the ball before the first look.
 const SETUP_SECONDS: Record<Tactics['tempo'], number> = { slow: 47, normal: 38, fast: 30 };
@@ -284,6 +294,7 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
   const starterGoalie = starterSet ? goalies.find((g) => starterSet.has(g.id)) : undefined;
   const goaliePlayer = starterGoalie ?? goalies[0] ?? roster[0];
   const depth = (p: Player) => playerDepthWeight(p.id, starterSet);
+  const feederWeight = (p: Player) => depth(p) * FEEDER_ROLE[p.position] * ((p.passing * 0.7 + p.IQ * 0.3) / SHOOTER_SKILL_PIVOT) ** 3;
 
   return {
     offense: offWeighted / Math.max(offDenom, 1e-6),
@@ -296,7 +307,8 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
     faceoffPlayer,
     wearRate,
     shooters: buildPool(roster, (p) => depth(p) * SHOOTER_ROLE[p.position] * (shooterSkill(p) / SHOOTER_SKILL_PIVOT) ** 3),
-    feeders: buildPool(roster, (p) => depth(p) * FEEDER_ROLE[p.position] * ((p.passing * 0.7 + p.IQ * 0.3) / SHOOTER_SKILL_PIVOT) ** 3),
+    feeders: buildPool(roster, feederWeight),
+    quarterback: roster.reduce<Player | null>((best, p) => (feederWeight(p) > (best ? feederWeight(best) : 0) ? p : best), null),
     scrappers: buildPool(roster, (p) => depth(p) * SCRAPPER_ROLE[p.position] * ((p.speed * 0.5 + p.defense * 0.3 + p.IQ * 0.2) / SHOOTER_SKILL_PIVOT) ** 2),
     defenders: buildPool(roster, (p) => depth(p) * DEFENDER_ROLE[p.position] * ((p.defense * 0.7 + p.IQ * 0.3) / SHOOTER_SKILL_PIVOT) ** 2),
   };
@@ -380,6 +392,11 @@ function resolveGameplayModifiers(input: TeamSimInput): EffectiveGameplayModifie
 /** Chance a fast-tempo offense turns a clean clear into a transition look, given the other side's ride. */
 export function pushTransitionChance(ridingTactics: Tactics): number {
   return PUSH_TRANSITION_CHANCE * (ridingTactics.rideClear === 'conservative' ? PUSH_VS_CONSERVATIVE_RIDE_SCALE : 1);
+}
+
+/** A side's draw rating on the scale faceoffs are decided on, with the elite curve applied. */
+export function drawStrength(faceoffRating: number): number {
+  return faceoffRating + Math.max(0, faceoffRating - FACEOFF_ELITE_PIVOT) * FACEOFF_ELITE_BONUS;
 }
 
 /** Last-resort winner if sudden death somehow never produces a goal. */
@@ -672,7 +689,8 @@ export function simulateGame(
 
   /** One draw. Returns the side that wins possession. */
   function faceoff(): Side {
-    const edge = (sideA.ratings.faceoff + sideA.mods.faceoff - sideB.ratings.faceoff - sideB.mods.faceoff) / FACEOFF_EDGE_DIVISOR;
+    // The elite curve is about the players; installs, staff, and fatigue move the draw linearly.
+    const edge = (drawStrength(sideA.ratings.faceoff) + sideA.mods.faceoff - drawStrength(sideB.ratings.faceoff) - sideB.mods.faceoff) / FACEOFF_EDGE_DIVISOR;
     const chanceA = clamp(
       0.5 + edge * FACEOFF_EDGE_WEIGHT + sideA.faceoffForm - sideB.faceoffForm,
       FACEOFF_MIN_CHANCE,
@@ -895,7 +913,10 @@ export function simulateGame(
       }
       let assistName: string | null = null;
       if (rng() < ASSIST_CHANCE && !transition) {
-        const feeder = drawFromPool(rng, offense.ratings.feeders, shooter, shooter);
+        const quarterback = offense.ratings.quarterback;
+        const feeder = quarterback && quarterback.id !== shooter.id && rng() < QUARTERBACK_ASSIST_SHARE
+          ? quarterback
+          : drawFromPool(rng, offense.ratings.feeders, shooter, shooter);
         if (feeder.id !== shooter.id) {
           ensurePlayerStats(offense, feeder).assists += 1;
           assistName = feeder.name;

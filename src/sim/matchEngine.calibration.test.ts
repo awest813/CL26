@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import { fatigueWear, homeFieldScale, lateGameAdjustment, pushTransitionChance, simulateGame } from './matchEngine.ts';
+import { drawStrength, fatigueWear, homeFieldScale, lateGameAdjustment, pushTransitionChance, simulateGame } from './matchEngine.ts';
 import { generateRoster } from './generateRoster.ts';
 import { programStarters } from './programLedger.ts';
 import { DEFAULT_TACTICS } from './tactics.ts';
@@ -146,6 +146,30 @@ describe('match engine event model', () => {
     assert.strictEqual(leader[0], star.id);
   });
 
+  test('the offense runs through its quarterback: the best feeder leads in assists by a clear margin', () => {
+    const rosterA = generateRoster(alpha, 'qb-model');
+    const rosterB = generateRoster(beta, 'qb-model');
+    const startersA = programStarters(rosterA);
+    const qbIndex = rosterA.findIndex((player) => player.position === 'A' && startersA.includes(player.id));
+    const qb: Player = { ...rosterA[qbIndex], passing: 99, IQ: 95 };
+    const roster = rosterA.map((player, index) => (index === qbIndex ? qb : player));
+    const assistsByPlayer = new Map<string, number>();
+    let teamAssists = 0;
+    for (let seed = 1; seed <= 300; seed += 1) {
+      const result = simulateGame(
+        { team: alpha, roster, starterIds: startersA },
+        { team: beta, roster: rosterB, starterIds: programStarters(rosterB) },
+        DEFAULT_TACTICS, DEFAULT_TACTICS, seed,
+      );
+      for (const row of result.boxScoreA ?? result.topPlayersA) {
+        assistsByPlayer.set(row.playerId, (assistsByPlayer.get(row.playerId) ?? 0) + row.assists);
+        teamAssists += row.assists;
+      }
+    }
+    const qbAssists = assistsByPlayer.get(qb.id) ?? 0;
+    assert.ok(qbAssists / teamAssists > 0.3, `quarterback had ${((qbAssists / teamAssists) * 100).toFixed(0)}% of team assists`);
+  });
+
   test('overtime is sudden death: the first goal ends it', () => {
     const rosterA = generateRoster(alpha, 'ot-model');
     const rosterB = generateRoster(beta, 'ot-model');
@@ -211,6 +235,16 @@ describe('match engine specialists and penalties', () => {
     const weak = sample(withSpecialty('FO', { faceoff: 50 }));
     assert.ok(strong.faceoffPct > weak.faceoffPct + 0.05, `${strong.faceoffPct} vs ${weak.faceoffPct}`);
     assert.ok(strong.faceoffPct < 0.72, 'one faceoff man should not own the X');
+  });
+
+  test('elite faceoff men separate from the pack; average and weak ones stay close', () => {
+    // The curve only bends above the elite line: ten points in the middle of the scale stay ten points.
+    assert.strictEqual(drawStrength(80) - drawStrength(70), 10);
+    assert.ok(drawStrength(95) - drawStrength(85) > 30);
+    const elite = sample(withSpecialty('FO', { faceoff: 97 }));
+    const average = sample(withSpecialty('FO', { faceoff: 84 }));
+    assert.ok(elite.faceoffPct > 0.6, `an elite faceoff man should win .600+, won ${elite.faceoffPct}`);
+    assert.ok(average.faceoffPct < 0.56, `an average faceoff man should be near .500, won ${average.faceoffPct}`);
   });
 
   test('a better goalie saves more shots on goal', () => {
@@ -358,7 +392,8 @@ describe('weekly installs', () => {
       for (const opponent of opponents) {
         const opponentRoster = generateRoster(opponent, 'installs');
         const opponentStarters = programStarters(opponentRoster);
-        for (let seed = 1; seed <= 60; seed += 1) {
+        // Enough games that a 2 pp gap between installs is not sampling noise.
+        for (let seed = 1; seed <= 240; seed += 1) {
           const result = simulateGame(
             { team: alpha, roster, starterIds: starters, gameplan: plan.modifiers },
             { team: opponent, roster: opponentRoster, starterIds: opponentStarters },
