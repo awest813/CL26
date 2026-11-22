@@ -1,5 +1,6 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import storageEngine from 'redux-persist/es/storage';
+import { checkStorageAvailable, reportSaveFailure, reportSaveOk } from './saveStatus';
 
 type PersistStorage = {
   getItem: (key: string) => Promise<string | null>;
@@ -21,7 +22,27 @@ function resolvePersistStorage(candidate: unknown): PersistStorage {
   throw new Error('Persist storage is unavailable.');
 }
 
-const storage = resolvePersistStorage(storageEngine);
+/** Report every write's outcome, so a failing save is shown to the player instead of only logged. */
+function withSaveReporting(base: PersistStorage): PersistStorage {
+  return {
+    getItem: (key) => base.getItem(key),
+    removeItem: (key) => base.removeItem(key),
+    setItem: (key, value) => base.setItem(key, value).then(
+      (result) => {
+        reportSaveOk();
+        return result;
+      },
+      (error: unknown) => {
+        reportSaveFailure(error);
+        throw error;
+      },
+    ),
+  };
+}
+
+const storage = withSaveReporting(resolvePersistStorage(storageEngine));
+// redux-persist falls back to storage that keeps nothing when the browser blocks localStorage.
+checkStorageAvailable();
 import { createMigrate, persistReducer } from 'redux-persist';
 import {
   FLUSH,

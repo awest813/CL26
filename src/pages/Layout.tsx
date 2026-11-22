@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { IconWarning } from '../components/UiIcons';
+import SaveStatusBanner from '../components/SaveStatusBanner';
 import Footer from './Layout/Footer';
 import Header from './Layout/Header';
 import LeftNavBar from './Layout/LeftNavBar';
@@ -102,6 +103,7 @@ function Layout() {
           </span>
         </div>
       )}
+      <SaveStatusBanner />
       <div className="layoutBody">
         <div id="app-primary-menu">
           <LeftNavBar
