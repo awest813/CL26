@@ -342,6 +342,59 @@ describe('each strategy earns its keep', () => {
   });
 });
 
+describe('midfield rotation', () => {
+  const rosterA = generateRoster(alpha, 'rotation');
+  const rosterB = generateRoster(beta, 'rotation');
+  const startersA = programStarters(rosterA);
+  const startersB = programStarters(rosterB);
+  const starterSet = new Set(startersA);
+  const GAMES = 3000;
+  const withSecondLine = (delta: number) => rosterA.map((player) => (
+    player.position === 'M' && !starterSet.has(player.id)
+      ? { ...player, shooting: player.shooting + delta, passing: player.passing + delta, speed: player.speed + delta, defense: player.defense + delta, IQ: player.IQ + delta }
+      : player
+  ));
+  const winRate = (roster: Player[], rotation: Tactics['midfieldRotation']) => {
+    let wins = 0;
+    for (let i = 0; i < GAMES; i += 1) {
+      const result = simulateGame(
+        { team: alpha, roster, starterIds: startersA },
+        { team: beta, roster: rosterB, starterIds: startersB },
+        { ...DEFAULT_TACTICS, midfieldRotation: rotation }, DEFAULT_TACTICS, i * 13 + 4, { homeAdvantageForA: i % 2 === 0 },
+      );
+      if (result.scoreA > result.scoreB) wins += 1;
+    }
+    return wins / GAMES;
+  };
+
+  test('an unset rotation plays exactly like a balanced one, so older saves are unchanged', () => {
+    const { midfieldRotation: _unset, ...older } = DEFAULT_TACTICS;
+    void _unset;
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const balanced = simulateGame({ team: alpha, roster: rosterA, starterIds: startersA }, { team: beta, roster: rosterB, starterIds: startersB }, DEFAULT_TACTICS, DEFAULT_TACTICS, seed);
+      const unset = simulateGame({ team: alpha, roster: rosterA, starterIds: startersA }, { team: beta, roster: rosterB, starterIds: startersB }, older as Tactics, DEFAULT_TACTICS, seed);
+      assert.strictEqual(`${unset.scoreA}-${unset.scoreB}`, `${balanced.scoreA}-${balanced.scoreB}`);
+    }
+  });
+
+  test('without a depth chart there are no lines to rotate, so the call changes nothing', () => {
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const scores = (['tight', 'balanced', 'deep'] as const).map((rotation) => {
+        const result = simulateGame({ team: alpha, roster: rosterA }, { team: beta, roster: rosterB }, { ...DEFAULT_TACTICS, midfieldRotation: rotation }, DEFAULT_TACTICS, seed);
+        return `${result.scoreA}-${result.scoreB}`;
+      });
+      assert.strictEqual(new Set(scores).size, 1, `seed ${seed}: ${scores.join(' / ')}`);
+    }
+  });
+
+  test('a thin second line wants the starters ridden; a deep bench wants the game shared', () => {
+    const thin = withSecondLine(-12);
+    assert.ok(winRate(thin, 'tight') - winRate(thin, 'deep') > 0.03, 'riding the starters should beat a deep rotation with a thin second line');
+    const deep = withSecondLine(8);
+    assert.ok(winRate(deep, 'deep') - winRate(deep, 'tight') > 0.02, 'a deep rotation should beat riding the starters with a deep bench');
+  });
+});
+
 describe('fatigue and the late game', () => {
   test('wear builds through the game and costs more at a fast pace', () => {
     assert.strictEqual(fatigueWear(0, 1, DEFAULT_TACTICS), 0);

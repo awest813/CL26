@@ -27,7 +27,7 @@ type TacticSelectsProps = {
   idPrefix: string;
 };
 
-/** The five base-scheme calls as selects, each with the trade-off of the current call under it. */
+/** The base-scheme calls as selects, each with the trade-off of the current call under it. */
 export function TacticSelects({ tactics, onChange, idPrefix }: TacticSelectsProps) {
   return (
     <div className="tacticGrid">

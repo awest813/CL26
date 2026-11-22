@@ -287,6 +287,8 @@ export interface Tactics {
   slideAggression: 'early' | 'normal' | 'late';
   offenseSet?: 'balanced' | 'motion' | 'invert' | 'crease';
   defensePackage?: 'man' | 'zone' | 'pressure';
+  /** How the midfield lines share the game. Missing on older saves: treat as 'balanced'. */
+  midfieldRotation?: 'tight' | 'balanced' | 'deep';
 }
 
 export type PracticeFocus = 'OFFENSE' | 'DEFENSE' | 'CONDITIONING' | 'DISCIPLINE';

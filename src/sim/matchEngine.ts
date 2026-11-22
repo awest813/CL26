@@ -162,6 +162,18 @@ const IN_GAME_FATIGUE_MAX = 10;
 const SHALLOW_ROTATION_WEAR = 1.15;
 const ROTATION_RELIEF = 0.3;
 
+type MidfieldRotation = NonNullable<Tactics['midfieldRotation']>;
+/**
+ * How the midfield lines share the game. Riding the first line keeps the best middies on the
+ * field but tires them; a deep rotation keeps legs fresh at the cost of more snaps for the
+ * second line. 'balanced' is the weighting every position has always used.
+ */
+const MIDFIELD_ROTATION: Record<MidfieldRotation, { starter: number; bench: number; relief: number }> = {
+  tight: { starter: 2.05, bench: 0.15, relief: 0.3 },
+  balanced: { starter: 1.78, bench: 0.38, relief: 1 },
+  deep: { starter: 1.35, bench: 0.85, relief: 2.3 },
+};
+
 const MAX_OVERTIME_PERIODS = 30;
 const OVERTIME_BASE_WIN_CHANCE = 0.5;
 const OVERTIME_EDGE_DIVISOR = 260;
@@ -228,8 +240,16 @@ function drawFromPool(rng: () => number, pool: WeightedPool, fallback: Player, e
   return pool.players.find((p) => p.id !== exclude?.id) ?? fallback;
 }
 
-function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
+function calcRatings(roster: Player[], starterIds?: string[], rotation: MidfieldRotation = 'balanced'): TeamRatings {
   const starterSet = resolveStarterSet(roster, starterIds);
+  // Without a depth chart there are no lines to rotate: every player is weighted alike, so a
+  // rotation call would only ease wear for free. It plays as balanced.
+  const lines = starterSet ? (MIDFIELD_ROTATION[rotation] ?? MIDFIELD_ROTATION.balanced) : MIDFIELD_ROTATION.balanced;
+  // Midfielders follow the rotation; every other position keeps the standard starter weight.
+  const weightOf = (p: Player): number => {
+    if (p.position !== 'M' || !starterSet) return playerDepthWeight(p.id, starterSet);
+    return starterSet.has(p.id) ? lines.starter : lines.bench;
+  };
 
   let offWeighted = 0;
   let offDenom = 0;
@@ -245,7 +265,7 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
   let faceoffPlayerWeight = 0;
 
   for (const p of roster) {
-    const w = playerDepthWeight(p.id, starterSet);
+    const w = weightOf(p);
     disWeighted += p.discipline * w;
     disDenom += w;
     // Wings on the draw: long poles first, short-stick middies behind them.
@@ -282,7 +302,7 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
   let staminaDenom = 0;
   for (const p of roster) {
     if (p.position === 'G') continue;
-    const w = playerDepthWeight(p.id, starterSet);
+    const w = weightOf(p);
     staminaWeighted += p.stamina * w;
     staminaDenom += w;
   }
@@ -291,12 +311,12 @@ function calcRatings(roster: Player[], starterIds?: string[]): TeamRatings {
   const firstLine = average(middies.slice(0, 3));
   const secondLineRatio = firstLine > 0 ? Math.min(1, average(middies.slice(3, 6)) / firstLine) : 0;
   const wearRate = clamp(1 - (staminaWeighted / Math.max(staminaDenom, 1e-6) - 70) / 60, 0.5, 1.5)
-    * (SHALLOW_ROTATION_WEAR - ROTATION_RELIEF * secondLineRatio);
+    * (SHALLOW_ROTATION_WEAR - ROTATION_RELIEF * lines.relief * secondLineRatio);
 
   const goalies = roster.filter((p) => p.position === 'G');
   const starterGoalie = starterSet ? goalies.find((g) => starterSet.has(g.id)) : undefined;
   const goaliePlayer = starterGoalie ?? goalies[0] ?? roster[0];
-  const depth = (p: Player) => playerDepthWeight(p.id, starterSet);
+  const depth = weightOf;
   const feederWeight = (p: Player) => depth(p) * FEEDER_ROLE[p.position] * ((p.passing * 0.7 + p.IQ * 0.3) / SHOOTER_SKILL_PIVOT) ** 3;
 
   return {
@@ -538,7 +558,7 @@ export function simulateGame(
 
   const sideA: SideState = {
     input: teamA,
-    ratings: calcRatings(teamA.roster, teamA.starterIds),
+    ratings: calcRatings(teamA.roster, teamA.starterIds, tacticsA.midfieldRotation),
     mods: modifiersA,
     tactics: tacticsA,
     stats: blankStats(teamA, modifiersA, tacticsA),
@@ -548,7 +568,7 @@ export function simulateGame(
   };
   const sideB: SideState = {
     input: teamB,
-    ratings: calcRatings(teamB.roster, teamB.starterIds),
+    ratings: calcRatings(teamB.roster, teamB.starterIds, tacticsB.midfieldRotation),
     mods: modifiersB,
     tactics: tacticsB,
     stats: blankStats(teamB, modifiersB, tacticsB),

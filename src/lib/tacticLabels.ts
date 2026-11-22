@@ -1,6 +1,6 @@
 import type { Tactics } from '../types/sim';
 
-type TacticKey = 'tempo' | 'rideClear' | 'slideAggression' | 'offenseSet' | 'defensePackage';
+type TacticKey = 'tempo' | 'rideClear' | 'slideAggression' | 'offenseSet' | 'defensePackage' | 'midfieldRotation';
 
 type TacticOption = {
   value: string;
@@ -18,7 +18,7 @@ type TacticField = {
   options: TacticOption[];
 };
 
-/** The five scheme calls, shared by the Coach Office game plan and the exhibition. */
+/** The scheme calls, shared by the Coach Office game plan and the exhibition. */
 export const TACTIC_FIELDS: TacticField[] = [
   {
     key: 'tempo',
@@ -66,6 +66,15 @@ export const TACTIC_FIELDS: TacticField[] = [
       { value: 'pressure', label: 'Pressure', hint: 'takeaways and loose balls; motion and cutters beat it; more fouls', short: 'Pressure defense' },
     ],
   },
+  {
+    key: 'midfieldRotation',
+    label: 'Midfield lines',
+    options: [
+      { value: 'tight', label: 'Ride the starters', hint: 'your best middies play more and tire late; pays off with a thin second line', short: 'First line rides' },
+      { value: 'balanced', label: 'Balanced', short: 'Balanced lines' },
+      { value: 'deep', label: 'Deep rotation', hint: 'fresh legs late, more second-line snaps; pays off with a deep bench, low stamina, or a fast, pressing plan', short: 'Deep rotation' },
+    ],
+  },
 ];
 
 const DEFAULTS: Record<TacticKey, string> = {
@@ -74,6 +83,7 @@ const DEFAULTS: Record<TacticKey, string> = {
   slideAggression: 'normal',
   offenseSet: 'balanced',
   defensePackage: 'man',
+  midfieldRotation: 'balanced',
 };
 
 export function tacticValue(tactics: Tactics, key: TacticKey): string {

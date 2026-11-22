@@ -1,4 +1,4 @@
-import type { Player, Position } from '../types/sim.ts';
+import type { Player, Position, Tactics } from '../types/sim.ts';
 import { POSITION_ORDER } from '../types/sim.ts';
 import { faceoffRating, savingRating } from './playerSpecialty.ts';
 import { buildDefaultStarters } from './rosterManagement.ts';
@@ -104,4 +104,61 @@ export function lineupGap(roster: Player[], starterIds: string[]): { position: P
   return POSITION_ORDER
     .map((position) => ({ position, points: total(best[position]) - total(current[position]) }))
     .filter((row) => row.points > 0);
+}
+
+export interface MidfieldLineReport {
+  /** Average overall of the starting midfield line and of the next three middies. */
+  firstLine: number;
+  secondLine: number;
+  /** First line minus second line. */
+  gap: number;
+  /** Average stamina of the starting field players. */
+  stamina: number;
+  /** The rotation that fits this roster and plan, and why. */
+  suggestion: NonNullable<Tactics['midfieldRotation']>;
+  reason: string;
+}
+
+/** Where riding the starters starts to pay: the second line this many points behind. */
+const TIGHT_GAP = 5;
+/** At or under this gap the lines are even enough to share the game. */
+const EVEN_GAP = 0.5;
+/** Starters this tired or worse want fresh legs late. */
+const LOW_STAMINA = 67;
+
+/**
+ * How the midfield lines compare, and the rotation the match engine rewards for them:
+ * a thin second line wants the starters ridden; even lines, low stamina, or a fast or
+ * pressing plan (more wear) want a deep rotation. Thresholds come from engine sweeps.
+ */
+export function midfieldLineReport(roster: Player[], starterIds: string[], tactics: Tactics): MidfieldLineReport | null {
+  const starters = new Set(starterIds);
+  const middies = activeRoster(roster).filter((player) => player.position === 'M');
+  const first = middies.filter((player) => starters.has(player.id));
+  const second = middies.filter((player) => !starters.has(player.id)).sort((a, b) => b.overall - a.overall).slice(0, 3);
+  if (first.length === 0 || second.length === 0) return null;
+  const average = (players: Player[], value: (player: Player) => number) => players.reduce((sum, player) => sum + value(player), 0) / players.length;
+  const firstLine = average(first, (player) => player.overall);
+  const secondLine = average(second, (player) => player.overall);
+  const gap = firstLine - secondLine;
+  const fieldStarters = roster.filter((player) => starters.has(player.id) && player.position !== 'G');
+  const stamina = fieldStarters.length > 0 ? average(fieldStarters, (player) => player.stamina) : 70;
+  const wearHeavy = tactics.tempo === 'fast' || tactics.defensePackage === 'pressure';
+
+  let suggestion: MidfieldLineReport['suggestion'] = 'balanced';
+  let reason = 'The lines are close enough that a standard rotation is right.';
+  if (gap >= TIGHT_GAP) {
+    suggestion = 'tight';
+    reason = `Your second line is ${Math.round(gap)} points behind the first, so ride the starters.`;
+  } else if (gap <= EVEN_GAP) {
+    suggestion = 'deep';
+    reason = 'Your second line is as good as the first, so share the game and keep legs fresh.';
+  } else if (stamina <= LOW_STAMINA) {
+    suggestion = 'deep';
+    reason = `Your starters' stamina is ${Math.round(stamina)}, so rotate deep to keep them fresh late.`;
+  } else if (wearHeavy) {
+    suggestion = 'deep';
+    reason = 'A fast or pressing plan wears legs down, so rotate deep.';
+  }
+  return { firstLine, secondLine, gap, stamina, suggestion, reason };
 }

@@ -6,4 +6,5 @@ export const DEFAULT_TACTICS: Tactics = {
   slideAggression: 'normal',
   offenseSet: 'balanced',
   defensePackage: 'man',
+  midfieldRotation: 'balanced',
 };

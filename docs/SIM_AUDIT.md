@@ -149,7 +149,7 @@ Xbox 360 lacrosse was a handful of $5 Xbox Live Indie Games arcade titles, mostl
 
 Sources: [NLL 11 on Metacritic](https://www.metacritic.com/game/nll-11/), [Nexgam review](https://www.nexgam.de/xbox-live-arcade-xbox/nll-2011), [Armless Octopus via N4G](https://n4g.com/news/739871/examiner-nll-11-video-game-preview?info=true), [College Lacrosse 2012 review, Retro Sports Gamer](https://retrosportsgamer.wordpress.com/2012/07/29/college-lacrosse-2012-indie-dev-covers-ignored-sport/), [College Lacrosse 2012 on Metacritic](https://www.metacritic.com/game/college-lacrosse-2012/).
 
-What those games had that this one does not: **manual line changes** (NLL 11's substitutions; here the second midfield line only matters through rotation relief, D4), and **team editing** (College Lacrosse 2012; here schools, names, and colors are fixed). Reviewers of both faulted execution and onboarding more than missing modes; the lesson for this sim is to keep explaining its systems in the UI, as the scouting report and install descriptions do.
+What those games had that this one does not: ~~manual line changes~~ (added as the midfield-lines call; see "Midfield rotation" below), and **team editing** (College Lacrosse 2012; here schools, names, and colors are fixed). Reviewers of both faulted execution and onboarding more than missing modes; the lesson for this sim is to keep explaining its systems in the UI, as the scouting report and install descriptions do.
 
 ### Recruiting stakes (2026-11-22)
 
@@ -166,6 +166,24 @@ Now a walk-on is a step below the program's recruits in every trait and is liste
 The naive board is the career harness's recruiting routine, so its numbers fell (100-season mean 43.9% vs 74.8%; it passes its assertions). That is the honest result for a board of Reach and Long shot targets, so the harness was left as written; `recruitingStakes.test.ts` now holds the gap between not recruiting and staff recruiting.
 
 So that a player does not fall into it blind, the Weekly Hub's recruiting item now judges the class, not just the effort: from week 6, a class below half of a staff-run pace (2 commits by week 6, 4 by week 10, against a staff pace of 6 by week 5 and 12 by week 10) turns to a warning with the commit count, the weeks left, what open scholarships become, and the two fixes.
+
+### Midfield rotation (2026-11-22)
+
+A sixth game-plan call, **Midfield lines**: ride the starters, balanced (the old behavior and the default; saves without the field play exactly as before), or a deep rotation. It moves only the midfielders' starter and bench weights and how much a second line eases wear (`MIDFIELD_ROTATION` in `matchEngine.ts`). Without a depth chart there are no lines, so the call does nothing. CPU staffs keep balanced lines.
+
+Win % against balanced (6,000–8,000 games each, same matchup, opponent on default):
+
+| Roster / plan | Ride the starters | Deep rotation |
+|---|---|---|
+| Typical (second line ~2 behind) | -0.3 | +0.1 |
+| Second line 6 behind | **+1.6** | -1.1 |
+| Second line 12 behind | **+3.3** | -3.4 |
+| Lines even | -0.7 | **+1.0** |
+| Second line 8 better | -2.1 | **+2.8** |
+| Starters' stamina 90 | +0.2 | -1.3 |
+| Fast tempo, pressure, hard ride | -0.2 | **+1.7** |
+
+Under the game plan, the Coach Office shows the coach's own lines (first and second line, starters' stamina) and the rotation those numbers favor, with a one-click switch: ride the starters from a 5-point gap; rotate deep with even lines, stamina of 67 or less, or a fast or pressing plan. With depth charts, no rotation combination beats default against every opponent (best worst case -0.3 pp).
 
 ---
 
@@ -220,7 +238,7 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 | D2 | ✅ | **Done in Phase 5:** 1–6 week injuries and season-enders, stateless and the same for every team. Redshirts came after Phase 5: before week 1 a coach can sit a player for the season (one per player, no seniors, never thinning a position below the starters plus one). He still develops and keeps his class year, shown as "RS". Was: injuries lasted one week only. Each week is a fresh roll with no carry-over, no severity, and no season-ending injuries, so the injured-reserve and redshirt flags in `gameRules.ts` have nothing to act on. | `injuries.ts` L34 | Add duration (1–6 weeks, rare season-ending) and keep active injuries in `coachSlice`. Redshirts can follow later. |
 | D3 | ✅ | **Done in Phase 3:** the career harness checks the user's roster against the top ten CPU rosters each season and logs win % by year. Was: user roster against CPU rosters had never been measured over a long career. The user's roster develops and recruits while the CPU stays static (L1). The 20-season harness only asserts an average overall below 94. | `careerTwentySeason.test.ts` | Add an assertion that the user's roster average stays within a band of the top CPU programs, and log the user's win % per season so drift is visible. |
 | D5 | Mitigated | **Phase 5 measured it and softened it.** Diagnosis: late in a career the user's starters (about 85) are *below* the best CPU programs (about 90), but play an average conference schedule with a maxed coaching tree, in an engine where the better team won too often. Potential-capped growth, game-to-game form, and a softer rating-to-result curve brought late-career seasons from 83–100% wins to mostly 67–92%. After Phase 5, skill-tree levels give diminishing game-day returns (a maxed tree is worth about +9 pp instead of +10, since much of the edge was the install), and the weekly installs were rebalanced to within about 3 pp of each other. The discipline install had been a clear best at +6–10 pp. Original gap: late careers turned into dynasties. In the 100-season harness, the user's program wins 83–100% of its regular-season games from about year 20 on (a 58–83% band before that). The roster stays inside the top-ten band, so the edge comes from the maxed coach skill tree, archetype bonuses, and program resources stacking on game day, not from roster talent. | `coachEffects.ts` `buildCoachGamePlan`; `careerThunks.ts` | Cap the combined game-day modifiers, or make coach skill gains taper. Then add a harness check on late-career win %. |
-| D4 | Partly done | **The second midfield line matters in Phase 5** through rotation relief on fatigue. Explicit line changes, short-stick defensive middies, and wing assignments are still open. Was: depth-chart lines. Starters are a flat set. There are no first and second midfield lines, no short-stick D-middies, and no faceoff wing assignment. | `buildDefaultStarters` | Comes with E8 (line fatigue). |
+| D4 | Mostly done | **The second midfield line matters in Phase 5** through rotation relief on fatigue, and **the coach now sets how the lines share the game** (Midfield lines call, 2026-11-22). Short-stick defensive middies and wing assignments are still open. Was: depth-chart lines. Starters are a flat set. There are no first and second midfield lines, no short-stick D-middies, and no faceoff wing assignment. | `buildDefaultStarters` | Comes with E8 (line fatigue). |
 
 ### E. Tooling and tests
 

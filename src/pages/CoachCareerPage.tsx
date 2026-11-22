@@ -42,6 +42,8 @@ import PageHeader from '../components/PageHeader';
 import CoachStars from '../components/CoachStars';
 import { COACH_PERKS, PERK_UNLOCK_LEVEL, perkInfo, type CoachPerkId, type SkillBranch } from '../sim/coachPerks';
 import { coachToNextStar, headCoachRating, skillTreeLevels } from '../sim/coachRating';
+import { midfieldLineReport } from '../sim/depthChart';
+import { tacticShortLabel } from '../lib/tacticLabels';
 
 const ARCHETYPE_BONUSES: Record<string, string[]> = {
   RECRUITER: ['+15% weekly interest gain', 'Expanded recruit reach', 'Faster commitments on key needs'],
@@ -256,6 +258,11 @@ function CoachCareerPage() {
     [coach.assistants, coach.coachPerks, coach.practiceFocus, coach.profile?.archetype, coach.profile?.skill, coach.skillTree, coach.tactics, coach.teamFatigue],
   );
   const prepNotes = useMemo(() => summarizeCoachGamePlan(coachGamePlan), [coachGamePlan]);
+  // The midfield read-out judges the base scheme the coach is editing, against his own roster.
+  const lineReport = useMemo(
+    () => (coach.managedRoster ? midfieldLineReport(coach.managedRoster, coach.starterIds, coach.tactics) : null),
+    [coach.managedRoster, coach.starterIds, coach.tactics],
+  );
   const gameDayChanges = useMemo(
     () =>
       gameDayTacticChanges({
@@ -651,6 +658,24 @@ function CoachCareerPage() {
           tactics={coach.tactics}
           onChange={(next) => dispatch(setTactics(next))}
         />
+        {lineReport && (
+          <p className="text-xs mt-2 mb-0" aria-live="polite">
+            <strong>Midfield lines:</strong> first {Math.round(lineReport.firstLine)}, second {Math.round(lineReport.secondLine)};
+            starters&apos; stamina {Math.round(lineReport.stamina)}. {lineReport.reason}
+            {(coach.tactics.midfieldRotation ?? 'balanced') !== lineReport.suggestion && (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  className="seasonInlineLink"
+                  onClick={() => dispatch(setTactics({ ...coach.tactics, midfieldRotation: lineReport.suggestion }))}
+                >
+                  Use {tacticShortLabel('midfieldRotation', lineReport.suggestion).toLowerCase()}
+                </button>
+              </>
+            )}
+          </p>
+        )}
 
         <h4 className="planSubhead">This week&apos;s install</h4>
         <InstallPicker

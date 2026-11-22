@@ -3,7 +3,9 @@ import { describe, test } from 'node:test';
 import leagueData from '../data/teams128.json' with { type: 'json' };
 import type { Team } from '../types/sim.ts';
 import { generateRoster } from './generateRoster.ts';
-import { bestLineup, depthChartSlots, lineupGap, startingRating, STARTER_SLOTS, swapStarter, weakestStarter } from './depthChart.ts';
+import { bestLineup, depthChartSlots, lineupGap, midfieldLineReport, startingRating, STARTER_SLOTS, swapStarter, weakestStarter } from './depthChart.ts';
+import { DEFAULT_TACTICS } from './tactics.ts';
+import type { Player } from '../types/sim.ts';
 import { POSITION_ORDER } from '../types/sim.ts';
 
 const team = (leagueData.teams as Team[])[10];
@@ -54,5 +56,35 @@ describe('depth chart', () => {
     const redshirted = roster.map((player) => (player.id === goalie.id ? { ...player, redshirt: true } : player));
     assert.equal(depthChartSlots(redshirted, best).G[0].player, null);
     assert.ok(!bestLineup(redshirted).includes(goalie.id));
+  });
+});
+
+describe('midfield line report', () => {
+  const starters = bestLineup(roster);
+  const starterSet = new Set(starters);
+  const adjust = (patch: (player: Player) => Partial<Player>) => roster.map((player) => ({ ...player, ...patch(player) }));
+  const secondLine = (delta: number) => adjust((player) => (player.position === 'M' && !starterSet.has(player.id) ? { overall: player.overall + delta } : {}));
+
+  test('a thin second line suggests riding the starters', () => {
+    const report = midfieldLineReport(secondLine(-12), starters, DEFAULT_TACTICS);
+    assert.equal(report?.suggestion, 'tight');
+    assert.match(report?.reason ?? '', /behind the first/);
+  });
+
+  test('even lines, tired starters, or a fast plan suggest a deep rotation', () => {
+    assert.equal(midfieldLineReport(secondLine(10), starters, DEFAULT_TACTICS)?.suggestion, 'deep');
+    const tired = adjust(() => ({ stamina: 60 }));
+    const report = midfieldLineReport(tired, starters, DEFAULT_TACTICS);
+    assert.ok(report && report.gap > 0.5 && report.gap < 5, 'precondition: close lines');
+    assert.equal(report?.suggestion, 'deep');
+    const close = midfieldLineReport(roster, starters, { ...DEFAULT_TACTICS, tempo: 'fast' });
+    assert.ok(close && close.gap > 0.5 && close.gap < 5 && close.stamina > 67, 'precondition: close lines, fresh legs');
+    assert.equal(close?.suggestion, 'deep');
+  });
+
+  test('close lines with fresh legs keep the standard rotation', () => {
+    const report = midfieldLineReport(adjust(() => ({ stamina: 80 })), starters, DEFAULT_TACTICS);
+    assert.ok(report && report.gap > 0.5 && report.gap < 5, 'precondition: close lines');
+    assert.equal(report?.suggestion, 'balanced');
   });
 });
