@@ -68,9 +68,8 @@ Measured each single call against the schemes the 128 CPU programs actually run 
 |---|---|---|
 | Fast tempo was a trap: every effect it had was a cost (rushed looks, turnovers, wear), and shorter possessions gave both sides the extra trips | −3.3 pp vs the CPU field; −2.8 pp for an underdog; +0.5 pp for a favorite | −0.5 pp vs the field; +0.7 pp for a favorite, −1.4 pp for an underdog. A fast offense now pushes after a clean clear (25% transition chance, 40% of that against a conservative ride), and its settled shot-quality cost is halved. A conservative ride is its counter (−2.1 pp vs −0.7 pp against a balanced ride). |
 | Pressure defense beat man against three of four offense sets: its takeaway bonus outweighed the crease's shot-quality edge, so the crease did not beat it as the hint said | +2.8 pp vs the field; vs crease +0.4 pp | −0.3 pp vs the field; vs crease −4.4 pp, vs motion −5.7 pp, vs invert +8.3 pp. Crease vs pressure edge 0.025 → 0.045; pressure takeaway edge 0.022/0.030 → 0.014/0.022 (standard/early slides). |
-| Scheme search, best worst-case edge over default | +1.2 pp | +1.2 pp (no scheme to always run). Pressure schemes left the top of the average column (+4–5 pp). |
-
-Still open: slow tempo leads the scheme search's average column at about +2.5 pp (worst case +1.2 pp). It is the patient underdog's call (+1.5 pp for a weaker team), so it was left alone.
+| Slow tempo stacked a shot-quality bonus (+0.006) on top of fewer possessions and fresher legs, and led the scheme search | +1.0 to +1.6 pp vs the field; best worst case +1.2 pp, average about +2.5 pp | Bonus removed: +0.3 pp in an even matchup, +0.7 pp for an underdog, −0.3 pp for a favorite. It stays the underdog's call through fewer possessions, not better shots. |
+| Scheme search, best worst-case edge over default | +1.2 pp | 0.0 pp: default tops the table and no scheme beats it against every opponent. Pressure schemes left the top of the average column (+4–5 pp); slow schemes average about +1.3 pp. |
 
 ---
 

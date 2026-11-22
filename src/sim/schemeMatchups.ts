@@ -44,8 +44,8 @@ export function schemeShotQualityEdge(offense: Tactics, defense: Tactics): numbe
   const pkg: DefensePackage = defense.defensePackage && defense.defensePackage in SET_VS_PACKAGE.balanced ? defense.defensePackage : 'man';
   const slides = SLIDE_VS_SET[defense.slideAggression] ?? SLIDE_VS_SET.normal;
   let edge = SET_VS_PACKAGE[set][pkg] + slides[set];
-  // Patience buys better looks; pace trades them for volume.
-  if (offense.tempo === 'slow') edge += 0.006;
+  // Pace rushes settled looks. Slow tempo's edge is fewer possessions and fresher legs, not
+  // better shots: a shot-quality bonus on top made it a call to always run.
   if (offense.tempo === 'fast') edge -= 0.003;
   return edge;
 }

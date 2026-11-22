@@ -24,7 +24,7 @@ export const TACTIC_FIELDS: TacticField[] = [
     key: 'tempo',
     label: 'Tempo',
     options: [
-      { value: 'slow', label: 'Slow', hint: 'fewer possessions, better looks, shot-clock risk', short: 'Slow tempo' },
+      { value: 'slow', label: 'Slow', hint: 'fewer possessions, fresher legs, shot-clock risk', short: 'Slow tempo' },
       { value: 'normal', label: 'Balanced', short: 'Balanced tempo' },
       { value: 'fast', label: 'Fast', hint: 'pushes for transition looks; rushed sets, more turnovers, tired legs', short: 'Fast tempo' },
     ],
