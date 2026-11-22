@@ -11,6 +11,7 @@ import {
   resetSeason,
 } from '../features/season/seasonSlice';
 import { beginFirstSeason } from '../features/coach/careerThunks';
+import { nextPaint } from '../lib/nextPaint';
 import { selectIsCareerReady } from '../features/coach/coachSlice';
 import { confirmPlayCopy } from '../features/settings/settingsSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -86,34 +87,38 @@ function SeasonPage() {
     return { label: 'Season is in preseason setup.', link: null, cta: null };
   }, [coachReady, hasSeason, summary.phase]);
 
-  const handleStartSeason = async () => {
-    if (!hasValidSeed) return;
-    setStartError(null);
+  // One action at a time: buttons disable and read "Working…" until the sim finishes.
+  const [busy, setBusy] = useState<'start' | 'week' | 'season' | null>(null);
+  const runBusy = async (kind: 'start' | 'week' | 'season', work: () => Promise<unknown>, onError: (message: string) => void) => {
+    setBusy(kind);
     try {
-      await dispatch(beginFirstSeason({ seed: seedInput })).unwrap();
+      await nextPaint();
+      await work();
     } catch (err) {
-      setStartError(err instanceof Error ? err.message : String(err));
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
     }
+  };
+
+  const handleStartSeason = async () => {
+    if (!hasValidSeed || busy) return;
+    setStartError(null);
+    await runBusy('start', () => dispatch(beginFirstSeason({ seed: seedInput })).unwrap(), setStartError);
   };
 
   const handleSimWeek = async () => {
+    if (busy) return;
     if (confirmPlay && !window.confirm(confirmPlayCopy('week', `week ${displayWeek + 1}`))) return;
     setActionError(null);
-    try {
-      await dispatch(simCurrentWeek()).unwrap();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : String(err));
-    }
+    await runBusy('week', () => dispatch(simCurrentWeek()).unwrap(), setActionError);
   };
 
   const handleSimSeason = async () => {
+    if (busy) return;
     if (!confirm('Simulate the rest of the regular season?')) return;
     setActionError(null);
-    try {
-      await dispatch(simSeason()).unwrap();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : String(err));
-    }
+    await runBusy('season', () => dispatch(simSeason()).unwrap(), setActionError);
   };
 
   const handleReset = () => {
@@ -184,8 +189,8 @@ function SeasonPage() {
           {startError && <p className="text-sm text-red-600 mt-1">{startError}</p>}
 
           <div className="flex justify-end">
-            <button type="button" className="btn btn-primary" onClick={handleStartSeason} disabled={!hasValidSeed}>
-              Begin season
+            <button type="button" className="btn btn-primary" onClick={handleStartSeason} disabled={!hasValidSeed || busy !== null} aria-busy={busy === 'start'}>
+              {busy === 'start' ? 'Working…' : 'Begin season'}
             </button>
           </div>
         </div>
@@ -208,11 +213,11 @@ function SeasonPage() {
                 </Link>
               ) : (
                 <>
-                  <button type="button" className="btn btn-primary" onClick={handleSimWeek}>
-                    Sim week {displayWeek + 1}
+                  <button type="button" className="btn btn-primary" onClick={handleSimWeek} disabled={busy !== null} aria-busy={busy === 'week'}>
+                    {busy === 'week' ? 'Working…' : `Sim week ${displayWeek + 1}`}
                   </button>
-                  <button type="button" className="btn" onClick={handleSimSeason}>
-                    Sim to the end
+                  <button type="button" className="btn" onClick={handleSimSeason} disabled={busy !== null} aria-busy={busy === 'season'}>
+                    {busy === 'season' ? 'Working…' : 'Sim to the end'}
                   </button>
                 </>
               )

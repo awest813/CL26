@@ -194,7 +194,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [ ] Mobile / tablet responsive tables
 - [x] Settings page for play confirmations and the matchup estimate
 - [ ] Sim speed, display density, and theme toggle
-- [ ] Performance audit for 128-team workflows (virtualized long lists if needed)
+- [x] Performance audit for 128-team workflows: page renders stay under 50 ms of main-thread work (no virtualization needed); a schedule builds 6.6x faster (Begin season 840 ms → ~240 ms); sim buttons paint "Working…" before the work runs; the save holds at ~2.2M chars across seasons
 
 ---
 

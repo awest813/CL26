@@ -84,7 +84,11 @@ function tryBuildWeekMatchups(
     if (used.size === teamIds.length) return true;
 
     const available = teamIds.filter((id) => !used.has(id));
-    available.sort((a, b) => candidatesFor(a).length - candidatesFor(b).length);
+    // Most constrained team first. Count each team's options once per step: the comparator
+    // used to rebuild both lists on every comparison, which made a schedule take ~0.5 s.
+    // The sort is stable and the counts are the same, so the order (and the schedule) is unchanged.
+    const optionCount = new Map(available.map((id) => [id, candidatesFor(id).length]));
+    available.sort((a, b) => (optionCount.get(a) ?? 0) - (optionCount.get(b) ?? 0));
     const teamId = available[0];
     const candidates = candidatesFor(teamId);
 

@@ -38,6 +38,7 @@ import { gameDayProgramTactics, programTactics } from '../sim/schemeMatchups';
 import { programRoster, programStarters } from '../sim/programLedger';
 import { activeRoster } from '../sim/redshirts';
 import { availabilityWeekKey, injuryTimeline, rosterForAvailability, weeklyScratches } from '../sim/injuries';
+import { nextPaint } from '../lib/nextPaint';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import { estimateWinChance } from '../sim/winEstimate';
 import { isNeutralSiteRound } from '../sim/playoffs';
@@ -581,6 +582,7 @@ function WeeklyHubPage() {
     setActionError(null);
     setAdvancing(true);
     try {
+      await nextPaint();
       if (loopStep.action === 'play-week') {
         pendingScroll.current = true;
         const outcome = await dispatch(runCareerWeeklyCycle()).unwrap();
@@ -632,6 +634,7 @@ function WeeklyHubPage() {
     setAdvancing(true);
     pendingScroll.current = true;
     try {
+      await nextPaint();
       const played = await dispatch(simCareerToBracket()).unwrap();
       if (played < weeksLeft) {
         setActionError(`Stopped after ${played} of ${weeksLeft} weeks. Stay on this hub and try again.`);
