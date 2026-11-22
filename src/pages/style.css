@@ -4040,3 +4040,10 @@ button.seasonScoreButton:hover:not(:disabled) {
   margin-top: 0.25rem;
   color: var(--danger);
 }
+
+/* Shown for the moment a page's code is loading (first visit only). */
+.pageLoading {
+  padding: 2rem 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
