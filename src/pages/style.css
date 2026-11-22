@@ -123,7 +123,8 @@
   color: #fff;
 }
 
-.dynastyProgramChip:has(.teamLogo) {
+/* With a logo the chip lays out in a row (a class, not :has(), so Firefox before 121 matches too). */
+.dynastyProgramChip-logo {
   flex-direction: row;
   align-items: center;
   gap: 0.55rem;
@@ -2899,6 +2900,12 @@ button.archetypeOption[aria-pressed='true'] {
   .pollWhyRow .weightList {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.storageHealth {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
 }
 
 .scoreDetails {

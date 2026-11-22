@@ -14,6 +14,13 @@ export interface PersistStorage {
   removeItem: (key: string) => Promise<unknown>;
 }
 
+/** Where the save is going right now. */
+export type SaveLocation = 'indexeddb' | 'localstorage' | 'none';
+
+export interface SaveStorage extends PersistStorage {
+  location: () => SaveLocation;
+}
+
 /** A key-value store the save can sit in. */
 export interface SaveBackend {
   get: (key: string) => Promise<string | null>;
@@ -105,7 +112,7 @@ export function localStorageBackend(storage?: Storage | null): SaveBackend | nul
  * The save's storage: IndexedDB first, localStorage when IndexedDB is unavailable or fails.
  * Reads find a save in either place; a localStorage save found by a read moves into IndexedDB.
  */
-export function createSaveStorage(primary: SaveBackend | null, legacy: SaveBackend | null): PersistStorage {
+export function createSaveStorage(primary: SaveBackend | null, legacy: SaveBackend | null): SaveStorage {
   // Once IndexedDB fails, the session stays on localStorage rather than splitting the save.
   let usePrimary = primary !== null;
   const fallBack = (error: unknown): void => {
@@ -114,6 +121,7 @@ export function createSaveStorage(primary: SaveBackend | null, legacy: SaveBacke
   };
 
   return {
+    location: () => (usePrimary && primary ? 'indexeddb' : legacy ? 'localstorage' : 'none'),
     getItem: async (key) => {
       if (usePrimary && primary) {
         try {
@@ -156,4 +164,39 @@ export function createSaveStorage(primary: SaveBackend | null, legacy: SaveBacke
       ]);
     },
   };
+}
+
+export interface StorageHealth {
+  location: SaveLocation;
+  /** Bytes the site uses and may use, when the browser says. */
+  usage: number | null;
+  quota: number | null;
+  /** True when the browser has agreed not to clear the site's data on its own; null when it cannot say. */
+  persisted: boolean | null;
+}
+
+type StorageManagerLike = Pick<StorageManager, 'estimate' | 'persisted' | 'persist'>;
+
+function storageManager(): StorageManagerLike | null {
+  return typeof navigator !== 'undefined' && navigator.storage && typeof navigator.storage.estimate === 'function'
+    ? navigator.storage
+    : null;
+}
+
+/** How the save is kept: where, how much room it has, and whether the browser may clear it. */
+export async function storageHealth(storage: Pick<SaveStorage, 'location'>, manager: StorageManagerLike | null = storageManager()): Promise<StorageHealth> {
+  const estimate = manager ? await manager.estimate().catch(() => null) : null;
+  const persisted = manager && typeof manager.persisted === 'function' ? await manager.persisted().catch(() => null) : null;
+  return {
+    location: storage.location(),
+    usage: estimate?.usage ?? null,
+    quota: estimate?.quota ?? null,
+    persisted,
+  };
+}
+
+/** Ask the browser to keep the site's data. Some browsers decide on their own; Firefox asks the player. */
+export async function requestPersistentSave(manager: StorageManagerLike | null = storageManager()): Promise<boolean | null> {
+  if (!manager || typeof manager.persist !== 'function') return null;
+  return manager.persist().catch(() => null);
 }

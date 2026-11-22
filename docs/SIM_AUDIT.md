@@ -313,6 +313,14 @@ The Top 25 page explained the formula, but broke down the score only for No. 1 a
 - **Your program** gets the same line-by-line breakdown, ranked or not.
 - **Phones.** Points now show at every width; the trend arrow moves under the rank there, so the poll still fits without sideways scrolling.
 
+### Browser support (2026-11-22)
+
+- **The real build target was newer than anyone had chosen.** Vite 8 defaults to Chrome 111, Firefox 114, and Safari 16.4; the shipped code used ES2021 syntax (`??=`, `||=`), so an iPhone stuck on iOS 15 got a blank page. The build now targets Chrome/Edge 100, Firefox 100, and Safari/iOS 15 (`SUPPORTED_BROWSERS`), for 940 bytes more; `npm run check:browsers` holds the output to ES2020. A scan of the bundle found no newer runtime APIs (`.at`, `structuredClone`, `Object.hasOwn`, and the like), and `tsconfig`'s ES2020 lib keeps them out of the source.
+- **Older browsers see a notice** from `index.html` instead of a blank page, and the app does not render over it.
+- **CSS:** the header chip's `:has()` (Firefox before 121) is now a class, and an `@layer` block (dropped whole by browsers without layers) is plain rules. `doiuse` against the supported list leaves only cosmetic gaps.
+- **Fixed with it:** after the save moved to IndexedDB, the pre-paint script could no longer read the theme, so dark mode flashed light on every load. Theme and density are mirrored under `cl26:display`; checked: dark applies before the app's scripts arrive.
+- **Saves on Safari:** Settings shows where the save is kept, how much room it has, and whether the browser agreed to keep it (with a button to ask, `navigator.storage.persist()`), and on Safari warns that site data is cleared after 7 days without a visit unless the game is on the Home Screen.
+
 ---
 
 ## Gap list

@@ -27,12 +27,15 @@
     <title>College Lacrosse Head Coach Sim</title>
     <script>
       // Apply a saved theme and density before first paint, so the page never flashes the other look.
+      // The app keeps them under cl26:display; a save from before that lived whole in localStorage.
       try {
-        var saved = JSON.parse(localStorage.getItem('persist:root') || '{}');
-        var theme = saved.settings ? JSON.parse(saved.settings).theme : null;
-        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-        var density = saved.settings ? JSON.parse(saved.settings).density : null;
-        if (density === 'compact') document.documentElement.dataset.density = 'compact';
+        var display = JSON.parse(localStorage.getItem('cl26:display') || 'null');
+        if (!display) {
+          var saved = JSON.parse(localStorage.getItem('persist:root') || '{}');
+          display = saved.settings ? JSON.parse(saved.settings) : {};
+        }
+        if (display.theme === 'light' || display.theme === 'dark') document.documentElement.dataset.theme = display.theme;
+        if (display.density === 'compact') document.documentElement.dataset.density = 'compact';
       } catch (error) {
         // No saved settings yet, or storage is blocked: the system setting applies.
       }
@@ -40,6 +43,32 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p style="max-width: 32rem; margin: 3rem auto; padding: 0 1rem; font: 16px/1.5 system-ui, sans-serif">
+        College Lacrosse Head Coach Sim runs in your browser and needs JavaScript. Turn it on for this site and reload.
+      </p>
+    </noscript>
+    <script>
+      // Browsers older than the game supports (Safari and iOS 15, Chrome, Edge, and Firefox 100)
+      // would show a blank page. Tell the player instead, before the app tries to load.
+      (function () {
+        var supported = 'noModule' in document.createElement('script')
+          && typeof Promise !== 'undefined' && typeof Promise.any === 'function'
+          && typeof WeakRef === 'function'
+          && typeof Object.fromEntries === 'function'
+          && typeof String.prototype.replaceAll === 'function'
+          && typeof window.ResizeObserver === 'function'
+          && typeof (window.CSS && CSS.supports) === 'function' && CSS.supports('display', 'flex') && CSS.supports('gap', '1rem');
+        if (supported) return;
+        window.__cl26Unsupported = true;
+        var root = document.getElementById('root');
+        if (!root) return;
+        root.innerHTML = '<div style="max-width:32rem;margin:3rem auto;padding:1rem 1.25rem;border-radius:12px;font:16px/1.5 system-ui,-apple-system,sans-serif;color:#142018;background:#fffcf8">'
+          + '<h1 style="font-size:1.4rem">This browser is too old for the game</h1>'
+          + '<p>College Lacrosse Head Coach Sim needs Safari 15 or newer (iOS 15 on iPhone and iPad), or a current Chrome, Edge, or Firefox.</p>'
+          + '<p>Update your browser or device, or open this page in another browser.</p></div>';
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

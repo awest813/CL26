@@ -1,7 +1,7 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { checkStorageAvailable, reportSaveFailure, reportSaveOk } from './saveStatus';
 import { SAVE_VERSION } from './saveBackup';
-import { createSaveStorage, indexedDbBackend, localStorageBackend, type PersistStorage } from './saveStorage';
+import { createSaveStorage, indexedDbBackend, localStorageBackend, type PersistStorage, type SaveStorage } from './saveStorage';
 
 /** Report every write's outcome, so a failing save is shown to the player instead of only logged. */
 function withSaveReporting(base: PersistStorage): PersistStorage {
@@ -22,8 +22,9 @@ function withSaveReporting(base: PersistStorage): PersistStorage {
 }
 
 const idb = indexedDbBackend();
+const baseStorage = createSaveStorage(idb, localStorageBackend());
 /** The career's storage: IndexedDB, or localStorage where IndexedDB is unavailable. */
-export const saveStorage = withSaveReporting(createSaveStorage(idb, localStorageBackend()));
+export const saveStorage: SaveStorage = { ...withSaveReporting(baseStorage), location: baseStorage.location };
 const storage = saveStorage;
 // Without IndexedDB the save depends on localStorage: say so up front if the browser blocks it.
 if (!idb) checkStorageAvailable();

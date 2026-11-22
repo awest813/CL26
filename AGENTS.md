@@ -38,6 +38,7 @@ This is a client-side-only React SPA — no backend, database, or Docker service
 | Lint | `npm run lint` |
 | Build (type-check + prod) | `npm run build` |
 | Unit/regression tests | `npm run test:regression` (requires `bun` on PATH) |
+| Browser support check | `npm run check:browsers` (build, then ES2020 check of the output) |
 
 ### Non-obvious notes
 

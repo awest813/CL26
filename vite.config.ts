@@ -6,7 +6,17 @@ import { VitePWA } from 'vite-plugin-pwa'
 // VITE_PAGES_BASE so the project site is served from /CL26/.
 const pagesBase = process.env.VITE_PAGES_BASE || '/'
 
+/**
+ * The oldest browsers the game supports (see "Browser support" in the README). Vite 8's
+ * default is Chrome 111, Firefox 114, and Safari 16.4; this reaches back to the iPhones that
+ * stop at iOS 15. index.html shows a notice to anything older instead of a blank page.
+ */
+export const SUPPORTED_BROWSERS = ['es2020', 'chrome100', 'edge100', 'firefox100', 'safari15', 'ios15']
+
 export default defineConfig({
+  build: {
+    target: SUPPORTED_BROWSERS,
+  },
   plugins: [
     react(),
     // Installable, and playable offline: the whole app (every lazily loaded page) is

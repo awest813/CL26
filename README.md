@@ -40,8 +40,23 @@ npm run dev        # Vite dev server → http://localhost:5173
 | `npm run preview` | Serve the production build locally |
 | `npm run test:regression` | Regression tests (requires `bun` on PATH) |
 | `npm run sim:careers` | Ten 20-season careers in parallel with integrity checks every season and a determinism replay (requires `bun`; about a minute) |
+| `npm run check:browsers` | Build, then check every shipped script is ES2020, the oldest the supported browsers run |
 
 > **Bun is required for tests.** Bun is pre-installed at `~/.bun/bin/bun`; ensure `~/.bun/bin` is on `PATH` before running `test:regression`.
+
+## Browser support
+
+| Browser | Oldest supported |
+|---------|------------------|
+| Safari (Mac), and every browser on iPhone and iPad | Safari 15 / iOS 15 |
+| Chrome, Edge, Samsung Internet | Chrome and Edge 100 |
+| Firefox | 100 |
+
+- **The build targets these explicitly** (`SUPPORTED_BROWSERS` in `vite.config.ts`). Vite 8's own default is newer (Chrome 111, Firefox 114, Safari 16.4), which would leave iPhones that stop at iOS 15 with a blank page. `npm run check:browsers` fails if a dependency ships newer syntax.
+- **Older browsers get a notice**, not a blank page: `index.html` checks for what the game needs before the app loads.
+- **Saves** live in IndexedDB, with localStorage as the fallback (some private-browsing modes). The theme and density are mirrored under `cl26:display` in localStorage, so the first paint already has them.
+- **Safari clears a site's data after 7 days without a visit**, unless the game is on the Home Screen. Settings says so on Safari and shows where the save is kept, how much room it has, and whether the browser has agreed to keep it, with a button to ask.
+- Checked in Chromium (desktop and phone widths, both themes). Safari and Firefox are covered by the build target and a feature audit of the shipped CSS (`doiuse`) and scripts (`es-check`): the gaps left are cosmetic (no `overscroll-behavior` before Safari 16).
 
 ## Architecture at a glance
 

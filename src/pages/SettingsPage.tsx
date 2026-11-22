@@ -15,6 +15,7 @@ import {
 } from '../features/settings/settingsSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import PageHeader from '../components/PageHeader';
+import StorageHealthPanel from '../components/StorageHealthPanel';
 import { persistor } from '../store/persistor';
 import { saveStorage } from '../store/store';
 import { backupFileName, buildBackup, parseBackup, SAVE_STORAGE_KEY } from '../store/saveBackup';
@@ -223,6 +224,7 @@ function SettingsPage() {
             {backupNote.text}
           </p>
         )}
+        <StorageHealthPanel />
       </section>
 
       <section className="card newGameCard" aria-labelledby="settings-save">

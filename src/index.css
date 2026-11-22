@@ -351,15 +351,14 @@ button:focus-visible {
   outline-offset: 1px;
 }
 
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+/* Plain rules rather than @layer, which older browsers drop as a whole. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 

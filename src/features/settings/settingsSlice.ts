@@ -77,11 +77,27 @@ export function confirmPlayCopy(kind: 'week' | 'round', label: string): string {
 export const { setConfirmPlay, setShowWinChance, setTheme, setGameReveal, setDensity, setTeamOverride, clearTeamOverride, clearAllTeamOverrides } = settingsSlice.actions;
 
 /** Put the theme on the page: a set data-theme wins over the system setting; 'system' clears it. */
+/**
+ * Where index.html reads the theme and density before the app loads, so the first paint
+ * already has them. The save itself lives in IndexedDB, which a script cannot read in time.
+ */
+export const DISPLAY_PREFS_KEY = 'cl26:display';
+
+function rememberDisplay(change: { theme?: ThemePreference; density?: DisplayDensity }): void {
+  try {
+    const current = JSON.parse(window.localStorage.getItem(DISPLAY_PREFS_KEY) ?? '{}') as Record<string, string>;
+    window.localStorage.setItem(DISPLAY_PREFS_KEY, JSON.stringify({ ...current, ...change }));
+  } catch {
+    // Storage blocked or full: the page still applies the setting; only the first paint misses it.
+  }
+}
+
 export function applyTheme(theme: ThemePreference | undefined): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
   if (!theme || theme === 'system') delete root.dataset.theme;
   else root.dataset.theme = theme;
+  rememberDisplay({ theme: theme ?? 'system' });
 }
 
 /** Put the density on the page; comfortable is the default and clears it. */
@@ -90,6 +106,7 @@ export function applyDensity(density: DisplayDensity | undefined): void {
   const root = document.documentElement;
   if (density === 'compact') root.dataset.density = 'compact';
   else delete root.dataset.density;
+  rememberDisplay({ density: density ?? 'comfortable' });
 }
 
 export const settingsReducer = settingsSlice.reducer;

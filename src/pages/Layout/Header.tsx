@@ -90,7 +90,7 @@ function Header({ menuOpen, onToggleMenu, menuButtonRef }: HeaderProps) {
       </div>
       <div className="dynastyHeaderMeta">
         {selectedTeam ? (
-          <Link to={`/team/${selectedTeam.id}`} className="dynastyProgramChip">
+          <Link to={`/team/${selectedTeam.id}`} className="dynastyProgramChip dynastyProgramChip-logo">
             <TeamLogo team={selectedTeam} size="sm" />
             <span className="dynastyProgramText">
               <span className="dynastyMetaLabel">Program</span>

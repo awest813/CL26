@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { createSaveStorage, localStorageBackend, type SaveBackend } from './saveStorage.ts';
+import { createSaveStorage, localStorageBackend, requestPersistentSave, storageHealth, type SaveBackend } from './saveStorage.ts';
 
 /** An in-memory store that can be told to fail. */
 function memory(initial: Record<string, string> = {}) {
@@ -70,5 +70,28 @@ describe('save storage', () => {
     assert.equal(await storage.getItem('k'), 'v');
     await assert.rejects(createSaveStorage(null, null).setItem('k', 'v'));
     assert.equal(localStorageBackend(null), null);
+  });
+
+  test('it says where the save is going, and switches when IndexedDB fails', async () => {
+    const idb = memory();
+    const storage = createSaveStorage(idb.backend, memory().backend);
+    assert.equal(storage.location(), 'indexeddb');
+    idb.state.failWrites = true;
+    await storage.setItem('k', 'v');
+    assert.equal(storage.location(), 'localstorage');
+    assert.equal(createSaveStorage(null, null).location(), 'none');
+  });
+
+  test('storage health reads what the browser reports, and copes when it reports nothing', async () => {
+    const manager = {
+      estimate: async () => ({ usage: 3_000_000, quota: 300_000_000 }),
+      persisted: async () => false,
+      persist: async () => true,
+    };
+    const storage = createSaveStorage(memory().backend, null);
+    assert.deepEqual(await storageHealth(storage, manager), { location: 'indexeddb', usage: 3_000_000, quota: 300_000_000, persisted: false });
+    assert.deepEqual(await storageHealth(storage, null), { location: 'indexeddb', usage: null, quota: null, persisted: null });
+    assert.equal(await requestPersistentSave(manager), true);
+    assert.equal(await requestPersistentSave(null), null);
   });
 });
