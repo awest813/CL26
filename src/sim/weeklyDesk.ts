@@ -24,6 +24,12 @@ export interface WeeklyDeskInput {
   hoursCap: number;
   /** Staff sets the board and hours before each week. */
   autoRecruiting?: boolean;
+  /** Prospects committed to the program so far this cycle, and scholarships to fill. */
+  commits?: number;
+  scholarships?: number;
+  /** Regular-season weeks already played, and how many there are. */
+  weeksPlayed?: number;
+  weeksTotal?: number;
   hasRoster: boolean;
   positionNeeds: Record<Position, number>;
   wins: number;
@@ -68,6 +74,28 @@ export function adGoalCopy(input: Pick<WeeklyDeskInput, 'wins' | 'winTarget' | '
   }
 
   return { detail: `${winsLine}. ${rankLine}`, tone };
+}
+
+/** Weeks before the class is judged: early commitments are rare even for a full class. */
+const PACE_GRACE_WEEKS = 3;
+/** Half the pace a staff-run board keeps (half the class by week 5, all of it by week 10). */
+const PACE_SHARE = 0.5;
+
+/** Commits a class should have by now to be on track; a class below it is flagged. */
+export function classPaceFloor(scholarships: number, weeksPlayed: number, weeksTotal: number): number {
+  const span = Math.max(1, weeksTotal - PACE_GRACE_WEEKS);
+  const progress = Math.max(0, Math.min(1, (weeksPlayed - PACE_GRACE_WEEKS) / span));
+  return Math.floor(scholarships * progress * PACE_SHARE);
+}
+
+/** A warning when the class trails the pace, or null. Unfilled scholarships go to walk-ons. */
+function classPaceWarning(input: WeeklyDeskInput): string | null {
+  const { commits, scholarships, weeksPlayed, weeksTotal } = input;
+  if (commits == null || !scholarships || weeksPlayed == null || !weeksTotal) return null;
+  if (weeksPlayed < PACE_GRACE_WEEKS * 2 || commits >= classPaceFloor(scholarships, weeksPlayed, weeksTotal)) return null;
+  const weeksLeft = Math.max(0, weeksTotal - weeksPlayed);
+  const commitLine = `${commits} commit${commits === 1 ? '' : 's'} for ${scholarships} scholarships`;
+  return `${commitLine} with ${weeksLeft} week${weeksLeft === 1 ? '' : 's'} left. Open scholarships go to walk-ons, a step below recruits. Swap Reach and Long shot targets for Good fit and Strong pull, or let your staff run recruiting.`;
 }
 
 function recruitingTask(input: WeeklyDeskInput): DeskTask {
@@ -118,6 +146,17 @@ function recruitingTask(input: WeeklyDeskInput): DeskTask {
       detail: 'The class is open. Add targets before the hours sit unused.',
       tone: 'open',
       action: 'Add targets',
+      href: '/career/recruiting',
+    };
+  }
+  const behind = input.phase === 'REGULAR' ? classPaceWarning(input) : null;
+  if (behind) {
+    return {
+      id: 'recruiting',
+      title: 'Recruiting',
+      detail: behind,
+      tone: 'watch',
+      action: 'Board',
       href: '/career/recruiting',
     };
   }

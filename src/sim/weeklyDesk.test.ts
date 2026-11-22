@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { adGoalCopy, buildWeeklyDesk, type WeeklyDeskInput } from './weeklyDesk.ts';
+import { adGoalCopy, buildWeeklyDesk, classPaceFloor, type WeeklyDeskInput } from './weeklyDesk.ts';
 
 const emptyNeeds = { A: 0, M: 0, D: 0, LSM: 0, FO: 0, G: 0 };
 
@@ -123,5 +123,37 @@ describe('weekly desk', () => {
     assert.equal(goal.tone, 'open');
     assert.match(goal.detail, /Top 12 finish/);
     assert.doesNotMatch(goal.detail, /Outside/);
+  });
+});
+
+describe('recruiting class pace', () => {
+  const recruiting = (overrides: Partial<WeeklyDeskInput>) =>
+    buildWeeklyDesk(desk({ hoursAssigned: 120, scholarships: 12, weeksTotal: 12, ...overrides })).find((task) => task.id === 'recruiting');
+
+  test('a class far behind is flagged with the numbers and the fixes', () => {
+    const task = recruiting({ commits: 1, weeksPlayed: 8 });
+    assert.equal(task?.tone, 'watch');
+    assert.match(task?.detail ?? '', /1 commit for 12 scholarships with 4 weeks left/);
+    assert.match(task?.detail ?? '', /walk-ons/);
+    assert.match(task?.detail ?? '', /staff run recruiting/);
+  });
+
+  test('a staff-paced class is never flagged', () => {
+    // A staff-run board: half the class by week 5, all of it by week 10.
+    const staffPace = [0, 0, 0, 1, 6, 6, 6, 8, 11, 12, 12, 12];
+    staffPace.forEach((commits, index) => {
+      assert.notEqual(recruiting({ commits, weeksPlayed: index + 1 })?.tone, 'watch', `week ${index + 1}`);
+    });
+  });
+
+  test('no verdict before week 6, and none when the staff runs recruiting', () => {
+    assert.notEqual(recruiting({ commits: 0, weeksPlayed: 5 })?.tone, 'watch');
+    assert.notEqual(recruiting({ commits: 0, weeksPlayed: 10, autoRecruiting: true })?.tone, 'watch');
+  });
+
+  test('the pace floor is half of a staff-run pace', () => {
+    assert.equal(classPaceFloor(12, 3, 12), 0);
+    assert.equal(classPaceFloor(12, 6, 12), 2);
+    assert.equal(classPaceFloor(12, 12, 12), 6);
   });
 });

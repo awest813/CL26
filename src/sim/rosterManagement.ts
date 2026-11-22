@@ -333,31 +333,35 @@ export function applyRosterTurnover(
   // Walk-ons never share a name with someone already on the roster.
   const rosterNames = new Set(combined.map((player) => player.name));
   let walkOnSerial = 0;
-  // Known gap: a walk-on is listed `overallPenalty` below the traits he plays with, and career
-  // balance currently leans on that hidden edge. Making the two agree (either way) needs the
-  // recruiting pipeline rebalanced; see docs/SIM_AUDIT.md.
   const addWalkOn = (pos: Position, tag: string, overallPenalty: number) => {
     walkOnSerial += 1;
+    // A walk-on is a step below the program's recruits in every trait he plays with, and he
+    // is listed at what those traits make him. (He used to be listed below his traits, which
+    // made walk-ons a free, hidden source of talent.)
+    const base = baseline - overallPenalty;
     const variance = randInt(rng, -12, 8);
-    const overall = clamp(Math.round(baseline + variance - overallPenalty));
-    const skill = clamp(Math.round(overall + randInt(rng, -3, 3)));
+    const traits = {
+      shooting: clamp(Math.round(base + variance + (pos === 'A' ? 6 : 0))),
+      passing: clamp(Math.round(base + randInt(rng, -8, 6))),
+      speed: clamp(Math.round(base + randInt(rng, -7, 7))),
+      defense: clamp(Math.round(base + randInt(rng, -9, 8) + (pos === 'D' || pos === 'LSM' ? 8 : 0))),
+      IQ: clamp(Math.round(base + randInt(rng, -5, 7))),
+      stamina: clamp(Math.round(base + randInt(rng, -6, 6))),
+      discipline: clamp(Math.round(base + randInt(rng, -5, 7))),
+    };
     const walkOnRng = makeRng(seedToNumber(`${team.id}:${tag}:${newSeed}:${walkOnSerial}:specialty`));
+    const specialties = rollSpecialties(pos, base, walkOnRng);
+    const overall = positionOverall({ position: pos, ...traits, ...specialties });
     combined.push({
       id: `${team.id}-${tag}-${pos}-${newSeed}-${walkOnSerial}`,
       name: drawName(rng, rosterNames),
       position: pos,
       year: 1,
       age: 18,
-      skill,
-      shooting: clamp(Math.round(baseline + variance + (pos === 'A' ? 6 : 0))),
-      passing: clamp(Math.round(baseline + randInt(rng, -8, 6))),
-      speed: clamp(Math.round(baseline + randInt(rng, -7, 7))),
-      defense: clamp(Math.round(baseline + randInt(rng, -9, 8) + (pos === 'D' || pos === 'LSM' ? 8 : 0))),
-      IQ: clamp(Math.round(baseline + randInt(rng, -5, 7))),
-      stamina: clamp(Math.round(baseline + randInt(rng, -6, 6))),
-      discipline: clamp(Math.round(baseline + randInt(rng, -5, 7))),
+      skill: clamp(Math.round(overall + randInt(rng, -3, 3))),
+      ...traits,
       overall,
-      ...rollSpecialties(pos, baseline - overallPenalty, walkOnRng),
+      ...specialties,
       potential: rollPotential(overall, 1, walkOnRng),
     });
   };

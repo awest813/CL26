@@ -99,7 +99,7 @@ Checked and left as designed: **playoff seeding is close to a coin flip among th
 - Box score and the career harness hold (100-season user win %: 68.7 vs 70.8 before; first 20 seasons 52.9 vs 50.9).
 - Production by position was already D-I-like and is unchanged: attack 55% of goals, midfield 42%; close defense 53% of caused turnovers; faceoff men 35% of ground balls.
 
-Still open: **walk-ons are listed 5–8 points below the traits they play with** (`addWalkOn` rolls the overall separately). Career balance leans on that hidden edge: penalizing their traits to match drops the user's program to about 25% wins for 35 seasons, and listing them honestly lifts it about 7 pp (good walk-ons stop being benched and cut). Fixing it needs the user's recruiting pipeline rebalanced with it.
+~~Still open: walk-ons listed 5–8 points below the traits they play with.~~ Resolved below ("Recruiting stakes").
 
 ### Against 2026 NCAA D-I (2026-11-22)
 
@@ -150,6 +150,22 @@ Xbox 360 lacrosse was a handful of $5 Xbox Live Indie Games arcade titles, mostl
 Sources: [NLL 11 on Metacritic](https://www.metacritic.com/game/nll-11/), [Nexgam review](https://www.nexgam.de/xbox-live-arcade-xbox/nll-2011), [Armless Octopus via N4G](https://n4g.com/news/739871/examiner-nll-11-video-game-preview?info=true), [College Lacrosse 2012 review, Retro Sports Gamer](https://retrosportsgamer.wordpress.com/2012/07/29/college-lacrosse-2012-indie-dev-covers-ignored-sport/), [College Lacrosse 2012 on Metacritic](https://www.metacritic.com/game/college-lacrosse-2012/).
 
 What those games had that this one does not: **manual line changes** (NLL 11's substitutions; here the second midfield line only matters through rotation relief, D4), and **team editing** (College Lacrosse 2012; here schools, names, and colors are fixed). Reviewers of both faulted execution and onboarding more than missing modes; the lesson for this sim is to keep explaining its systems in the UI, as the scouting report and install descriptions do.
+
+### Recruiting stakes (2026-11-22)
+
+Walk-ons were listed 5–8 points below the traits they played with, at the program's baseline. That made them free talent: a coach who **never recruited** kept a roster as good as the program's typical player and stayed near .500 indefinitely (8-season probe at a prestige-61 program: 6-6, 8-4, 5-7, 7-5, 6-6, 5-7, 5-7, 2-10, with all 32 players walk-ons by year 5).
+
+Now a walk-on is a step below the program's recruits in every trait and is listed at his position overall. Same probe:
+
+| Recruiting | Years 5–8 | Roster (real overall) |
+|---|---|---|
+| None | 1-11, 3-9, 0-12, 0-12 | 64 (all walk-ons) |
+| Naive: 8-player board of the highest-star prospects | 6-6, 3-9, 2-10, 2-10 | 63, 0–3 signees a year |
+| Staff runs recruiting | 8-4, 5-7, 7-5, 5-7 | 71–72, 12 signees a year |
+
+The naive board is the career harness's recruiting routine, so its numbers fell (100-season mean 43.9% vs 74.8%; it passes its assertions). That is the honest result for a board of Reach and Long shot targets, so the harness was left as written; `recruitingStakes.test.ts` now holds the gap between not recruiting and staff recruiting.
+
+So that a player does not fall into it blind, the Weekly Hub's recruiting item now judges the class, not just the effort: from week 6, a class below half of a staff-run pace (2 commits by week 6, 4 by week 10, against a staff pace of 6 by week 5 and 12 by week 10) turns to a warning with the commit count, the weeks left, what open scholarships become, and the two fixes.
 
 ---
 
