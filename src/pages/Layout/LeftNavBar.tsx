@@ -95,7 +95,7 @@ function LeftNavBar({ isMenuOpen, onNavigate, onClose }: LeftNavBarProps) {
       </div>
       <div className="dynastyCoachCard">
         <p className="dynastyCoachLabel">Head Coach</p>
-        <h3>{coachProfile?.name ?? 'No coach yet'}</h3>
+        <h2 className="dynastyCoachName">{coachProfile?.name ?? 'No coach yet'}</h2>
         <p className="programLockup">
           {selectedTeam && <TeamLogo team={selectedTeam} size="sm" />}
           <span>{selectedTeam ? `${selectedTeam.schoolName} ${selectedTeam.nickname}` : 'No program selected'}</span>

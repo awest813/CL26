@@ -135,6 +135,22 @@ Still open: the best offense in a sim season (~17) runs about 1.5 goals above 20
 
 Other lacrosse games: none is a management sim. Casey Powell Lacrosse 18 (Big Ant, 2018) is a console action game with a player-or-coach career mode that reviewers called barebones ([Stevivor](https://stevivor.com/reviews/casey-powell-lacrosse-18-review-take-to-the-field), [Player 2](https://www.player2.net.au/2018/05/casey-powell-lacrosse-18-review/)); Blue Chip Lax is a browser shooting and 3v3 arcade game ([bluechiplax.com](https://bluechiplax.com/)). The nearest genre peers are other sports' college dynasty sims such as Football Coach: College Dynasty.
 
+### Against the Xbox 360 lacrosse games (2026-11-22)
+
+Xbox 360 lacrosse was a handful of $5 Xbox Live Indie Games arcade titles, mostly from Crosse Studios: NLL Lacrosse 2010, NLL 11 (indoor, licensed), and the College Lacrosse series (2011 and 2012 confirmed) ([Video Games Now](https://www.videogamesnow.com/the-best-lacrosse-video-games-4316607/), [Kotaku](https://kotaku.com/licensed-pro-lacrosse-video-game-arrives-for-xbox-360-5523257)). None had critic reviews on Metacritic.
+
+| | NLL 11 | College Lacrosse 2012 | This sim |
+|---|---|---|---|
+| Genre | Arcade action, indoor | Arcade action, field | Head-coach management |
+| Season / career | Franchise mode, league stats | Single-player season | 12-game seasons, conference tournaments, 12-team playoff, multi-decade career |
+| Roster control | Manual substitutions | Team editing | Depth chart, redshirts, recruiting, portal, draft |
+| Teams | 10 licensed NLL teams, 230 players | College teams | 128 fictional programs |
+| Strategy | Play it yourself | Play it yourself | Five scheme calls with counters, weekly installs, scouting |
+
+Sources: [NLL 11 on Metacritic](https://www.metacritic.com/game/nll-11/), [Nexgam review](https://www.nexgam.de/xbox-live-arcade-xbox/nll-2011), [Armless Octopus via N4G](https://n4g.com/news/739871/examiner-nll-11-video-game-preview?info=true), [College Lacrosse 2012 review, Retro Sports Gamer](https://retrosportsgamer.wordpress.com/2012/07/29/college-lacrosse-2012-indie-dev-covers-ignored-sport/), [College Lacrosse 2012 on Metacritic](https://www.metacritic.com/game/college-lacrosse-2012/).
+
+What those games had that this one does not: **manual line changes** (NLL 11's substitutions; here the second midfield line only matters through rotation relief, D4), and **team editing** (College Lacrosse 2012; here schools, names, and colors are fixed). Reviewers of both faulted execution and onboarding more than missing modes; the lesson for this sim is to keep explaining its systems in the UI, as the scouting report and install descriptions do.
+
 ---
 
 ## Gap list

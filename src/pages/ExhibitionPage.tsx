@@ -19,7 +19,7 @@ function TacticsControls({
 }) {
   return (
     <div className="card">
-      <h4>{label} tactics</h4>
+      <h3 className="text-base">{label} tactics</h3>
       <TacticSelects idPrefix={idPrefix} tactics={value} onChange={onChange} />
     </div>
   );

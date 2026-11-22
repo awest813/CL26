@@ -45,7 +45,7 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 ### Not Yet Started
 - [ ] News feed and weekly storyline flavor
 - [x] Rivalry game tagging and trophy events (rivalry week, 64 trophies, holders tracked across seasons)
-- [ ] Accessibility pass (keyboard navigation, semantic HTML, contrast audit)
+- [x] Accessibility pass (keyboard navigation, semantic HTML, contrast audit): axe-core reports no violations on any page at desktop and phone widths in light and dark themes; every tab stop shows a focus ring, with a skip link first
 - [ ] Sim speed, display density, and theme (confirmations and the matchup estimate are on the settings page)
 
 ---
@@ -190,7 +190,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 ---
 
 ### M12 — Polish + Accessibility (Partial)
-- [ ] Accessibility pass (keyboard nav, ARIA, contrast)
+- [x] Accessibility pass (keyboard nav, ARIA, contrast)
 - [ ] Mobile / tablet responsive tables
 - [x] Settings page for play confirmations and the matchup estimate
 - [ ] Sim speed, display density, and theme toggle

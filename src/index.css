@@ -14,6 +14,8 @@
   --ink: #102018;
   --surface-soft: #f3f7f4;
   --success: #157a3c;
+  /* A 70s rating: a step below --success, readable as text on cards and starter rows (5.2:1+). */
+  --rating-solid: #437022;
   --success-soft: #e5f6eb;
   --warning-fg: #92400e;
   --warning-bg: #fef3c7;
@@ -44,13 +46,15 @@
   --text: #e3ece6;
   --text-muted: #9db0a5;
   --border: #2a3a31;
-  --accent: #2f9a62;
+  /* Deep enough for white button text (5.0:1) and still a 3.4:1 ring on the dark page. */
+  --accent: #217f4e;
   --accent-strong: #7fd8a6;
   --accent-soft: #163024;
   --accent-hover: #237a4d;
   --ink: #0b2216;
   --surface-soft: #1b2720;
   --success: #6fd49a;
+  --rating-solid: #b5e08c;
   --success-soft: #153022;
   --warning-fg: #f2c46d;
   --warning-bg: #352a10;
@@ -73,13 +77,15 @@
     --text: #e3ece6;
     --text-muted: #9db0a5;
     --border: #2a3a31;
-    --accent: #2f9a62;
+    /* Deep enough for white button text (5.0:1) and still a 3.4:1 ring on the dark page. */
+  --accent: #217f4e;
     --accent-strong: #7fd8a6;
     --accent-soft: #163024;
     --accent-hover: #237a4d;
     --ink: #0b2216;
     --surface-soft: #1b2720;
     --success: #6fd49a;
+  --rating-solid: #b5e08c;
     --success-soft: #153022;
     --warning-fg: #f2c46d;
     --warning-bg: #352a10;

@@ -101,8 +101,8 @@ function PerkPicker({ branch, level, picked, onPick }: {
 
 function jobSecurityLabel(security: number): { label: string; color: string } {
   if (security >= 75) return { label: 'Strong Position', color: 'var(--success)' };
-  if (security >= 55) return { label: 'Secure', color: 'var(--accent)' };
-  if (security >= 40) return { label: 'Moderate Pressure', color: 'var(--warning-border)' };
+  if (security >= 55) return { label: 'Secure', color: 'var(--accent-strong)' };
+  if (security >= 40) return { label: 'Moderate Pressure', color: 'var(--warning-fg)' };
   if (security >= 25) return { label: 'Hot Seat', color: 'var(--danger)' };
   return { label: 'On Thin Ice', color: 'var(--danger)' };
 }
@@ -129,7 +129,7 @@ function JobSecurityBar({ value }: { value: number }) {
 function adPressureLabel(pressure: number): { label: string; color: string } {
   if (pressure >= 80) return { label: 'Extreme AD pressure', color: 'var(--danger)' };
   if (pressure >= 65) return { label: 'High AD pressure', color: 'var(--danger)' };
-  if (pressure >= 45) return { label: 'Moderate AD pressure', color: 'var(--warning-border)' };
+  if (pressure >= 45) return { label: 'Moderate AD pressure', color: 'var(--warning-fg)' };
   return { label: 'Low AD pressure', color: 'var(--success)' };
 }
 

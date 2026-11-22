@@ -477,6 +477,9 @@
 
 .dynastyCoachCard {
   position: relative;
+  /* The nav column is a flex stack that scrolls; without this a short window squeezes the
+     card (it clips its own overflow) down to its first line and hides the coach and program. */
+  flex-shrink: 0;
   overflow: hidden;
   border: 0;
   border-radius: 12px;
@@ -502,7 +505,7 @@
   z-index: 1;
 }
 
-.dynastyCoachCard h3 {
+.dynastyCoachCard .dynastyCoachName {
   margin: 0.2rem 0;
   font-size: 1.12rem;
 }
@@ -1129,8 +1132,9 @@ td.num {
 }
 
 .rating-good { color: var(--success); }
-.rating-solid { color: #4ade80; }
-.rating-warning { color: var(--star); }
+.rating-solid { color: var(--rating-solid); }
+/* Gold --star is for star icons; as text it fails contrast on light cards. */
+.rating-warning { color: var(--warning-fg); }
 .rating-muted { color: var(--text-muted); }
 .standing-good { color: var(--success); }
 .standing-watch { color: var(--warning-fg); }
@@ -3761,6 +3765,11 @@ button.seasonScoreButton:hover:not(:disabled) {
 .rosterTabCount {
   font-size: 0.68rem;
   opacity: 0.75;
+}
+
+/* On the filled active tab, fading would drop the count below AA contrast. */
+.rosterTab-active .rosterTabCount {
+  opacity: 1;
 }
 
 .rosterSort {
