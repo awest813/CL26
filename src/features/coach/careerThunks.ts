@@ -47,7 +47,7 @@ import {
   entrantToPlayer,
 } from '../../sim/offseasonMarket';
 import { computePollInputs, computeRankings } from '../../sim/rankings';
-import { advanceProgramLedger, draftLedger, nextPrestigeDrift, prestigeDriftForSeason, programRoster, reachedSemifinal, withLeaguePrestige } from '../../sim/programLedger';
+import { advanceProgramLedger, draftLedger, expectedWinsByTeamId, nextPrestigeDrift, prestigeDriftForSeason, programRoster, reachedSemifinal, withLeaguePrestige } from '../../sim/programLedger';
 import { leaguePrestiges } from '../../sim/programExpectations';
 import { buildSeasonJobMarket, FIRED_JOB_SECURITY, programOpenings } from '../../sim/jobOffers';
 import { advanceStaff, assistantCandidates, assistantHireCheck, generateStaff, type HireRefusal } from '../../sim/assistants';
@@ -56,7 +56,8 @@ import {
   careerOffseasonCapabilities,
   hasSeasonHistoryForYear,
 } from '../../sim/seasonPhase';
-import { applyProgramLedger, simConferenceChampionships, startNewSeason } from '../season/seasonSlice';
+import { applyCoachingCarousel, applyProgramLedger, selectProgramCoaches, setProgramCoaches, simConferenceChampionships, startNewSeason } from '../season/seasonSlice';
+import { coachDevelopmentEdge, fillVacantPrograms, runCoachingCarousel } from '../../sim/coachingCarousel';
 import { tournamentRunFor } from '../../sim/conferenceTournaments';
 
 const BASE_WEEKLY_XP = 8;
@@ -354,6 +355,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     // classes before the recruit pool is cleared for next year.
     // Prospects still uncommitted sign late with CPU programs, so every program brings in a class.
     const lateSignings = lateSigningSweep(coach.recruitPool, coach.selectedTeamId, teams);
+    const programCoaches = selectProgramCoaches(state);
     const classStarsByTeamId: Record<string, number[]> = {};
     for (const recruit of coach.recruitPool) {
       const teamId = recruit.committedTeamId ?? lateSignings[recruit.id];
@@ -384,6 +386,10 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
         playoffs: season.playoffs,
         classStarsByTeamId,
         earlyEntrantsByTeamId,
+        // A good head coach develops his players; a poor one lets them slide.
+        developmentByTeamId: Object.fromEntries(
+          Object.entries(programCoaches).map(([teamId, headCoach]) => [teamId, coachDevelopmentEdge(headCoach.rating)]),
+        ),
         userTeamId: coach.selectedTeamId,
         year: season.year,
       });
@@ -428,6 +434,31 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     // A seat an assistant took is filled.
     const filled = new Set(staffYear.departures.map((departure) => departure.teamId).filter(Boolean));
 
+    // The coaching carousel: the openings lose their coaches and are filled, biggest jobs first,
+    // except the ones that called the user. Judged against where programs stood going into the season.
+    const carousel = season.carouselYear === season.year
+      ? null
+      : runCoachingCarousel({
+        coaches: programCoaches,
+        teams: marketTeams,
+        records,
+        expectedWins: expectedWinsByTeamId(withLeaguePrestige(teams, season.programLedger)),
+        championTeamId: season.playoffs?.championTeamId ?? null,
+        year: season.year,
+        seed: season.seasonSeed,
+        userTeamId: coach.selectedTeamId,
+        openings,
+        heldForUser: new Set(market.offers.map((offer) => offer.teamId)),
+        assistantHires: staffYear.departures
+          .filter((departure) => departure.reason === 'head-coach' && departure.teamId)
+          .map((departure) => ({
+            teamId: departure.teamId!,
+            name: departure.name,
+            rating: departure.rating,
+            age: (coach.assistants ?? []).find((assistant) => assistant.name === departure.name)?.age ?? 45,
+          })),
+      });
+
     dispatch(recordSeasonEnd({
       year: season.year,
       teamId: coach.selectedTeamId,
@@ -450,6 +481,7 @@ export const processSeasonEnd = createAsyncThunk<void, void, { state: RootState 
     dispatch(updateJobSecurity(newJobSecurity));
     dispatch(applyPrestigeDrift(prestigeDriftDelta));
     dispatch(applyProgramLedger({ year: season.year, ledger: nextLedger }));
+    if (carousel) dispatch(applyCoachingCarousel({ year: season.year, coaches: carousel.coaches, news: carousel.news }));
     dispatch(updateProgramStanding(nextStanding));
     dispatch(setPendingJobOffers(market.offers));
     dispatch(setEmployment(market.employment));
@@ -565,6 +597,15 @@ export const beginNextCareerSeason = createAsyncThunk<number | null, void, { sta
     if (!ceremony.canAdvanceNextYear) return null;
 
     const nextSeed = season.seasonSeed + 1;
+    // Jobs the user turned down, and the program he left, hire before the season starts.
+    const vacancies = fillVacantPrograms({
+      coaches: selectProgramCoaches(state),
+      teams: withLeaguePrestige(league.teams, season.programLedger),
+      userTeamId: coach.selectedTeamId,
+      year: season.year + 1,
+      seed: nextSeed,
+    });
+    dispatch(setProgramCoaches(vacancies));
     await dispatch(applyOffseasonRosterTurnover({ newSeed: nextSeed })).unwrap();
     await dispatch(startNewSeason({ seed: nextSeed })).unwrap();
 

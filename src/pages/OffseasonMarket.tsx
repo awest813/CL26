@@ -8,10 +8,10 @@ import { leaguePrestiges, SITUATION_DETAILS, SITUATION_LABELS } from '../sim/pro
 import type { JobOffer } from '../types/sim';
 import { acceptJobOffer, careerSetupFromPrestige, declineAllJobOffers, togglePortalClaim } from '../features/coach/coachSlice';
 import { initializeManagedRoster } from '../features/coach/careerThunks';
+import CoachingCarouselNews from '../components/CoachingCarouselNews';
 import { leagueSeasonRosterSeed } from '../sim/leagueRosterSeed';
 import {
   PORTAL_CLAIM_CAP,
-  buildCoachPool,
   buildPortalBoard,
   buildProDraft,
 } from '../sim/offseasonMarket';
@@ -74,36 +74,34 @@ function OffseasonMarket() {
   const yourPickById = new Map(yourPicks.map((pick) => [pick.playerId, pick]));
   // Openings are announced when the season ends; until then the market waits.
   const seasonRecorded = hasSeasonHistoryForYear(coach.seasonHistory, season.year);
-  const openingIds = useMemo(
-    () => new Set(seasonRecorded ? coach.jobOpenings ?? [] : []),
-    [coach.jobOpenings, seasonRecorded],
-  );
-  const coaches = useMemo(
-    () => (selectedTeam ? buildCoachPool(teams, season.seasonSeed, season.year, selectedTeam.id, openingIds) : []),
-    [openingIds, season.seasonSeed, season.year, selectedTeam, teams],
+  // This offseason's carousel, once the season is on the books.
+  const carouselNews = useMemo(
+    () => (seasonRecorded && season.carouselYear === season.year ? season.carouselNews ?? [] : []),
+    [season.carouselNews, season.carouselYear, season.year, seasonRecorded],
   );
   const conferenceName = useMemo(() => new Map(conferences.map((conference) => [conference.id, conference.name])), [conferences]);
   // Offers belong to the season just ended; anything older has expired.
   const liveOffers = seasonRecorded ? (coach.pendingJobOffers ?? []).filter((offer) => offer.presentedAtYear === season.year) : [];
-  const offerIds = new Set(liveOffers.map((offer) => offer.teamId));
   // Judged against where programs stood going into the season, as the openings were.
   const preseasonLedger = draftLedger(season);
   const expectedWins = useMemo(() => expectedWinsByTeamId(withLeaguePrestige(teams, preseasonLedger)), [preseasonLedger, teams]);
   const prestiges = useMemo(() => leaguePrestiges(currentTeams), [currentTeams]);
-  const marketCoaches = coaches
-    .filter((staff) => staff.hiring || offerIds.has(staff.teamId))
-    .map((staff) => ({ staff, prestige: currentTeams.find((team) => team.id === staff.teamId)?.prestige ?? 0 }))
-    .sort((a, b) => Number(offerIds.has(b.staff.teamId)) - Number(offerIds.has(a.staff.teamId)) || b.prestige - a.prestige);
-  const currentPrestige = currentTeams.find((team) => team.id === selectedTeam?.id)?.prestige ?? selectedTeam?.prestige ?? 0;
+  // The jobs that called you. Every other opening was filled in the carousel.
+  const marketJobs = liveOffers
+    .map((offer) => ({ teamId: offer.teamId, prestige: currentTeams.find((team) => team.id === offer.teamId)?.prestige ?? 0 }))
+    .sort((a, b) => b.prestige - a.prestige);
   const committedHere = coach.recruitPool.filter((recruit) => recruit.committedTeamId === selectedTeam?.id).length
     + (coach.signedRecruitsByYear[season.year]?.length ?? 0);
 
-  /** Why the seat is open: the old staff missed badly, or moved on. */
-  function openingReason(teamId: string, coachName: string): string {
+  /** Why the seat is open: the coach who left it, and why. */
+  function openingReason(teamId: string): string {
+    const left = carouselNews.find((move) => move.teamId === teamId && move.kind !== 'hired');
     const record = records[teamId];
+    const coachName = left?.coachName ?? 'The head coach';
+    if (left?.kind === 'retired') return `${coachName} retired.`;
     if (!record) return `${coachName} moved on.`;
     const shortfall = (expectedWins.get(teamId) ?? 6) - record.wins;
-    return shortfall >= 2
+    return left?.kind === 'fired' || (!left && shortfall >= 2)
       ? `${coachName} was let go after ${record.wins}–${record.losses}.`
       : `${coachName} moved on after ${record.wins}–${record.losses}.`;
   }
@@ -319,21 +317,18 @@ function OffseasonMarket() {
                 : 'No one called. Make the field, or win the title, to get a call from a bigger program.'}
         </p>
         {offerError && <p className="text-xs text-red-600 mt-2 mb-0">{offerError}</p>}
-        {seasonRecorded && marketCoaches.length === 0 && (
-          <p className="text-sm text-gray-500 mt-2 mb-0">No program is searching. Your seat is the job.</p>
-        )}
-        {marketCoaches.length > 0 && (
+        {marketJobs.length > 0 && (
           <ul className="marketList mt-2">
-            {marketCoaches.map(({ staff, prestige }) => {
-              const school = teams.find((team) => team.id === staff.teamId);
-              const offer = liveOffers.find((item) => item.teamId === staff.teamId);
+            {marketJobs.map(({ teamId, prestige }) => {
+              const school = teams.find((team) => team.id === teamId);
+              const offer = liveOffers.find((item) => item.teamId === teamId);
               const { careerTier: situation, programExpectations: expectations } = careerSetupFromPrestige(prestige, prestiges);
               return (
-                <li key={staff.id} className={`marketRow jobRow${offer ? ' jobRow-offer' : ''}`}>
+                <li key={teamId} className={`marketRow jobRow${offer ? ' jobRow-offer' : ''}`}>
                   <span className="programLockup">
                     {school && <TeamLogo team={school} size="sm" />}
                     <span>
-                      <strong>{school?.schoolName ?? staff.teamId}</strong>{' '}
+                      <strong>{school?.schoolName ?? teamId}</strong>{' '}
                       {offer && <span className={`jobTier jobTier-${offer.tier}`}>{JOB_TIER_LABEL[offer.tier]}</span>}
                       <span className="pollNick">
                         {school ? `${conferenceName.get(school.conferenceId) ?? 'Independent'} · ${school.region}` : ''}
@@ -341,7 +336,7 @@ function OffseasonMarket() {
                       </span>
                       <span className="jobMeta">
                         <PrestigeStars prestige={prestige} showTier />
-                        <span className="pollNick">{openingReason(staff.teamId, staff.name)}</span>
+                        <span className="pollNick">{openingReason(teamId)}</span>
                       </span>
                     </span>
                   </span>
@@ -350,19 +345,31 @@ function OffseasonMarket() {
                       type="button"
                       className="btn btn-primary text-xs"
                       aria-label={`Take the ${school?.schoolName ?? 'offered'} job`}
-                      onClick={() => void onAcceptOffer(staff.teamId, prestige)}
+                      onClick={() => void onAcceptOffer(teamId, prestige)}
                     >
                       {offer.tier === 'UPGRADE' ? 'Take the upgrade' : 'Take the job'}
                     </button>
-                  ) : (
-                    <span className="text-xs text-gray-500" title={prestige > currentPrestige ? 'A bigger season gets this call' : undefined}>
-                      {prestige > currentPrestige ? 'Not calling yet' : 'Searching'}
-                    </span>
-                  )}
+                  ) : null}
                 </li>
               );
             })}
           </ul>
+        )}
+        {seasonRecorded && (
+          <>
+            <h5 className="marketHeading mt-3 mb-1" id="coaching-carousel">The coaching carousel</h5>
+            <p className="text-xs text-gray-500 mt-0 mb-2">
+              {liveOffers.length > 0
+                ? 'Every other opening has been filled. The jobs that called you wait for your answer and hire when the next season begins.'
+                : 'Who was let go, who retired, and who got the jobs. A head coach who wins at a smaller program moves up, and his seat opens in turn.'}
+            </p>
+            <CoachingCarouselNews
+              news={carouselNews}
+              teams={teams}
+              userTeamId={selectedTeam?.id ?? null}
+              waitingTeamIds={new Set(liveOffers.map((offer) => offer.teamId))}
+            />
+          </>
         )}
       </div>
     </section>

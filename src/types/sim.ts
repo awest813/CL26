@@ -373,6 +373,47 @@ export interface SeasonState {
   allAmericanHistory?: Record<number, { first: SeasonAward[]; second: SeasonAward[] }>;
   /** This season's conference championships, by conference id; null until they are played. */
   conferenceTournaments?: Record<string, ConferenceTournament> | null;
+  /** Every CPU program's head coach. Missing on saves from before the coaching carousel: each program starts with its original coach. */
+  programCoaches?: ProgramCoaches;
+  /** The last season year the carousel ran for, so it never runs twice. */
+  carouselYear?: number | null;
+  /** Firings, retirements, and hires from the last carousel, in the order they happened. */
+  carouselNews?: CarouselMove[];
+}
+
+/** A CPU program's head coach. Ratings use the head coach scale, 40–99. */
+export interface ProgramCoach {
+  id: string;
+  name: string;
+  age: number;
+  rating: number;
+  /** The season he took over. */
+  hiredYear: number;
+  /** His record at this program, over the seasons this save has seen (`seasons`). */
+  wins: number;
+  losses: number;
+  titles: number;
+  /** Seasons of his on the record here. Fewer than his tenure for a coach who was in place when the league began. */
+  seasons?: number;
+  /** Where he came from. */
+  background: 'original' | 'coordinator' | 'head-coach' | 'your-staff' | 'retread';
+  /** The program he left for this one, when he was a head coach or on your staff. */
+  fromTeamId?: string;
+}
+
+export type ProgramCoaches = Record<string, ProgramCoach>;
+
+/** One move in the coaching carousel. */
+export interface CarouselMove {
+  kind: 'fired' | 'retired' | 'resigned' | 'hired';
+  teamId: string;
+  coachName: string;
+  rating: number;
+  /** Hired: the program he left, if he was a head coach or one of your assistants. */
+  fromTeamId?: string;
+  background?: ProgramCoach['background'];
+  /** Leaving: his record at the program over `seasons`, of `tenure` seasons there in all. */
+  record?: { wins: number; losses: number; seasons: number; tenure?: number };
 }
 
 export interface ConferenceTournamentGame {

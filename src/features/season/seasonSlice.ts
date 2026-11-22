@@ -1,5 +1,6 @@
 import { createSelector, createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { SeasonState, TeamRecord, GameResult, ProgramLedger, ProgramLedgerEntry } from '../../types/sim';
+import { SeasonState, TeamRecord, GameResult, ProgramLedger, ProgramLedgerEntry, CarouselMove, ProgramCoaches } from '../../types/sim';
+import { programCoachesOrInitial } from '../../sim/coachingCarousel';
 import { RootState } from '../../store/store';
 import { generateSeasonSchedule } from '../../sim/schedule';
 import { simulateGame } from '../../sim/matchEngine';
@@ -9,7 +10,6 @@ import { leagueSeasonRosterSeed } from '../../sim/leagueRosterSeed';
 import { selectTeams } from '../league/leagueSlice';
 import { buildPlayoffField, buildPlayoffState, firstTeamsOut, selectPlayoffField, simulatePlayoffRound } from '../../sim/playoffs';
 import { coachOfTheYear, conferencePlayersOfYear, mostOutstandingPlayer } from '../../sim/postseasonAwards';
-import { buildCoachPool } from '../../sim/offseasonMarket';
 import { computePollInputs, computeRankings } from '../../sim/rankings';
 import { compareConferenceStanding, compareOverallStanding, conferenceLeaders } from '../../sim/standings';
 import { programRoster, programStarters, withLeaguePrestige } from '../../sim/programLedger';
@@ -401,15 +401,12 @@ export const simNextPlayoffRound = createAsyncThunk(
 
         // The champion is crowned: Coach of the Year and the championship's top player.
         const records = selectTeamRecords(state);
-        const staffNames = new Map(
-          buildCoachPool(teams, state.season.seasonSeed, state.season.year, coach.selectedTeamId ?? '')
-            .map((staff) => [staff.teamId, staff.name]),
-        );
+        const programCoaches = selectProgramCoaches(state);
         const coachOfYear = coachOfTheYear({
           teams: selectRankingTeams(state),
           records,
           playoffs: nextState,
-          coachNameByTeamId: (teamId) => (teamId === coach.selectedTeamId && coach.profile ? coach.profile.name : staffNames.get(teamId) ?? 'Staff'),
+          coachNameByTeamId: (teamId) => (teamId === coach.selectedTeamId && coach.profile ? coach.profile.name : programCoaches[teamId]?.name ?? 'Staff'),
         });
         return {
           playoffs: nextState,
@@ -448,7 +445,24 @@ const seasonSlice = createSlice({
         awardHistory: state.awardHistory ?? {},
         allAmericanHistory: state.allAmericanHistory ?? {},
         postseasonAwardHistory: state.postseasonAwardHistory ?? {},
+        programCoaches: state.programCoaches,
+        carouselYear: state.carouselYear ?? null,
+        carouselNews: state.carouselNews ?? [],
       };
+    },
+    /** One offseason's coaching changes. Ignored if that season's carousel already ran. */
+    applyCoachingCarousel: (state, action: PayloadAction<{ year: number; coaches: ProgramCoaches; news: CarouselMove[] }>) => {
+      if (state.carouselYear === action.payload.year) return;
+      state.programCoaches = action.payload.coaches;
+      state.carouselYear = action.payload.year;
+      state.carouselNews = action.payload.news;
+    },
+    /** Coaches hired outside the season-end carousel: empty seats filled as a season begins, or a job the user took. */
+    setProgramCoaches: (state, action: PayloadAction<{ coaches: ProgramCoaches; news?: CarouselMove[] }>) => {
+      state.programCoaches = action.payload.coaches;
+      if (action.payload.news && action.payload.news.length > 0) {
+        state.carouselNews = [...(state.carouselNews ?? []), ...action.payload.news];
+      }
     },
     /** Fold a finished season into the ledger. Ignored if that season was already counted. */
     applyProgramLedger: (state, action: PayloadAction<{ ledger: ProgramLedger; year: number }>) => {
@@ -552,7 +566,7 @@ const seasonSlice = createSlice({
   },
 });
 
-export const { resetSeason, applyProgramLedger, setProgramLedgerEntry } = seasonSlice.actions;
+export const { resetSeason, applyProgramLedger, setProgramLedgerEntry, applyCoachingCarousel, setProgramCoaches } = seasonSlice.actions;
 export const seasonReducer = seasonSlice.reducer;
 
 // Selectors
@@ -683,6 +697,17 @@ export const selectRankingTeams = createSelector(
 );
 
 export const selectProgramLedger = (state: RootState): ProgramLedger => state.season.programLedger ?? {};
+
+/** Every CPU program's head coach: the stored ones, or each program's original coach on an older save. */
+export const selectProgramCoaches = createSelector(
+  [
+    (state: RootState) => state.season.programCoaches,
+    (state: RootState) => state.league.teams,
+    (state: RootState) => state.season.year,
+    (state: RootState) => state.coach.selectedTeamId,
+  ],
+  (stored, teams, year, userTeamId): ProgramCoaches => programCoachesOrInitial(stored, teams, year, userTeamId),
+);
 
 export const selectPollInputs = createSelector(
   [selectTeamRecords, (state: RootState) => state.season.gameResults],

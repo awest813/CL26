@@ -2,6 +2,7 @@ import type { Recruit, RecruitingPitch, TeamId } from '../types/sim.ts';
 import { makeRng, randInt, seedToNumber } from './rng.ts';
 import { regionsAreProximate } from './recruiting.ts';
 import { NEUTRAL_RECRUITING_EDGES, recruitEdgeScale, type RecruitingEdges } from './coachPerks.ts';
+import { coachRecruitingPull } from './coachingCarousel.ts';
 
 export interface RecruitingWeekResult {
   interestByRecruitId: Record<string, Record<string, number>>; // recruitId -> teamId -> interest
@@ -12,6 +13,8 @@ export interface RecruitingWeekResult {
 export interface CpuRecruitingProfile {
   prestige: number;
   region: string;
+  /** The program's head coach (see `coachRecruitingPull`). Missing recruits like an average coach. */
+  coachRating?: number;
 }
 
 /** CPU programs stop chasing new commits once their class is this size: a full year's scholarships. */
@@ -147,7 +150,7 @@ export function cpuWeeklyPursuit(recruit: Recruit, profile: CpuRecruitingProfile
     return sum;
   }, 0);
   const starFactor = 0.4 + recruit.stars * 0.2;
-  return 1 + prestigeTerm * starFactor + regionTerm + motivationTerm;
+  return (1 + prestigeTerm * starFactor + regionTerm + motivationTerm) * coachRecruitingPull(profile.coachRating);
 }
 
 /**

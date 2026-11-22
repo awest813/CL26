@@ -5,7 +5,7 @@ A deterministic, web-based college lacrosse head-coaching simulation. Build a pr
 - **128 fictionalized teams** across 16 conferences
 - **12-game regular season** (7 conference round-robin + 5 non-conference)
 - **Full postseason** — weekly Top 25 + Top 12 bracket projection, 12-team playoff with automatic byes for seeds 1–4
-- **Coach career layer** — onboarding, program selection, recruiting board over a 1,700-prospect national class that all 128 programs sign from, staff-run recruiting, transfer portal, pro draft, assistants, coach skill tree, job market, weekly hub with sim to the bracket, offseason roster turnover
+- **Coach career layer** — onboarding, program selection, recruiting board over a 1,700-prospect national class that all 128 programs sign from, staff-run recruiting, transfer portal, pro draft, assistants, coach skill tree, job market and a coaching carousel (every CPU program keeps its head coach until he is fired, retires, or moves up), weekly hub with sim to the bracket, offseason roster turnover
 - **Event-driven match engine calibrated to 2026 NCAA D-I team stats** — goals, shooting and save percentage, turnovers, ground balls, faceoffs, clears, man-up, and stat leaders land near real D-I (see [docs/SIM_AUDIT.md](./docs/SIM_AUDIT.md))
 - **Game plans with counters** — tempo, ride/clear, slide timing, offense set, defense package, and midfield lines; every call wins some matchups and loses others, CPU staffs scout and adjust, and no scheme beats the default against every opponent
 - **Position-aware ratings** — a player's overall weighs what his position does (a goalie's saves, a faceoff man's draws, a defenseman's defense)

@@ -16,7 +16,7 @@ import { RootState } from '../../store/store';
 import { ledgerEntry, MAX_PRESTIGE_DRIFT, MIN_PRESTIGE_DRIFT, nextPrestigeDrift, withLeaguePrestige } from '../../sim/programLedger';
 import { redshirtBlocker } from '../../sim/redshirts';
 import { STARTER_SLOTS, startingRating, swapStarter } from '../../sim/depthChart';
-import { setProgramLedgerEntry } from '../season/seasonSlice';
+import { selectProgramCoaches, setProgramCoaches, setProgramLedgerEntry } from '../season/seasonSlice';
 import type { PressEffect, PressTone } from '../../sim/pressConference';
 
 export const WEEKLY_HOURS_CAP = 120;
@@ -840,6 +840,12 @@ export const acceptJobOffer = createAsyncThunk(
             inheritedDrift,
         );
 
+        const programCoaches = state.season.programCoaches;
+        if (programCoaches?.[teamId]) {
+            const remaining = { ...programCoaches };
+            delete remaining[teamId];
+            dispatch(setProgramCoaches({ coaches: remaining }));
+        }
         dispatch(applyJobOfferAcceptance({
             teamId,
             seasonYear: state.season.year,
@@ -912,10 +918,12 @@ export const advanceRecruitingWeek = createAsyncThunk(
         const teamProfilesByTeamId: Record<string, CpuRecruitingProfile> = {};
         // CPU programs recruit at their current standing, so a program on the rise pulls better classes.
         const currentTeams = withLeaguePrestige(teams, state.season.programLedger);
+        // Each CPU staff recruits as hard as its head coach drives it.
+        const programCoaches = selectProgramCoaches(state);
         currentTeams.forEach((team) => {
             teamProfilesByTeamId[team.id] = team.id === selectedTeam.id
                 ? { prestige: selectedTeam.prestige, region: selectedTeam.region }
-                : { prestige: team.prestige, region: team.region };
+                : { prestige: team.prestige, region: team.region, coachRating: programCoaches[team.id]?.rating };
         });
 
         const result = simulateRecruitingWeek(

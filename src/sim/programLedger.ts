@@ -177,6 +177,8 @@ export interface ProgramLedgerSeason {
   classStarsByTeamId: Record<string, number[]>;
   /** Players each program lost early to the pro draft this year. */
   earlyEntrantsByTeamId: Record<string, number>;
+  /** Rating points each program's head coach adds by developing his players (see `coachDevelopmentEdge`). */
+  developmentByTeamId?: Record<string, number>;
   userTeamId?: string | null;
   year: number;
 }
@@ -222,7 +224,8 @@ export function advanceProgramLedger(season: ProgramLedgerSeason): ProgramLedger
       ? (stars / commits - expectedAverage(team.prestige)) * CLASS_TALENT_PER_AVERAGE_STAR * Math.min(1, commits / FULL_CLASS)
       : 0;
     const departures = (season.earlyEntrantsByTeamId[team.id] ?? 0) * EARLY_ENTRY_TALENT_COST;
-    const talent = roundTenth(clamp(entry.talent * TALENT_RETENTION + classEdge - departures, MIN_TALENT, MAX_TALENT));
+    const development = season.developmentByTeamId?.[team.id] ?? 0;
+    const talent = roundTenth(clamp(entry.talent * TALENT_RETENTION + classEdge - departures + development, MIN_TALENT, MAX_TALENT));
 
     next[team.id] = {
       prestigeDrift,

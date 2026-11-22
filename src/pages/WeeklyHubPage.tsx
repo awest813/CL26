@@ -598,6 +598,10 @@ function WeeklyHubPage() {
   );
   const conferenceStandings = useAppSelector(conferenceStandingsSelector);
   const awaitingSpecialty = assistantsAwaitingSpecialty(coach.assistants);
+  // Programs with a new head coach (or still hiring) this offseason.
+  const coachingChanges = season.carouselYear === season.year
+    ? new Set((season.carouselNews ?? []).map((move) => move.teamId)).size
+    : 0;
   const specialtyLine = awaitingSpecialty.length === 0
     ? null
     : awaitingSpecialty.length === 1
@@ -1043,6 +1047,9 @@ function WeeklyHubPage() {
                           ? 'Your staff has an empty seat to fill.'
                           : null,
                         specialtyLine,
+                        coachingChanges > 0
+                          ? `${coachingChanges} program${coachingChanges === 1 ? '' : 's'} changed head coaches; the carousel is in the Coach Office.`
+                          : null,
                         'Before the next season: check the portal, the staff, and the depth chart.',
                       ].filter(Boolean).join(' ')
               : 'Set the install and the board, then play the week.'}

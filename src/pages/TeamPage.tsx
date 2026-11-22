@@ -4,6 +4,8 @@ import TeamLogo from '../components/TeamLogo';
 import PrestigeStars from '../components/PrestigeStars';
 import { formatPrestige } from '../sim/prestige';
 import { selectConferenceById, selectTeamWithRosterSummary } from '../features/league/leagueSlice';
+import { selectProgramCoaches } from '../features/season/seasonSlice';
+import CoachStars from '../components/CoachStars';
 import { buildRosterSummary, playerYearLabel } from '../sim/rosterSummary';
 import { useAppSelector } from '../store/hooks';
 import PageHeader from '../components/PageHeader';
@@ -21,6 +23,9 @@ function TeamPage() {
   const trophyHolders = useAppSelector((state) => state.season.trophyHolders);
   const managedRoster = useAppSelector((state) => state.coach.managedRoster);
   const recruitPool = useAppSelector((state) => state.coach.recruitPool);
+  const programCoaches = useAppSelector(selectProgramCoaches);
+  const seasonYear = useAppSelector((state) => state.season.year);
+  const headCoach = id && id !== selectedTeamId ? programCoaches[id] : undefined;
   /** This year's verbal commits from the national class, best first. */
   const commits = useMemo(
     () => recruitPool
@@ -173,6 +178,33 @@ function TeamPage() {
                   {standing.lastClass.commits} {standing.lastClass.commits === 1 ? 'commit' : 'commits'}
                   {standing.lastClass.commits > 0 ? ` · ${standing.lastClass.averageStars.toFixed(1)}★ average` : ''}
                 </strong>
+              </div>
+            )}
+            {headCoach && (
+              <div className="teamInfoRow">
+                <span className="teamInfoLabel">Head coach</span>
+                <strong>
+                  {headCoach.name} <CoachStars rating={headCoach.rating} showTier />
+                  <span className="block text-xs font-normal text-gray-500">
+                    {headCoach.hiredYear > seasonYear
+                      ? `Hired for ${headCoach.hiredYear}`
+                      : `Since ${headCoach.hiredYear}`}
+                    {headCoach.wins + headCoach.losses > 0 ? ` · ${headCoach.wins}–${headCoach.losses} here` : ''}
+                    {headCoach.titles > 0 ? ` · ${headCoach.titles} title${headCoach.titles === 1 ? '' : 's'}` : ''}
+                    {' · '}Age {headCoach.age}
+                    {headCoach.background === 'head-coach' && headCoach.fromTeamId && (
+                      <> · came from <Link to={`/team/${headCoach.fromTeamId}`}>{leagueTeams.find((team) => team.id === headCoach.fromTeamId)?.schoolName ?? 'another program'}</Link></>
+                    )}
+                    {headCoach.background === 'your-staff' && ' · came off your staff'}
+                    {headCoach.background === 'coordinator' && ' · first head job'}
+                  </span>
+                </strong>
+              </div>
+            )}
+            {!isOwnTeam && id && !headCoach && (
+              <div className="teamInfoRow">
+                <span className="teamInfoLabel">Head coach</span>
+                <strong>Searching: the job hires before next season</strong>
               </div>
             )}
             {recruitPool.length > 0 && (

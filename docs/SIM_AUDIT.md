@@ -256,6 +256,34 @@ Fixed:
 - **Specialty reminder.** The hub flags assistants who have earned a specialty and links to the Coach Office. Links to a section of another page (`/career#staff`) now land on it; in-app navigation used to stop at the top.
 - **Layout.** The four seats read as a two-by-two (was three and an orphan), downgrades on the market step back, and specialty buttons are left-aligned.
 
+### Coaching carousel (2026-11-22)
+
+Was: CPU head coaches were generated from each season's seed, so every program had a new coach with a new name every year, and an opening never changed anything but the name.
+
+Now (`src/sim/coachingCarousel.ts`, stored as `season.programCoaches`):
+- **A coach stays** until he is fired (the opening rules in `programOpenings` are unchanged: a bad miss against the program's expected wins), retires (63+ when he leaves, or on his own from 67), or resigns. His record, titles, age, and seasons at the program are kept.
+- **Ratings follow results.** Each year a coach gains or loses up to 2 points on his win difference, 2 more for a title, a point while young and a point back after 60, and settles a tenth of the way toward what a program of that standing usually has. Over 16 seasons the league average moved 70.6 → 72.3, mostly following CPU prestige.
+- **Openings fill from the biggest job down.** Candidates: head coaches who won 60%+ last season at a program at least 6 prestige points smaller (after two seasons there), coaches let go elsewhere this offseason (marked down 4), and coordinators ready for a first head job (a notch under the program's usual level). A program can draw a coach up to `52 + prestige × 0.5`. A head coach who moves up opens his seat, which is filled in turn. About 7–15 programs change coaches a year.
+- **Your staff in the carousel.** An assistant hired away from your staff becomes that program's head coach (his assistant rating less 4).
+- **Jobs that called you** wait for your answer. They, the program you leave, and the one that fires you hire when the next season begins (`fillVacantPrograms`).
+- **What a coach is worth.** CPU staffs recruit 0.85× to 1.15× as hard by head coach rating (`coachRecruitingPull`, neutral at 70), and his players gain −0.8 to +0.8 roster rating points a year on the ledger (`coachDevelopmentEdge`). Game day is unchanged, so engine calibration holds.
+- **Where to see it.** The Coach Office market lists the carousel: who left (let go, retired, moved on, with his record) and who was hired from where. Team pages show the head coach, his stars, when he was hired, his record there, and his background. Coach of the Year names the real coach. The hub points to the carousel in the offseason.
+- **Old saves** need no migration: until a carousel runs, every program shows its original coach, drawn from the program alone.
+
+The 20-season batch checks every season that each CPU program has its own coach, the user's program has none, and ratings stay in range: no problems, identical replay, saves +0.02 MB.
+
+| Start (prestige) | Recruiting | Win % by 5-year block | Playoffs | Titles |
+|---|---|---|---|---|
+| Harbor City (52) | staff | 25 / 38 / 43 / 55 | 0 | 0 |
+| Kentucky Bluegrass (68) | staff | 37 / 67 / 60 / 70 | 1 | 0 |
+| Cascade State (86) | staff | 88 / 92 / 83 / 78 | 15 | 7 |
+| Harbor City (52) | naive | 15 / 33 / 33 / 22 | 0 | 0 |
+| Cascade State (86) | naive | 87 / 90 / 95 / 80 | 15 | 7 |
+| Kentucky Bluegrass (68) | none | 48 / 37 / 17 / 42 | 0 | 0 |
+| Harbor City (52) | staff, best job offer | 25 / 37 / 50 / 70 | 2 | 1 |
+| Cascade State (86) | staff, aggressive plan | 83 / 90 / 85 / 97 | 16 | 8 |
+| Kentucky Bluegrass (68) | staff, bold answers | 32 / 47 / 55 / 63 | 0 | 0 |
+
 ---
 
 ## Gap list

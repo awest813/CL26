@@ -57,6 +57,16 @@ const naiveWeek = () => {
   const ids = store.getState().coach.boardRecruitIds.filter((id) => { const r = store.getState().coach.recruitPool.find((x) => x.id === id); return r && !r.committedTeamId; });
   for (const id of ids) store.dispatch(setRecruitHours({ recruitId: id, hours: Math.floor(120 / ids.length) }));
 };
+// Every CPU program has its own head coach once the carousel has run; the user's program has none.
+const checkCoaches = (when: string) => {
+  const st = store.getState(); const coaches = st.season.programCoaches ?? {};
+  const cpuTeams = st.league.teams.filter((t) => t.id !== st.coach.selectedTeamId);
+  check(cpuTeams.every((t) => coaches[t.id]), `${when}: a CPU program has no head coach`);
+  check(!coaches[st.coach.selectedTeamId ?? ''], `${when}: the user's program has a CPU head coach`);
+  const names = Object.values(coaches).map((c) => c.name);
+  check(new Set(names).size === names.length, `${when}: two programs share a head coach`);
+  check(Object.values(coaches).every((c) => c.rating >= 40 && c.rating <= 99), `${when}: a head coach rating is out of range`);
+};
 const checkRoster = (when: string) => {
   const c = store.getState().coach; const roster = c.managedRoster ?? [];
   check(roster.length >= 30 && roster.length <= 34, `${when}: roster size ${roster.length}`);
@@ -75,6 +85,7 @@ let fired = 0, moves = 0; const t0 = performance.now(); const saveSizes: number[
 for (let s = 0; s < SEASONS; s++) {
   const teamId = store.getState().coach.selectedTeamId!;
   checkRoster(`Y${s + 1} start`);
+  if (s > 0) checkCoaches(`Y${s + 1} start`);
   for (let w = 0; w < 12; w++) {
     if (recruiting === 'naive') naiveWeek();
     const out = await store.dispatch(runCareerWeeklyCycle());

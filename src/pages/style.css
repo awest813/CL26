@@ -3711,6 +3711,35 @@ button.seasonScoreButton:hover:not(:disabled) {
   margin-top: 0.15rem;
 }
 
+.carouselList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.carouselRow {
+  display: grid;
+  grid-template-columns: minmax(9rem, 14rem) minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.carouselMoves {
+  display: grid;
+  gap: 0.1rem;
+}
+
+@media (max-width: 640px) {
+  .carouselRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .staffHire {
   display: flex;
   flex-direction: column;

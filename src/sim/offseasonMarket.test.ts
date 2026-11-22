@@ -4,7 +4,6 @@ import type { Player, Team } from '../types/sim.ts';
 import {
   PRO_CLUBS,
   PRO_DRAFT_ROUNDS,
-  buildCoachPool,
   buildPortalBoard,
   buildProDraft,
   entrantToPlayer,
@@ -44,11 +43,6 @@ describe('offseason market', () => {
     assert.equal(portalA.length, 7);
     assert.ok(portalA.every((entrant) => entrant.originTeamId !== 't0'));
 
-    const coachesA = buildCoachPool(teams, 2026, 2026, 't0');
-    const coachesB = buildCoachPool(teams, 2026, 2026, 't0');
-    assert.deepEqual(coachesA, coachesB);
-    assert.equal(coachesA.length, teams.length);
-    assert.equal(coachesA.find((coach) => coach.teamId === 't0')?.hiring, false);
   });
 
   test('a portal entrant becomes a roster player with the same rating', () => {
