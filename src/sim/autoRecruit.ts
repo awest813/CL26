@@ -1,6 +1,6 @@
 import type { Position, Recruit, RecruitingPitch, Team } from '../types/sim.ts';
 import { estimateRecruitFit, getTeamPitchGrade } from './recruiting.ts';
-import { blueChipPace, INTEREST_PER_HOUR, pitchMultiplier, programPull } from './recruitingWeek.ts';
+import { blueChipPace, classCrowding, INTEREST_PER_HOUR, pitchMultiplier, programPull } from './recruitingWeek.ts';
 
 export const RECRUITING_BOARD_LIMIT = 25;
 
@@ -38,6 +38,8 @@ interface ScoredTarget {
   pitch: RecruitingPitch | null;
   perHourGain: number;
   interest: number;
+  /** Periods to close at today's class crowding, and the score's share of that count. */
+  periodsToCommit: number;
 }
 
 /**
@@ -72,18 +74,26 @@ function hasDealbreakerConflict(recruit: Recruit, team: Team, positionNeedByPosi
   return grade === 'D' || grade === 'F';
 }
 
-function scoreTarget(input: AutoRecruitInput, recruit: Recruit, onBoard: boolean): ScoredTarget | null {
+/** Score lost per extra period a target takes to close. */
+const PERIOD_COST = 6;
+
+function periodsToClose(interest: number, weeklyGain: number): number {
+  return Math.ceil((100 - interest) / Math.max(1, weeklyGain));
+}
+
+function scoreTarget(input: AutoRecruitInput, recruit: Recruit, onBoard: boolean, committedStars: number[]): ScoredTarget | null {
   const { team, positionNeedByPosition, periodsLeft, maxHoursPerRecruit, gainMultiplier } = input;
   if (hasDealbreakerConflict(recruit, team, positionNeedByPosition)) return null;
 
   const { pitch, multiplier } = bestPitch(recruit, team, positionNeedByPosition);
-  const perHourGain = INTEREST_PER_HOUR * gainMultiplier * multiplier * programPull(team.prestige, recruit.stars) * blueChipPace(recruit.stars);
+  const perHourGain = INTEREST_PER_HOUR * gainMultiplier * multiplier * programPull(team.prestige, recruit.stars) * blueChipPace(recruit.stars)
+    * classCrowding(recruit.stars, committedStars);
   const weeklyGain = perHourGain * maxHoursPerRecruit;
   const interest = Math.min(
     100,
     Math.max(recruit.interestByTeamId[team.id] ?? 0, onBoard ? 0 : boardStartingInterest(recruit, team)),
   );
-  const periodsToCommit = Math.ceil((100 - interest) / Math.max(1, weeklyGain));
+  const periodsToCommit = periodsToClose(interest, weeklyGain);
   if (periodsToCommit > periodsLeft) return null;
 
   // A suitor already near 100 will likely sign the prospect before we can.
@@ -94,8 +104,8 @@ function scoreTarget(input: AutoRecruitInput, recruit: Recruit, onBoard: boolean
   const raceRisk = Math.max(0, cpuLead - interest) / 10 + Math.max(0, periodsToCommit - cpuPeriodsToCommit) * 4;
 
   const baseScore =
-    recruit.stars * 10 + (recruit.potential - 60) * 0.5 + interest * 0.3 - periodsToCommit * 6 - raceRisk * 2;
-  return { recruit, baseScore, pitch, perHourGain, interest };
+    recruit.stars * 10 + (recruit.potential - 60) * 0.5 + interest * 0.3 - periodsToCommit * PERIOD_COST - raceRisk * 2;
+  return { recruit, baseScore, pitch, perHourGain, interest, periodsToCommit };
 }
 
 /** Value of one more player at a position, given how many spots are still open there. */
@@ -108,12 +118,27 @@ function needValue(openSpots: number): number {
 /**
  * Rank targets one pick at a time so each pick lowers the need at its position.
  * Commits already in hand count first, so a class does not pile up at one spot.
+ * Picks that fill the open scholarships count as commits for class crowding too: a
+ * staff does not chase a twelfth five-star it could never close.
  */
 function rankByClassNeed(
   scored: ScoredTarget[],
   classNeedByPosition: Record<Position, number>,
   committed: Recruit[],
+  input: Pick<AutoRecruitInput, 'periodsLeft' | 'maxHoursPerRecruit'>,
+  openSlots: number,
 ): ScoredTarget[] {
+  const committedStars = committed.map((recruit) => recruit.stars);
+  const plannedStars: number[] = [];
+  const crowdedScore = (target: ScoredTarget): number => {
+    if (plannedStars.length === 0 || target.recruit.stars < 4) return target.baseScore;
+    const now = classCrowding(target.recruit.stars, committedStars);
+    const later = classCrowding(target.recruit.stars, [...committedStars, ...plannedStars]);
+    const periods = periodsToClose(target.interest, (target.perHourGain * input.maxHoursPerRecruit * later) / now);
+    if (periods > input.periodsLeft) return -Infinity;
+    return target.baseScore - (periods - target.periodsToCommit) * PERIOD_COST;
+  };
+
   const openSpots = { ...classNeedByPosition };
   committed.forEach((recruit) => {
     openSpots[recruit.position] = (openSpots[recruit.position] ?? 0) - 1;
@@ -125,7 +150,7 @@ function rankByClassNeed(
     let bestIndex = 0;
     let bestScore = -Infinity;
     remaining.forEach((target, index) => {
-      const score = target.baseScore + needValue(openSpots[target.recruit.position] ?? 0);
+      const score = crowdedScore(target) + needValue(openSpots[target.recruit.position] ?? 0);
       if (score > bestScore || (score === bestScore && target.recruit.id < remaining[bestIndex].recruit.id)) {
         bestScore = score;
         bestIndex = index;
@@ -134,6 +159,7 @@ function rankByClassNeed(
     const [picked] = remaining.splice(bestIndex, 1);
     ranked.push(picked);
     openSpots[picked.recruit.position] = (openSpots[picked.recruit.position] ?? 0) - 1;
+    if (plannedStars.length < openSlots) plannedStars.push(picked.recruit.stars);
   }
   return ranked;
 }
@@ -159,11 +185,12 @@ export function planAutoRecruiting(input: AutoRecruitInput): AutoRecruitPlan {
   const openSlots = Math.max(0, scholarshipsAvailable - committedToUser.length);
 
   const keptSet = new Set(kept);
+  const committedStars = committedToUser.map((recruit) => recruit.stars);
   const scored = recruitPool
     .filter((recruit) => !recruit.committedTeamId)
-    .map((recruit) => scoreTarget(input, recruit, keptSet.has(recruit.id)))
+    .map((recruit) => scoreTarget(input, recruit, keptSet.has(recruit.id), committedStars))
     .filter((target): target is ScoredTarget => target !== null);
-  const ranked = rankByClassNeed(scored, input.classNeedByPosition, committedToUser);
+  const ranked = rankByClassNeed(scored, input.classNeedByPosition, committedToUser, input, openSlots);
 
   // Keep a deep enough board that a lost battle has a ready replacement.
   const boardGoal = Math.min(RECRUITING_BOARD_LIMIT, openSlots === 0 ? 0 : openSlots * 2 + 2);

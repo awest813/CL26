@@ -139,7 +139,12 @@ describe('auto recruiting plan', () => {
       assert.ok(signed.length >= 9, `${me.id} (prestige ${me.prestige}) only closed ${signed.length}`);
       const byPosition = new Map<string, number>();
       signed.forEach((r) => byPosition.set(r.position, (byPosition.get(r.position) ?? 0) + 1));
-      assert.ok(Math.max(...byPosition.values()) <= 4, `class piled up: ${JSON.stringify([...byPosition])}`);
+      // Twelve scholarships usually outnumber next year's holes; no spot runs more than two past its need.
+      const classNeed = buildPositionNeedByPosition(roster.filter((p) => p.year < 4));
+      byPosition.forEach((count, position) => {
+        const over = count - Math.max(0, classNeed[position as keyof typeof classNeed]);
+        assert.ok(over <= 2, `class piled up at ${position}: ${JSON.stringify([...byPosition])} vs need ${JSON.stringify(classNeed)}`);
+      });
     }
   });
 });

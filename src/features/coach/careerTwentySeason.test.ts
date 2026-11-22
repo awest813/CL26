@@ -6,6 +6,7 @@ import assert from 'node:assert';
 import { describe, test } from 'node:test';
 import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { leagueReducer } from '../league/leagueSlice.ts';
+import { NATIONAL_CLASS_SIZE } from '../../sim/recruiting.ts';
 import { seasonReducer, startPlayoffs, selectTeamRecords } from '../season/seasonSlice.ts';
 import {
   coachReducer,
@@ -292,7 +293,7 @@ async function runOneSeason(store: CareerStore, seasonIndex: number, seasonCount
     assert.strictEqual(next.season.phase, 'REGULAR');
     assert.strictEqual(next.season.seasonSeed, nextSeed);
     assert.strictEqual(next.coach.recruitingSeed, nextSeed);
-    assert.strictEqual(next.coach.recruitPool.length, 180);
+    assert.strictEqual(next.coach.recruitPool.length, NATIONAL_CLASS_SIZE);
     assert.strictEqual(next.coach.recruitingWeekIndex, 0);
     assert.ok(!next.season.playoffs, `${seasonLabel} playoffs should clear on new season`);
   }

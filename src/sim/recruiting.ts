@@ -68,7 +68,13 @@ function shuffleInPlace<T>(rng: () => number, values: T[]): T[] {
   return values;
 }
 
-export function generateRecruitPool(seed: number, count = 180): Recruit[] {
+/**
+ * One national class a year that every program recruits from: about a full class for each of
+ * the 128 programs, plus prospects nobody signs (they walk on, go to prep school, or leave the sport).
+ */
+export const NATIONAL_CLASS_SIZE = 1700;
+
+export function generateRecruitPool(seed: number, count = NATIONAL_CLASS_SIZE): Recruit[] {
   const rng = makeRng(seed);
   // Every prospect in a class has his own name.
   const names = new Set<string>();
@@ -110,14 +116,16 @@ export function generateSuitors(recruit: Recruit, teams: Team[], seed: number): 
   const rng = makeRng(seedToNumber(`${seed}:${recruit.id}`));
   const suitors: Record<string, number> = {};
 
-  // Score all teams for fit
+  // Programs at the prospect's level come after him first: a blue chip hears from the
+  // national powers, a depth recruit from programs his tier usually signs with. Home and
+  // what he wants move a program up; every staff also reads him a little differently.
   const scoredTeams = teams
     .map((team) => ({
       team,
       fit: estimateRecruitFit(recruit, team),
-      noise: randInt(rng, -10, 10),
+      score: suitorScore(recruit, team) + randInt(rng, -6, 6),
     }))
-    .sort((a, b) => b.fit + b.noise - (a.fit + a.noise));
+    .sort((a, b) => b.score - a.score || a.team.id.localeCompare(b.team.id));
 
   // Pick top 3-5 teams as initial suitors
   const count = Math.min(scoredTeams.length, randInt(rng, 3, 5));
@@ -129,6 +137,26 @@ export function generateSuitors(recruit: Recruit, teams: Team[], seed: number): 
   }
 
   return suitors;
+}
+
+/** The prestige a prospect's recruitment usually centers on: 55–65 for a two-star, 85–95 for a five-star. */
+export function suitorTargetPrestige(recruit: Pick<Recruit, 'stars' | 'potential'>): number {
+  return 40 + recruit.stars * 10 + (recruit.potential - (58 + recruit.stars * 7)) * 0.8;
+}
+
+/** How likely a program is to recruit this prospect at all: near his level, near his home, selling what he wants. */
+function suitorScore(recruit: Recruit, team: Team): number {
+  const levelGap = Math.abs(team.prestige - suitorTargetPrestige(recruit));
+  const regionBonus = team.region === recruit.region ? 6 : regionsAreProximate(team.region, recruit.region) ? 3 : 0;
+  const wantsBonus = recruit.motivations.reduce((sum, motivation) => {
+    if (motivation.importance !== 'HIGH') return sum;
+    if (motivation.pitch === 'PRESTIGE' && team.prestige >= 78) return sum + 3;
+    if (motivation.pitch === 'CHAMPIONSHIP' && team.prestige >= 85) return sum + 3;
+    if (motivation.pitch === 'PROXIMITY' && regionsAreProximate(team.region, recruit.region)) return sum + 3;
+    if (motivation.pitch === 'PLAYING_TIME' && team.prestige < 70) return sum + 2;
+    return sum;
+  }, 0);
+  return -levelGap + regionBonus + wantsBonus;
 }
 
 export function estimateRecruitFit(recruit: Recruit, team: Team): number {

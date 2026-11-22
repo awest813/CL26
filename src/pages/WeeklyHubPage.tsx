@@ -597,13 +597,14 @@ function WeeklyHubPage() {
     [selectedTeam?.conferenceId],
   );
   const conferenceStandings = useAppSelector(conferenceStandingsSelector);
-  const blueChipCommits = useMemo(
-    () => (coach.recruitingReport?.commits ?? [])
+  const blueChipCommits = useMemo(() => {
+    const poolById = new Map(coach.recruitPool.map((recruit) => [recruit.id, recruit]));
+    return (coach.recruitingReport?.commits ?? [])
       .filter(({ teamId }) => teamId !== selectedTeamId)
-      .map(({ recruitId, teamId }) => ({ recruit: coach.recruitPool.find((recruit) => recruit.id === recruitId), teamId }))
+      .map(({ recruitId, teamId }) => ({ recruit: poolById.get(recruitId), teamId }))
       .filter((row): row is { recruit: Recruit; teamId: string } => Boolean(row.recruit && row.recruit.stars >= 4))
-      .sort((a, b) => b.recruit.stars - a.recruit.stars || b.recruit.potential - a.recruit.potential),
-    [coach.recruitPool, coach.recruitingReport, selectedTeamId],
+      .sort((a, b) => b.recruit.stars - a.recruit.stars || b.recruit.potential - a.recruit.potential);
+  }, [coach.recruitPool, coach.recruitingReport, selectedTeamId],
   );
   const weeklyDesk = useMemo(
     () =>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import {
   addRecruitToBoard,
@@ -24,7 +24,7 @@ import {
   recruitingPeriodLabel,
   RECRUITING_POSITION_FILTERS,
 } from '../sim/recruiting';
-import { programPull, userWeeklyGain } from '../sim/recruitingWeek';
+import { classCrowding, programPull, userWeeklyGain } from '../sim/recruitingWeek';
 import { recruitingEdges } from '../sim/coachPerks';
 import { PROGRAM_PULL_LABELS, programPullBand } from '../sim/prestige';
 import PrestigeStars from '../components/PrestigeStars';
@@ -38,6 +38,10 @@ import PageHeader from '../components/PageHeader';
 type PositionFilterValue = (typeof RECRUITING_POSITION_FILTERS)[number];
 type StarFilterValue = 'ALL' | '5' | '4' | '3' | '2';
 type PoolSort = 'fit' | 'stars' | 'interest';
+type StatusFilterValue = 'OPEN' | 'COMMITTED' | 'ALL';
+
+/** Prospects per page of the national class. */
+const POOL_PAGE_SIZE = 50;
 
 /** Interest a dealbreaker costs each week the program cannot meet it (see `simulateRecruitingWeek`). */
 const DEALBREAKER_WEEKLY_COST = 5;
@@ -104,8 +108,16 @@ function RecruitingBoardPage() {
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState<PositionFilterValue>('ALL');
   const [starFilter, setStarFilter] = useState<StarFilterValue>('ALL');
-  const [hideTaken, setHideTaken] = useState(true);
+  const [regionFilter, setRegionFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('OPEN');
   const [poolSort, setPoolSort] = useState<PoolSort>('fit');
+  const [page, setPageState] = useState(0);
+  const poolListRef = useRef<HTMLDivElement>(null);
+  /** A new page starts at its first prospect. */
+  const setPage = (next: number) => {
+    setPageState(next);
+    if (poolListRef.current) poolListRef.current.scrollTop = 0;
+  };
   const isCoachReady = useAppSelector(selectIsCareerReady);
   const selectedTeamId = coach.selectedTeamId ?? '';
   const baseTeam = teams.find((t) => t.id === selectedTeamId) ?? null;
@@ -126,6 +138,10 @@ function RecruitingBoardPage() {
   const gainMultiplier = programRecruitingBonus(coach);
   const coachSkill = coach.profile?.skill ?? 72;
   const edges = recruitingEdges(coach.coachPerks, coach.assistants, selectedTeam?.region);
+  const committedStars = useMemo(
+    () => coach.recruitPool.filter((r) => r.committedTeamId && r.committedTeamId === selectedTeamId).map((r) => r.stars),
+    [coach.recruitPool, selectedTeamId],
+  );
   /** What this week's hours add, before the random swing; the same formula the recruiting week plays. */
   const projectedGain = (recruit: Recruit, hours: number, pitch: RecruitingPitch | undefined, pitchGrade: string | undefined, dealbreaker: boolean) => {
     const gain = userWeeklyGain({
@@ -138,6 +154,7 @@ function RecruitingBoardPage() {
       programPrestige: effectivePrestige,
       positionNeedBonus: Math.max(0, Math.min(3, positionNeedByPosition[recruit.position] ?? 0)),
       edges,
+      committedStars,
     });
     return gain - (dealbreaker ? DEALBREAKER_WEEKLY_COST : 0);
   };
@@ -189,15 +206,43 @@ function RecruitingBoardPage() {
       .sort((a, b) => b.interest - a.interest);
   }, [boardRecruits, coach.weeklyHoursByRecruitId, coach.activePitchesByRecruitId, selectedTeam, selectedTeamId, teamNameById, positionNeedByPosition]);
 
+  const regions = useMemo(() => [...new Set(coach.recruitPool.map((r) => r.region))].sort(), [coach.recruitPool]);
+
   const filteredRecruits = useMemo(() => {
+    const query = search.trim().toLowerCase();
     return coach.recruitPool
       .filter((r) => (positionFilter === 'ALL' ? true : r.position === positionFilter))
       .filter((r) => (starFilter === 'ALL' ? true : starFilter === '2' ? r.stars <= 2 : r.stars === Number(starFilter)))
-      .filter((r) => !hideTaken || !r.committedTeamId || r.committedTeamId === selectedTeamId)
-      .filter((r) => r.name.toLowerCase().includes(search.toLowerCase()))
-  }, [coach.recruitPool, hideTaken, positionFilter, search, selectedTeamId, starFilter]);
+      .filter((r) => regionFilter === 'ALL' || r.region === regionFilter)
+      .filter((r) => {
+        // Your own commits stay in view whichever status is picked.
+        if (statusFilter === 'ALL' || r.committedTeamId === selectedTeamId) return true;
+        return statusFilter === 'OPEN' ? !r.committedTeamId : Boolean(r.committedTeamId);
+      })
+      // Search finds a prospect by name, or every prospect headed to a school.
+      .filter((r) => !query
+        || r.name.toLowerCase().includes(query)
+        || (r.committedTeamId ? (teamNameById.get(r.committedTeamId) ?? '').toLowerCase().includes(query) : false));
+  }, [coach.recruitPool, positionFilter, regionFilter, search, selectedTeamId, starFilter, statusFilter, teamNameById]);
 
-  const visibleRecruits = useMemo(() => {
+  /** The national class race: the five CPU or user classes with the most star points so far. */
+  const classLeaders = useMemo(() => {
+    const byTeam = new Map<string, { commits: number; stars: number }>();
+    coach.recruitPool.forEach((r) => {
+      if (!r.committedTeamId) return;
+      const entry = byTeam.get(r.committedTeamId) ?? { commits: 0, stars: 0 };
+      entry.commits += 1;
+      entry.stars += r.stars;
+      byTeam.set(r.committedTeamId, entry);
+    });
+    return [...byTeam.entries()]
+      .map(([teamId, entry]) => ({ teamId, ...entry }))
+      .sort((a, b) => b.stars - a.stars || b.commits - a.commits || a.teamId.localeCompare(b.teamId))
+      .slice(0, 5);
+  }, [coach.recruitPool]);
+  const committedCount = useMemo(() => coach.recruitPool.filter((r) => r.committedTeamId).length, [coach.recruitPool]);
+
+  const sortedRecruits = useMemo(() => {
     return filteredRecruits
       .map((recruit) => ({
         recruit,
@@ -226,9 +271,13 @@ function RecruitingBoardPage() {
         if (b.fit !== a.fit) return b.fit - a.fit;
         return b.recruit.potential - a.recruit.potential;
       })
-      .map(({ recruit }) => recruit)
-      .slice(0, 75);
+      .map(({ recruit }) => recruit);
   }, [boardSet, filteredRecruits, poolSort, selectedTeam, selectedTeamId]);
+  const pageCount = Math.max(1, Math.ceil(sortedRecruits.length / POOL_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleRecruits = sortedRecruits.slice(currentPage * POOL_PAGE_SIZE, (currentPage + 1) * POOL_PAGE_SIZE);
+  /** Any filter change starts the list over from the first page. */
+  const resetPage = <T,>(setter: (value: T) => void) => (value: T) => { setter(value); setPage(0); };
 
   const committedToUserCount = coach.recruitPool.filter(
     (r) => r.committedTeamId === selectedTeamId,
@@ -423,6 +472,14 @@ function RecruitingBoardPage() {
                           {recruit.position} · {recruit.region}{' '}
                           {!recruit.committedTeamId && <PullTag prestige={effectivePrestige} recruit={recruit} />}
                         </div>
+                        {!recruit.committedTeamId && classCrowding(recruit.stars, committedStars) < 1 && (
+                          <div
+                            className="text-xs text-gray-500"
+                            title="A blue chip wants to stand out: every prospect of his star rating already committed to you makes him slower to say yes."
+                          >
+                            Crowded class: hours go {Math.round(classCrowding(recruit.stars, committedStars) * 100)}% as far
+                          </div>
+                        )}
                         {dealbreaker && !recruit.committedTeamId && (
                           <div className="text-xs text-red-500">
                             Dealbreaker: {PITCH_LABELS[dealbreaker.pitch]} ({dealbreaker.grade}), −{DEALBREAKER_WEEKLY_COST} a period
@@ -539,13 +596,16 @@ function RecruitingBoardPage() {
             <div>
               <h3 className="text-base font-bold m-0">Prospect pool</h3>
               <div className="text-xs text-gray-500 mt-1">
-                Showing {visibleRecruits.length} of {filteredRecruits.length} matches
+                {sortedRecruits.length === 0
+                  ? 'No matches'
+                  : `Showing ${currentPage * POOL_PAGE_SIZE + 1}–${currentPage * POOL_PAGE_SIZE + visibleRecruits.length} of ${sortedRecruits.length} matches`}
+                {' · '}National class: {coach.recruitPool.length.toLocaleString()} prospects, {committedCount.toLocaleString()} committed
               </div>
             </div>
             <button
               type="button"
               className="textButton"
-              onClick={() => { setSearch(''); setPositionFilter('ALL'); setStarFilter('ALL'); setHideTaken(true); setPoolSort('fit'); }}
+              onClick={() => { setSearch(''); setPositionFilter('ALL'); setStarFilter('ALL'); setRegionFilter('ALL'); setStatusFilter('OPEN'); setPoolSort('fit'); setPage(0); }}
             >
               Reset filters
             </button>
@@ -556,8 +616,8 @@ function RecruitingBoardPage() {
               Search
               <input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name…"
+                onChange={(e) => resetPage(setSearch)(e.target.value)}
+                placeholder="Prospect or school…"
                 className="block w-full p-1.5 text-sm border rounded mt-0.5"
               />
             </label>
@@ -565,7 +625,7 @@ function RecruitingBoardPage() {
               Position
               <select
                 value={positionFilter}
-                onChange={(e) => setPositionFilter(e.target.value as PositionFilterValue)}
+                onChange={(e) => resetPage(setPositionFilter)(e.target.value as PositionFilterValue)}
                 className="block p-1.5 text-sm border rounded w-20 mt-0.5"
               >
                 {RECRUITING_POSITION_FILTERS.map((position) => (
@@ -579,7 +639,7 @@ function RecruitingBoardPage() {
               Stars
               <select
                 value={starFilter}
-                onChange={(e) => setStarFilter(e.target.value as StarFilterValue)}
+                onChange={(e) => resetPage(setStarFilter)(e.target.value as StarFilterValue)}
                 className="block p-1.5 text-sm border rounded w-20 mt-0.5"
               >
                 <option value="ALL">All</option>
@@ -590,10 +650,35 @@ function RecruitingBoardPage() {
               </select>
             </label>
             <label className="text-sm">
+              Region
+              <select
+                value={regionFilter}
+                onChange={(e) => resetPage(setRegionFilter)(e.target.value)}
+                className="block p-1.5 text-sm border rounded mt-0.5"
+              >
+                <option value="ALL">All</option>
+                {regions.map((region) => (
+                  <option key={region} value={region}>{region}</option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
+              Status
+              <select
+                value={statusFilter}
+                onChange={(e) => resetPage(setStatusFilter)(e.target.value as StatusFilterValue)}
+                className="block p-1.5 text-sm border rounded mt-0.5"
+              >
+                <option value="OPEN">Open</option>
+                <option value="COMMITTED">Committed</option>
+                <option value="ALL">All</option>
+              </select>
+            </label>
+            <label className="text-sm">
               Sort
               <select
                 value={poolSort}
-                onChange={(e) => setPoolSort(e.target.value as PoolSort)}
+                onChange={(e) => resetPage(setPoolSort)(e.target.value as PoolSort)}
                 className="block p-1.5 text-sm border rounded mt-0.5"
               >
                 <option value="fit">Best fit</option>
@@ -602,12 +687,28 @@ function RecruitingBoardPage() {
               </select>
             </label>
             </div>
-          <label className="text-xs text-gray-500 flex items-center gap-1 mb-2">
-            <input type="checkbox" checked={hideTaken} onChange={(e) => setHideTaken(e.target.checked)} />
-            Hide prospects committed elsewhere
-          </label>
+          {classLeaders.length > 0 && (
+            <details className="text-xs text-gray-500 mb-2">
+              <summary className="cursor-pointer">Top classes so far</summary>
+              <ol className="mt-1 mb-0 pl-5">
+                {classLeaders.map((leader) => (
+                  <li key={leader.teamId} className={leader.teamId === selectedTeamId ? 'font-bold' : undefined}>
+                    <button
+                      type="button"
+                      className="textButton text-xs"
+                      title="Show this class"
+                      onClick={() => { setSearch(teamNameById.get(leader.teamId) ?? ''); setStatusFilter('ALL'); setPage(0); }}
+                    >
+                      {teamNameById.get(leader.teamId) ?? leader.teamId}
+                    </button>
+                    {' '}{leader.commits} {leader.commits === 1 ? 'commit' : 'commits'}, {(leader.stars / leader.commits).toFixed(1)}★ average
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
 
-          <div className="overflow-y-auto" style={{ maxHeight: '560px' }}>
+          <div ref={poolListRef} className="overflow-y-auto" style={{ maxHeight: '560px' }} tabIndex={0} role="region" aria-label="Prospect pool">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0">
                 <tr className="text-left text-xs text-gray-400">
@@ -697,6 +798,17 @@ function RecruitingBoardPage() {
               </tbody>
             </table>
           </div>
+          {pageCount > 1 && (
+            <nav className="flex items-center justify-between gap-2 mt-2 text-sm" aria-label="Prospect pages">
+              <button type="button" className="textButton" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 0}>
+                ← Previous
+              </button>
+              <span className="text-xs text-gray-500">Page {currentPage + 1} of {pageCount}</span>
+              <button type="button" className="textButton" onClick={() => setPage(currentPage + 1)} disabled={currentPage >= pageCount - 1}>
+                Next →
+              </button>
+            </nav>
+          )}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert';
-import { CPU_CLASS_CAP, cpuWeeklyPursuit, simulateRecruitingWeek } from './recruitingWeek.ts';
-import { generateRecruitPool, generateSuitors } from './recruiting.ts';
+import { classCrowding, CPU_CLASS_CAP, cpuWeeklyPursuit, lateSigningSweep, simulateRecruitingWeek, userWeeklyGain } from './recruitingWeek.ts';
+import { generateRecruitPool, generateSuitors, NATIONAL_CLASS_SIZE } from './recruiting.ts';
 import teamsData from '../data/teams128.json' with { type: 'json' };
 import type { Recruit, Team } from '../types/sim.ts';
 
@@ -174,7 +174,7 @@ describe('Recruiting Week Simulation', () => {
         }
     });
 
-    test('CPU commits a meaningful share of the class across a 12-week season', () => {
+    test('CPU commits a meaningful share of the national class across a 12-week season', () => {
         const teams = teamsData.teams as Team[];
         const profiles = Object.fromEntries(teams.map((t) => [t.id, { prestige: t.prestige, region: t.region }]));
         const seed = 2026;
@@ -193,8 +193,9 @@ describe('Recruiting Week Simulation', () => {
         }
 
         const committed = pool.filter((r) => r.committedTeamId);
-        assert.ok(committed.length >= 40, `CPU should land real commits (got ${committed.length})`);
-        assert.ok(committed.length <= 130, `Some of the class should still be open (got ${committed.length})`);
+        assert.equal(pool.length, NATIONAL_CLASS_SIZE);
+        assert.ok(committed.length >= 250, `CPU should land real commits (got ${committed.length})`);
+        assert.ok(committed.length <= 700, `Most of the class should still be open for signing day (got ${committed.length})`);
         assert.ok(firstCommitWeek >= 2 && firstCommitWeek <= 7, `Commits should start mid-cycle (week ${firstCommitWeek})`);
 
         const blueChips = pool.filter((r) => r.stars >= 4);
@@ -208,6 +209,24 @@ describe('Recruiting Week Simulation', () => {
         classSizes.forEach((size, teamId) => {
             assert.ok(size <= CPU_CLASS_CAP, `${teamId} signed ${size} over the CPU class cap`);
         });
+
+        // Late signings: every CPU program brings in a full class, and the class reads like its standing.
+        const late = lateSigningSweep(pool, userTeamId, teams);
+        const classByTeam = new Map<string, number[]>();
+        pool.forEach((r) => {
+            const teamId = r.committedTeamId ?? late[r.id];
+            if (teamId) classByTeam.set(teamId, [...(classByTeam.get(teamId) ?? []), r.stars]);
+        });
+        const cpuTeams = teams.filter((t) => t.id !== userTeamId);
+        cpuTeams.forEach((t) => assert.equal(classByTeam.get(t.id)?.length, CPU_CLASS_CAP, `${t.id} class size`));
+        const average = (list: Team[]) => {
+            const stars = list.flatMap((t) => classByTeam.get(t.id) ?? []);
+            return stars.reduce((sum, value) => sum + value, 0) / stars.length;
+        };
+        const byPrestige = [...cpuTeams].sort((a, b) => b.prestige - a.prestige);
+        const top = average(byPrestige.slice(0, 16));
+        const bottom = average(byPrestige.slice(-16));
+        assert.ok(top - bottom >= 1.5, `Top programs should sign far better classes (${top.toFixed(2)} vs ${bottom.toFixed(2)})`);
     });
 
     test('Hours on one target do not change CPU outcomes for another', () => {
@@ -234,5 +253,17 @@ describe('Recruiting Week Simulation', () => {
         const elite = cpuWeeklyPursuit(recruit, { prestige: 88, region: 'Northeast' });
         const distant = cpuWeeklyPursuit(recruit, { prestige: 52, region: 'West' });
         assert.ok(elite > distant * 2, `elite ${elite} vs distant ${distant}`);
+    });
+
+    test('Blue chips slow down as your class fills with players at their level', () => {
+        assert.strictEqual(classCrowding(3, [5, 5, 5, 5]), 1, 'depth recruits do not care');
+        assert.strictEqual(classCrowding(5, [4, 4, 3]), 1, 'a five-star only counts five-stars');
+        assert.strictEqual(classCrowding(4, [5, 5]), 1, 'a four-star only counts four-stars');
+        assert.ok(classCrowding(4, [4, 4]) < classCrowding(4, [4]));
+        const recruit = mockRecruit('bc', { stars: 5, potential: 92 });
+        const input = { recruit, hours: 20, gainMultiplier: 1, coachSkill: 72, programPrestige: 88, positionNeedBonus: 0 };
+        const open = userWeeklyGain(input);
+        const crowded = userWeeklyGain({ ...input, committedStars: [5, 5, 5, 5, 5] });
+        assert.ok(crowded < open * 0.7, `crowded ${crowded} vs open ${open}`);
     });
 });

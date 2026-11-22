@@ -2,6 +2,7 @@ import type { Player, PlayoffState, ProgramLedger, ProgramLedgerEntry, Team, Tea
 import { generateRoster } from './generateRoster.ts';
 import { buildDefaultStarters } from './rosterManagement.ts';
 import { situationFromPrestige, type ProgramSituation } from './programExpectations.ts';
+import { CPU_CLASS_CAP } from './recruitingWeek.ts';
 
 /**
  * Each CPU program's standing beyond its base rating in the league file: prestige it
@@ -21,7 +22,7 @@ const TALENT_RETENTION = 0.7;
 /** Rating points for a full class whose average is a star above what programs of its prestige sign. */
 const CLASS_TALENT_PER_AVERAGE_STAR = 2.4;
 /** Commits that count as a full class; a smaller class moves talent proportionally less. */
-const FULL_CLASS = 8;
+const FULL_CLASS = CPU_CLASS_CAP;
 /** Rating points an early pro departure takes off next year's roster. */
 const EARLY_ENTRY_TALENT_COST = 0.8;
 

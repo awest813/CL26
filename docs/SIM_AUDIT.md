@@ -207,6 +207,42 @@ Under the game plan, the Coach Office shows the coach's own lines (first and sec
 
 The weak program is climbing, not stuck: Harbor City starts in one of the strongest conferences (rivals' starters ~79 against a league median of 77) with starters at 69.7. Full staff-signed classes of ~2.3 stars lift its starters to 74.1 and its prestige drift to +6 over 12 years, closing the gap to its conference from 10 points to 4 and reaching a first winning season in year 12. Kentucky Bluegrass starts level with an average conference, wins, recruits 3.5 stars rising to 4.3, and is 6 points above the league by year 10. Prestige, recruiting, and wins feed each other; a weak program in a strong conference turns the loop slowly. A design question, not a bug; left as is.
 
+### National class (2026-11-22)
+
+Recruiting now runs on one national class of 1,700 prospects (`NATIONAL_CLASS_SIZE`) that all 128 programs recruit from. Before, your pool was 180 prospects: most CPU programs signed two or three a year, and their talent faded toward their rating.
+
+- **Who recruits whom.** A prospect's suitors are the 3–5 programs nearest his level (`suitorTargetPrestige`: 55–65 for a two-star, 85–95 for a five-star), moved up by home region and what he wants, with a little noise per staff.
+- **Full classes.** A CPU class is full at 12 (`CPU_CLASS_CAP`, also the ledger's full class). In-season commits go mostly to the top half; late signings fill every CPU program to 12 from its suitors first, and about 165 two-stars go unsigned. One seed, after late signings:
+
+| Prestige | Programs | Class | Avg stars | Five-stars |
+|---|---|---|---|---|
+| 48–57 | 31 | 12 | 2.03 | 0 |
+| 58–67 | 32 | 12 | 2.48 | 0 |
+| 68–77 | 32 | 12 | 3.12 | 0 |
+| 78–85 | 25 | 12 | 3.50 | 23 |
+| 86–90 | 7 | 12 | 4.06 | 45 |
+
+- **CPU talent comes from those signings.** Every program now brings in a full class, so the ledger's class edge (stars against programs of the same prestige) moves every CPU roster every year, not just the few that signed someone.
+- **Class crowding.** With 68 five-stars in the class, a prestige-86 staff signed twelve of them. Now each prospect of a blue chip's own star rating already committed to you slows him (`classCrowding`: 1 / (1 + 0.15 × count); two- and three-stars do not care). The staff plans for it, and the board shows it ("Crowded class"). The staff's classes, three seeds each: prestige 52 → 2.0–2.1 stars, 68 → 3.0–3.1, 86 → 3.75–3.9 (5★ ×3, 4★ ×3–5).
+- **Save size.** The class is 0.61 MB of JSON (signed prospects keep only their school and your interest). An in-season save in year 1 is 3.2 M characters, of which game results and player stats are 2.0 M.
+- **Board.** 50 prospects a page, with filters for status (open, committed, all), region, position, and stars. Search finds a prospect, or every prospect headed to a school. A "Top classes so far" list sits on the board. Team pages list the program's commits this year.
+
+The 20-season batch after the change (no integrity problems, identical replay):
+
+| Start (prestige) | Recruiting | Win % by 5-year block | Playoffs | Titles | Before |
+|---|---|---|---|---|---|
+| Harbor City (52) | staff | 18 / 30 / 62 / 50 | 0 | 0 | 27 / 32 / 38 / 32 |
+| Kentucky Bluegrass (68) | staff | 43 / 58 / 70 / 72 | 2 | 0 | 53 / 75 / 88 / 87, 12 playoffs, 4 titles |
+| Cascade State (86) | staff | 90 / 90 / 88 / 83 | 18 | 3 | 8 titles |
+| Harbor City (52) | naive | 15 / 17 / 33 / 28 | 0 | 0 | 15 / 28 / 20 / 22 |
+| Cascade State (86) | naive | 93 / 85 / 90 / 93 | 18 | 5 | 4 titles |
+| Kentucky Bluegrass (68) | none | 45 / 40 / 25 / 17 | 0 | 0 | 48 / 37 / 33 / 32 |
+| Harbor City (52) | staff, best job offer | 18 / 20 / 57 / 53 | 0 | 0 | 2 playoffs |
+| Cascade State (86) | staff, aggressive plan | 90 / 88 / 80 / 97 | 17 | 3 | 8 titles |
+| Kentucky Bluegrass (68) | staff, bold answers | 43 / 60 / 78 / 73 | 5 | 0 | 12 playoffs, 4 titles |
+
+The league is harder near the top: CPU programs that sign well now build real rosters. A mid program that recruits well still climbs (43% to 72%), but slower, and the bracket is harder to reach. Not recruiting is punished harder than before.
+
 ---
 
 ## Gap list

@@ -124,11 +124,11 @@ describe('advancing the ledger', () => {
 
   test('a class above what the program usually signs adds talent; early pros take it away', () => {
     const classStarsByTeamId = Object.fromEntries(league.map((team) => [team.id, [3, 3, 3]]));
-    classStarsByTeamId.t6 = [5, 5, 5, 5, 5, 5, 5, 5];
+    classStarsByTeamId.t6 = Array(12).fill(5);
     const next = neutralSeason(undefined, { classStarsByTeamId, earlyEntrantsByTeamId: { t7: 3 } });
     assert.ok(next.t6.talent > 3, `talent ${next.t6.talent}`);
     assert.ok(next.t7.talent < 0);
-    assert.deepStrictEqual(next.t6.lastClass, { year: 2026, commits: 8, averageStars: 5 });
+    assert.deepStrictEqual(next.t6.lastClass, { year: 2026, commits: 12, averageStars: 5 });
   });
 
   test('leaves the user program alone and keeps every value in bounds', () => {

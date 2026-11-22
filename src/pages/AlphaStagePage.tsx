@@ -22,7 +22,7 @@ const alphaChecklist = [
   {
     area: 'Coach Layer',
     status: 'complete',
-    details: 'The office, recruiting, the portal, the pro draft, job offers, and firing are in the year loop.',
+    details: 'The office, recruiting from one 1,700-prospect national class every program signs from, the portal, the pro draft, job offers, and firing are in the year loop.',
   },
   {
     area: 'Alpha UX + Quality Bar',

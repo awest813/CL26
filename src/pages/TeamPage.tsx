@@ -20,6 +20,14 @@ function TeamPage() {
   const leagueTeams = useAppSelector((state) => state.league.teams);
   const trophyHolders = useAppSelector((state) => state.season.trophyHolders);
   const managedRoster = useAppSelector((state) => state.coach.managedRoster);
+  const recruitPool = useAppSelector((state) => state.coach.recruitPool);
+  /** This year's verbal commits from the national class, best first. */
+  const commits = useMemo(
+    () => recruitPool
+      .filter((recruit) => id && recruit.committedTeamId === id)
+      .sort((a, b) => b.stars - a.stars || b.potential - a.potential || a.name.localeCompare(b.name)),
+    [id, recruitPool],
+  );
   const isOwnTeam = Boolean(id && selectedTeamId === id);
   const ownRoster = isOwnTeam && managedRoster && managedRoster.length > 0 ? managedRoster : null;
 
@@ -164,6 +172,22 @@ function TeamPage() {
                 <strong>
                   {standing.lastClass.commits} {standing.lastClass.commits === 1 ? 'commit' : 'commits'}
                   {standing.lastClass.commits > 0 ? ` · ${standing.lastClass.averageStars.toFixed(1)}★ average` : ''}
+                </strong>
+              </div>
+            )}
+            {recruitPool.length > 0 && (
+              <div className="teamInfoRow">
+                <span className="teamInfoLabel">Commits this year</span>
+                <strong>
+                  {commits.length === 0
+                    ? 'None yet'
+                    : `${commits.length} · ${(commits.reduce((sum, recruit) => sum + recruit.stars, 0) / commits.length).toFixed(1)}★ average`}
+                  {commits.length > 0 && (
+                    <span className="block text-xs font-normal text-gray-500">
+                      {commits.slice(0, 6).map((recruit) => `${recruit.name} (${recruit.position}, ${recruit.stars}★)`).join(' · ')}
+                      {commits.length > 6 ? ` · +${commits.length - 6} more` : ''}
+                    </span>
+                  )}
                 </strong>
               </div>
             )}

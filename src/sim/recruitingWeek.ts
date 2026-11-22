@@ -14,8 +14,8 @@ export interface CpuRecruitingProfile {
   region: string;
 }
 
-/** CPU programs stop chasing new commits once their class is this size. */
-export const CPU_CLASS_CAP = 8;
+/** CPU programs stop chasing new commits once their class is this size: a full year's scholarships. */
+export const CPU_CLASS_CAP = 12;
 const DEFAULT_CPU_PROFILE: CpuRecruitingProfile = { prestige: 60, region: '' };
 
 function getGradeMultiplier(grade?: string): number {
@@ -74,6 +74,20 @@ export function coachSkillMultiplier(coachSkill: number): number {
   return 0.85 + ((boundedCoachSkill - 40) / 59) * 0.3;
 }
 
+/** How much each blue chip already in your class slows the next one at his level. */
+export const CLASS_CROWDING_STEP = 0.15;
+
+/**
+ * A blue chip wants to stand out in his class: every prospect of his star rating already
+ * committed to you makes him slower to say yes. 1 for a two- or three-star, and for the
+ * first blue chip of each tier; 0.625 once five of his tier are in.
+ */
+export function classCrowding(stars: number, committedStars: readonly number[]): number {
+  if (stars < 4) return 1;
+  const ahead = committedStars.filter((value) => value === stars).length;
+  return 1 / (1 + CLASS_CROWDING_STEP * ahead);
+}
+
 /** Interest one recruiting hour buys before any multiplier. */
 export const INTEREST_PER_HOUR = 0.6;
 
@@ -93,6 +107,8 @@ export interface UserWeeklyGainInput {
   swing?: number;
   /** Head coach perks and the recruiting coordinator's specialty. */
   edges?: RecruitingEdges;
+  /** Star ratings of the prospects already committed to you (see `classCrowding`). */
+  committedStars?: readonly number[];
 }
 
 /**
@@ -107,7 +123,7 @@ export function userWeeklyGain(input: UserWeeklyGainInput): number {
   const rawGain = input.hours * INTEREST_PER_HOUR * edges.hourScale + input.recruit.stars * 0.2 + (input.swing ?? 0);
   const pull = input.programPrestige == null ? 1 : programPull(input.programPrestige, input.recruit.stars);
   const baseGain = rawGain * input.gainMultiplier * coachSkillMultiplier(input.coachSkill) * pull * blueChipPace(input.recruit.stars)
-    * recruitEdgeScale(edges, input.recruit);
+    * recruitEdgeScale(edges, input.recruit) * classCrowding(input.recruit.stars, input.committedStars ?? []);
   const pitchBonus = baseGain * (pitchMultiplier(input.recruit, input.pitch, input.pitchGrade) - 1) * edges.pitchScale;
   return Math.max(0, Math.round(baseGain + pitchBonus + input.positionNeedBonus));
 }
@@ -175,6 +191,10 @@ export function simulateRecruitingWeek(
   const boardSet = new Set(boardRecruitIds);
   // Commits made this week count toward CPU class caps for recruits checked later.
   const classSizeByTeamId = committedCountsByTeam(recruits);
+  // The user's class as it stood when the week began.
+  const userCommittedStars = selectedTeamId
+    ? recruits.filter((recruit) => recruit.committedTeamId === selectedTeamId).map((recruit) => recruit.stars)
+    : [];
 
   const interestByRecruitId: Record<string, Record<string, number>> = {};
   const committedTeamByRecruitId: Record<string, TeamId | null> = {};
@@ -215,6 +235,7 @@ export function simulateRecruitingWeek(
           // A visit that lands or falls flat: -1 to +1 before the multipliers.
           swing: rng() * 2 - 1,
           edges,
+          committedStars: userCommittedStars,
         });
       }
 

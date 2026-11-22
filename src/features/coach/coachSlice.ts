@@ -593,11 +593,13 @@ const coachSlice = createSlice({
         commitments: { recruitId: string; teamId: string }[];
     }>) => {
         state.recruitingWeekIndex += 1;
+        // The national class runs to well over a thousand prospects: look them up by id.
+        const poolById = new Map(state.recruitPool.map((recruit) => [recruit.id, recruit]));
 
         // Apply interest updates
         Object.entries(action.payload.interestUpdates).forEach(([recruitId, interestMap]) => {
-            const recruit = state.recruitPool.find(r => r.id === recruitId);
-            if (recruit) {
+            const recruit = poolById.get(recruitId);
+            if (recruit && !recruit.committedTeamId) {
                 recruit.interestByTeamId = interestMap;
             }
         });
@@ -612,9 +614,16 @@ const coachSlice = createSlice({
             commits: [],
         };
         action.payload.commitments.forEach(({ recruitId, teamId }) => {
-            const recruit = state.recruitPool.find(r => r.id === recruitId);
+            const recruit = poolById.get(recruitId);
             if (!recruit || recruit.committedTeamId) return;
             recruit.committedTeamId = teamId;
+            // A signed prospect only needs where he went and how far you got with him; dropping
+            // the rest of the suitors keeps the saved class small.
+            const userInterest = state.selectedTeamId ? recruit.interestByTeamId[state.selectedTeamId] : undefined;
+            recruit.interestByTeamId = { [teamId]: recruit.interestByTeamId[teamId] ?? 100 };
+            if (state.selectedTeamId && userInterest !== undefined && state.selectedTeamId !== teamId) {
+                recruit.interestByTeamId[state.selectedTeamId] = userInterest;
+            }
             report.totalCommits += 1;
             report.commits?.push({ recruitId, teamId });
             if (teamId === state.selectedTeamId) {
@@ -627,7 +636,7 @@ const coachSlice = createSlice({
 
         // Hours and pitches on committed prospects go back to the weekly pool.
         state.boardRecruitIds.forEach((recruitId) => {
-            const recruit = state.recruitPool.find(r => r.id === recruitId);
+            const recruit = poolById.get(recruitId);
             if (recruit?.committedTeamId) {
                 state.weeklyHoursByRecruitId[recruitId] = 0;
                 delete state.activePitchesByRecruitId[recruitId];
