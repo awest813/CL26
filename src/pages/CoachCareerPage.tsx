@@ -537,7 +537,7 @@ function CoachCareerPage() {
                 className="btn btn-primary"
                 onClick={() => dispatch(processSigningDay())}
               >
-                Resolve Signing Day
+                Resolve signing day
               </button>
             )}
             {offseasonCaps.canFinalizeSeason && (
@@ -611,7 +611,7 @@ function CoachCareerPage() {
                   className="btn btn-primary text-sm"
                   onClick={() => dispatch(initializeRecruitingBoard({ seed: seedInput, teams: effectiveRecruitingTeams }))}
                 >
-                  Start Recruiting
+                  Start recruiting
                 </button>
               </div>
             )

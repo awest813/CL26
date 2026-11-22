@@ -271,11 +271,6 @@ function SeasonPage() {
           <Link to="/rankings" className="seasonInlineLink">
             Top 25
           </Link>
-          {capabilities.canResetSeason && (
-            <button type="button" onClick={handleReset} className="seasonInlineLink seasonInlineLink-danger ml-auto">
-              Reset season
-            </button>
-          )}
         </div>
         {!coachReady && (
           <div className="mt-3 border-t pt-3 flex items-center justify-between gap-3">
@@ -365,6 +360,23 @@ function SeasonPage() {
           )}
         </div>
       </div>
+
+      {/* Kept apart from the navigation links above, so a reset is never one mis-tap away. */}
+      {capabilities.canResetSeason && (
+        <section className="card newGameCard" aria-labelledby="season-reset-title">
+          <div>
+            <h3 id="season-reset-title" className="sectionTitle">Restart this season</h3>
+            <p className="sectionSubtitle">
+              {coachReady
+                ? 'Replays the season from preseason: the schedule, results, and recruiting class start over; your career, roster, and year stay.'
+                : 'Clears the schedule and results so the season can be started again.'}
+            </p>
+          </div>
+          <button type="button" onClick={handleReset} className="btn btn-danger">
+            Reset season
+          </button>
+        </section>
+      )}
     </div>
   );
 }

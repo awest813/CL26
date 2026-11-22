@@ -94,7 +94,7 @@ function Header({ menuOpen, onToggleMenu, menuButtonRef }: HeaderProps) {
             <TeamLogo team={selectedTeam} size="sm" />
             <span className="dynastyProgramText">
               <span className="dynastyMetaLabel">Program</span>
-              <strong>{selectedTeam.schoolName}</strong>
+              <strong title={`${selectedTeam.schoolName} ${selectedTeam.nickname}`}>{selectedTeam.schoolName}</strong>
               <small>
                 <span className="revealSpoiler">{recordLine}</span>
                 <span className="dynastyPhaseInline"> · {phaseLabel}</span>
