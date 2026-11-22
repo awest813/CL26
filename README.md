@@ -39,6 +39,7 @@ npm run dev        # Vite dev server → http://localhost:5173
 | `npm run lint` | ESLint over all TS/TSX files |
 | `npm run preview` | Serve the production build locally |
 | `npm run test:regression` | Regression tests (requires `bun` on PATH) |
+| `npm run sim:careers` | Ten 20-season careers in parallel with integrity checks every season and a determinism replay (requires `bun`; about a minute) |
 
 > **Bun is required for tests.** Bun is pre-installed at `~/.bun/bin/bun`; ensure `~/.bun/bin` is on `PATH` before running `test:regression`.
 

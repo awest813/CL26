@@ -189,6 +189,24 @@ Win % against balanced (6,000–8,000 games each, same matchup, opponent on defa
 
 Under the game plan, the Coach Office shows the coach's own lines (first and second line, starters' stamina) and the rotation those numbers favor, with a one-click switch: ride the starters from a 5-point gap; rotate deep with even lines, stamina of 67 or less, or a fast or pressing plan. With depth charts, no rotation combination beats default against every opponent (best worst case -0.3 pp).
 
+### Twenty-season career batch (2026-11-22)
+
+`npm run sim:careers` plays ten 20-season careers (200 seasons) and checks every season: each week advances, rosters stay valid (30–34 players, every starting spot filled, ratings in range and matching each player's traits, no duplicate players), history grows by one a year, and a champion is crowned. A replay of one career must match it exactly. Result: no integrity problems, identical replay, saves steady at ~2.37 MB, 15–21 s a career.
+
+| Start (prestige) | Recruiting | Win % by 5-year block | Playoffs | Titles | Notes |
+|---|---|---|---|---|---|
+| Harbor City (52) | staff | 27 / 32 / 38 / 32 | 0 | 0 | slow climb |
+| Kentucky Bluegrass (68) | staff | 53 / 75 / 88 / 87 | 12 | 4 | dynasty |
+| Cascade State (86) | staff | 92 / 85 / 82 / 92 | 19 | 8 | |
+| Harbor City (52) | naive | 15 / 28 / 20 / 22 | 0 | 0 | fired 3x |
+| Cascade State (86) | naive | 83 / 82 / 87 / 88 | 17 | 4 | |
+| Kentucky Bluegrass (68) | none | 48 / 37 / 33 / 32 | 0 | 0 | fired once |
+| Harbor City (52) | staff, takes the best job offer | 27 / 37 / 48 / 68 | 2 | 0 | 5 moves |
+| Cascade State (86) | staff, fast / pressure / deep lines | 90 / 85 / 87 / 93 | 18 | 8 | |
+| Kentucky Bluegrass (68) | staff, bold press answers | 55 / 77 / 92 / 80 | 12 | 4 | |
+
+The weak program is climbing, not stuck: Harbor City starts in one of the strongest conferences (rivals' starters ~79 against a league median of 77) with starters at 69.7. Full staff-signed classes of ~2.3 stars lift its starters to 74.1 and its prestige drift to +6 over 12 years, closing the gap to its conference from 10 points to 4 and reaching a first winning season in year 12. Kentucky Bluegrass starts level with an average conference, wins, recruits 3.5 stars rising to 4.3, and is 6 points above the league by year 10. Prestige, recruiting, and wins feed each other; a weak program in a strong conference turns the loop slowly. A design question, not a bug; left as is.
+
 ---
 
 ## Gap list
