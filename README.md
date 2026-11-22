@@ -14,6 +14,7 @@ A deterministic, web-based college lacrosse head-coaching simulation. Build a pr
 - **Accessible** — no axe-core violations on any page in either theme, keyboard navigation with a skip link, and layouts that work from phone to desktop
 - **Fully deterministic** — same seed always produces the same schedule, rosters, and results
 - **Client-side only** — all state lives in `localStorage` via redux-persist; no server, no account required. Pages load on demand, so the first visit downloads about 415 KB of JavaScript
+- **Installable and offline** — a PWA (via `vite-plugin-pwa`): install it from the browser, and after the first visit the whole game, every page included, loads without a connection. A new deploy waits for the player to choose Reload now, and the career is saved first. If the browser stops saving (storage full or blocked), every page says so
 
 The project site is [https://awest813.github.io/CL26/](https://awest813.github.io/CL26/). It publishes from `master` after GitHub Pages is set to **GitHub Actions**. See [Deploy](#deploy).
 
@@ -90,6 +91,8 @@ src/
 GitHub Pages serves this app at `/CL26/`. `npm run build:pages` sets that base, and copies `index.html` to `404.html` so a refreshed route such as `/CL26/career` still loads the app. `.nojekyll` is included so Pages does not drop files.
 
 [`.github/workflows/pages.yml`](./.github/workflows/pages.yml) runs on every push to `master`, and it can also be started by hand. Before the first run, open the repo **Settings → Pages** and set **Source** to **GitHub Actions**. The workflow cannot turn that setting on by itself.
+
+The build also emits `manifest.webmanifest`, `sw.js`, and the app icons (`public/pwa-*.png`, `public/apple-touch-icon.png`). The service worker precaches every built file and is scoped to the base path, so it works at `/` and at `/CL26/`. It is not registered by the dev server; check offline behavior with a production preview.
 
 Local check of the Pages bundle:
 

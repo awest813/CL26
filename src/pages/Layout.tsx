@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { IconWarning } from '../components/UiIcons';
 import SaveStatusBanner from '../components/SaveStatusBanner';
+import UpdatePrompt from '../components/UpdatePrompt';
 import Footer from './Layout/Footer';
 import Header from './Layout/Header';
 import LeftNavBar from './Layout/LeftNavBar';
@@ -104,6 +105,7 @@ function Layout() {
         </div>
       )}
       <SaveStatusBanner />
+      <UpdatePrompt />
       <div className="layoutBody">
         <div id="app-primary-menu">
           <LeftNavBar

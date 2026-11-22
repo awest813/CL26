@@ -4090,3 +4090,23 @@ button.seasonScoreButton:hover:not(:disabled) {
     font-size: 0.78rem;
   }
 }
+
+/* App update and offline-ready notices. */
+.updateBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.updateBannerActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.statusBanner.updateBanner {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
