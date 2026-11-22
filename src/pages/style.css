@@ -4047,3 +4047,46 @@ button.seasonScoreButton:hover:not(:disabled) {
   color: var(--text-muted);
   font-size: 0.9rem;
 }
+
+/* Prospect pool filters: search gets a full row, the three selects share the next. */
+.poolFilters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.poolFilters .poolSearch {
+  grid-column: 1 / -1;
+}
+
+.poolFilters select {
+  width: 100%;
+}
+
+/* Conferences on a phone: one compact row per program instead of a tall card, so the
+   128-team league is a few screens of scrolling rather than twenty-five. */
+@media (max-width: 640px) {
+  .conferenceTeamGrid {
+    gap: 0.4rem;
+  }
+
+  .conferenceTeamCard {
+    flex-direction: row;
+    align-items: center;
+    min-height: 0;
+    padding: 0.5rem 0.65rem;
+  }
+
+  .conferenceTeamMeta {
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    gap: 0.15rem;
+    text-align: right;
+  }
+
+  .conferenceTeamNickname {
+    margin-top: 0;
+    font-size: 0.78rem;
+  }
+}

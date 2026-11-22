@@ -26,8 +26,8 @@ const alphaChecklist = [
   },
   {
     area: 'Alpha UX + Quality Bar',
-    status: 'in-progress',
-    details: 'The Weekly Hub, settings, and narrow layout are in. A full accessibility pass is still open.',
+    status: 'complete',
+    details: 'The Weekly Hub, settings, phone-to-desktop layouts, and an accessibility pass (no axe-core violations in either theme, keyboard navigation with a skip link) are in.',
   },
 ] as const;
 
@@ -193,10 +193,12 @@ function AlphaStagePage() {
       <section className="card">
         <h3>Still open</h3>
         <ol style={{ margin: '0.5rem 0 0 1rem' }}>
-          <li>Accessibility pass for keyboard, labels, and contrast.</li>
-          <li>Long tables on a phone.</li>
-          <li>News, rivalries, and press conferences stay out of this alpha.</li>
+          <li>Top-end balance: the best offense in a sim season runs about 1.5 goals a game above 2026&apos;s best D-I offense.</li>
+          <li>Long careers: a maxed-out coach&apos;s program wins a little more late in a career than it used to.</li>
         </ol>
+        <p className="text-sm text-gray-500 mt-2 mb-0">
+          Since this alpha was scoped, the accessibility pass, phone-friendly tables, the league news wire, rivalry trophies, and press conferences have shipped.
+        </p>
         <div style={{ marginTop: '1rem' }}>
           <Link to="/season" className="btn btn-primary">
             Continue season work

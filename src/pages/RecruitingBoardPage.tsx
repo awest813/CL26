@@ -551,8 +551,8 @@ function RecruitingBoardPage() {
             </button>
           </div>
 
-          <div className="flex gap-2 mb-3">
-            <label className="flex-1 text-sm">
+          <div className="poolFilters mb-3">
+            <label className="poolSearch text-sm">
               Search
               <input
                 value={search}
