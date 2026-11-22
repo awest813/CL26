@@ -5,9 +5,15 @@ A deterministic, web-based college lacrosse head-coaching simulation. Build a pr
 - **128 fictionalized teams** across 16 conferences
 - **12-game regular season** (7 conference round-robin + 5 non-conference)
 - **Full postseason** — weekly Top 25 + Top 12 bracket projection, 12-team playoff with automatic byes for seeds 1–4
-- **Coach career layer** — onboarding, program selection, recruiting board with CPU recruiting battles, staff-run recruiting, weekly hub with sim to the bracket, offseason roster turnover
+- **Coach career layer** — onboarding, program selection, recruiting board with CPU recruiting battles, staff-run recruiting, transfer portal, pro draft, assistants, coach skill tree, job market, weekly hub with sim to the bracket, offseason roster turnover
+- **Event-driven match engine calibrated to 2026 NCAA D-I team stats** — goals, shooting and save percentage, turnovers, ground balls, faceoffs, clears, man-up, and stat leaders land near real D-I (see [docs/SIM_AUDIT.md](./docs/SIM_AUDIT.md))
+- **Game plans with counters** — tempo, ride/clear, slide timing, offense set, defense package, and midfield lines; every call wins some matchups and loses others, CPU staffs scout and adjust, and no scheme beats the default against every opponent
+- **Position-aware ratings** — a player's overall weighs what his position does (a goalie's saves, a faceoff man's draws, a defenseman's defense)
+- **Weekly color** — postgame press conferences with small, stated effects, a league news wire, rivalry trophies, and an optional goal-by-goal reveal of your game
+- **Make it yours** — rename any program and pick its logo; light, dark, or system theme; comfortable or compact density
+- **Accessible** — no axe-core violations on any page in either theme, keyboard navigation with a skip link, and layouts that work from phone to desktop
 - **Fully deterministic** — same seed always produces the same schedule, rosters, and results
-- **Client-side only** — all state lives in `localStorage` via redux-persist; no server, no account required
+- **Client-side only** — all state lives in `localStorage` via redux-persist; no server, no account required. Pages load on demand, so the first visit downloads about 415 KB of JavaScript
 
 The project site is [https://awest813.github.io/CL26/](https://awest813.github.io/CL26/). It publishes from `master` after GitHub Pages is set to **GitHub Actions**. See [Deploy](#deploy).
 
@@ -39,7 +45,11 @@ npm run dev        # Vite dev server → http://localhost:5173
 ```
 src/
   sim/        Pure deterministic simulation (no React/Redux imports)
-  features/   Redux slices — leagueSlice, seasonSlice, coachSlice, exhibitionSlice
+  features/   Redux slices — leagueSlice, seasonSlice, coachSlice, settingsSlice, exhibitionSlice
+              (cross-slice career flows in features/coach/careerThunks.ts)
+  components/ Shared UI (game plan, depth chart, team logo and editor, game log, ...)
+  hooks/      React hooks (goal-by-goal game reveal, season sanity check)
+  lib/        UI copy shared across pages (tactic labels, season labels)
   pages/      Route-level UI components
   data/       Static JSON — teams128.json, names.json
   types/      Shared TypeScript domain contracts
@@ -48,7 +58,8 @@ src/
 
 **Persistence rules**
 - Persisted: `season`, `coach`, `settings`
-- Not persisted: `league` (reloaded from JSON on every launch), `exhibition` (sandbox state)
+- Not persisted: `league` (reloaded from JSON on every launch, with the user's team edits from `settings` laid over it), `exhibition` (sandbox state)
+- Saves migrate forward (`version` and `createMigrate` in `src/store/store.ts`)
 
 ## In-app pages
 
@@ -56,13 +67,13 @@ src/
 |-------|------|
 | `/` | Home / dashboard |
 | `/conferences` | Browse all 16 conferences |
-| `/team/:id` | Team detail + roster summary |
-| `/exhibition` | Seeded exhibition game |
+| `/team/:id` | Team detail, roster summary, rivalry, and Edit team (name, nickname, logo letters and colors) |
+| `/exhibition` | Seeded exhibition game with both sides' game plans |
 | `/career/setup` | Create coach + choose program |
-| `/career` | Coach Office (job, recruiting class, base scheme and install, staff) |
-| `/career/week` | Weekly hub (play a week or sim to the bracket, recruiting hours, the week's install) |
+| `/career` | Coach Office (job, recruiting class, game plan and install, midfield-lines read-out, staff, offseason market) |
+| `/career/week` | Weekly hub (play a week or sim to the bracket, last game and press conference, scouting, recruiting pace, league wire) |
 | `/career/recruiting` | Recruiting board (targets, hours, pitches, staff plan) |
-| `/career/roster` | Roster viewer |
+| `/career/roster` | Roster and depth chart, redshirts |
 | `/season` | Season dashboard |
 | `/schedule` | Redirects to `/season` |
 | `/season/week/:n` | Week game results |
@@ -70,7 +81,7 @@ src/
 | `/season/leaders` | Regular-season stat leaders and national awards |
 | `/rankings` | Top 25 + Top 12 projection |
 | `/playoffs` | Playoff bracket |
-| `/settings` | Confirmations, the matchup estimate, and reset |
+| `/settings` | Confirmations, matchup estimate, game reveal speed, theme, density, team-edit reset, and save reset |
 | `/login` | Redirects home |
 | `/alpha` | Alpha-stage progress tracker |
 
@@ -86,3 +97,7 @@ Local check of the Pages bundle:
 npm run build:pages
 VITE_PAGES_BASE=/CL26/ npx vite preview
 ```
+
+## Dependency notes
+
+`npm audit --omit=dev` reports two moderate React Router advisories that are fixed only in React Router 7 (a breaking upgrade). Neither applies here: the open redirect needs navigation to an attacker-controlled path (this app only navigates to its own routes), and the hydration issue needs server-side rendering (this app is client-only). The 6.x line is kept at its latest patch.
