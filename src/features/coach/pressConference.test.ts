@@ -4,7 +4,7 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit';
 import { leagueReducer } from '../league/leagueSlice.ts';
 import { seasonReducer } from '../season/seasonSlice.ts';
 import { exhibitionReducer } from '../exhibition/exhibitionSlice.ts';
-import { advanceRecruitingWeek, answerPressConference, careerSetupFromPrestige, coachReducer, completeCareerSetup, setCoachProfile } from './coachSlice.ts';
+import { advanceRecruitingWeek, answerPressConference, careerSetupFromPrestige, coachReducer, completeCareerSetup, resetRecruitingForNewSeason, setCoachProfile } from './coachSlice.ts';
 import { beginFirstSeason, initializeManagedRoster } from './careerThunks.ts';
 
 test('a press answer lands once per game, and its recruiting buzz lasts one recruiting week', async () => {
@@ -31,5 +31,10 @@ test('a press answer lands once per game, and its recruiting buzz lasts one recr
 
   // The next recruiting week uses the buzz up.
   await store.dispatch(advanceRecruitingWeek());
+  assert.strictEqual(store.getState().coach.pendingRecruitingBuzz, 1);
+
+  // A lift left over at season's end never reaches the next class.
+  store.dispatch(answerPressConference({ ...bold, gameKey: '2026-w11-y' }));
+  store.dispatch(resetRecruitingForNewSeason());
   assert.strictEqual(store.getState().coach.pendingRecruitingBuzz, 1);
 });

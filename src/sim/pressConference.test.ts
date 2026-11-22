@@ -48,6 +48,13 @@ describe('press conference', () => {
     for (const answer of worst) assert.ok(Math.abs(answer.effect.adPressure) <= 0.6 && answer.effect.recruitingBuzz <= 1.1);
   });
 
+  test('after the last recruiting week a bold answer promises nothing it cannot deliver', () => {
+    const bold = buildPressConference({ ...base, recruitingAhead: false }).answers[1];
+    assert.deepEqual(bold.effect, { adPressure: 0, recruitingBuzz: 1, fatigue: 0 });
+    assert.match(bold.effectLine, /recruiting is over/);
+    assert.ok(buildPressConference({ ...base, recruitingAhead: true }).answers[1].effect.recruitingBuzz > 1);
+  });
+
   test('streaks count the run ending with the latest game', () => {
     assert.equal(resultStreak([true, false, true, true, true]), 3);
     assert.equal(resultStreak([true, false, false]), -2);

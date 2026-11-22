@@ -576,6 +576,8 @@ const coachSlice = createSlice({
         state.programExpectations = action.payload.programExpectations;
     },
     resetRecruitingForNewSeason: (state) => {
+        // A press-conference lift never carries into the next class.
+        state.pendingRecruitingBuzz = 1;
         state.recruitPool = [];
         state.boardRecruitIds = [];
         state.weeklyHoursByRecruitId = {};

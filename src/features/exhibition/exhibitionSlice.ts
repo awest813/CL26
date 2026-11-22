@@ -4,6 +4,7 @@ import { Tactics } from '../../types/sim';
 import { DEFAULT_TACTICS } from '../../sim/tactics';
 import { generateRoster } from '../../sim/generateRoster';
 import { GameResult, simulateGame } from '../../sim/matchEngine';
+import { buildDefaultStarters } from '../../sim/rosterManagement';
 
 interface ExhibitionState {
   selectedTeamAId: string | null;
@@ -40,9 +41,13 @@ export const runExhibition = createAsyncThunk<GameResult | null, void, { state: 
       return null;
     }
 
+    // Field each side with its staff's depth chart, as league games do, so lineup-based
+    // calls such as the midfield rotation mean the same thing here.
+    const rosterA = generateRoster(teamA, `exhibition-${seed}`);
+    const rosterB = generateRoster(teamB, `exhibition-${seed}`);
     return simulateGame(
-      { team: teamA, roster: generateRoster(teamA, `exhibition-${seed}`) },
-      { team: teamB, roster: generateRoster(teamB, `exhibition-${seed}`) },
+      { team: teamA, roster: rosterA, starterIds: buildDefaultStarters(rosterA) },
+      { team: teamB, roster: rosterB, starterIds: buildDefaultStarters(rosterB) },
       tacticsA,
       tacticsB,
       seed,

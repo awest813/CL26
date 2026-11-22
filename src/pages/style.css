@@ -2586,7 +2586,7 @@ button.archetypeOption[aria-pressed='true'] {
 }
 
 #week-result {
-  scroll-margin-top: 5.5rem;
+  scroll-margin-top: var(--header-clearance, 8.5rem);
 }
 
 .loopActions {
@@ -3926,7 +3926,8 @@ button.seasonScoreButton:hover:not(:disabled) {
 
 .hubJump:hover { border-color: var(--accent); color: var(--accent-strong); }
 
-[id] { scroll-margin-top: 7.5rem; }
+/* Below the sticky header, measured in Layout; the fallback covers the first paint. */
+[id] { scroll-margin-top: var(--header-clearance, 8.5rem); }
 
 /* Compact density (Settings → Display): more rows on screen, same type scale for body text.
    Tables lose the most padding since they are where a coach scans the most. */
@@ -3971,4 +3972,14 @@ button.seasonScoreButton:hover:not(:disabled) {
 .pressQuote {
   margin: 0 0 0.35rem;
   font-style: italic;
+}
+
+/* While your game is revealed goal by goal, hide what would give the final away: the record in
+   the header and hub, and everything on the hub below the scoreboard. */
+:root[data-revealing] .revealSpoiler {
+  visibility: hidden;
+}
+
+:root[data-revealing] .pageStack > #week-result ~ * {
+  display: none;
 }

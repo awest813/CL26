@@ -151,6 +151,10 @@ describe('recruiting class pace', () => {
     assert.notEqual(recruiting({ commits: 0, weeksPlayed: 10, autoRecruiting: true })?.tone, 'watch');
   });
 
+  test('no advice once the regular season, and its recruiting, is over', () => {
+    assert.notEqual(recruiting({ commits: 0, weeksPlayed: 12 })?.tone, 'watch');
+  });
+
   test('the pace floor is half of a staff-run pace', () => {
     assert.equal(classPaceFloor(12, 3, 12), 0);
     assert.equal(classPaceFloor(12, 6, 12), 2);

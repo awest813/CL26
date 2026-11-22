@@ -28,6 +28,21 @@ function Layout() {
     applyDensity(density);
   }, [density]);
 
+  // Scroll targets (the week's result, the hub's jump links) must land below the sticky
+  // header, whose height changes with the viewport and its contents. Keep it measured.
+  useEffect(() => {
+    const header = document.querySelector<HTMLElement>('header.header');
+    if (!header || typeof ResizeObserver === 'undefined') return undefined;
+    const update = () => {
+      const bottom = header.getBoundingClientRect().height + (parseFloat(getComputedStyle(header).top) || 0);
+      document.documentElement.style.setProperty('--header-clearance', `${Math.ceil(bottom + 12)}px`);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
   const closeMenu = useCallback((returnFocus: boolean) => {
     setIsMenuOpen(false);
     if (returnFocus) menuButtonRef.current?.focus();

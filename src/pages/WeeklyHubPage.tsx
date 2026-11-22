@@ -336,6 +336,17 @@ function WeeklyHubPage() {
   const roundPlays = playoffSpot.lastGame?.result?.scoringPlays ?? [];
   const roundRevealKey = playoffSpot.lastGame ? `p${playoffSpot.lastGame.round}` : '';
   const roundReveal = useGameReveal(roundPlays.length, canReveal && revealKey === roundRevealKey, revealMs, roundRevealKey);
+  // While a game is revealed, the rest of the app (record, standings, next week) would give the
+  // final away: flag the page so CSS hides those spoilers until the final horn.
+  const revealing = weekReveal.revealing || roundReveal.revealing;
+  useEffect(() => {
+    const root = document.documentElement;
+    if (revealing) root.dataset.revealing = 'true';
+    else delete root.dataset.revealing;
+    return () => {
+      delete root.dataset.revealing;
+    };
+  }, [revealing]);
   // A seeded program with games left still plays its install in the bracket.
   const inBracket = season.phase === 'PLAYOFF'
     && playoffSpot.seed != null
@@ -531,13 +542,15 @@ function WeeklyHubPage() {
       userScore,
       oppScore,
       opponentName: opponent?.schoolName ?? 'them',
-      opponentRank: top25.find((row) => row.teamId === opponentId)?.rank ?? null,
+      // The poll the game was played under, not the one it produced.
+      opponentRank: (season.previousRankByTeamId?.[opponentId] ?? 99) <= 25 ? season.previousRankByTeamId[opponentId] : null,
+      recruitingAhead: season.phase === 'REGULAR' && season.currentWeekIndex < season.scheduleByWeek.length,
       rivalryTrophy: scheduled?.rivalryTrophy ?? null,
       streak: resultStreak(results),
       overtime: (userLastResult.scoringPlays ?? []).some((play) => play.period > 4),
     };
     return { gameKey: context.gameKey, ...buildPressConference(context) };
-  }, [showsRegularBoard, userLastResult, selectedTeamId, teams, season.scheduleByWeek, season.gameResults, season.year, top25]);
+  }, [showsRegularBoard, userLastResult, selectedTeamId, teams, season.scheduleByWeek, season.gameResults, season.year, season.previousRankByTeamId, season.phase, season.currentWeekIndex]);
 
   const lastResultEdge = useMemo(() => {
     if (!userLastResult || !selectedTeam) return null;
@@ -790,7 +803,7 @@ function WeeklyHubPage() {
         title="Weekly Hub"
         subtitle={
           <>
-            {seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length)} · {selectedTeam?.schoolName} {selectedTeam?.nickname} · <span className="nowrap">{userRecord.wins}–{userRecord.losses} overall</span> · <span className="nowrap">{userRecord.confWins}–{userRecord.confLosses} conf</span>
+            {seasonPhaseLabel(season.phase, season.currentWeekIndex, season.scheduleByWeek.length)} · {selectedTeam?.schoolName} {selectedTeam?.nickname} <span className="revealSpoiler">· <span className="nowrap">{userRecord.wins}–{userRecord.losses} overall</span> · <span className="nowrap">{userRecord.confWins}–{userRecord.confLosses} conf</span></span>
           </>
         }
       />

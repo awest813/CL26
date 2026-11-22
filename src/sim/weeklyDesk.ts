@@ -92,6 +92,8 @@ export function classPaceFloor(scholarships: number, weeksPlayed: number, weeksT
 function classPaceWarning(input: WeeklyDeskInput): string | null {
   const { commits, scholarships, weeksPlayed, weeksTotal } = input;
   if (commits == null || !scholarships || weeksPlayed == null || !weeksTotal) return null;
+  // After the last regular-season week no recruiting period is left to act on.
+  if (weeksPlayed >= weeksTotal) return null;
   if (weeksPlayed < PACE_GRACE_WEEKS * 2 || commits >= classPaceFloor(scholarships, weeksPlayed, weeksTotal)) return null;
   const weeksLeft = Math.max(0, weeksTotal - weeksPlayed);
   const commitLine = `${commits} commit${commits === 1 ? '' : 's'} for ${scholarships} scholarships`;

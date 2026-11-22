@@ -27,6 +27,8 @@ export interface PressContext {
   streak: number;
   /** Went to overtime. */
   overtime?: boolean;
+  /** A recruiting week is still to come this season. Without one, a bold answer has nothing to lift. */
+  recruitingAhead?: boolean;
 }
 
 export interface PressEffect {
@@ -139,14 +141,18 @@ export function buildPressConference(context: PressContext): PressConference {
   const bigStage = Boolean(context.rivalryTrophy) || context.opponentRank != null;
   const scale = bigStage ? BIG_STAGE_SCALE : 1;
   const question = questionFor(context, rng);
+  const recruitingOver = context.recruitingAhead === false;
   const answers = (['humble', 'bold', 'focus'] as PressTone[]).map((tone) => {
-    const effect = scaled(BASE_EFFECTS[result][tone], scale);
+    // After the last recruiting week a bold answer is just talk: no lift and no cost.
+    const effect = tone === 'bold' && recruitingOver
+      ? { adPressure: 0, recruitingBuzz: 1, fatigue: 0 }
+      : scaled(BASE_EFFECTS[result][tone], scale);
     return {
       tone,
       label: QUOTES[result][tone].label,
       quote: pick(rng, QUOTES[result][tone].quotes),
       effect,
-      effectLine: describePressEffect(effect),
+      effectLine: tone === 'bold' && recruitingOver ? 'No effect: this year\'s recruiting is over' : describePressEffect(effect),
     };
   });
   return { question, bigStage, answers };
