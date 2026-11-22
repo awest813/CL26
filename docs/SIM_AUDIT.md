@@ -288,6 +288,17 @@ The 20-season batch checks every season that each CPU program has its own coach,
 | Cascade State (86) | staff, aggressive plan | 83 / 90 / 85 / 97 | 16 | 8 |
 | Kentucky Bluegrass (68) | staff, bold answers | 32 / 47 / 55 / 63 | 0 | 0 |
 
+### Short-stick defensive middies (2026-11-22)
+
+Starters played both ends, so a bench middie who defended far better than a starting scorer never saw the defensive end. Now every staff (CPU and yours) sends its best-defending bench middie on for the starting middie who defends worst, on defense only, when he is at least 2 points better at it (defense 60%, speed 20%, IQ 20%). In his place he counts at the starter's weight in the team defense rating and in who forces turnovers; the starter he replaces counts at the bench's. Offense is unchanged.
+
+- It applies to 96 of 128 generated programs, a median 6 points of midfield defense.
+- League calibration barely moved (10.48 → 10.47 goals a team, favorites .796 → .795), since every team gains alike.
+- A 95-defense D-middie saves about 0.65 goals a game against the same opponent (600 paired games).
+- The Roster page's depth chart names the D-middie and who he runs on for, from this week's available players.
+
+**Fixed with it:** two players on one roster could share a name. Each class's names are unique, but a signee was never checked against the players already there, and the 1,700-prospect class made a clash likely (the career batch caught one in year 9). A newcomer whose name is taken now gets a middle initial ("Nathan R. Egan"), the same one every time; portal additions too.
+
 ---
 
 ## Gap list
@@ -341,7 +352,7 @@ Severity: **P0** breaks realism or decision-making in a way players will notice.
 | D2 | ✅ | **Done in Phase 5:** 1–6 week injuries and season-enders, stateless and the same for every team. Redshirts came after Phase 5: before week 1 a coach can sit a player for the season (one per player, no seniors, never thinning a position below the starters plus one). He still develops and keeps his class year, shown as "RS". Was: injuries lasted one week only. Each week is a fresh roll with no carry-over, no severity, and no season-ending injuries, so the injured-reserve and redshirt flags in `gameRules.ts` have nothing to act on. | `injuries.ts` L34 | Add duration (1–6 weeks, rare season-ending) and keep active injuries in `coachSlice`. Redshirts can follow later. |
 | D3 | ✅ | **Done in Phase 3:** the career harness checks the user's roster against the top ten CPU rosters each season and logs win % by year. Was: user roster against CPU rosters had never been measured over a long career. The user's roster develops and recruits while the CPU stays static (L1). The 20-season harness only asserts an average overall below 94. | `careerTwentySeason.test.ts` | Add an assertion that the user's roster average stays within a band of the top CPU programs, and log the user's win % per season so drift is visible. |
 | D5 | Mitigated | **Phase 5 measured it and softened it.** Diagnosis: late in a career the user's starters (about 85) are *below* the best CPU programs (about 90), but play an average conference schedule with a maxed coaching tree, in an engine where the better team won too often. Potential-capped growth, game-to-game form, and a softer rating-to-result curve brought late-career seasons from 83–100% wins to mostly 67–92%. After Phase 5, skill-tree levels give diminishing game-day returns (a maxed tree is worth about +9 pp instead of +10, since much of the edge was the install), and the weekly installs were rebalanced to within about 3 pp of each other. The discipline install had been a clear best at +6–10 pp. Original gap: late careers turned into dynasties. In the 100-season harness, the user's program wins 83–100% of its regular-season games from about year 20 on (a 58–83% band before that). The roster stays inside the top-ten band, so the edge comes from the maxed coach skill tree, archetype bonuses, and program resources stacking on game day, not from roster talent. | `coachEffects.ts` `buildCoachGamePlan`; `careerThunks.ts` | Cap the combined game-day modifiers, or make coach skill gains taper. Then add a harness check on late-career win %. |
-| D4 | Mostly done | **The second midfield line matters in Phase 5** through rotation relief on fatigue, and **the coach now sets how the lines share the game** (Midfield lines call, 2026-11-22). Short-stick defensive middies and wing assignments are still open. Was: depth-chart lines. Starters are a flat set. There are no first and second midfield lines, no short-stick D-middies, and no faceoff wing assignment. | `buildDefaultStarters` | Comes with E8 (line fatigue). |
+| D4 | ✅ | **Done (2026-11-22).** The second midfield line matters through rotation relief on fatigue, the coach sets how the lines share the game (Midfield lines call), wings on the draw are the LSM first and the short-stick middies behind him, and every staff now runs a **short-stick defensive middie**: on defense the bench middie who defends best runs on for the starting middie who defends worst, when he is at least 2 points better (`defensiveMiddieSwap`). Was: depth-chart lines; starters were a flat set. | `matchEngine.ts` `calcRatings` | — |
 
 ### E. Tooling and tests
 

@@ -35,3 +35,32 @@ export function drawName(rng: RngFn, taken?: Set<string>): string {
   taken?.add(name);
   return name;
 }
+
+const INITIALS = 'ABCDEFGHJKLMNPRSTW';
+
+/**
+ * A name that reads apart from everyone in `taken`: unchanged when it is free, otherwise the
+ * same name with a middle initial ("Nathan R. Egan"), picked from `key` so the same player
+ * always gets the same one. The name returned is added to `taken`.
+ */
+export function distinctName(name: string, taken: Set<string>, key: string): string {
+  let result = name;
+  if (taken.has(name)) {
+    const space = name.indexOf(' ');
+    const first = space > 0 ? name.slice(0, space) : name;
+    const last = space > 0 ? name.slice(space + 1) : '';
+    const start = seedToNumber(`initial:${key}`) % INITIALS.length;
+    for (let i = 0; i < INITIALS.length * 2; i += 1) {
+      const initial = INITIALS[(start + i) % INITIALS.length];
+      const candidate = i < INITIALS.length
+        ? `${first} ${initial}. ${last}`.trim()
+        : `${first} ${initial}${INITIALS[(start + i + 7) % INITIALS.length]}. ${last}`.trim();
+      if (!taken.has(candidate)) {
+        result = candidate;
+        break;
+      }
+    }
+  }
+  taken.add(result);
+  return result;
+}

@@ -2,6 +2,7 @@ import { replaceStarter, setStarterIds } from '../features/coach/coachSlice';
 import { bestLineup, depthChartSlots, lineupGap, POSITION_NAMES, startingRating } from '../sim/depthChart';
 import { rosterForAvailability, type WeekScratch } from '../sim/injuries';
 import { activeRoster } from '../sim/redshirts';
+import { defensiveMiddieSwap, DEFENSIVE_MIDDIE_MARGIN, middieDefense } from '../sim/matchEngine';
 import { useAppDispatch } from '../store/hooks';
 import { POSITION_ORDER, type Player } from '../types/sim';
 
@@ -22,6 +23,8 @@ function DepthChartBoard({ roster, starterIds, scratches }: DepthChartBoardProps
   const gameDay = rosterForAvailability(activeRoster(roster), starterIds, scratches);
   const playing = new Set(gameDay.starterIds);
   const fillIns = gameDay.roster.filter((player) => playing.has(player.id) && !starterIds.includes(player.id));
+  // The short-stick D-middie the staff sends on for this week's game.
+  const dMiddie = defensiveMiddieSwap(gameDay.roster, gameDay.starterIds);
 
   return (
     <section className="card" aria-labelledby="depth-title">
@@ -84,6 +87,16 @@ function DepthChartBoard({ roster, starterIds, scratches }: DepthChartBoardProps
                   </label>
                 );
               })}
+              {position === 'M' && (
+                <p
+                  className="depthSlotNote depthDMiddie"
+                  title={`On defense the bench midfielder who defends best (defense, speed, and IQ) runs on for the starter who defends worst, when he is at least ${DEFENSIVE_MIDDIE_MARGIN} points better at it.`}
+                >
+                  {dMiddie
+                    ? `D-middie: ${dMiddie.ssdm.name} (${Math.round(middieDefense(dMiddie.ssdm))} on defense) runs on for ${dMiddie.replaces.name} (${Math.round(middieDefense(dMiddie.replaces))}) when you defend.`
+                    : 'D-middie: none. No bench middie defends clearly better than your starters.'}
+                </p>
+              )}
             </div>
           );
         })}

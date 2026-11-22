@@ -1,8 +1,10 @@
 import assert from 'node:assert';
 import { describe, test } from 'node:test';
-import { resolveDeadlockWinner, simulateGame } from './matchEngine.ts';
+import { defensiveMiddieSwap, middieDefense, resolveDeadlockWinner, simulateGame } from './matchEngine.ts';
+import { programStarters } from './programLedger.ts';
 import { generateRoster } from './generateRoster.ts';
 import type { Team, Tactics } from '../types/sim.ts';
+import { DEFAULT_TACTICS } from './tactics.ts';
 
 const teamA: Team = {
   id: 'alpha',
@@ -358,5 +360,50 @@ describe('match engine gameplay modifiers', () => {
     }
 
     assert.ok(pressureFouls > manFouls, `expected pressure fouls ${pressureFouls} > man ${manFouls}`);
+  });
+});
+
+describe('short-stick defensive middie', () => {
+  const team: Team = { id: 'ssdm', schoolName: 'SSDM U', nickname: 'X', conferenceId: 'c', region: 'North', prestige: 70 };
+
+  /** A roster whose best defending middie sits on the bench: starters by overall, defense on the bench. */
+  function rosterWithBenchDefender(benchDefense: number) {
+    const roster = generateRoster(team, 'ssdm');
+    const middies = roster.filter((p) => p.position === 'M').sort((a, b) => b.overall - a.overall);
+    const starters = programStarters(roster);
+    const bench = middies.find((p) => !starters.includes(p.id))!;
+    const changed = roster.map((p) => (p.id === bench.id ? { ...p, defense: benchDefense, speed: 85, IQ: 85 } : p));
+    return { roster: changed, starters, benchId: bench.id };
+  }
+
+  test('the best-defending bench middie runs on for the starter who defends worst', () => {
+    const { roster, starters, benchId } = rosterWithBenchDefender(95);
+    const swap = defensiveMiddieSwap(roster, starters);
+    assert.ok(swap);
+    assert.strictEqual(swap.ssdm.id, benchId);
+    assert.ok(starters.includes(swap.replaces.id));
+    const startingMiddies = roster.filter((p) => p.position === 'M' && starters.includes(p.id));
+    assert.strictEqual(Math.min(...startingMiddies.map(middieDefense)), middieDefense(swap.replaces));
+  });
+
+  test('no swap without a depth chart, or when the bench defends no better', () => {
+    const { roster, starters } = rosterWithBenchDefender(95);
+    assert.strictEqual(defensiveMiddieSwap(roster, undefined), null);
+    const weak = roster.map((p) => (p.position === 'M' && !starters.includes(p.id) ? { ...p, defense: 40, speed: 40, IQ: 40 } : p));
+    assert.strictEqual(defensiveMiddieSwap(weak, starters), null);
+  });
+
+  test('a real D-middie gives up fewer goals than leaving the starters on', () => {
+    const { roster, starters } = rosterWithBenchDefender(95);
+    const plain = roster.map((p) => (p.position === 'M' && !starters.includes(p.id) ? { ...p, defense: 40, speed: 40, IQ: 40 } : p));
+    const opponent = generateRoster({ ...team, id: 'opp' }, 'ssdm-opp');
+    let allowedWith = 0;
+    let allowedWithout = 0;
+    for (let i = 0; i < 600; i += 1) {
+      const opp = { team: { ...team, id: 'opp' }, roster: opponent, starterIds: programStarters(opponent) };
+      allowedWith += simulateGame({ team, roster, starterIds: starters }, opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i).scoreB;
+      allowedWithout += simulateGame({ team, roster: plain, starterIds: starters }, opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i).scoreB;
+    }
+    assert.ok(allowedWith < allowedWithout, `with ${allowedWith / 600} vs without ${allowedWithout / 600}`);
   });
 });

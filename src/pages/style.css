@@ -3808,6 +3808,15 @@ button.seasonScoreButton:hover:not(:disabled) {
   border-color: var(--danger);
 }
 
+.depthSlotNote.depthDMiddie {
+  margin: 0.35rem 0 0;
+  display: block;
+  white-space: normal;
+  grid-column: auto;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 .depthSlotNote {
   grid-column: 2;
   font-size: 0.7rem;

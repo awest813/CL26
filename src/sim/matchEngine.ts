@@ -240,6 +240,38 @@ function drawFromPool(rng: () => number, pool: WeightedPool, fallback: Player, e
   return pool.players.find((p) => p.id !== exclude?.id) ?? fallback;
 }
 
+/** A midfielder's worth at the defensive end: the blend the team defense rating uses. */
+export function middieDefense(p: Player): number {
+  return p.defense * 0.6 + p.speed * 0.2 + p.IQ * 0.2;
+}
+
+/** How much better a bench middie has to defend before he takes a starter's defensive shifts. */
+export const DEFENSIVE_MIDDIE_MARGIN = 2;
+
+/**
+ * The short-stick defensive middie: when the other team has the ball, the bench midfielder who
+ * defends best runs on for the starting middie who defends worst, if he is clearly better at it.
+ * Every staff makes this change; it needs a depth chart, since without one there are no starters.
+ */
+export function defensiveMiddieSwap(
+  roster: Player[],
+  starterIds?: string[] | Set<string> | null,
+): { ssdm: Player; replaces: Player } | null {
+  const starterSet = starterIds instanceof Set ? starterIds : resolveStarterSet(roster, starterIds ?? undefined);
+  if (!starterSet) return null;
+  const middies = roster.filter((p) => p.position === 'M' && !p.redshirt);
+  const starting = middies.filter((p) => starterSet.has(p.id));
+  const bench = middies.filter((p) => !starterSet.has(p.id));
+  if (starting.length === 0 || bench.length === 0) return null;
+  const best = (list: Player[], sign: 1 | -1) => list.reduce((pick, p) => {
+    const diff = (middieDefense(p) - middieDefense(pick)) * sign;
+    return diff > 0 || (diff === 0 && p.id < pick.id) ? p : pick;
+  });
+  const ssdm = best(bench, 1);
+  const replaces = best(starting, -1);
+  return middieDefense(ssdm) >= middieDefense(replaces) + DEFENSIVE_MIDDIE_MARGIN ? { ssdm, replaces } : null;
+}
+
 function calcRatings(roster: Player[], starterIds?: string[], rotation: MidfieldRotation = 'balanced'): TeamRatings {
   const starterSet = resolveStarterSet(roster, starterIds);
   // Without a depth chart there are no lines to rotate: every player is weighted alike, so a
@@ -249,6 +281,14 @@ function calcRatings(roster: Player[], starterIds?: string[], rotation: Midfield
   const weightOf = (p: Player): number => {
     if (p.position !== 'M' || !starterSet) return playerDepthWeight(p.id, starterSet);
     return starterSet.has(p.id) ? lines.starter : lines.bench;
+  };
+  // At the defensive end the D-middie plays the starter's shifts and the O-middie he replaces sits.
+  const swap = defensiveMiddieSwap(roster, starterSet);
+  const defensiveWeightOf = (p: Player): number => {
+    if (!swap) return weightOf(p);
+    if (p.id === swap.ssdm.id) return lines.starter;
+    if (p.id === swap.replaces.id) return lines.bench;
+    return weightOf(p);
   };
 
   let offWeighted = 0;
@@ -282,8 +322,9 @@ function calcRatings(roster: Player[], starterIds?: string[], rotation: Midfield
     } else if (pos === 'M') {
       offWeighted += (p.shooting * 0.55 + p.passing * 0.25 + p.IQ * 0.2) * w;
       offDenom += w;
-      defWeighted += (p.defense * 0.6 + p.speed * 0.2 + p.IQ * 0.2) * w;
-      defDenom += w;
+      const dw = defensiveWeightOf(p);
+      defWeighted += middieDefense(p) * dw;
+      defDenom += dw;
     } else if (pos === 'D' || pos === 'LSM') {
       defWeighted += (p.defense * 0.6 + p.speed * 0.2 + p.IQ * 0.2) * w;
       defDenom += w;
@@ -333,7 +374,7 @@ function calcRatings(roster: Player[], starterIds?: string[], rotation: Midfield
     feeders: buildPool(roster, feederWeight),
     quarterback: roster.reduce<Player | null>((best, p) => (feederWeight(p) > (best ? feederWeight(best) : 0) ? p : best), null),
     scrappers: buildPool(roster, (p) => depth(p) * SCRAPPER_ROLE[p.position] * ((p.speed * 0.5 + p.defense * 0.3 + p.IQ * 0.2) / SHOOTER_SKILL_PIVOT) ** 2),
-    defenders: buildPool(roster, (p) => depth(p) * DEFENDER_ROLE[p.position] * ((p.defense * 0.7 + p.IQ * 0.3) / SHOOTER_SKILL_PIVOT) ** 2),
+    defenders: buildPool(roster, (p) => defensiveWeightOf(p) * DEFENDER_ROLE[p.position] * ((p.defense * 0.7 + p.IQ * 0.3) / SHOOTER_SKILL_PIVOT) ** 2),
   };
 }
 

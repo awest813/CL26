@@ -1,6 +1,6 @@
 import { Player, Position, SignedRecruit, Team } from '../types/sim';
 import { makeRng, randInt, seedToNumber } from './rng';
-import { drawName } from './names';
+import { distinctName, drawName } from './names';
 import { faceoffRating, growSpecialty, playerPotential, rollPotential, rollSpecialties, savingRating } from './playerSpecialty';
 import { ROSTER_POSITION_ORDER, ROSTER_POSITION_TARGETS, ROSTER_SIZE } from './generateRoster';
 import { advanceClassYear } from './redshirts';
@@ -314,10 +314,13 @@ export function applyRosterTurnover(
   // Step 3: Age returning players. A redshirt keeps his class year.
   const agedReturners: Player[] = staying.map(advanceClassYear);
 
-  // Step 4: Convert signed recruits to freshmen
-  const incomingFreshmen: Player[] = signedRecruits.map((sr) =>
-    convertRecruitToPlayer(sr, team, rng),
-  );
+  // Step 4: Convert signed recruits to freshmen. A newcomer who shares a name with someone
+  // already on the roster gets a middle initial, so every player on it reads apart.
+  const namesInUse = new Set(agedReturners.map((player) => player.name));
+  const incomingFreshmen: Player[] = signedRecruits
+    .map((sr) => convertRecruitToPlayer(sr, team, rng))
+    .map((player) => ({ ...player, name: distinctName(player.name, namesInUse, player.id) }));
+  additions = additions.map((player) => ({ ...player, name: distinctName(player.name, namesInUse, player.id) }));
 
   // Step 5: Fill remaining spots with generated walk-ons up to 24 players.
   // A large signing class can already be over the target. Make room before adding

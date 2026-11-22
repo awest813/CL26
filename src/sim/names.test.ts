@@ -5,7 +5,7 @@ import namesData from '../data/names.json' with { type: 'json' };
 import type { Team } from '../types/sim.ts';
 import { generateRoster } from './generateRoster.ts';
 import { generateRecruitPool } from './recruiting.ts';
-import { drawName } from './names.ts';
+import { distinctName, drawName } from './names.ts';
 import { makeRng } from './rng.ts';
 
 const teams = leagueData.teams as Team[];
@@ -52,5 +52,18 @@ describe('names', () => {
       generateRoster(teams[0], 'seed').map((player) => player.name),
       generateRoster(teams[0], 'seed').map((player) => player.name),
     );
+  });
+});
+
+describe('distinct names', () => {
+  test('a free name is kept; a taken one gets a steady middle initial', () => {
+    const taken = new Set(['Nathan Egan']);
+    assert.strictEqual(distinctName('Cole Dunn', taken, 'a'), 'Cole Dunn');
+    const second = distinctName('Nathan Egan', taken, 'player-2');
+    assert.match(second, /^Nathan [A-Z]\. Egan$/);
+    assert.strictEqual(distinctName('Nathan Egan', new Set(['Nathan Egan']), 'player-2'), second);
+    const third = distinctName('Nathan Egan', taken, 'player-2');
+    assert.notStrictEqual(third, second);
+    assert.strictEqual(taken.size, 4);
   });
 });
