@@ -11,8 +11,11 @@ import { buildCoachGamePlan } from './coachEffects.ts';
 
 /**
  * League-wide box-score bands, so engine changes cannot drift away from a
- * D-I-like game without a test noticing. Run `bun scripts/calibrate-engine.ts`
- * for the full table these bands come from.
+ * D-I-like game without a test noticing. Centered on 2026 D-I team averages
+ * (Big Ten, Big East, and Patriot League, 21 teams): 11.3 goals on 39.2 shots
+ * (.287), .516 save %, 30.5 ground balls, 16.0 turnovers, 2.5 penalties and
+ * 2.5 man-up chances at .332. See docs/SIM_AUDIT.md. Run
+ * `bun scripts/calibrate-engine.ts` for the full table.
  */
 const teams = leagueData.teams as Team[];
 const GAMES = 1000;
@@ -76,20 +79,20 @@ describe('match engine calibration bands', () => {
   const teamGames = totals.games * 2;
 
   test('scoring volume looks like a D-I game', () => {
-    assertBand('goals per team', totals.goals / teamGames, 10, 13.5);
-    assertBand('shots per team', totals.shots / teamGames, 32, 42);
-    assertBand('shooting pct', totals.goals / totals.shots, 0.27, 0.35);
-    assertBand('save pct on shots on goal', totals.saves / totals.shotsOnGoal, 0.45, 0.58);
+    assertBand('goals per team', totals.goals / teamGames, 9.5, 13);
+    assertBand('shots per team', totals.shots / teamGames, 34, 43);
+    assertBand('shooting pct', totals.goals / totals.shots, 0.26, 0.32);
+    assertBand('save pct on shots on goal', totals.saves / totals.shotsOnGoal, 0.47, 0.57);
   });
 
   test('possession battles look like a D-I game', () => {
     assertBand('ground balls per team', totals.groundBalls / teamGames, 24, 34);
-    assertBand('turnovers per team', totals.turnovers / teamGames, 10, 16);
-    assertBand('penalties per team', totals.penalties / teamGames, 2, 4.5);
+    assertBand('turnovers per team', totals.turnovers / teamGames, 13, 19);
+    assertBand('penalties per team', totals.penalties / teamGames, 1.8, 3.6);
   });
 
   test('man-up chances convert at a D-I rate', () => {
-    assertBand('man-up chances per team', totals.extraManOpportunities / teamGames, 1.8, 4);
+    assertBand('man-up chances per team', totals.extraManOpportunities / teamGames, 1.7, 3.3);
     assertBand('man-up conversion', totals.extraManGoals / totals.extraManOpportunities, 0.25, 0.45);
   });
 
@@ -308,7 +311,8 @@ describe('no scheme to always run', () => {
 describe('each strategy earns its keep', () => {
   const rosterA = generateRoster(alpha, 'strategy-keep');
   const rosterB = generateRoster(beta, 'strategy-keep');
-  const GAMES_PER_CALL = 1000;
+  // A 3 pp scheme edge needs about this many paired games to clear sampling noise.
+  const GAMES_PER_CALL = 3000;
 
   function winRate(tactics: Tactics, opponent: (index: number) => Tactics): number {
     let wins = 0;

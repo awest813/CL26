@@ -56,7 +56,7 @@ export function schemeTurnoverEdge(offense: Tactics, defense: Tactics): number {
   if (offense.offenseSet === 'invert') edge += 0.012;
   if (offense.offenseSet === 'motion') edge += 0.006;
   if (offense.tempo === 'fast') edge += 0.006;
-  if (defense.defensePackage === 'pressure') edge += defense.slideAggression === 'early' ? 0.022 : 0.014;
+  if (defense.defensePackage === 'pressure') edge += defense.slideAggression === 'early' ? 0.019 : 0.011;
   if (defense.defensePackage === 'zone') edge -= 0.01;
   return edge;
 }

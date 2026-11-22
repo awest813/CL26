@@ -101,6 +101,40 @@ Checked and left as designed: **playoff seeding is close to a coin flip among th
 
 Still open: **walk-ons are listed 5–8 points below the traits they play with** (`addWalkOn` rolls the overall separately). Career balance leans on that hidden edge: penalizing their traits to match drops the user's program to about 25% wins for 35 seasons, and listing them honestly lifts it about 7 pp (good walk-ons stop being benched and cut). Fixing it needs the user's recruiting pipeline rebalanced with it.
 
+### Against 2026 NCAA D-I (2026-11-22)
+
+Reference: full 2026 team stats for the Big Ten, Big East, and Patriot League (21 teams, 309 team-games), games-weighted, from the conferences' stats pages ([Big Ten](https://bigten.org/stats.aspx?path=mlax&year=2026), [Big East](https://www.bigeast.com/stats.aspx?path=mlax&year=2026), [Patriot League](https://patriotleague.org/stats.aspx?path=mlax&year=2026)). NCAA.com's national tables could not be fetched; national extremes come from its snapshots (best scoring offense 15.64, best scoring defense 7.36). Sim: 6 full league seasons through the real store.
+
+| Per team per game | Sim before | Sim after | 2026 D-I |
+|---|---|---|---|
+| Goals | 12.6 | 11.1 | 11.3 |
+| Shots | 39.5 | 37.4 | 39.2 |
+| Shooting % | .318 | .297 | .287 |
+| Save % | .510 | .516 | .516 |
+| Ground balls | 30.2 | 29.5 | 30.5 |
+| Turnovers | 13.8 | 15.9 | 16.0 |
+| Caused turnovers | 7.3 | 8.5 | 8.2 |
+| Clear % | .868 | .867 | .864 |
+| Penalties | 3.6 | 2.8 | 2.5 |
+| Man-up chances / conversion | 2.8 / .353 | 2.3 / .329 | 2.5 / .332 |
+| Best offense in a season | ~19 | 17.2 | 15.6 |
+| Best defense in a season | ~6.3 | 7.5 | 7.4 |
+
+| Leader per game (sim #1) | Before | After | 2026 conference #1s (B1G / BE / PL) |
+|---|---|---|---|
+| Ground balls | 13.2 | 7.8 | 5.9 / 4.9 / 6.5 |
+| Points | 6.2 | 5.7 | 3.8 / 4.8 / 5.4 (2025 national record pace: 6.05) |
+| Goals | 4.1 | 3.7 | 2.5 / 3.4 / 3.7 |
+| Assists, caused turnovers, faceoff %, save % | in range | in range | 3.4, 2.4, .675, .617 at most |
+
+League checks after: one-goal games 22.8% (was 19.0%), overtime 7.6% (was 5.9%), favorites by 10+ prestige 79.6% (was 82.5%).
+
+Changes (`matchEngine.ts`): on-goal base 0.60 → 0.58 and shooter skill flattened (on-goal 250 → 400, goal 300 → 525 rating points per point), so top programs' shooters no longer run up 18–22 goals a game against weak schedules; goal base 0.45 → 0.46; forced turnovers 0.13 → 0.155 and shot attempts 0.90 → 0.88 (more unforced giveaways); defensive fouls 0.062 → 0.053 and offensive 0.030 → 0.018; faceoff winners' ground balls to the specialist 60% → 35% (wings get the rest, as in a box score); assisted share 0.56 → 0.60. Pressure's takeaway edge was trimmed again (0.014/0.022 → 0.011/0.019) because turnovers decide more games now, and the discipline install's turnover avoidance rose 0.015 → 0.022 for the same reason. Scheme search: best worst case +0.8 pp.
+
+Still open: the best offense in a sim season (~17) runs about 1.5 goals above 2026's best; closing it needs a narrower prestige-to-roster slope, which recruiting and career balance are built on. Late-career user programs win more (100-season harness, seasons 61–100: 83% vs 75%) because the narrower talent spread lets an underdog win more often, not because coaching edges grew (a maxed coach is still worth about 8 pp).
+
+Other lacrosse games: none is a management sim. Casey Powell Lacrosse 18 (Big Ant, 2018) is a console action game with a player-or-coach career mode that reviewers called barebones ([Stevivor](https://stevivor.com/reviews/casey-powell-lacrosse-18-review-take-to-the-field), [Player 2](https://www.player2.net.au/2018/05/casey-powell-lacrosse-18-review/)); Blue Chip Lax is a browser shooting and 3v3 arcade game ([bluechiplax.com](https://bluechiplax.com/)). The nearest genre peers are other sports' college dynasty sims such as Football Coach: College Dynasty.
+
 ---
 
 ## Gap list

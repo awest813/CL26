@@ -38,7 +38,7 @@ const FOCUS_MODIFIERS: Record<PracticeFocus, TeamGameplayModifiers> = {
     faceoff: 0,
     discipline: 4,
     shotQuality: 0,
-    turnoverAvoidance: 0.015,
+    turnoverAvoidance: 0.022,
     penaltyAvoidance: 0.022,
     groundBallBonus: 0,
   },

@@ -63,7 +63,7 @@ const ZERO_GAMEPLAN: EffectiveGameplayModifiers = {
 };
 
 // Settled-offense mistakes: a forced turnover the defense earns, plus an unforced one when the offense cannot get a shot off.
-const TURNOVER_BASE_CHANCE = 0.13;
+const TURNOVER_BASE_CHANCE = 0.155;
 const TURNOVER_MIN_CHANCE = 0.05;
 const TURNOVER_MAX_CHANCE = 0.3;
 const RETAINED_POSSESSION_TURNOVER_SCALE = 0.45;
@@ -72,14 +72,14 @@ const DEFENSIVE_DISCIPLINE_TURNOVER_DIVISOR = 900;
 const DISCIPLINE_TURNOVER_DIVISOR = 200;
 /** Ground-ball edge points per point of chance to win a loose ball after a miss or a rebound. */
 const LOOSE_BALL_EDGE_DIVISOR = 150;
-const SHOT_ATTEMPT_BASE_CHANCE = 0.9;
+const SHOT_ATTEMPT_BASE_CHANCE = 0.88;
 const SHOT_ATTEMPT_MIN_CHANCE = 0.72;
 const SHOT_ATTEMPT_MAX_CHANCE = 0.97;
 const CAUSED_TURNOVER_GROUND_BALL_CHANCE = 0.55;
 
 const DISCIPLINE_PIVOT = 72;
-const PENALTY_BASE_CHANCE = 0.03;
-const DEFENSIVE_FOUL_BASE_CHANCE = 0.062;
+const PENALTY_BASE_CHANCE = 0.018;
+const DEFENSIVE_FOUL_BASE_CHANCE = 0.053;
 const PENALTY_MIN_CHANCE = 0.012;
 const PENALTY_MAX_CHANCE = 0.15;
 const DEFENSIVE_DISCIPLINE_PENALTY_DIVISOR = 400;
@@ -125,24 +125,27 @@ const FACEOFF_ELITE_BONUS = 4;
 const GAME_FORM_VARIANCE = 10;
 const FACEOFF_MIN_CHANCE = 0.3;
 const FACEOFF_MAX_CHANCE = 0.7;
-const FACEOFF_WINNER_GROUND_BALL_CHANCE = 0.6;
+const FACEOFF_WINNER_GROUND_BALL_CHANCE = 0.35;
 const FACEOFF_FAST_BREAK_CHANCE = 0.12;
 
 // Shots: on-cage rate is driven by the shooter, goal rate by the shooter against the goalie.
 const SHOT_QUALITY_POWER_DIVISOR = 260;
 const SHOT_QUALITY_VARIANCE = 0.06;
-const ON_GOAL_BASE_CHANCE = 0.6;
+const ON_GOAL_BASE_CHANCE = 0.58;
 const ON_GOAL_MIN_CHANCE = 0.42;
 const ON_GOAL_MAX_CHANCE = 0.8;
-const GOAL_BASE_CHANCE = 0.45;
+const GOAL_BASE_CHANCE = 0.46;
 const GOAL_MIN_CHANCE = 0.26;
 const GOAL_MAX_CHANCE = 0.74;
 const SHOOTER_SKILL_PIVOT = 70;
+/** Rating points of shooter skill per point of on-goal and goal chance. Larger is a flatter talent curve. */
+const SHOOTER_ON_GOAL_DIVISOR = 400;
+const SHOOTER_GOAL_DIVISOR = 525;
 const MISS_BACKUP_CHANCE = 0.42;
 const SAVE_REBOUND_CHANCE = 0.14;
 const LOOSE_BALL_GROUND_BALL_CHANCE = 0.5;
 const MAX_SHOTS_PER_POSSESSION = 5;
-const ASSIST_CHANCE = 0.56;
+const ASSIST_CHANCE = 0.6;
 /** Share of assisted goals set up by the offense's quarterback outright, before the rest are drawn by passing. */
 const QUARTERBACK_ASSIST_SHARE = 0.2;
 
@@ -858,7 +861,7 @@ export function simulateGame(
       }
 
       const shooter = drawFromPool(rng, offense.ratings.shooters, offense.ratings.goaliePlayer);
-      const shooterEdge = (shooterSkill(shooter) - SHOOTER_SKILL_PIVOT) / 250;
+      const shooterEdge = (shooterSkill(shooter) - SHOOTER_SKILL_PIVOT) / SHOOTER_ON_GOAL_DIVISOR;
       offense.stats.shots += 1;
       const shooterRow = ensurePlayerStats(offense, shooter);
       shooterRow.shots = (shooterRow.shots ?? 0) + 1;
@@ -880,7 +883,7 @@ export function simulateGame(
       offense.stats.shotsOnGoal = (offense.stats.shotsOnGoal ?? 0) + 1;
       const manUpNow = hasManUp(offenseSide);
       const goalChance = clamp(
-        GOAL_BASE_CHANCE + (offensePower - goalieRating) / 600 + (shooterSkill(shooter) - SHOOTER_SKILL_PIVOT) / 300 + quality * 0.35 + (manUpNow ? MAN_UP_GOAL_BOOST : 0),
+        GOAL_BASE_CHANCE + (offensePower - goalieRating) / 600 + (shooterSkill(shooter) - SHOOTER_SKILL_PIVOT) / SHOOTER_GOAL_DIVISOR + quality * 0.35 + (manUpNow ? MAN_UP_GOAL_BOOST : 0),
         GOAL_MIN_CHANCE,
         GOAL_MAX_CHANCE,
       );
