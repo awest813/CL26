@@ -40,13 +40,13 @@ A deterministic, web-based college lacrosse coaching sim with NCAA-ish realism a
 - [x] Rankings criteria exposed in UI (methodology + score breakdowns on Rankings page)
 - [x] Week/game detail pages — more depth and drill-down UX
 - [x] Career multi-year loop — program prestige drift, job security score, 20-season regression harness
-- [ ] Responsive layout — tables are compact but not fully mobile-friendly
+- [x] Responsive layout: no page scrolls sideways at 390, 768, 1024, or 1280 px; every tap target meets WCAG 2.2's 24 px minimum; the roster table (the only one wider than a tablet) pins role and name while its stats scroll
 
 ### Not Yet Started
 - [ ] News feed and weekly storyline flavor
 - [x] Rivalry game tagging and trophy events (rivalry week, 64 trophies, holders tracked across seasons)
 - [x] Accessibility pass (keyboard navigation, semantic HTML, contrast audit): axe-core reports no violations on any page at desktop and phone widths in light and dark themes; every tab stop shows a focus ring, with a skip link first
-- [ ] Sim speed, display density, and theme (confirmations and the matchup estimate are on the settings page)
+- [ ] Sim speed and display density (theme is done: System, Light, or Dark on the settings page, applied before first paint; confirmations and the matchup estimate are there too)
 
 ---
 
@@ -58,7 +58,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 - [x] Playoff bracket flow is fully validated end-to-end via regression tests
 - [x] Week/game detail pages provide enough depth to understand individual results
 - [x] Career loop can complete two seasons (Year 1 offseason → Year 2 preseason)
-- [ ] UI is usable on common desktop and tablet viewports
+- [x] UI is usable on common desktop and tablet viewports
 
 ---
 
@@ -191,9 +191,9 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 
 ### M12 — Polish + Accessibility (Partial)
 - [x] Accessibility pass (keyboard nav, ARIA, contrast)
-- [ ] Mobile / tablet responsive tables
+- [x] Mobile / tablet responsive tables
 - [x] Settings page for play confirmations and the matchup estimate
-- [ ] Sim speed, display density, and theme toggle
+- [ ] Sim speed and display density (theme toggle done)
 - [x] Performance audit for 128-team workflows: page renders stay under 50 ms of main-thread work (no virtualization needed); a schedule builds 6.6x faster (Begin season 840 ms → ~240 ms); sim buttons paint "Working…" before the work runs; the save holds at ~2.2M chars across seasons
 
 ---
