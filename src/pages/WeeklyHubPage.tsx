@@ -23,6 +23,7 @@ import {
   processSigningDay,
   WEEKLY_HOURS_CAP,
   MAX_HOURS_PER_RECRUIT,
+  answerPressConference,
 } from '../features/coach/coachSlice';
 import { beginNextCareerSeason, processSeasonEnd, runCareerWeeklyCycle, simCareerConferenceChampionships, simCareerPlayoffRound, simCareerToBracket } from '../features/coach/careerThunks';
 import {
@@ -60,6 +61,7 @@ import { tacticShortLabel, tacticValue } from '../lib/tacticLabels';
 import PageHeader from '../components/PageHeader';
 import { prefersReducedMotion, useGameReveal } from '../hooks/useGameReveal';
 import { seasonPhaseLabel } from '../lib/seasonLabels';
+import { buildPressConference, resultStreak, type PressAnswer, type PressConference, type PressTone } from '../sim/pressConference';
 
 /** The two calls that shape a game most, as the desk's game-plan row reads them. */
 function schemeCall(tactics: Tactics): string {
@@ -200,6 +202,43 @@ function Scoreboard({
       )}
       {!live && keyEdge && <p className="resultLine text-sm text-gray-500">{keyEdge}</p>}
       {children}
+    </section>
+  );
+}
+
+/** The postgame presser: the reporter's question, three answers with their effects, then your quote. */
+function PressConferenceCard({ conference, answered, onAnswer }: {
+  conference: PressConference & { gameKey: string };
+  answered: { tone: PressTone; quote: string; effectLine: string } | null;
+  onAnswer: (answer: PressAnswer) => void;
+}) {
+  return (
+    <section className="card pressCard" aria-labelledby="press-title">
+      <div className="matchupBoardTop">
+        <h3 id="press-title" className="m-0 text-base font-bold">Press conference</h3>
+        {conference.bigStage && <p className="matchupKicker">Big stage</p>}
+      </div>
+      <p className="pressQuestion">&ldquo;{conference.question}&rdquo;</p>
+      {answered ? (
+        <div className="pressAnswered">
+          <p className="pressQuote">{answered.quote}</p>
+          <p className="text-xs text-gray-500 m-0">{answered.effectLine || 'No effect.'}</p>
+        </div>
+      ) : (
+        <>
+          <div className="choiceGrid pressAnswers" role="group" aria-label="Your answer">
+            {conference.answers.map((answer) => (
+              <button key={answer.tone} type="button" className="choiceChip" onClick={() => onAnswer(answer)}>
+                <span className="font-semibold">{answer.label}</span>
+                <span className="choiceChipHelp">{answer.effectLine}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2 mb-0">
+            One answer per game{conference.bigStage ? '; a rivalry or ranked opponent makes it count half again as much' : ''}. Skip it and nothing changes.
+          </p>
+        </>
+      )}
     </section>
   );
 }
@@ -467,6 +506,38 @@ function WeeklyHubPage() {
 
   const top25 = useAppSelector(selectRankTrends);
   const pollRank = season.phase === 'PRE' ? null : top25.find((row) => row.teamId === selectedTeamId)?.rank ?? null;
+
+  // The postgame press conference for the regular-season game on the scoreboard.
+  const showsRegularBoard = Boolean(userLastResult)
+    && !(playoffSpot.lastGame?.result && (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON'))
+    && !(lastConferenceGame && (season.phase === 'PLAYOFF' || season.phase === 'OFFSEASON'))
+    && season.phase !== 'OFFSEASON';
+  const pressConference = useMemo(() => {
+    if (!showsRegularBoard || !userLastResult || !selectedTeamId) return null;
+    const weekIndex = userLastResult.weekIndex ?? 0;
+    const userIsA = userLastResult.teamAId === selectedTeamId;
+    const opponentId = userIsA ? userLastResult.teamBId : userLastResult.teamAId;
+    const opponent = teams.find((team) => team.id === opponentId);
+    const scheduled = season.scheduleByWeek[weekIndex]?.find((game) => game.homeTeamId === selectedTeamId || game.awayTeamId === selectedTeamId);
+    const results = season.gameResults
+      .filter((game) => game.teamAId === selectedTeamId || game.teamBId === selectedTeamId)
+      .sort((a, b) => (a.weekIndex ?? 0) - (b.weekIndex ?? 0))
+      .map((game) => (game.teamAId === selectedTeamId ? game.scoreA > game.scoreB : game.scoreB > game.scoreA));
+    const userScore = userIsA ? userLastResult.scoreA : userLastResult.scoreB;
+    const oppScore = userIsA ? userLastResult.scoreB : userLastResult.scoreA;
+    const context = {
+      gameKey: `${season.year}-w${weekIndex}-${opponentId}`,
+      won: userScore > oppScore,
+      userScore,
+      oppScore,
+      opponentName: opponent?.schoolName ?? 'them',
+      opponentRank: top25.find((row) => row.teamId === opponentId)?.rank ?? null,
+      rivalryTrophy: scheduled?.rivalryTrophy ?? null,
+      streak: resultStreak(results),
+      overtime: (userLastResult.scoringPlays ?? []).some((play) => play.period > 4),
+    };
+    return { gameKey: context.gameKey, ...buildPressConference(context) };
+  }, [showsRegularBoard, userLastResult, selectedTeamId, teams, season.scheduleByWeek, season.gameResults, season.year, top25]);
 
   const lastResultEdge = useMemo(() => {
     if (!userLastResult || !selectedTeam) return null;
@@ -790,6 +861,20 @@ function WeeklyHubPage() {
           />
         </Scoreboard>
       ) : null}
+
+      {pressConference && !weekReveal.revealing && (
+        <PressConferenceCard
+          conference={pressConference}
+          answered={coach.pressConference?.gameKey === pressConference.gameKey ? coach.pressConference : null}
+          onAnswer={(answer) => dispatch(answerPressConference({
+            gameKey: pressConference.gameKey,
+            tone: answer.tone,
+            quote: answer.quote,
+            effectLine: answer.effectLine,
+            effect: answer.effect,
+          }))}
+        />
+      )}
 
       <section className="card matchupBoard" aria-labelledby="loop-title">
         {actionError && (

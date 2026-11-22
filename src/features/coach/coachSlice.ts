@@ -17,6 +17,7 @@ import { ledgerEntry, MAX_PRESTIGE_DRIFT, MIN_PRESTIGE_DRIFT, nextPrestigeDrift,
 import { redshirtBlocker } from '../../sim/redshirts';
 import { STARTER_SLOTS, startingRating, swapStarter } from '../../sim/depthChart';
 import { setProgramLedgerEntry } from '../season/seasonSlice';
+import type { PressEffect, PressTone } from '../../sim/pressConference';
 
 export const WEEKLY_HOURS_CAP = 120;
 export const MAX_HOURS_PER_RECRUIT = 20;
@@ -128,6 +129,10 @@ export interface CoachState {
   staffDepartures?: StaffDeparture[];
   /** Programs with an open head-coaching job after the last recorded season. */
   jobOpenings?: string[];
+  /** The last press conference answered: which game, and what was said. Missing on older saves. */
+  pressConference?: { gameKey: string; tone: PressTone; quote: string; effectLine: string } | null;
+  /** A one-week lift to recruiting from a bold answer, used up by the next recruiting week. 1 is none. */
+  pendingRecruitingBuzz?: number;
   /** The roster and depth chart as this season began, so a season reset does not grow players twice. */
   seasonStartRoster?: { year: number; roster: Player[]; starterIds: string[]; progress?: SeasonStartProgress } | null;
 }
@@ -401,6 +406,18 @@ const coachSlice = createSlice({
     setJobOpenings: (state, action: PayloadAction<string[]>) => {
         state.jobOpenings = action.payload;
     },
+    /** Answer the postgame press conference once per game: its effect lands now, recruiting buzz next week. */
+    answerPressConference: (state, action: PayloadAction<{ gameKey: string; tone: PressTone; quote: string; effectLine: string; effect: PressEffect }>) => {
+        const { gameKey, tone, quote, effectLine, effect } = action.payload;
+        if (state.pressConference?.gameKey === gameKey) return;
+        state.pressConference = { gameKey, tone, quote, effectLine };
+        state.adPressure = Math.round(Math.max(15, Math.min(98, state.adPressure + effect.adPressure)) * 100) / 100;
+        state.teamFatigue = Math.max(0, Math.min(100, state.teamFatigue + effect.fatigue));
+        state.pendingRecruitingBuzz = effect.recruitingBuzz;
+    },
+    consumeRecruitingBuzz: (state) => {
+        state.pendingRecruitingBuzz = 1;
+    },
     setSeasonStartRoster: (state, action: PayloadAction<CoachState['seasonStartRoster']>) => {
         state.seasonStartRoster = action.payload;
     },
@@ -415,6 +432,9 @@ const coachSlice = createSlice({
         state.teamFatigue = progress.teamFatigue;
         state.adPressure = progress.adPressure;
         state.jobSecurity = progress.jobSecurity;
+        // The replayed season's press conferences start fresh too.
+        state.pressConference = null;
+        state.pendingRecruitingBuzz = 1;
     },
     /** Hire an assistant into his role, replacing whoever held it. Callers check the window and his prestige demand. */
     hireAssistant: (state, action: PayloadAction<{ candidate: AssistantCandidate; currentStaff: AssistantCoach[] }>) => {
@@ -745,6 +765,8 @@ export const {
     setJobOpenings,
     setSeasonStartRoster,
     restoreSeasonStartProgress,
+    answerPressConference,
+    consumeRecruitingBuzz,
     hireAssistant,
     chooseCoachPerk,
     chooseAssistantSpecialty,
@@ -872,7 +894,9 @@ export const advanceRecruitingWeek = createAsyncThunk(
              }
         });
 
-        const recruitingBonus = programRecruitingBonus(coach);
+        // A bold answer at last week's press conference lifts this week only.
+        const recruitingBonus = programRecruitingBonus(coach) * (coach.pendingRecruitingBuzz ?? 1);
+        if ((coach.pendingRecruitingBuzz ?? 1) !== 1) dispatch(consumeRecruitingBuzz());
         const coachSkill = coach.profile?.skill ?? 72;
         const teamProfilesByTeamId: Record<string, CpuRecruitingProfile> = {};
         // CPU programs recruit at their current standing, so a program on the rise pulls better classes.

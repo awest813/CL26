@@ -185,7 +185,7 @@ An **alpha-ready** build means a user can complete a full deterministic year loo
 ### M11 — Flavor Systems (Not Started)
 - [x] News feed and weekly storyline text (league wire)
 - [x] Rivalry game tagging and trophy events (rivalry week, 64 trophies, holders tracked across seasons)
-- [ ] Press conference flavor hooks
+- [x] Press conference flavor hooks: after each regular-season game the Weekly Hub asks a question about that game (rivalry, ranked opponent, overtime, streak, rout, one-goal game) and offers three answers with small stated effects: humble eases AD pressure, bold lifts next week's recruiting but raises expectations, focus eases fatigue; bigger on a rivalry or ranked stage
 
 ---
 
